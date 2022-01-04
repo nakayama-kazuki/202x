@@ -1,0 +1,77 @@
+<html>
+<head>
+<meta name='viewport' content='width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1' />
+<meta name='description' content='game, rubiks cube' />
+<meta property='og:description' content='game, rubiks cube' />
+<script async src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7863584801355594' crossorigin='anonymous'></script>
+<style>
+body {
+	margin: 0px;
+	overflow: hidden;
+	background-color: black;
+}
+#main, #google {
+	margin: 0px;
+	position: absolute;
+}
+iframe {
+	margin: 0px;
+	border: none;
+	width: 100%;
+	height: 100%;
+}
+</style>
+</head>
+<body>
+<div id='main'><iframe id='cube' frameborder='0'></iframe></div>
+<div id='google'></div>
+<script>
+
+document.querySelector('#cube').src = 'cube3d.html' + location.hash;
+
+HTMLElement.prototype.setXYWH = function(x, y, w, h) {
+	let s = this.style;
+	if (w * h > 0) {
+		s.left = x + 'px';
+		s.top = y + 'px';
+		s.width = w + 'px';
+		s.height = h + 'px';
+		s.visibility = 'visible';
+	} else {
+		s.visibility = 'hidden';
+	}
+}
+
+function resize()
+{
+	let size = {
+		m : 3,
+		a : 1
+	};
+	let ratio = size.m / (size.m + size.a);
+	let w = window.innerWidth;
+	let h = window.innerHeight;
+	let m = document.querySelector('#main');
+	let a = document.querySelector('#google');
+	if (w * ratio > h) {
+		m.setXYWH(0, 0, w * ratio, h);
+		a.setXYWH(w * ratio, 0, w * (1 - ratio), h);
+	} else {
+		if (h * ratio > w) {
+			m.setXYWH(0, 0, w, h * ratio);
+			a.setXYWH(0, h * ratio, w, h * (1 - ratio));
+		} else {
+			m.setXYWH(0, 0, w, h);
+			a.setXYWH(0, 0, 0, 0);
+		}
+	}
+}
+
+window.addEventListener('resize', resize);
+
+resize();
+
+</script>
+</body>
+</html>
+

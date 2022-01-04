@@ -1,0 +1,979 @@
+<head>
+<meta name='viewport' content='width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1' />
+<style>
+body {
+	margin: 0;
+	overflow: hidden;
+}
+#control {
+	position: absolute;
+	left : 10px;
+	top : 10px;
+	font-family: monospace;;
+}
+</style>
+</head>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r127/three.min.js'></script>
+<canvas id='myCanvas'></canvas>
+<span id='control'>
+<button id='dec'>dim --</button>
+<button id='shuffle'>shuffle</button>
+<button id='inc'>dim ++</button>
+</span>
+<script>
+
+const cCanvas = document.querySelector('#myCanvas');
+
+const cWorldRadius = 1000;
+const cCubeSize = 360;
+const cFogMargin = 200;
+
+const cAudio = new Audio('data:audio/mpeg;base64,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');
+
+Array.prototype.randomElement = function() {
+	return this[Math.floor(Math.random() * this.length)];
+};
+
+Array.prototype.maxElement = function() {
+	let candidate = this[0];
+	this.forEach(e => {
+		if (e > candidate) {
+			candidate = e;
+		}
+	});
+	return candidate;
+};
+
+const cAxisUtil = {
+	_xyz : ['x', 'y', 'z'],
+	randomElement : function() {
+		return this._xyz.randomElement();
+	},
+	forEach : function(in_callback) {
+		this._xyz.forEach(axis => {
+			(in_callback)(axis);
+		});
+	},
+	other : function(...in_axisArr) {
+		let arr = [];
+		this.forEach(axis => {
+			if (in_axisArr.indexOf(axis) < 0) {
+				arr.push(axis);
+			}
+		});
+		return arr;
+	},
+	rest : function(in_axis1, in_axis2) {
+		let arr = this.other(in_axis1, in_axis2);
+		return arr[0];
+	}
+};
+
+function adjust(in_value, in_notch)
+{
+	let notch = in_notch / 2;
+	let abs = Math.abs(in_value);
+	let cnt = Math.floor(abs / notch);
+	if (cnt % 2 === 1) {
+		cnt += 1;
+	}
+	if (abs === 0) {
+		return 0;
+	} else {
+		return notch * cnt * (in_value / abs);
+	}
+}
+
+function adjust_05PI(in_value)
+{
+	return adjust(in_value, Math.PI / 2);
+}
+
+CanvasRenderingContext2D.prototype.fillRoundRect = function(x, y, w, h, r) {
+	this.beginPath();
+	this.moveTo(x + r, y);
+	this.lineTo(x + w - r, y);
+	this.arc(x + w - r, y + r, r, Math.PI * (3 / 2), 0, false);
+	this.lineTo(x + w, y + h - r);
+	this.arc(x + w - r, y + h - r, r, 0, Math.PI * (1 / 2), false);
+	this.lineTo(x + r, y + h);
+	this.arc(x + r, y + h - r, r, Math.PI * (1 / 2), Math.PI, false);
+	this.lineTo(x, y + r);
+	this.arc(x + r, y + r, r, Math.PI, Math.PI * (3 / 2), false);
+	this.closePath();
+	this.fill();
+}
+
+const cCubeTexture = {
+	cache : [],
+	search : function(in_w, in_h, in_grad) {
+		for (let i = 0; i < this.cache.length; i++) {
+			let obj = this.cache[i];
+			if ((obj.w === in_w) && (obj.h === in_h) && (obj.g === in_grad)) {
+				return obj.t;
+			}
+		}
+		return null;
+	},
+	create : function(in_w, in_h, in_grad) {
+		let hit = this.search(in_w, in_h, in_grad);
+		if (hit) {
+			return hit;
+		}
+		// gradation (from black to white)
+		let maxDepth = 255;
+		let styles = [];
+		for (let i = 0; i < in_grad; i++) {
+			let depth = Math.ceil(maxDepth / (in_grad - 1) * i);
+			styles[i] = 'rgb(' + depth + ',' + depth + ',' + depth + ')';
+		}
+		// draw and convert using toDataUR
+		let canvas = document.createElement('CANVAS');
+		canvas.width = in_w;
+		canvas.height = in_h;
+		const ctx = canvas.getContext('2d');
+		let radius = 6;
+		for (let i = 0; i < in_grad; i++) {
+			ctx.fillStyle = styles[i];
+			if (i > 0) {
+				ctx.fillRoundRect(i, i, in_w - i * 2, in_h - i * 2, radius - i);
+			} else {
+				ctx.fillRect(i, i, in_w - i * 2, in_h - i * 2);
+			}
+		}
+		// return texture
+		let texture = (new THREE.TextureLoader()).load(canvas.toDataURL());
+		this.cache.push({
+			w : in_w,
+			h : in_h,
+			g : in_grad,
+			t : texture
+		});
+		return texture;
+	}
+};
+
+const cCubeMaterial = {
+	cache : [],
+	types : [
+		{
+			w : 100,
+			h : 100,
+			g : 4
+		},
+		{
+			w : 200,
+			h : 100,
+			g : 4
+		},
+		{
+			w : 100,
+			h : 200,
+			g : 4
+		},
+		{
+			w : 200,
+			h : 200,
+			g : 4
+		}
+	],
+	search : function(in_type_id, in_color) {
+		for (let i = 0; i < this.cache.length; i++) {
+			let obj = this.cache[i];
+			if ((obj.t === in_type_id) && (obj.c === in_color)) {
+				return obj.m;
+			}
+		}
+		return null;
+	},
+	create : function(in_type_id, in_color) {
+		let hit = this.search(in_type_id, in_color);
+		if (hit) {
+			return hit;
+		}
+		let type = this.types[in_type_id];
+		let material = new THREE.MeshLambertMaterial({
+			color: in_color,
+			map: cCubeTexture.create(...Object.values(type))
+		});
+		this.cache.push({
+			t : in_type_id,
+			c : in_color,
+			m : material
+		});
+		return material;
+	},
+	rect1x1x1 : function(in_colors) {
+		return [
+			this.create(0, in_colors[0]),
+			this.create(0, in_colors[1]),
+			this.create(0, in_colors[2]),
+			this.create(0, in_colors[3]),
+			this.create(0, in_colors[4]),
+			this.create(0, in_colors[5])
+		];
+	},
+	rect2x1x1 : function(in_colors) {
+		return [
+			this.create(0, in_colors[0]),
+			this.create(0, in_colors[1]),
+			this.create(1, in_colors[2]),
+			this.create(1, in_colors[3]),
+			this.create(1, in_colors[4]),
+			this.create(1, in_colors[5])
+		];
+	},
+	rect1x2x1 : function(in_colors) {
+		return [
+			this.create(2, in_colors[0]),
+			this.create(2, in_colors[1]),
+			this.create(0, in_colors[2]),
+			this.create(0, in_colors[3]),
+			this.create(2, in_colors[4]),
+			this.create(2, in_colors[5])
+		];
+	},
+	rect2x2x1 : function(in_colors) {
+		return [
+			this.create(2, in_colors[0]),
+			this.create(2, in_colors[1]),
+			this.create(1, in_colors[2]),
+			this.create(1, in_colors[3]),
+			this.create(3, in_colors[4]),
+			this.create(3, in_colors[5])
+		];
+	},
+};
+
+function convertUnit(in_src_x, in_src_y, in_src_r, in_dst_r)
+{
+	let src_w = in_src_r.x2 - in_src_r.x1;
+	let src_h = in_src_r.y2 - in_src_r.y1;
+	let dst_w = in_dst_r.x2 - in_dst_r.x1;
+	let dst_h = in_dst_r.y2 - in_dst_r.y1;
+	return (new THREE.Vector2(
+		(in_src_x - in_src_r.x1) * dst_w / src_w + in_dst_r.x1,
+		(in_src_y - in_src_r.y1) * dst_h / src_h + in_dst_r.y1
+	));
+}
+
+function convertRaycasterUnit(in_src_x, in_src_y, in_src_w, in_src_h)
+{
+	let src_r = {
+		x1 : 0,
+		x2 : in_src_w,
+		y1 : 0,
+		y2 : in_src_h
+	};
+	let dst_r = {
+		x1 : -1,
+		x2 : 1,
+		y1 : -1,
+		y2 : 1
+	};
+	return convertUnit(in_src_x, in_src_y, src_r, dst_r);
+}
+
+const cBoxGeometry = {
+	insedeColor : 0x222222,
+	surfaceList : [
+		{
+			// orange
+			axis : 'x',
+			side :  1,
+			color : 0xffaa00,
+			rotateAround : {
+				y : -1,
+				z : 1
+			}
+		},
+		{
+			// red
+			axis : 'x',
+			side : -1,
+			color : 0xff0000,
+			rotateAround : {
+				y : 1,
+				z : -1
+			}
+		},
+		{
+			// white
+			axis : 'y',
+			side :  1,
+			color : 0xffffff,
+			rotateAround : {
+				z : -1,
+				x : 1
+			}
+		},
+		{
+			// yellow
+			axis : 'y',
+			side : -1,
+			color : 0xffff00,
+			rotateAround : {
+				z : 1,
+				x : -1
+			}
+		},
+		{
+			// blue
+			axis : 'z',
+			side :  1,
+			color : 0x3333ff,
+			rotateAround : {
+				x : -1,
+				y : 1
+			}
+		},
+		{
+			// green
+			axis : 'z',
+			side : -1,
+			color : 0x33cc33,
+			rotateAround : {
+				x : 1,
+				y : -1
+			}
+		}
+	],
+	facesInSurface : 2,
+	createColorList : function(in_dimVec, in_posVec) {
+		let list = [];
+		for (let i = 0; i < this.surfaceList.length; i++) {
+			let surface = this.surfaceList[i];
+			if (surface.side > 0) {
+				if (in_posVec[surface.axis] === in_dimVec[surface.axis] - 1) {
+					// edge (side = 1)
+					list.push(surface.color);
+				} else {
+					list.push(this.insedeColor);
+				}
+			} else {
+				if (in_posVec[surface.axis] === 0) {
+					// edge (side = -1)
+					list.push(surface.color);
+				} else {
+					list.push(this.insedeColor);
+				}
+			}
+		}
+		return list;
+	},
+	getSurface : function(in_face_ix) {
+		return this.surfaceList[Math.trunc(in_face_ix / this.facesInSurface)];
+	},
+	sameSurface : function(in_face_ix1, in_face_ix2) {
+		let f1 = this.getSurface(in_face_ix1);
+		let f2 = this.getSurface(in_face_ix2);
+		if (f1.side !== f2.side) {
+			return false;
+		}
+		if (f1.axis !== f2.axis) {
+			return false;
+		}
+		return true;
+	}
+};
+
+function pieceSizeList(in_dimVec, in_unitSize)
+{
+	let pieceSize = {};
+	let maxDim = Object.values(in_dimVec).maxElement();
+	cAxisUtil.forEach(axis => {
+		pieceSize[axis] = [];
+		for (let i = 0; i < in_dimVec[axis]; i++) {
+			pieceSize[axis].push(in_unitSize);
+		}
+		if (in_dimVec[axis] < maxDim) {
+			// replace last element
+			pieceSize[axis].pop();
+			pieceSize[axis].push(in_unitSize * (maxDim - in_dimVec[axis] + 1));
+		}
+	});
+	/*
+		x : [1n, 1n, 2n]
+		y : [1n, 1n, 2n]
+		z : [1n, 1n, 1n, 1n]
+	*/
+	return pieceSize;
+}
+
+const cCube = {
+	cubeSize : cCubeSize,
+	unitSize : null,
+	pieces : [],
+	faceCapture : null,
+	dragged : {
+		position : null,
+		faceIx : null,
+		piece : null,
+		cache : null
+	},
+	raycaster : new THREE.Raycaster(),
+	rotating : {
+		group : new THREE.Object3D(),
+		axis : null,
+		toRight : 0,
+		initVec : null,
+		curRange : 0
+	},
+	initPieces : function(in_dimVec) {
+		let maxDim = Object.values(in_dimVec).maxElement();
+		this.unitSize = this.cubeSize / maxDim;
+		let sizeList = pieceSizeList(in_dimVec, this.unitSize);
+		for (let z = 0; z < in_dimVec.z; z++) {
+			for (let y = 0; y < in_dimVec.y; y++) {
+				for (let x = 0; x < in_dimVec.x; x++) {
+					if ((0 < z) && (z < in_dimVec.z - 1) &&
+						(0 < y) && (y < in_dimVec.y - 1) &&
+						(0 < x) && (x < in_dimVec.x - 1)) {
+						// inside cube
+						continue;
+					}
+					// position of pieces at world space
+					let ixVec = new THREE.Vector3(x, y, z);
+					let posVec = new THREE.Vector3();
+					let needStretch = []
+					cAxisUtil.forEach(axis => {
+						if ((in_dimVec[axis] < maxDim) && (ixVec[axis] === in_dimVec[axis] - 1)) {
+							// piece of x2
+							posVec[axis] = this.unitSize * (ixVec[axis] - (maxDim - 2) / 2);
+							needStretch.push(axis);
+						} else {
+							// piece of x1
+							posVec[axis] = this.unitSize * (ixVec[axis] - (maxDim - 1) / 2);
+						}
+					});
+					// method to make materials for BoxGeometry
+					let method;
+					switch (needStretch.length) {
+					case 1 :
+						if (needStretch[0] === 'x') {
+							method = 'rect2x1x1';
+						} else if (needStretch[0] === 'y') {
+							method = 'rect1x2x1';
+						} else {
+							method = 'rect1x1x1';
+						}
+						break;
+					case 2 :
+						method = 'rect2x2x1';
+						break;
+					case 0 :
+					default :
+						method = 'rect1x1x1';
+						break;
+					}
+					let colorList = cBoxGeometry.createColorList(in_dimVec, ixVec);
+					let piece = new THREE.Mesh(
+						new THREE.BoxGeometry(sizeList.x[x], sizeList.y[y], sizeList.z[z]),
+						(cCubeMaterial[method])(colorList)
+					);
+					piece.position.copy(posVec);
+					this.pieces.push(piece);
+				}
+			}
+		}
+	},
+	init : function(in_dimVec) {
+		// this.faceCapture
+		let delta = 0.1;
+		let size = this.cubeSize - delta * 2;
+		let trans = new THREE.MeshBasicMaterial({transparent: true, opacity: 0});
+		this.faceCapture = new THREE.Mesh(
+			new THREE.BoxGeometry(size, size, size),
+			[trans, trans, trans, trans, trans, trans]
+		);
+		this.faceCapture.position.set(0, 0, 0);
+		// this.pieces
+		this.initPieces(in_dimVec);
+	},
+	get objects() {
+		return this.pieces.concat(this.faceCapture, this.rotating.group);
+	},
+	hitTest : function(in_x, in_y, in_w, in_h, in_camera) {
+		let vec2 = convertRaycasterUnit(in_x, in_y, in_w, in_h);
+		vec2.y *= -1;
+		this.raycaster.setFromCamera(vec2, in_camera);
+		let test1 = this.raycaster.intersectObject(this.faceCapture, false);
+		if (test1.length === 0) {
+			return null;
+		} else {
+			// test2 must exist because this.faceCapture is inside of this.pieces
+			let test2 = this.raycaster.intersectObjects(this.pieces, false);
+			return {
+				piece : test2[0].object,
+				faceIx : test1[0].faceIndex
+			};
+		}
+	},
+	hitTestOnDraggedCache : function(in_x, in_y) {
+		if (!this.dragged.cache) {
+			return null;
+		}
+		return this.hitTest(
+			in_x,
+			in_y,
+			this.dragged.cache.w,
+			this.dragged.cache.h,
+			this.dragged.cache.camera
+		);
+	},
+	get isDragged() {
+		if (this.dragged.position) {
+			return true;
+		} else {
+			return false;
+		}
+	},
+	uiDrag : function(in_vec2, in_w, in_h, in_camera) {
+		let test = this.hitTest(in_vec2.x, in_vec2.y, in_w, in_h, in_camera);
+		if (!test) {
+			return false;
+		}
+		this.dragged.position = in_vec2;
+		this.dragged.faceIx = test.faceIx;
+		this.dragged.piece = test.piece;
+		this.dragged.cache = {
+			w : in_w,
+			h : in_h,
+			camera : in_camera
+		};
+		// dragged
+		return true;
+	},
+	get isRotating() {
+		if (this.rotating.group.children.length > 0) {
+			return true;
+		} else {
+			return false;
+		}
+	},
+	uiRotate : function(in_vec2) {
+		if (!this.isDragged) {
+			return;
+		}
+		let current = in_vec2.clone();
+		let delta = in_vec2.clone().sub(this.dragged.position);
+		let threshold = 5;
+		if (delta.length() < threshold) {
+			return;
+		}
+		if (this.isRotating) {
+			this.rotate(delta, false);
+		} else {
+			let maxCnt = 10;
+			while (maxCnt-- > 0) {
+				let _enum = this.preRotateStatus;
+				let status = this.preRotate(current);
+				if (status === _enum.WOULDBLOCK1) {
+					current.add(delta);
+				} else if (status === _enum.WOULDBLOCK2) {
+					// search opposite side
+					current.copy(in_vec2);
+					delta.multiplyScalar(-1);
+				} else if (status === _enum.READY) {
+					this.rotating.initVec = delta;
+					this.rotating.initVec.normalize();
+					break;
+				} else {
+					break;
+				}
+			}
+		}
+	},
+	uiRelease : function(in_vec2) {
+		if (this.isRotating) {
+			this.rotate(in_vec2.sub(this.dragged.position), true);
+		}
+		this.clearRotationGroup();
+		// settings of dragged
+		this.dragged.position = null;
+		this.dragged.faceIx = null;
+		this.dragged.piece = null;
+		this.dragged.cache = null;
+		// settings of rotating
+		this.rotating.axis = null;
+		this.rotating.toRight = 0;
+		this.rotating.initVec = null;
+		this.rotating.curRange = 0;
+	},
+	hasOverlapStatus : {
+		ALL : Symbol(),
+		PARTIAL : Symbol(),
+		NONE : Symbol()
+	},
+	hasOverlap(in_val1, in_val2) {
+		// adhoc !! (this method should be fixed !!)
+		let _enum = this.hasOverlapStatus;
+		let error = 1;
+		let diff = Math.abs(in_val2 - in_val1);
+		if (diff < error) {
+			return _enum.ALL;
+		} else if (diff < this.unitSize / 2 + error) {
+			return _enum.PARTIAL;
+		} else if ((diff < this.unitSize + error) && (Math.abs(in_val1 + in_val2) < error) && (this.cubeSize / this.unitSize === 3)) {
+			return _enum.PARTIAL;
+		} else {
+			return _enum.NONE;
+		}
+	},
+	neighborAxis : function(in_peace1, in_peace2) {
+		let _enum = this.hasOverlapStatus;
+		let same = 0;
+		let diff;
+		cAxisUtil.forEach(axis => {
+			if (this.hasOverlap(in_peace1.position[axis], in_peace2.position[axis]) === _enum.NONE) {
+				diff = axis;
+			} else {
+				same++;
+			}
+		});
+		if (same === 2) {
+			return diff;
+		} else {
+			return null;
+		}
+	},
+	preRotateStatus : {
+		WOULDBLOCK1 : Symbol(),
+		WOULDBLOCK2 : Symbol(),
+		READY : Symbol(),
+		EXIT : Symbol()
+	},
+	preRotate : function(in_vec2) {
+		let test = this.hitTestOnDraggedCache(in_vec2.x, in_vec2.y);
+		if (!test) {
+			// no intersectObject
+			return this.preRotateStatus.EXIT;
+		}
+		let p1 = this.dragged.piece;
+		let p2 = test.piece;
+		let _enum = this.preRotateStatus;
+		if (cBoxGeometry.sameSurface(this.dragged.faceIx, test.faceIx)) {
+			if (p1 === p2) {
+				// 1. same face + same piece ... continue to search
+				return _enum.WOULDBLOCK1;
+			} else {
+				let axis = this.neighborAxis(p1, p2);
+				if (!axis) {
+					// not neighbor
+					return _enum.EXIT;
+				}
+				// 2. same face + other piece (neighbor) ... start to rotate
+				let face = cBoxGeometry.getSurface(this.dragged.faceIx);
+				let rest = cAxisUtil.rest(axis, face.axis);
+				this.rotating.axis = rest;
+				let direction = (p1.position[axis] < p2.position[axis]) ? -1 : 1;
+				this.rotating.toRight = face.rotateAround[axis] * direction;
+				this.setupRotationGroup(rest, this.dragged.piece);
+				return _enum.READY;
+			}
+		} else {
+			if (p1 !== p2) {
+				// not neighbor
+				return _enum.EXIT;
+			} else {
+				// 3. other face + same piece ... continue to search
+				return _enum.WOULDBLOCK2;
+			}
+		}
+	},
+	setupRotationGroup : function(in_axis, in_target) {
+		let _enum = this.hasOverlapStatus;
+		for (let i = 0; i < this.pieces.length; i++) {
+			let piece = this.pieces[i];
+			switch (this.hasOverlap(piece.position[in_axis], in_target.position[in_axis])) {
+			case _enum.ALL :
+				this.rotating.group.add(piece);
+				break;
+			case _enum.PARTIAL :
+				if (this.rotating.group.children.indexOf(piece) < 0) {
+					this.setupRotationGroup(in_axis, piece);
+				}
+				break;
+			case _enum.NONE :
+			default :
+				break;
+			}
+		}
+	},
+	clearRotationGroup : function() {
+		let ro = this.rotating;
+		(ro.group.children.concat()).forEach(e => {
+			cScene.attach(e);
+		});
+		cAxisUtil.forEach(axis => {
+			ro.group.rotation[axis] = 0;
+		});
+	},
+	rotate : function(in_delta, in_adjust = false) {
+		let ro = this.rotating;
+		let value = ro.initVec.dot(in_delta) * 0.01;
+		if (in_adjust) {
+			value = adjust_05PI(value);
+		}
+		let range = Math.floor(2 * Math.abs(value) / Math.PI + 0.5);
+		if (ro.curRange !== range) {
+			cAudio.play();
+			ro.curRange = range;
+		}
+		ro.group.rotation[ro.axis] = ro.toRight * value;
+	},
+	shuffle : function(in_cnt = 30) {
+		let radianList = [Math.PI / 2, Math.PI, Math.PI * 3 / 2];
+		let cnt = in_cnt;
+		while (cnt-- > 0) {
+			let axis = cAxisUtil.randomElement();
+			let target = this.pieces.randomElement();
+			this.setupRotationGroup(axis, target);
+			this.rotating.group.rotation[axis] = radianList.randomElement();
+			this.clearRotationGroup();
+		}
+	}
+};
+
+const cLight = new THREE.AmbientLight(0xCCCCCC, 1.0);
+
+const cScene = new THREE.Scene();
+cScene.fog = new THREE.Fog(
+	0x000000,
+	cWorldRadius - cCubeSize / 2,
+	cWorldRadius + cCubeSize / 2 + cFogMargin
+);
+
+cScene.add(cLight);
+
+const cStructure = {
+	defaultLevel : 3,
+	levels : [
+		new THREE.Vector3(2, 2, 2),
+		new THREE.Vector3(2, 2, 3),
+		new THREE.Vector3(2, 3, 3),
+		new THREE.Vector3(3, 3, 3),
+		new THREE.Vector3(3, 3, 4),
+		new THREE.Vector3(3, 4, 4),
+		new THREE.Vector3(4, 4, 4),
+	],
+	getLevel : function() {
+		if (location.hash) {
+			let hash = Number(location.hash.substr(1));
+			if ((0 <= hash) && (hash < this.levels.length)) {
+				return hash;
+			}
+		}
+		return this.defaultLevel;
+	},
+	getDim : function() {
+		return this.levels[this.getLevel()];
+	},
+	changeDim : function(in_inc) {
+		let level = this.getLevel();
+		if (in_inc) {
+			if (level < this.levels.length - 1) {
+				level++;
+			} else {
+				level = 0;
+			}
+		} else {
+			if (0 < level) {
+				level--;
+			} else {
+				level = this.levels.length - 1;
+			}
+		}
+		location.hash = '#' + level;
+		location.reload();
+	}
+};
+
+cCube.init(cStructure.getDim());
+cCube.objects.forEach(obj3d => {
+	cScene.add(obj3d);
+});
+
+function handleClick(in_id, in_callback)
+{
+	document.querySelector('#' + in_id).addEventListener('click', in_callback);
+}
+
+handleClick('shuffle', () => {
+	cAudio.play();
+	cCube.shuffle();
+});
+handleClick('inc', () => {
+	cAudio.play();
+	cStructure.changeDim(true)
+});
+handleClick('dec', () => {
+	cAudio.play();
+	cStructure.changeDim(false)
+});
+
+const cSphericalViewer = {
+	conf : {
+		speed : 5,
+		threshold : 5,
+		translate : -1
+	},
+	buffer : new THREE.Spherical(),
+	renderer : null,
+	camera : null,
+	setCameraByAngle(in_delta_theta, in_delta_phi) {
+		this.buffer.setFromVector3(this.camera.position);
+		this.buffer.theta += in_delta_theta;
+		this.buffer.phi -= in_delta_phi;
+		this.buffer.makeSafe();
+		this.camera.position.setFromSpherical(this.buffer); 
+		this.camera.lookAt(new THREE.Vector3(0, 0, 0));
+	},
+	resize : function() {
+		let w = window.innerWidth;
+		let h = window.innerHeight;
+		this.renderer.setPixelRatio(window.devicePixelRatio);
+		this.renderer.setSize(w, h);
+		this.camera.aspect = w / h;
+		this.camera.updateProjectionMatrix();
+	},
+	move : function(in_delta) {
+		if (in_delta.length() < this.conf.threshold) {
+			return false;
+		}
+		// move the camera in the opposite direction to the vector
+		let the = in_delta.x * this.conf.translate * -1;
+		let phi = in_delta.y * this.conf.translate;
+		this.setCameraByAngle(the, phi);
+		return true;
+	},
+	init : function(in_canvas, in_radius) {
+		this.conf.translate = this.conf.speed / in_radius;
+		this.renderer = new THREE.WebGLRenderer({canvas : in_canvas});
+		this.camera = new THREE.PerspectiveCamera();
+		this.camera.fov = 45;
+		this.camera.near = 1;
+		this.camera.far = in_radius * 2;
+		this.camera.position.set(0, 0, in_radius);
+		this.setCameraByAngle(0, 0);
+		this.resize();
+		(in_self => {
+			window.addEventListener('resize', () => {
+				in_self.resize();
+			});
+		})(this);
+	},
+	render : function(in_scene) {
+		this.renderer.render(in_scene, this.camera);
+	},
+	getSize : function() {
+		let v = this.renderer.getSize(new THREE.Vector2());
+		return {
+			w : v.x,
+			h : v.y
+		};
+	}
+};
+
+cSphericalViewer.init(cCanvas, cWorldRadius);
+cSphericalViewer.move(new THREE.Vector2(100, 100));
+
+let dragBackground = null;
+
+cCanvas.addEventListener('mousedown', (in_ev) => {
+	let vec2 = new THREE.Vector2(in_ev.offsetX, in_ev.offsetY);
+	let size = cSphericalViewer.getSize();
+	if (!cCube.uiDrag(vec2, size.w, size.h, cSphericalViewer.camera)) {
+		dragBackground = vec2;
+	}
+});
+
+cCanvas.addEventListener('mousemove', (in_ev) => {
+	let vec2 = new THREE.Vector2(in_ev.offsetX, in_ev.offsetY);
+	if (cCube.isDragged) {
+		cCube.uiRotate(vec2);
+	} else {
+		if (!dragBackground) {
+			return;
+		}
+		let delta = vec2.clone().sub(dragBackground);
+		if (cSphericalViewer.move(delta)) {
+			// updated
+			dragBackground = vec2;
+		}
+	}
+});
+
+cCanvas.addEventListener('mouseup', (in_ev) => {
+	let vec2 = new THREE.Vector2(in_ev.offsetX, in_ev.offsetY);
+	cCube.uiRelease(vec2);
+	dragBackground = null;
+});
+
+cCanvas.addEventListener('mouseout', (in_ev) => {
+	let vec2 = new THREE.Vector2(in_ev.offsetX, in_ev.offsetY);
+	cCube.uiRelease(vec2);
+	dragBackground = null;
+});
+
+const cConvertTable = [
+	{
+		src : 'touchstart',
+		dst : 'mousedown'
+	},
+	{
+		src : 'touchmove',
+		dst : 'mousemove'
+	},
+	{
+		src : 'touchend',
+		dst : 'mouseup'
+	},
+	{
+		src : 'touchleave',
+		dst : 'mouseout'
+	}
+];
+
+cConvertTable.forEach(mapping => {
+	cCanvas.addEventListener(mapping.src, (in_ev) => {
+		in_ev.preventDefault();
+		in_ev.stopPropagation();
+		if (in_ev.touches.length > 1) {
+			return;
+		}
+		let ev = document.createEvent('MouseEvents');
+		ev.initMouseEvent(
+			// type
+			mapping.dst,
+			// canBubble
+			true,
+			// cancelable
+			true,
+			// view
+			window,
+			// clickCount
+			0,
+			in_ev.changedTouches[0].screenX,
+			in_ev.changedTouches[0].screenY,
+			in_ev.changedTouches[0].clientX,
+			in_ev.changedTouches[0].clientY,
+			in_ev.ctrlKey,
+			in_ev.altKey,
+			in_ev.shiftKey,
+			in_ev.metaKey,
+			// button
+			0,
+			// relatedTarget
+			null
+		);
+		in_ev.target.dispatchEvent(ev);
+	});
+});
+
+(function tick() {
+	cSphericalViewer.render(cScene);
+	requestAnimationFrame(tick);
+})();
+
+</script>
