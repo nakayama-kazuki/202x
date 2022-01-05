@@ -492,6 +492,7 @@ const cCube = {
 		this.faceCapture.position.set(0, 0, 0);
 		// this.pieces
 		this.initPieces(in_dimVec);
+		this.clearAllCandidates();
 	},
 	get objects() {
 		return this.pieces.concat(this.faceCapture, this.rotating.group);
@@ -668,15 +669,19 @@ const cCube = {
 				// 2. same face + other piece (neighbor) ... start to rotate
 				let face = cBoxGeometry.getSurface(this.dragged.faceIx);
 				let rest = cAxisUtil.rest(axis, face.axis);
-				this.setupRotationGroup(rest, this.dragged.piece);
-				if (this.rotating.group.children.length < this.pieces.length) {
+				this.setupCandidates(rest, this.dragged.piece);
+				if (this.allCandidates.length < this.pieces.length) {
+					this.allCandidates.forEach(piece => {
+						this.rotating.group.add(piece);
+					});
 					this.rotating.axis = rest;
 					let direction = (p1.position[axis] < p2.position[axis]) ? -1 : 1;
 					this.rotating.toRight = face.rotateAround[axis] * direction;
+					this.clearAllCandidates();
 					return _enum.READY;
 				} else {
 					cAudioError.play();
-					this.clearRotationGroup();
+					this.clearAllCandidates();
 					return _enum.EXIT;
 				}
 			}
@@ -690,17 +695,34 @@ const cCube = {
 			}
 		}
 	},
-	setupRotationGroup : function(in_axis, in_target) {
+	asCandidate : function(in_piece) {
+		in_piece.userData.candidate = true;
+	},
+	clearAllCandidates : function() {
+		this.pieces.forEach(piece => {
+			piece.userData.candidate = false;
+		});
+	},
+	get allCandidates() {
+		let candidates = [];
+		this.pieces.forEach(piece => {
+			if (piece.userData.candidate) {
+				candidates.push(piece);
+			}
+		});
+		return candidates;
+	},
+	setupCandidates : function(in_axis, in_target) {
 		let _enum = this.hasOverlapStatus;
 		for (let i = 0; i < this.pieces.length; i++) {
 			let piece = this.pieces[i];
 			switch (this.hasOverlap(piece.position[in_axis], in_target.position[in_axis])) {
 			case _enum.ALL :
-				this.rotating.group.add(piece);
+				this.asCandidate(piece);
 				break;
 			case _enum.PARTIAL :
-				if (this.rotating.group.children.indexOf(piece) < 0) {
-					this.setupRotationGroup(in_axis, piece);
+				if (this.allCandidates.indexOf(piece) < 0) {
+					this.setupCandidates(in_axis, piece);
 				}
 				break;
 			case _enum.NONE :
@@ -737,12 +759,16 @@ const cCube = {
 		while (cnt > 0) {
 			let axis = cAxisUtil.randomElement();
 			let target = this.pieces.randomElement();
-			this.setupRotationGroup(axis, target);
-			if (this.rotating.group.children.length < this.pieces.length) {
+			this.setupCandidates(axis, target);
+			if (this.allCandidates.length < this.pieces.length) {
+				this.allCandidates.forEach(piece => {
+					this.rotating.group.add(piece);
+				});
 				this.rotating.group.rotation[axis] = radianList.randomElement();
+				this.clearRotationGroup();
 				cnt--;
 			}
-			this.clearRotationGroup();
+			this.clearAllCandidates();
 		}
 	}
 };
@@ -759,8 +785,9 @@ cScene.fog = new THREE.Fog(
 cScene.add(cLight);
 
 const cStructure = {
-	defaultLevel : 3,
+	defaultLevel : 4,
 	levels : [
+		new THREE.Vector3(1, 2, 2),
 		new THREE.Vector3(2, 2, 2),
 		new THREE.Vector3(2, 2, 3),
 		new THREE.Vector3(2, 3, 3),
