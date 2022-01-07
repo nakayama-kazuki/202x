@@ -19,6 +19,7 @@ body {
 <button id='dec'>dim --</button>
 <button id='shuffle'>shuffle</button>
 <button id='inc'>dim ++</button>
+<button onclick='location.href = "../index.html";'>back</button>
 </span>
 <script>
 
@@ -956,7 +957,7 @@ const cSphericalViewer = {
 };
 
 cSphericalViewer.init(cCanvas, cWorldRadius);
-cSphericalViewer.rotationEffect(-0.01, 0.01);
+cSphericalViewer.rotationEffect(-0.01, 0.015);
 
 let dragBackground = null;
 
