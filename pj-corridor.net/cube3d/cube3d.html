@@ -557,13 +557,13 @@ const cCube = {
 	},
 	uiRotate : function(in_vec2) {
 		if (!this.isDragged) {
-			return;
+			return true;
 		}
 		let current = in_vec2.clone();
 		let delta = in_vec2.clone().sub(this.dragged.position);
 		let threshold = 5;
 		if (delta.length() < threshold) {
-			return;
+			return true;
 		}
 		if (this.isRotating) {
 			this.rotate(delta, false);
@@ -582,27 +582,30 @@ const cCube = {
 					this.rotating.initVec = delta;
 					this.rotating.initVec.normalize();
 					break;
+				} else if (status === _enum.FAILED) {
+					return false;
 				} else {
 					break;
 				}
 			}
 		}
+		return true;
 	},
 	uiRelease : function(in_vec2) {
+		// settings of rotating
 		if (this.isRotating) {
 			this.rotate(in_vec2.sub(this.dragged.position), true);
 		}
 		this.clearRotationGroup();
+		this.rotating.axis = null;
+		this.rotating.toRight = 0;
+		this.rotating.initVec = null;
+		this.rotating.curRange = 0;
 		// settings of dragged
 		this.dragged.position = null;
 		this.dragged.faceIx = null;
 		this.dragged.piece = null;
 		this.dragged.cache = null;
-		// settings of rotating
-		this.rotating.axis = null;
-		this.rotating.toRight = 0;
-		this.rotating.initVec = null;
-		this.rotating.curRange = 0;
 	},
 	hasOverlapStatus : {
 		ALL : Symbol(),
@@ -645,6 +648,7 @@ const cCube = {
 		WOULDBLOCK1 : Symbol(),
 		WOULDBLOCK2 : Symbol(),
 		READY : Symbol(),
+		FAILED : Symbol(),
 		EXIT : Symbol()
 	},
 	preRotate : function(in_vec2) {
@@ -671,18 +675,18 @@ const cCube = {
 				let rest = cAxisUtil.rest(axis, face.axis);
 				this.setupCandidates(rest, this.dragged.piece);
 				if (this.allCandidates.length < this.pieces.length) {
+					let ro = this.rotating;
 					this.allCandidates.forEach(piece => {
-						this.rotating.group.add(piece);
+						ro.group.add(piece);
 					});
-					this.rotating.axis = rest;
 					let direction = (p1.position[axis] < p2.position[axis]) ? -1 : 1;
-					this.rotating.toRight = face.rotateAround[axis] * direction;
+					ro.axis = rest;
+					ro.toRight = face.rotateAround[axis] * direction;
 					this.clearAllCandidates();
 					return _enum.READY;
 				} else {
-					cAudioError.play();
 					this.clearAllCandidates();
-					return _enum.EXIT;
+					return _enum.FAILED;
 				}
 			}
 		} else {
@@ -761,10 +765,11 @@ const cCube = {
 			let target = this.pieces.randomElement();
 			this.setupCandidates(axis, target);
 			if (this.allCandidates.length < this.pieces.length) {
+				let ro = this.rotating;
 				this.allCandidates.forEach(piece => {
-					this.rotating.group.add(piece);
+					ro.group.add(piece);
 				});
-				this.rotating.group.rotation[axis] = radianList.randomElement();
+				ro.group.rotation[axis] = radianList.randomElement();
 				this.clearRotationGroup();
 				cnt--;
 			}
@@ -886,6 +891,42 @@ const cSphericalViewer = {
 		this.setCameraByAngle(the, phi);
 		return true;
 	},
+	viberationEffect : function(in_level) {
+		this.setHook(in_delta => {
+			if (in_delta < 0) {
+				// last
+				this.camera.lookAt(new THREE.Vector3(0, 0, 0));
+			} else {
+				let rand = (new THREE.Vector3()).random().subScalar(0.5).multiplyScalar(in_level);
+				this.camera.lookAt(rand);
+			}
+		}, 100);
+	},
+	rotationEffect : function(in_the, in_phi) {
+		this.setHook(in_delta => {
+			this.setCameraByAngle(in_the * in_delta / 15, in_phi);
+		}, 600);
+	},
+	hook : {
+		func : null,
+		expire : -1
+	},
+	setHook : function(in_func, in_duration_ms) {
+		this.hook.func = in_func;
+		this.hook.expire = Date.now() + in_duration_ms;
+	},
+	polling : function() {
+		if (this.hook.func) {
+			let delta = this.hook.expire - Date.now();
+			if (delta > 0) {
+				(this.hook.func)(delta);
+			} else {
+				(this.hook.func)(-1);
+				this.hook.func = null;
+				this.hook.expire = -1;
+			}
+		}
+	},
 	init : function(in_canvas, in_radius) {
 		this.conf.translate = this.conf.speed / in_radius;
 		this.renderer = new THREE.WebGLRenderer({canvas : in_canvas});
@@ -915,7 +956,7 @@ const cSphericalViewer = {
 };
 
 cSphericalViewer.init(cCanvas, cWorldRadius);
-cSphericalViewer.move(new THREE.Vector2(100, 100));
+cSphericalViewer.rotationEffect(-0.01, 0.01);
 
 let dragBackground = null;
 
@@ -930,7 +971,10 @@ cCanvas.addEventListener('mousedown', (in_ev) => {
 cCanvas.addEventListener('mousemove', (in_ev) => {
 	let vec2 = new THREE.Vector2(in_ev.offsetX, in_ev.offsetY);
 	if (cCube.isDragged) {
-		cCube.uiRotate(vec2);
+		if (!cCube.uiRotate(vec2)) {
+			cSphericalViewer.viberationEffect(20);
+			cAudioError.play();
+		}
 	} else {
 		if (!dragBackground) {
 			return;
@@ -1011,6 +1055,7 @@ cConvertTable.forEach(mapping => {
 });
 
 (function tick() {
+	cSphericalViewer.polling();
 	cSphericalViewer.render(cScene);
 	requestAnimationFrame(tick);
 })();
