@@ -900,7 +900,7 @@ const cSphericalViewer = {
 				let rand = (new THREE.Vector3()).random().subScalar(0.5).multiplyScalar(in_level);
 				this.camera.lookAt(rand);
 			}
-		}, 100);
+		}, 50);
 	},
 	rotationEffect : function(in_the, in_phi) {
 		this.setHook(in_delta => {
@@ -972,7 +972,7 @@ cCanvas.addEventListener('mousemove', (in_ev) => {
 	let vec2 = new THREE.Vector2(in_ev.offsetX, in_ev.offsetY);
 	if (cCube.isDragged) {
 		if (!cCube.uiRotate(vec2)) {
-			cSphericalViewer.viberationEffect(20);
+			cSphericalViewer.viberationEffect(10);
 			cAudioError.play();
 		}
 	} else {
