@@ -7,19 +7,21 @@ body {
 }
 #control {
 	position: absolute;
-	left : 10px;
-	top : 10px;
+	left: 10px;
+	top: 10px;
 	font-family: monospace;;
+}
+#control button {
+	min-width: 2em;
 }
 </style>
 </head>
 <script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r127/three.min.js'></script>
 <canvas id='myCanvas'></canvas>
 <span id='control'>
-<button id='dec'>dim --</button>
+<button id='dec'>-</button>
 <button id='shuffle'>shuffle</button>
-<button id='inc'>dim ++</button>
-<button onclick='location.href = "../index.html";'>back</button>
+<button id='inc'>+</button>
 </span>
 <script>
 
