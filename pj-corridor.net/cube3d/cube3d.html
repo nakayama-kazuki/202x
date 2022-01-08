@@ -558,19 +558,18 @@ const cCube = {
 			return false;
 		}
 	},
-	uiRotate : function(in_vec2) {
+	uiRotate : function(in_vec2, in_threshold) {
 		if (!this.isDragged) {
 			return true;
 		}
 		let current = in_vec2.clone();
 		let delta = in_vec2.clone().sub(this.dragged.position);
-		let threshold = 5;
-		if (delta.length() < threshold) {
-			return true;
-		}
 		if (this.isRotating) {
 			this.rotate(delta, false);
 		} else {
+			if (delta.length() < in_threshold) {
+				return true;
+			}
 			let maxCnt = 10;
 			while (maxCnt-- > 0) {
 				let _enum = this.preRotateStatus;
@@ -793,9 +792,8 @@ cScene.fog = new THREE.Fog(
 cScene.add(cLight);
 
 const cStructure = {
-	defaultLevel : 4,
+	defaultLevel : 3,
 	levels : [
-		new THREE.Vector3(1, 2, 2),
 		new THREE.Vector3(2, 2, 2),
 		new THREE.Vector3(2, 2, 3),
 		new THREE.Vector3(2, 3, 3),
@@ -895,6 +893,7 @@ const cSphericalViewer = {
 		return true;
 	},
 	viberationEffect : function(in_level) {
+		let duration = 50;
 		this.setHook(in_delta => {
 			if (in_delta < 0) {
 				// last
@@ -903,12 +902,13 @@ const cSphericalViewer = {
 				let rand = (new THREE.Vector3()).random().subScalar(0.5).multiplyScalar(in_level);
 				this.camera.lookAt(rand);
 			}
-		}, 50);
+		}, duration);
 	},
 	rotationEffect : function(in_the, in_phi) {
+		let duration = 600;
 		this.setHook(in_delta => {
 			this.setCameraByAngle(in_the * in_delta / 15, in_phi);
-		}, 600);
+		}, duration);
 	},
 	hook : {
 		func : null,
@@ -919,15 +919,14 @@ const cSphericalViewer = {
 		this.hook.expire = Date.now() + in_duration_ms;
 	},
 	polling : function() {
-		if (this.hook.func) {
-			let delta = this.hook.expire - Date.now();
-			if (delta > 0) {
-				(this.hook.func)(delta);
-			} else {
-				(this.hook.func)(-1);
-				this.hook.func = null;
-				this.hook.expire = -1;
-			}
+		if (!this.hook.func) {
+			return;
+		}
+		let delta = this.hook.expire - Date.now();
+		(this.hook.func)(delta);
+		if (delta < 0) {
+			this.hook.func = null;
+			this.hook.expire = -1;
 		}
 	},
 	init : function(in_canvas, in_radius) {
@@ -971,10 +970,12 @@ cCanvas.addEventListener('mousedown', (in_ev) => {
 	}
 });
 
+let mousemoveThreshold = 5;
+
 cCanvas.addEventListener('mousemove', (in_ev) => {
 	let vec2 = new THREE.Vector2(in_ev.offsetX, in_ev.offsetY);
 	if (cCube.isDragged) {
-		if (!cCube.uiRotate(vec2)) {
+		if (!cCube.uiRotate(vec2, mousemoveThreshold)) {
 			cSphericalViewer.viberationEffect(10);
 			cAudioError.play();
 		}
@@ -1028,6 +1029,7 @@ cConvertTable.forEach(mapping => {
 		if (in_ev.touches.length > 1) {
 			return;
 		}
+		mousemoveThreshold = 10;
 		let ev = document.createEvent('MouseEvents');
 		ev.initMouseEvent(
 			// type
