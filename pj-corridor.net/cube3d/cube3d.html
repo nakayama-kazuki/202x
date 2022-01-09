@@ -559,16 +559,25 @@ const cCube = {
 		}
 	},
 	uiRotate : function(in_vec2, in_threshold) {
+		let rc = {
+			CANT_MOVE_ANY_MORE : 1,
+			NEED_FEEDBACK : 2,
+			NOOP : 3
+		};
 		if (!this.isDragged) {
-			return true;
+			return rc.NOOP;
 		}
 		let current = in_vec2.clone();
 		let delta = in_vec2.clone().sub(this.dragged.position);
 		if (this.isRotating) {
-			this.rotate(delta, false);
+			if (this.rotate(delta, false)) {
+				return rc.NEED_FEEDBACK;
+			} else {
+				return rc.NOOP;
+			}
 		} else {
 			if (delta.length() < in_threshold) {
-				return true;
+				return rc.NOOP;
 			}
 			let maxCnt = 10;
 			while (maxCnt-- > 0) {
@@ -585,13 +594,13 @@ const cCube = {
 					this.rotating.initVec.normalize();
 					break;
 				} else if (status === _enum.FAILED) {
-					return false;
+					return rc.CANT_MOVE_ANY_MORE;
 				} else {
 					break;
 				}
 			}
 		}
-		return true;
+		return rc.NOOP;
 	},
 	uiRelease : function(in_vec2) {
 		// settings of rotating
@@ -752,12 +761,14 @@ const cCube = {
 		if (in_adjust) {
 			value = adjust_05PI(value);
 		}
+		ro.group.rotation[ro.axis] = ro.toRight * value;
 		let range = Math.floor(2 * Math.abs(value) / Math.PI + 0.5);
 		if (ro.curRange !== range) {
-			cAudioNormal.play();
 			ro.curRange = range;
+			return true;
+		} else {
+			return false;
 		}
-		ro.group.rotation[ro.axis] = ro.toRight * value;
 	},
 	shuffle : function(in_cnt = 30) {
 		let radianList = [Math.PI / 2, Math.PI, Math.PI * 3 / 2];
@@ -892,15 +903,15 @@ const cSphericalViewer = {
 		this.setCameraByAngle(the, phi);
 		return true;
 	},
-	viberationEffect : function(in_level) {
+	viberationEffect : function(in_boost) {
 		let duration = 50;
 		this.setHook(in_delta => {
 			if (in_delta < 0) {
 				// last
 				this.camera.lookAt(new THREE.Vector3(0, 0, 0));
 			} else {
-				let rand = (new THREE.Vector3()).random().subScalar(0.5).multiplyScalar(in_level);
-				this.camera.lookAt(rand);
+				let rand = (new THREE.Vector3()).random().subScalar(0.5);
+				this.camera.lookAt(rand.multiplyScalar(in_boost));
 			}
 		}, duration);
 	},
@@ -975,9 +986,17 @@ let mousemoveThreshold = 5;
 cCanvas.addEventListener('mousemove', (in_ev) => {
 	let vec2 = new THREE.Vector2(in_ev.offsetX, in_ev.offsetY);
 	if (cCube.isDragged) {
-		if (!cCube.uiRotate(vec2, mousemoveThreshold)) {
+		switch (cCube.uiRotate(vec2, mousemoveThreshold)) {
+		case 1 :
 			cSphericalViewer.viberationEffect(10);
 			cAudioError.play();
+			break;
+		case 2 :
+			cAudioNormal.play();
+			break;
+		case 3 :
+		default :
+			break;
 		}
 	} else {
 		if (!dragBackground) {
