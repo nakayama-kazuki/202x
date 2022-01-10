@@ -383,57 +383,59 @@ const UIR = {
 			cont.appendChild(bar);
 			list.push(which + '=' + in_scores[which]);
 		});
-		let result = EL('DIV', 'iResultURL');
-		result.appendChild(TX('Result : ' + location.pathname + '#' + list.join(',')));
-		cont.appendChild(result);
 		return cont;
 	}
 };
 
-function keyHasMaxValue(in_obj)
+function keyHasMaxValue(in_scores)
 {
-//	return (Object.entries(in_obj).sort((e1, e2) => {return e2[1] - e1[1]}))[0][0];
 	let current = {
 		key : null,
 		max : Number.NEGATIVE_INFINITY
 	};
-	Object.keys(in_obj).forEach((key) => {
-		if (in_obj[key] > current.max) {
+	Object.keys(in_scores).forEach((key) => {
+		if (in_scores[key] > current.max) {
 			current.key = key;
-			current.max = in_obj[key];
+			current.max = in_scores[key];
 		}
 	});
 	return current.key;
 }
 
-const QUESTION_TEXT = '最も「あてはまる」選択肢と「あてはまらない」選択肢を 1 つずつ選んでください。';
-
-function update_view()
+function restart()
 {
-	((q) => {
-		if (q) {
-			VIEW.replaceInnerNode(
-				UIQ.CreateForm(q.Current + ' : ' + QUESTION_TEXT, q.Options, q.Answers)
-			);
-		} else {
-			let scores = OpenAssessment.GetScore();
-			VIEW.replaceInnerNode(
-				UIR.CreateResult(scores)
-			);
-			show_detail(keyHasMaxValue(scores));
-		}
-	})(OpenAssessment.GetNextQuestion());
+	MISC.replaceInnerNode(EL('DUMMY'));
+	OpenAssessment.Shuffle();
+	update_view();
 }
 
-UIQ.AddSelectionListener((in_ev) => {
-	window.setTimeout(() => {
-		let el = in_ev.target;
-		if (!OpenAssessment.UpdateScore(el.getAttribute('result'), el.getAttribute('disc'))) {
-			return;
-		}
-		update_view();
-	}, 300);
-});
+function store_score(in_scores)
+{
+	localStorage.setItem('OpenDiSC', JSON.stringify(in_scores));
+}
+
+function load_score()
+{
+	let obj = null;
+	let text = localStorage.getItem('OpenDiSC')
+	if (text) {
+		obj = JSON.parse(text);
+	}
+	return obj;
+}
+
+function show_result(in_scores)
+{
+	let result = UIR.CreateResult(in_scores);
+	let link = EL('DIV', 'iRestartLink');
+	link.appendChild(TX('restart to click here.'));
+	link.addEventListener('click', () => {
+		restart();
+	});
+	result.appendChild(link);
+	VIEW.replaceInnerNode(result);
+	show_detail(keyHasMaxValue(in_scores));
+}
 
 function show_detail(in_which)
 {
@@ -454,29 +456,44 @@ function show_detail(in_which)
 	MISC.replaceInnerNode(cont);
 }
 
+const QUESTION_TEXT = '最も「あてはまる」選択肢と「あてはまらない」選択肢を 1 つずつ選んでください。';
+
+function update_view()
+{
+	((ques) => {
+		if (ques) {
+			VIEW.replaceInnerNode(
+				UIQ.CreateForm(ques.Current + ' : ' + QUESTION_TEXT, ques.Options, ques.Answers)
+			);
+		} else {
+			let scores = OpenAssessment.GetScore();
+			show_result(scores);
+			store_score(scores);
+		}
+	})(OpenAssessment.GetNextQuestion());
+}
+
+UIQ.AddSelectionListener((in_ev) => {
+	window.setTimeout(() => {
+		let el = in_ev.target;
+		if (!OpenAssessment.UpdateScore(el.getAttribute('result'), el.getAttribute('disc'))) {
+			return;
+		}
+		update_view();
+	}, 300);
+});
+
 UIR.AddSelectionListener((in_ev) => {
 	show_detail(in_ev.target.className);
 });
 
-((in_hash) => {
-	if (in_hash) {
-		let scores = {};
-		let results = in_hash.substr(1).split(',');
-		results.forEach((elem) => {
-			let [name, value] = elem.split('=');
-			if (name && Number.isInteger(parseInt(value))) {
-				scores[name] = parseInt(value);
-			}
-		});
-		VIEW.replaceInnerNode(
-			UIR.CreateResult(scores)
-		);
-		show_detail(keyHasMaxValue(scores));
+(in_scores => {
+	if (in_scores) {
+		show_result(in_scores);
 	} else {
-		OpenAssessment.Shuffle();
-		update_view();
+		restart();
 	}
-})(location.hash);
+})(load_score());
 
 </script>
 <style>
@@ -499,10 +516,16 @@ LABEL.N {
 	color : silver;
 	text-decoration : underline;
 }
-#iEXP, #iResultURL {
+#iEXP, #iRestartLink {
 	margin : 10px 0px 0px 5px;
 	width : 100%;
+}
+#iEXP {
 	color : gray;
+}
+#iRestartLink {
+	color : blue;
+	cursor : pointer;
 }
 #iIMG {
 	border-color : #eeeeee #cccccc #cccccc #eeeeee;
