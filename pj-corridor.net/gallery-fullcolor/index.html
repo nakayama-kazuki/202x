@@ -1,0 +1,62 @@
+<html>
+<head>
+<meta name='viewport' content='width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1' />
+<meta name='description' content='game, rubiks cube' />
+<meta property='og:description' content='game, rubiks cube' />
+<script async src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7863584801355594' crossorigin='anonymous'></script>
+<style>
+body {
+	margin: 0;
+}
+div {
+	text-align: center;
+}
+img {
+	width: 100%;
+	max-width: 400px;
+	margin: 1em 0em 1em 0em;
+	border-style: solid;
+	border-width: 1px;
+	border-color: silver black black silver;
+}
+</style>
+</head>
+<body>
+<div id ='iGallery'></div>
+<script>
+
+const cContainer = document.querySelector('#iGallery');
+
+const cList = [
+	'01.jpg',
+	'02.png',
+	'03.png',
+	'04.jpg',
+	'05.png',
+	'06.jpg',
+	'07.jpg',
+	'08.png',
+	'09.jpg',
+	'10.png',
+	'11.jpg',
+	'12.jpg',
+	'13.png',
+	'14.jpg',
+	'15.jpg',
+	'16.jpg',
+	'17.jpg',
+	'18.jpg',
+	'19.jpg',
+	'20.jpg',
+	'21.jpg',
+	'22.jpg',
+	'23.jpg'
+];
+
+cList.forEach(item => {
+	cContainer.innerHTML += "<div><img src='" + item + "' /></div>\n";
+});
+
+</script>
+</body>
+</html>
