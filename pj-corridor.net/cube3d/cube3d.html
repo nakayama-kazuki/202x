@@ -5,27 +5,54 @@ body {
 	margin: 0;
 	overflow: hidden;
 }
-#control {
+#iControl {
 	position: absolute;
 	left: 10px;
 	top: 10px;
 	font-family: monospace;;
 }
-#control button {
+#iControl button {
 	min-width: 3em;
+}
+#iScore {
+	display: none;
+	font: italic small-caps bold 1.5em cursive;
+	color: white;
+	margin: 0px;
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	margin-right: -50%;
+	transform: translate(-50%, -50%);
 }
 </style>
 </head>
 <script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r127/three.min.js'></script>
-<canvas id='myCanvas'></canvas>
-<span id='control'>
-<button id='dec'>-</button>
-<button id='shuffle'>shuffle</button>
-<button id='inc'>+</button>
+<canvas id='iCanvas'></canvas>
+<span id='iControl'>
+<button id='iDec'>-</button>
+<span id ='iShuffle'>
 </span>
 <script>
 
-const cCanvas = document.querySelector('#myCanvas');
+let gShuffleButtonList = (in_cntList => {
+	let idList = [];
+	in_cntList.forEach(in_cnt => {
+		let id = 'iShuffle_' + in_cnt;
+		document.querySelector('#iShuffle').innerHTML +=
+			"<button id='" + id + "' cnt='" + in_cnt + "'>shuffle x" + in_cnt + "</button>\n";
+		idList.push(id);
+	});
+	return idList;
+})([3, 30]);
+
+</script>
+<button id='iInc'>+</button>
+</span>
+<div id='iScore'></div>
+<script>
+
+const cCanvas = document.querySelector('#iCanvas');
 
 const cWorldRadius = 1000;
 const cCubeSize = 360;
@@ -497,6 +524,41 @@ const cCube = {
 		this.initPieces(in_dimVec);
 		this.clearAllCandidates();
 	},
+	isCompleted1 : function(in_axis, in_side) {
+		let orgVec = new THREE.Vector3();
+		let dirVec = new THREE.Vector3();
+		orgVec[in_axis] = cWorldRadius * in_side;
+		dirVec[in_axis] = in_side * -1;
+		let others = cAxisUtil.other(in_axis);
+		let faceIx = -1;
+		for (let i = 0; i < this.maxDim; i++) {
+			for (let j = 0; j < this.maxDim; j++) {
+				orgVec[others[0]] = this.unitSize * (i - (this.maxDim - 1) / 2);
+				orgVec[others[1]] = this.unitSize * (j - (this.maxDim - 1) / 2);
+				dirVec[others[0]] = 0;
+				dirVec[others[1]] = 0;
+				this.raycaster.set(orgVec, dirVec);
+				let test = this.raycaster.intersectObjects(this.pieces, false);
+				if (faceIx < 0) {
+					faceIx = test[0].faceIndex;
+				} else {
+					if (!cBoxGeometry.sameSurface(faceIx, test[0].faceIndex)) {
+						return false;
+					}
+				}
+			}
+		}
+		return true;
+	},
+	isCompleted6 : function() {
+		let list = cBoxGeometry.surfaceList;
+		for (let i = 0; i < list.length; i++) {
+			if (!this.isCompleted1(list[i].axis, list[i].side)) {
+				return false;
+			}
+		}
+		return true;
+	},
 	get objects() {
 		return this.pieces.concat(this.faceCapture, this.rotating.group);
 	},
@@ -617,6 +679,8 @@ const cCube = {
 		this.dragged.faceIx = null;
 		this.dragged.piece = null;
 		this.dragged.cache = null;
+		// check complete
+		return this.isCompleted6();
 	},
 	hasOverlapStatus : {
 		ALL : Symbol(),
@@ -688,7 +752,7 @@ const cCube = {
 				if (this.allCandidates.length < this.pieces.length) {
 					let ro = this.rotating;
 					this.allCandidates.forEach(piece => {
-						ro.group.add(piece);
+						ro.group.attach(piece);
 					});
 					let direction = (p1.position[axis] < p2.position[axis]) ? -1 : 1;
 					ro.axis = rest;
@@ -770,7 +834,7 @@ const cCube = {
 			return false;
 		}
 	},
-	shuffle : function(in_cnt = 30) {
+	shuffle : function(in_cnt) {
 		let radianList = [Math.PI / 2, Math.PI, Math.PI * 3 / 2];
 		let cnt = in_cnt;
 		while (cnt > 0) {
@@ -780,7 +844,7 @@ const cCube = {
 			if (this.allCandidates.length < this.pieces.length) {
 				let ro = this.rotating;
 				this.allCandidates.forEach(piece => {
-					ro.group.add(piece);
+					ro.group.attach(piece);
 				});
 				ro.group.rotation[axis] = radianList.randomElement();
 				this.clearRotationGroup();
@@ -847,7 +911,7 @@ const cStructure = {
 
 cCube.init(cStructure.getDim());
 cCube.objects.forEach(obj3d => {
-	cScene.add(obj3d);
+	cScene.attach(obj3d);
 });
 
 function handleClick(in_id, in_callback)
@@ -855,17 +919,24 @@ function handleClick(in_id, in_callback)
 	document.querySelector('#' + in_id).addEventListener('click', in_callback);
 }
 
-handleClick('shuffle', () => {
-	cAudioNormal.play();
-	cCube.shuffle();
+let gShuffled = -1;
+
+gShuffleButtonList.forEach(in_id => {
+	handleClick(in_id, (in_ev) => {
+		gShuffled = Date.now();
+		cAudioNormal.play();
+		cCube.shuffle(Number(in_ev.target.getAttribute('cnt')));
+	});
 });
-handleClick('inc', () => {
-	cAudioNormal.play();
-	cStructure.changeDim(true)
-});
-handleClick('dec', () => {
+
+handleClick('iDec', () => {
 	cAudioNormal.play();
 	cStructure.changeDim(false)
+});
+
+handleClick('iInc', () => {
+	cAudioNormal.play();
+	cStructure.changeDim(true)
 });
 
 const cSphericalViewer = {
@@ -903,8 +974,7 @@ const cSphericalViewer = {
 		this.setCameraByAngle(the, phi);
 		return true;
 	},
-	viberationEffect : function(in_boost) {
-		let duration = 50;
+	viberationEffect : function(in_duration, in_boost) {
 		this.setHook(in_delta => {
 			if (in_delta < 0) {
 				// last
@@ -913,13 +983,22 @@ const cSphericalViewer = {
 				let rand = (new THREE.Vector3()).random().subScalar(0.5);
 				this.camera.lookAt(rand.multiplyScalar(in_boost));
 			}
-		}, duration);
+		}, in_duration);
 	},
-	rotationEffect : function(in_the, in_phi) {
-		let duration = 600;
+	rotationEffect : function(in_duration, in_the, in_phi) {
 		this.setHook(in_delta => {
 			this.setCameraByAngle(in_the * in_delta / 15, in_phi);
-		}, duration);
+		}, in_duration);
+	},
+	panEffect : function(in_duration, in_callback) {
+		this.setHook(in_delta => {
+			if (in_delta < 0) {
+				// last
+				(in_callback)();
+			} else {
+				this.camera.position.multiplyScalar(1.005);
+			}
+		}, in_duration);
 	},
 	hook : {
 		func : null,
@@ -969,26 +1048,26 @@ const cSphericalViewer = {
 };
 
 cSphericalViewer.init(cCanvas, cWorldRadius);
-cSphericalViewer.rotationEffect(-0.01, 0.015);
+cSphericalViewer.rotationEffect(600, -0.01, 0.015);
 
-let dragBackground = null;
+let gDragBackground = null;
 
 cCanvas.addEventListener('mousedown', (in_ev) => {
 	let vec2 = new THREE.Vector2(in_ev.offsetX, in_ev.offsetY);
 	let size = cSphericalViewer.getSize();
 	if (!cCube.uiDrag(vec2, size.w, size.h, cSphericalViewer.camera)) {
-		dragBackground = vec2;
+		gDragBackground = vec2;
 	}
 });
 
-let mousemoveThreshold = 5;
+let gMousemoveThreshold = 5;
 
 cCanvas.addEventListener('mousemove', (in_ev) => {
 	let vec2 = new THREE.Vector2(in_ev.offsetX, in_ev.offsetY);
 	if (cCube.isDragged) {
-		switch (cCube.uiRotate(vec2, mousemoveThreshold)) {
+		switch (cCube.uiRotate(vec2, gMousemoveThreshold)) {
 		case 1 :
-			cSphericalViewer.viberationEffect(10);
+			cSphericalViewer.viberationEffect(50, 10);
 			cAudioError.play();
 			break;
 		case 2 :
@@ -999,27 +1078,46 @@ cCanvas.addEventListener('mousemove', (in_ev) => {
 			break;
 		}
 	} else {
-		if (!dragBackground) {
+		if (!gDragBackground) {
 			return;
 		}
-		let delta = vec2.clone().sub(dragBackground);
+		let delta = vec2.clone().sub(gDragBackground);
 		if (cSphericalViewer.move(delta)) {
 			// updated
-			dragBackground = vec2;
+			gDragBackground = vec2;
 		}
 	}
 });
 
-cCanvas.addEventListener('mouseup', (in_ev) => {
+function mousend(in_ev)
+{
+	if (!cCube.isDragged) {
+		gDragBackground = null;
+		return;
+	}
 	let vec2 = new THREE.Vector2(in_ev.offsetX, in_ev.offsetY);
-	cCube.uiRelease(vec2);
-	dragBackground = null;
+	if (cCube.uiRelease(vec2) && (gShuffled > 0)) {
+		let duration = 2000;
+		cSphericalViewer.panEffect(duration, () => {
+			let score = document.querySelector('#iScore');
+			let time = Math.ceil((Date.now() - gShuffled - duration) / 1000);
+			score.style.display = 'block';
+			score.innerText = 'completed, your time is ' + time + ' sec.';
+			gShuffled = -1;
+			let buttons = document.querySelector('#iShuffle').getElementsByTagName('BUTTON');
+			for (let i = 0; i < buttons.length; i++) {
+				buttons.item(i).disabled = true;
+			}
+		});
+	}
+}
+
+cCanvas.addEventListener('mouseup', (in_ev) => {
+	mousend(in_ev)
 });
 
 cCanvas.addEventListener('mouseout', (in_ev) => {
-	let vec2 = new THREE.Vector2(in_ev.offsetX, in_ev.offsetY);
-	cCube.uiRelease(vec2);
-	dragBackground = null;
+	mousend(in_ev)
 });
 
 const cConvertTable = [
@@ -1048,7 +1146,7 @@ cConvertTable.forEach(mapping => {
 		if (in_ev.touches.length > 1) {
 			return;
 		}
-		mousemoveThreshold = 10;
+		gMousemoveThreshold = 10;
 		let ev = document.createEvent('MouseEvents');
 		ev.initMouseEvent(
 			// type
