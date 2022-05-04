@@ -127,7 +127,7 @@ class SessionController
 			}
 		} else {
 			header('Content-Type: text/plain');
-			print 'call setDefaultId() API.';
+			print 'call registerDefaultHandler() API.';
 		}
 	}
 }
