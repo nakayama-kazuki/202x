@@ -183,10 +183,12 @@ class textImage
 
 class headerTextImage extends textImage
 {
-	private const TEXTMAXLEN = 75;
+	private const TEXTMAXLEN = 70;
+	private const OMITTED = ' ...';
 	function __construct($in_targetHeader = NULL) {
 		$headers = apache_request_headers();
 		$texts = array();
+		$textlen = self::TEXTMAXLEN - strlen(self::OMITTED);
 		foreach ($headers as $key => $val) {
 			if ($in_targetHeader) {
 				if (strpos(strtoupper($key), strtoupper($in_targetHeader)) === FALSE) {
@@ -194,8 +196,8 @@ class headerTextImage extends textImage
 				}
 			}
 			$buff = "{$key}: {$val}";
-			if (strlen($buff) > self::TEXTMAXLEN) {
-				$buff = substr($buff, 0, self::TEXTMAXLEN) . ' ...';
+			if (strlen($buff) > $textlen) {
+				$buff = substr($buff, 0, $textlen) . self::OMITTED;
 			}
 			array_push($texts, $buff);
 		}
