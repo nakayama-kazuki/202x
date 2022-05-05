@@ -68,13 +68,15 @@ class SessionController
 		$parsed = pathinfo($_SERVER['SCRIPT_NAME']);
 		$urldir = "https://{$_SERVER['HTTP_HOST']}{$parsed['dirname']}";
 		$sysdir = "{$_SERVER['DOCUMENT_ROOT']}{$parsed['dirname']}";
+		// $ext = 'txt';
+		$ext = 'log';
 		$this->script = array(
 			'url' => "{$urldir}/{$parsed['basename']}",
 			'sys' => "{$sysdir}/{$parsed['basename']}"
 		);
 		$this->logger = array(
-			'url' => "{$urldir}/{$parsed['filename']}.log",
-			'sys' => "{$sysdir}/{$parsed['filename']}.log"
+			'url' => "{$urldir}/{$parsed['filename']}.{$ext}",
+			'sys' => "{$sysdir}/{$parsed['filename']}.{$ext}"
 		);
 		register_shutdown_function([$this, 'renderContent']);
 	}
@@ -119,6 +121,7 @@ class SessionController
 		$contentId = $this->defaultId;
 		if (array_key_exists($this->cidField, $request)) {
 			$contentId = $request[$this->cidField];
+			unset($request[$this->cidField]);
 		}
 		if (array_key_exists($contentId, $this->handlerTable)) {
 			call_user_func($this->handlerTable[$contentId], $this->commonParams, $request);
@@ -132,14 +135,84 @@ class SessionController
 	}
 }
 
+class textImage
+{
+	private const FONTSIZE = 5;
+	private const IMGMARGIN = 10;
+	private const BG = array(0, 0, 255);
+	private const FG = array(255, 255, 255);
+	private $fontW;
+	private $fontH;
+	private $texts;
+	function __construct($in_texts = array()) {
+		$this->fontW = imagefontwidth(self::FONTSIZE);
+		$this->fontH = imagefontheight(self::FONTSIZE);
+		$this->texts = $in_texts;
+		register_shutdown_function([$this, 'renderContent']);
+	}
+	public function renderContent() {
+		$maxw = 0;
+		$maxh = 0;
+		foreach ($this->texts as $text) {
+			$w = $this->fontW * strlen($text);
+			if ($w > $maxw) {
+				$maxw = $w;
+			}
+			$maxh += $this->fontH;
+		}
+		$maxw += self::IMGMARGIN * 2;
+		$maxh += self::IMGMARGIN * 2;
+		$im = imagecreate($maxw, $maxh);
+		list($r, $g, $b) = self::BG;
+		$bg = imagecolorallocate($im, $r, $g, $b);
+		list($r, $g, $b) = self::FG;
+		$fg = imagecolorallocate($im, $r, $g, $b);
+		for ($y = 0; $y < count($this->texts); $y++) {
+			for ($x = 0; $x < strlen($this->texts[$y]); $x++) {
+				$xpos = $x * $this->fontW + self::IMGMARGIN;
+				$ypos = $y * $this->fontH + self::IMGMARGIN;
+				imagechar($im, self::FONTSIZE, $xpos, $ypos, substr($this->texts[$y], $x, 1), $fg);
+			}
+		}
+		imagegif($im);
+		imagedestroy($im);
+	}
+}
+
+class headerTextImage extends textImage
+{
+	private const TEXTMAXLEN = 75;
+	function __construct($in_targetHeader = NULL) {
+		$headers = apache_request_headers();
+		$texts = array();
+		foreach ($headers as $key => $val) {
+			if ($in_targetHeader) {
+				if (strpos(strtoupper($key), strtoupper($in_targetHeader)) === FALSE) {
+					continue;
+				}
+			}
+			$buff = "{$key}: {$val}";
+			if (strlen($buff) > self::TEXTMAXLEN) {
+				$buff = substr($buff, 0, self::TEXTMAXLEN) . ' ...';
+			}
+			array_push($texts, $buff);
+		}
+		parent::__construct($texts);
+	}
+}
+
+/*
+	0. edit below
+*/
+
 $sc = new SessionController();
 
 /*
 	1. common parameters in each handler
 */
 
-$sc->registerCommonParam('USERDATA1', array(2, 3, 5, 7, 11, 13));
-$sc->registerCommonParam('USERDATA2', 'hello world');
+$sc->registerCommonParam('USERDATA1', array('red', 'green', 'blue'));
+$sc->registerCommonParam('USERDATA2', 'hello, world');
 
 /*
 	2. default handler
@@ -152,9 +225,11 @@ $sc->registerDefaultHandler(function($in_common) {
 	$url1 = $sc->createURL('EX_PAGE1', $additional);
 	$url2 = $sc->createURL('EX_PAGE2');
 	$url3 = $sc->createURL('EX_PAGE3');
+	$url4 = $sc->createURL('EX_PAGE4');
 	print <<<EOC
 <html>
 <body>
+<div>examples of content behavior</div>
 <div>
 	<form action='{$url1}' method='get'>
 	<input type='text' name='EX_DATA1' />
@@ -168,6 +243,7 @@ $sc->registerDefaultHandler(function($in_common) {
 	</form>
 </div>
 <div><a href='{$url3}'>[see log]</a></div>
+<div><a href='{$url4}'>[see img]</a></div>
 </body>
 </html>
 EOC;
@@ -180,6 +256,7 @@ EOC;
 $sc->registerHandler('EX_PAGE1', function($in_common, $in_request) {
 	header('Content-Type: text/plain');
 	print_r($in_common);
+	print "\n";
 	print_r($in_request);
 });
 
@@ -202,14 +279,14 @@ $sc->registerHandler('EX_PAGE3', function($in_common, $in_request) {
 	print <<<EOC
 <html>
 <body>
-<textarea class='disp'></textarea>
+<textarea style='width: 80%; height: 200px;'></textarea>
 <script>
 
 let wait_report_uri_ms = 500;
 window.setTimeout(function() {
 	fetch('{$log}')
 		.then(res => res.ok ? res.text() : Promise.reject(new Error('404')))
-		.then(txt => document.getElementsByClassName('disp').item(0).value = txt)
+		.then(txt => document.getElementsByTagName('TEXTAREA').item(0).value = txt)
 		.catch(err => console.log(err));
 }, wait_report_uri_ms);
 
@@ -219,5 +296,9 @@ window.setTimeout(function() {
 EOC;
 });
 
+$sc->registerHandler('EX_PAGE4', function($in_common, $in_request) {
+	header('Content-Type: image/gif');
+	$img = new headerTextImage();
+});
 
 ?>
