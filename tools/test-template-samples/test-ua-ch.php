@@ -246,13 +246,13 @@ $sc->registerDefaultHandler(function($in_common) {
 		/*
 			page : n/a
 			subresource (1st-party) : Accept-CH
-			subresource (3rd-party) : n/a
+			subresource (3rd-party) : 
 		*/
 		'Page-00_1st-1_3rd-0',
 		/*
 			page : n/a
-			subresource (1st-party) : Accept-CH
-			subresource (3rd-party) : n/a
+			subresource (1st-party) : n/a
+			subresource (3rd-party) : Accept-CH
 		*/
 		'Page-00_1st-0_3rd-1',
 		/*
