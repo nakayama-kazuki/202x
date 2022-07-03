@@ -236,31 +236,35 @@ $sc->registerDefaultHandler(function($in_common) {
 			subresource (1st-party) : n/a
 			subresource (3rd-party) : n/a
 		*/
-		'PAGE0_1ST0_3RD0',
+		'Page-00_1st-0_3rd-0',
 		/*
 			page : Accept-CH
 			subresource (1st-party) : n/a
 			subresource (3rd-party) : n/a
 		*/
-		'PAGE1_1ST0_3RD0',
+		'Page-10_1st-0_3rd-0',
 		/*
 			page : n/a
 			subresource (1st-party) : Accept-CH
 			subresource (3rd-party) : n/a
 		*/
-		'PAGE0_1ST1_3RD0',
+		'Page-00_1st-1_3rd-0',
 		/*
 			page : n/a
 			subresource (1st-party) : Accept-CH
 			subresource (3rd-party) : n/a
 		*/
-		'PAGE0_1ST0_3RD1',
+		'Page-00_1st-0_3rd-1',
 		/*
 			page : Accept-CH + Permissions-Policy
 			subresource (1st-party) : n/a
 			subresource (3rd-party) : n/a
 		*/
-		'PAGE1F_1ST0_3RD0'
+		'Page-11_1st-0_3rd-0',
+		/*
+			1st --> 3rd (HTTP Redirect) --> LP
+		*/
+		'Redirect'
 	);
 	print "<ul>\n";
 	foreach ($testcases as $case) {
@@ -273,9 +277,7 @@ $sc->registerDefaultHandler(function($in_common) {
 	3. some handlers
 */
 
-$sc->registerHandler('PAGE0_1ST0_3RD0', function($in_common, $in_request) {
-
-	global $sc;
+$sc->registerHandler('Page-00_1st-0_3rd-0', function($in_common, $in_request) {
 	global $sc;
 	$subresource1 = $sc->createURL('SUBRESOURCE', array('REQ_ACCEPT_CH' => '0'));
 	$subresource2 = $sc->createURL('SUBRESOURCE', array('REQ_ACCEPT_CH' => '0'));
@@ -292,7 +294,7 @@ $sc->registerHandler('PAGE0_1ST0_3RD0', function($in_common, $in_request) {
 EOC;
 });
 
-$sc->registerHandler('PAGE1_1ST0_3RD0', function($in_common, $in_request) {
+$sc->registerHandler('Page-10_1st-0_3rd-0', function($in_common, $in_request) {
 	global $sc;
 	$subresource1 = $sc->createURL('SUBRESOURCE', array('REQ_ACCEPT_CH' => '0'));
 	$subresource2 = $sc->createURL('SUBRESOURCE', array('REQ_ACCEPT_CH' => '0'));
@@ -310,7 +312,7 @@ $sc->registerHandler('PAGE1_1ST0_3RD0', function($in_common, $in_request) {
 EOC;
 });
 
-$sc->registerHandler('PAGE0_1ST1_3RD0', function($in_common, $in_request) {
+$sc->registerHandler('Page-00_1st-1_3rd-0', function($in_common, $in_request) {
 	global $sc;
 	$subresource1 = $sc->createURL('SUBRESOURCE', array('REQ_ACCEPT_CH' => '1'));
 	$subresource2 = $sc->createURL('SUBRESOURCE', array('REQ_ACCEPT_CH' => '0'));
@@ -327,7 +329,7 @@ $sc->registerHandler('PAGE0_1ST1_3RD0', function($in_common, $in_request) {
 EOC;
 });
 
-$sc->registerHandler('PAGE0_1ST0_3RD1', function($in_common, $in_request) {
+$sc->registerHandler('Page-00_1st-0_3rd-1', function($in_common, $in_request) {
 	global $sc;
 	$subresource1 = $sc->createURL('SUBRESOURCE', array('REQ_ACCEPT_CH' => '0'));
 	$subresource2 = $sc->createURL('SUBRESOURCE', array('REQ_ACCEPT_CH' => '1'));
@@ -344,7 +346,7 @@ $sc->registerHandler('PAGE0_1ST0_3RD1', function($in_common, $in_request) {
 EOC;
 });
 
-$sc->registerHandler('PAGE1F_1ST0_3RD0', function($in_common, $in_request) {
+$sc->registerHandler('Page-11_1st-0_3rd-0', function($in_common, $in_request) {
 	global $sc;
 	$subresource1 = $sc->createURL('SUBRESOURCE', array('REQ_ACCEPT_CH' => '0'));
 	$subresource2 = $sc->createURL('SUBRESOURCE', array('REQ_ACCEPT_CH' => '0'));
@@ -364,6 +366,13 @@ $sc->registerHandler('PAGE1F_1ST0_3RD0', function($in_common, $in_request) {
 <div>subresource (3rd-party)</div>
 <div><img src='{$subresource2}' /></div>
 </div>
+EOC;
+});
+
+$sc->registerHandler('Redirect', function($in_common, $in_request) {
+	global $sc;
+	print <<<EOC
+<div>(comming soon)</div>
 EOC;
 });
 
