@@ -233,32 +233,72 @@ $sc->registerDefaultHandler(function($in_common) {
 	$testcases = array(
 		/*
 			page : n/a
-			subresource (1st-party) : n/a
-			subresource (3rd-party) : n/a
+				|
+				+- img (1st-party) : n/a
+				|
+				+- img (3rd-party) : n/a
+				|
+				+- iframe (3rd-party)
+					|
+					+ img (1st-party)
+					|
+					+ img (3rd-party)
 		*/
 		'Page-00_1st-0_3rd-0',
 		/*
 			page : Accept-CH
-			subresource (1st-party) : n/a
-			subresource (3rd-party) : n/a
+				|
+				+- img (1st-party) : n/a
+				|
+				+- img (3rd-party) : n/a
+				|
+				+- iframe (3rd-party)
+					|
+					+ img (1st-party)
+					|
+					+ img (3rd-party)
 		*/
 		'Page-10_1st-0_3rd-0',
 		/*
 			page : n/a
-			subresource (1st-party) : Accept-CH
-			subresource (3rd-party) : n/a
+				|
+				+- img (1st-party) : Accept-CH
+				|
+				+- img (3rd-party) : n/a
+				|
+				+- iframe (3rd-party)
+					|
+					+ img (1st-party)
+					|
+					+ img (3rd-party)
 		*/
 		'Page-00_1st-1_3rd-0',
 		/*
 			page : n/a
-			subresource (1st-party) : n/a
-			subresource (3rd-party) : Accept-CH
+				|
+				+- img (1st-party) : n/a
+				|
+				+- img (3rd-party) : Accept-CH
+				|
+				+- iframe (3rd-party)
+					|
+					+ img (1st-party)
+					|
+					+ img (3rd-party)
 		*/
 		'Page-00_1st-0_3rd-1',
 		/*
 			page : Accept-CH + Permissions-Policy
-			subresource (1st-party) : n/a
-			subresource (3rd-party) : n/a
+				|
+				+- img (1st-party) : n/a
+				|
+				+- img (3rd-party) : n/a
+				|
+				+- iframe (3rd-party)
+					|
+					+ img (1st-party)
+					|
+					+ img (3rd-party)
 		*/
 		'Page-11_1st-0_3rd-0',
 		/*
@@ -277,94 +317,158 @@ $sc->registerDefaultHandler(function($in_common) {
 	3. some handlers
 */
 
+function ch_header($in_accept_ch_list, $in_accept_ch, $in_feature_policy, $in_permissions_policy)
+{
+	if ($in_accept_ch) {
+		header('Accept-CH: ' . implode(', ', $in_accept_ch_list));
+	}
+	if ($in_feature_policy) {
+		$header = 'Feature-Policy: ';
+		foreach ($in_accept_ch_list as $value) {
+			$header .= strtolower(substr($value, 4)) . ' *; ';
+		}
+		header($header);
+	}
+	if ($in_permissions_policy) {
+		$header = 'Permissions-Policy: ';
+		foreach ($in_accept_ch_list as $value) {
+			$header .= strtolower(substr($value, 4)) . ' *; ';
+		}
+		header($header);
+	}
+}
+
 $sc->registerHandler('Page-00_1st-0_3rd-0', function($in_common, $in_request) {
 	global $sc;
-	$subresource1 = $sc->createURL('SUBRESOURCE', array('REQ_ACCEPT_CH' => '0'));
-	$subresource2 = $sc->createURL('SUBRESOURCE', array('REQ_ACCEPT_CH' => '0'));
-	$subresource2 = str_replace($in_common['DOMAIN_1P'], $in_common['DOMAIN_3P'], $subresource2);
+	$img1 = $sc->createURL('IMG', array('REQ_ACCEPT_CH' => '0'));
+	$img2 = $sc->createURL('IMG', array('REQ_ACCEPT_CH' => '0'));
+	$img2 = str_replace($in_common['DOMAIN_1P'], $in_common['DOMAIN_3P'], $img2);
+	$iframe = $sc->createURL('IFRAME', array('REQ_ACCEPT_CH' => '0'));
+	$iframe = str_replace($in_common['DOMAIN_1P'], $in_common['DOMAIN_3P'], $iframe);
 	print <<<EOC
 <div>
 <div>subresource (1st-party)</div>
-<div><img src='{$subresource1}' /></div>
+<div><img src='{$img1}' /></div>
 </div>
 <div>
 <div>subresource (3rd-party)</div>
-<div><img src='{$subresource2}' /></div>
+<div><img src='{$img2}' /></div>
+</div>
+<div>
+<div>iframe (3rd-party)</div>
+<div><iframe style='border: solid 1px gray; width: 80%; height: 50%;' src='{$iframe}'></iframe></div>
 </div>
 EOC;
 });
 
 $sc->registerHandler('Page-10_1st-0_3rd-0', function($in_common, $in_request) {
 	global $sc;
-	$subresource1 = $sc->createURL('SUBRESOURCE', array('REQ_ACCEPT_CH' => '0'));
-	$subresource2 = $sc->createURL('SUBRESOURCE', array('REQ_ACCEPT_CH' => '0'));
-	$subresource2 = str_replace($in_common['DOMAIN_1P'], $in_common['DOMAIN_3P'], $subresource2);
-	header('Accept-CH: ' . implode(', ', $in_common['ACCEPT_CH']));
+	$img1 = $sc->createURL('IMG', array('REQ_ACCEPT_CH' => '0'));
+	$img2 = $sc->createURL('IMG', array('REQ_ACCEPT_CH' => '0'));
+	$img2 = str_replace($in_common['DOMAIN_1P'], $in_common['DOMAIN_3P'], $img2);
+	$iframe = $sc->createURL('IFRAME', array('REQ_ACCEPT_CH' => '0'));
+	$iframe = str_replace($in_common['DOMAIN_1P'], $in_common['DOMAIN_3P'], $iframe);
+	ch_header($in_common['ACCEPT_CH'], TRUE, FALSE, FALSE);
 	print <<<EOC
 <div>
 <div>subresource (1st-party)</div>
-<div><img src='{$subresource1}' /></div>
+<div><img src='{$img1}' /></div>
 </div>
 <div>
 <div>subresource (3rd-party)</div>
-<div><img src='{$subresource2}' /></div>
+<div><img src='{$img2}' /></div>
+</div>
+<div>
+<div>iframe (3rd-party)</div>
+<div><iframe style='border: solid 1px gray; width: 80%; height: 50%;' src='{$iframe}'></iframe></div>
 </div>
 EOC;
 });
 
 $sc->registerHandler('Page-00_1st-1_3rd-0', function($in_common, $in_request) {
 	global $sc;
-	$subresource1 = $sc->createURL('SUBRESOURCE', array('REQ_ACCEPT_CH' => '1'));
-	$subresource2 = $sc->createURL('SUBRESOURCE', array('REQ_ACCEPT_CH' => '0'));
-	$subresource2 = str_replace($in_common['DOMAIN_1P'], $in_common['DOMAIN_3P'], $subresource2);
+	$img1 = $sc->createURL('IMG', array('REQ_ACCEPT_CH' => '1'));
+	$img2 = $sc->createURL('IMG', array('REQ_ACCEPT_CH' => '0'));
+	$img2 = str_replace($in_common['DOMAIN_1P'], $in_common['DOMAIN_3P'], $img2);
+	$iframe = $sc->createURL('IFRAME', array('REQ_ACCEPT_CH' => '0'));
+	$iframe = str_replace($in_common['DOMAIN_1P'], $in_common['DOMAIN_3P'], $iframe);
 	print <<<EOC
 <div>
 <div>subresource (1st-party)</div>
-<div><img src='{$subresource1}' /></div>
+<div><img src='{$img1}' /></div>
 </div>
 <div>
 <div>subresource (3rd-party)</div>
-<div><img src='{$subresource2}' /></div>
+<div><img src='{$img2}' /></div>
+</div>
+<div>
+<div>iframe (3rd-party)</div>
+<div><iframe style='border: solid 1px gray; width: 80%; height: 50%;' src='{$iframe}'></iframe></div>
 </div>
 EOC;
 });
 
 $sc->registerHandler('Page-00_1st-0_3rd-1', function($in_common, $in_request) {
 	global $sc;
-	$subresource1 = $sc->createURL('SUBRESOURCE', array('REQ_ACCEPT_CH' => '0'));
-	$subresource2 = $sc->createURL('SUBRESOURCE', array('REQ_ACCEPT_CH' => '1'));
-	$subresource2 = str_replace($in_common['DOMAIN_1P'], $in_common['DOMAIN_3P'], $subresource2);
+	$img1 = $sc->createURL('IMG', array('REQ_ACCEPT_CH' => '0'));
+	$img2 = $sc->createURL('IMG', array('REQ_ACCEPT_CH' => '1'));
+	$img2 = str_replace($in_common['DOMAIN_1P'], $in_common['DOMAIN_3P'], $img2);
+	$iframe = $sc->createURL('IFRAME', array('REQ_ACCEPT_CH' => '0'));
+	$iframe = str_replace($in_common['DOMAIN_1P'], $in_common['DOMAIN_3P'], $iframe);
 	print <<<EOC
 <div>
 <div>subresource (1st-party)</div>
-<div><img src='{$subresource1}' /></div>
+<div><img src='{$img1}' /></div>
 </div>
 <div>
 <div>subresource (3rd-party)</div>
-<div><img src='{$subresource2}' /></div>
+<div><img src='{$img2}' /></div>
+</div>
+<div>
+<div>iframe (3rd-party)</div>
+<div><iframe style='border: solid 1px gray; width: 80%; height: 50%;' src='{$iframe}'></iframe></div>
 </div>
 EOC;
 });
 
 $sc->registerHandler('Page-11_1st-0_3rd-0', function($in_common, $in_request) {
 	global $sc;
-	$subresource1 = $sc->createURL('SUBRESOURCE', array('REQ_ACCEPT_CH' => '0'));
-	$subresource2 = $sc->createURL('SUBRESOURCE', array('REQ_ACCEPT_CH' => '0'));
-	$subresource2 = str_replace($in_common['DOMAIN_1P'], $in_common['DOMAIN_3P'], $subresource2);
-	header('Accept-CH: ' . implode(', ', $in_common['ACCEPT_CH']));
-	$header = 'Feature-Policy: ';
-	foreach ($in_common['ACCEPT_CH'] as $value) {
-		$header .= strtolower(substr($value, 4)) . ' *; ';
-	}
-	header($header);
+	$img1 = $sc->createURL('IMG', array('REQ_ACCEPT_CH' => '0'));
+	$img2 = $sc->createURL('IMG', array('REQ_ACCEPT_CH' => '0'));
+	$img2 = str_replace($in_common['DOMAIN_1P'], $in_common['DOMAIN_3P'], $img2);
+	$iframe = $sc->createURL('IFRAME', array('REQ_ACCEPT_CH' => '0'));
+	$iframe = str_replace($in_common['DOMAIN_1P'], $in_common['DOMAIN_3P'], $iframe);
+	ch_header($in_common['ACCEPT_CH'], TRUE, TRUE, FALSE);
+//	ch_header($in_common['ACCEPT_CH'], TRUE, FALSE, TRUE);
 	print <<<EOC
 <div>
 <div>subresource (1st-party)</div>
-<div><img src='{$subresource1}' /></div>
+<div><img src='{$img1}' /></div>
 </div>
 <div>
 <div>subresource (3rd-party)</div>
-<div><img src='{$subresource2}' /></div>
+<div><img src='{$img2}' /></div>
+</div>
+<div>
+<div>iframe (3rd-party)</div>
+<div><iframe style='border: solid 1px gray; width: 80%; height: 50%;' src='{$iframe}'></iframe></div>
+</div>
+EOC;
+});
+
+$sc->registerHandler('IFRAME', function($in_common, $in_request) {
+	global $sc;
+	$img1 = $sc->createURL('IMG', array('REQ_ACCEPT_CH' => '0'));
+	$img2 = $sc->createURL('IMG', array('REQ_ACCEPT_CH' => '0'));
+	$img2 = str_replace($in_common['DOMAIN_1P'], $in_common['DOMAIN_3P'], $img2);
+	print <<<EOC
+<div>
+<div>subresource (1st-party)</div>
+<div><img src='{$img1}' /></div>
+</div>
+<div>
+<div>subresource (3rd-party)</div>
+<div><img src='{$img2}' /></div>
 </div>
 EOC;
 });
@@ -376,10 +480,10 @@ $sc->registerHandler('Redirect', function($in_common, $in_request) {
 EOC;
 });
 
-$sc->registerHandler('SUBRESOURCE', function($in_common, $in_request) {
+$sc->registerHandler('IMG', function($in_common, $in_request) {
 	header('Content-Type: image/gif');
 	if ($in_request['REQ_ACCEPT_CH'] === '1') {
-		header('Accept-CH: ' . implode(', ', $in_common['ACCEPT_CH']));
+		ch_header($in_common['ACCEPT_CH'], TRUE, FALSE, FALSE);
 	}
 	$img = new headerTextImage('Sec-CH-UA');
 });
