@@ -238,6 +238,12 @@ $sc->registerDefaultHandler(function($in_common) {
 				|
 				+- img (3rd-party) : n/a
 				|
+				+- iframe (1st-party)
+				|	|
+				|	+ img (1st-party)
+				|	|
+				|	+ img (3rd-party)
+				|
 				+- iframe (3rd-party)
 					|
 					+ img (1st-party)
@@ -251,6 +257,12 @@ $sc->registerDefaultHandler(function($in_common) {
 				+- img (1st-party) : n/a
 				|
 				+- img (3rd-party) : n/a
+				|
+				+- iframe (1st-party)
+				|	|
+				|	+ img (1st-party)
+				|	|
+				|	+ img (3rd-party)
 				|
 				+- iframe (3rd-party)
 					|
@@ -266,6 +278,12 @@ $sc->registerDefaultHandler(function($in_common) {
 				|
 				+- img (3rd-party) : n/a
 				|
+				+- iframe (1st-party)
+				|	|
+				|	+ img (1st-party)
+				|	|
+				|	+ img (3rd-party)
+				|
 				+- iframe (3rd-party)
 					|
 					+ img (1st-party)
@@ -280,6 +298,12 @@ $sc->registerDefaultHandler(function($in_common) {
 				|
 				+- img (3rd-party) : Accept-CH
 				|
+				+- iframe (1st-party)
+				|	|
+				|	+ img (1st-party)
+				|	|
+				|	+ img (3rd-party)
+				|
 				+- iframe (3rd-party)
 					|
 					+ img (1st-party)
@@ -293,6 +317,12 @@ $sc->registerDefaultHandler(function($in_common) {
 				+- img (1st-party) : n/a
 				|
 				+- img (3rd-party) : n/a
+				|
+				+- iframe (1st-party)
+				|	|
+				|	+ img (1st-party)
+				|	|
+				|	+ img (3rd-party)
 				|
 				+- iframe (3rd-party)
 					|
@@ -343,8 +373,9 @@ $sc->registerHandler('Page-00_1st-0_3rd-0', function($in_common, $in_request) {
 	$img1 = $sc->createURL('IMG', array('REQ_ACCEPT_CH' => '0'));
 	$img2 = $sc->createURL('IMG', array('REQ_ACCEPT_CH' => '0'));
 	$img2 = str_replace($in_common['DOMAIN_1P'], $in_common['DOMAIN_3P'], $img2);
-	$iframe = $sc->createURL('IFRAME', array('REQ_ACCEPT_CH' => '0'));
-	$iframe = str_replace($in_common['DOMAIN_1P'], $in_common['DOMAIN_3P'], $iframe);
+	$iframe1 = $sc->createURL('IFRAME');
+	$iframe2 = $sc->createURL('IFRAME');
+	$iframe2 = str_replace($in_common['DOMAIN_1P'], $in_common['DOMAIN_3P'], $iframe2);
 	print <<<EOC
 <div>
 <div>subresource (1st-party)</div>
@@ -355,8 +386,12 @@ $sc->registerHandler('Page-00_1st-0_3rd-0', function($in_common, $in_request) {
 <div><img src='{$img2}' /></div>
 </div>
 <div>
+<div>iframe (1st-party)</div>
+<div><iframe style='border: solid 1px gray; width: 80%; height: 40%;' src='{$iframe1}'></iframe></div>
+</div>
+<div>
 <div>iframe (3rd-party)</div>
-<div><iframe style='border: solid 1px gray; width: 80%; height: 50%;' src='{$iframe}'></iframe></div>
+<div><iframe style='border: solid 1px gray; width: 80%; height: 40%;' src='{$iframe2}'></iframe></div>
 </div>
 EOC;
 });
@@ -366,8 +401,9 @@ $sc->registerHandler('Page-10_1st-0_3rd-0', function($in_common, $in_request) {
 	$img1 = $sc->createURL('IMG', array('REQ_ACCEPT_CH' => '0'));
 	$img2 = $sc->createURL('IMG', array('REQ_ACCEPT_CH' => '0'));
 	$img2 = str_replace($in_common['DOMAIN_1P'], $in_common['DOMAIN_3P'], $img2);
-	$iframe = $sc->createURL('IFRAME', array('REQ_ACCEPT_CH' => '0'));
-	$iframe = str_replace($in_common['DOMAIN_1P'], $in_common['DOMAIN_3P'], $iframe);
+	$iframe1 = $sc->createURL('IFRAME');
+	$iframe2 = $sc->createURL('IFRAME');
+	$iframe2 = str_replace($in_common['DOMAIN_1P'], $in_common['DOMAIN_3P'], $iframe2);
 	ch_header($in_common['ACCEPT_CH'], TRUE, FALSE, FALSE);
 	print <<<EOC
 <div>
@@ -379,8 +415,12 @@ $sc->registerHandler('Page-10_1st-0_3rd-0', function($in_common, $in_request) {
 <div><img src='{$img2}' /></div>
 </div>
 <div>
+<div>iframe (1st-party)</div>
+<div><iframe style='border: solid 1px gray; width: 80%; height: 40%;' src='{$iframe1}'></iframe></div>
+</div>
+<div>
 <div>iframe (3rd-party)</div>
-<div><iframe style='border: solid 1px gray; width: 80%; height: 50%;' src='{$iframe}'></iframe></div>
+<div><iframe style='border: solid 1px gray; width: 80%; height: 40%;' src='{$iframe2}'></iframe></div>
 </div>
 EOC;
 });
@@ -390,8 +430,9 @@ $sc->registerHandler('Page-00_1st-1_3rd-0', function($in_common, $in_request) {
 	$img1 = $sc->createURL('IMG', array('REQ_ACCEPT_CH' => '1'));
 	$img2 = $sc->createURL('IMG', array('REQ_ACCEPT_CH' => '0'));
 	$img2 = str_replace($in_common['DOMAIN_1P'], $in_common['DOMAIN_3P'], $img2);
-	$iframe = $sc->createURL('IFRAME', array('REQ_ACCEPT_CH' => '0'));
-	$iframe = str_replace($in_common['DOMAIN_1P'], $in_common['DOMAIN_3P'], $iframe);
+	$iframe1 = $sc->createURL('IFRAME');
+	$iframe2 = $sc->createURL('IFRAME');
+	$iframe2 = str_replace($in_common['DOMAIN_1P'], $in_common['DOMAIN_3P'], $iframe2);
 	print <<<EOC
 <div>
 <div>subresource (1st-party)</div>
@@ -402,8 +443,12 @@ $sc->registerHandler('Page-00_1st-1_3rd-0', function($in_common, $in_request) {
 <div><img src='{$img2}' /></div>
 </div>
 <div>
+<div>iframe (1st-party)</div>
+<div><iframe style='border: solid 1px gray; width: 80%; height: 40%;' src='{$iframe1}'></iframe></div>
+</div>
+<div>
 <div>iframe (3rd-party)</div>
-<div><iframe style='border: solid 1px gray; width: 80%; height: 50%;' src='{$iframe}'></iframe></div>
+<div><iframe style='border: solid 1px gray; width: 80%; height: 40%;' src='{$iframe2}'></iframe></div>
 </div>
 EOC;
 });
@@ -413,8 +458,9 @@ $sc->registerHandler('Page-00_1st-0_3rd-1', function($in_common, $in_request) {
 	$img1 = $sc->createURL('IMG', array('REQ_ACCEPT_CH' => '0'));
 	$img2 = $sc->createURL('IMG', array('REQ_ACCEPT_CH' => '1'));
 	$img2 = str_replace($in_common['DOMAIN_1P'], $in_common['DOMAIN_3P'], $img2);
-	$iframe = $sc->createURL('IFRAME', array('REQ_ACCEPT_CH' => '0'));
-	$iframe = str_replace($in_common['DOMAIN_1P'], $in_common['DOMAIN_3P'], $iframe);
+	$iframe1 = $sc->createURL('IFRAME');
+	$iframe2 = $sc->createURL('IFRAME');
+	$iframe2 = str_replace($in_common['DOMAIN_1P'], $in_common['DOMAIN_3P'], $iframe2);
 	print <<<EOC
 <div>
 <div>subresource (1st-party)</div>
@@ -425,8 +471,12 @@ $sc->registerHandler('Page-00_1st-0_3rd-1', function($in_common, $in_request) {
 <div><img src='{$img2}' /></div>
 </div>
 <div>
+<div>iframe (1st-party)</div>
+<div><iframe style='border: solid 1px gray; width: 80%; height: 40%;' src='{$iframe1}'></iframe></div>
+</div>
+<div>
 <div>iframe (3rd-party)</div>
-<div><iframe style='border: solid 1px gray; width: 80%; height: 50%;' src='{$iframe}'></iframe></div>
+<div><iframe style='border: solid 1px gray; width: 80%; height: 40%;' src='{$iframe2}'></iframe></div>
 </div>
 EOC;
 });
@@ -436,8 +486,9 @@ $sc->registerHandler('Page-11_1st-0_3rd-0', function($in_common, $in_request) {
 	$img1 = $sc->createURL('IMG', array('REQ_ACCEPT_CH' => '0'));
 	$img2 = $sc->createURL('IMG', array('REQ_ACCEPT_CH' => '0'));
 	$img2 = str_replace($in_common['DOMAIN_1P'], $in_common['DOMAIN_3P'], $img2);
-	$iframe = $sc->createURL('IFRAME', array('REQ_ACCEPT_CH' => '0'));
-	$iframe = str_replace($in_common['DOMAIN_1P'], $in_common['DOMAIN_3P'], $iframe);
+	$iframe1 = $sc->createURL('IFRAME');
+	$iframe2 = $sc->createURL('IFRAME');
+	$iframe2 = str_replace($in_common['DOMAIN_1P'], $in_common['DOMAIN_3P'], $iframe2);
 	ch_header($in_common['ACCEPT_CH'], TRUE, TRUE, FALSE);
 //	ch_header($in_common['ACCEPT_CH'], TRUE, FALSE, TRUE);
 	print <<<EOC
@@ -450,8 +501,12 @@ $sc->registerHandler('Page-11_1st-0_3rd-0', function($in_common, $in_request) {
 <div><img src='{$img2}' /></div>
 </div>
 <div>
+<div>iframe (1st-party)</div>
+<div><iframe style='border: solid 1px gray; width: 80%; height: 40%;' src='{$iframe1}'></iframe></div>
+</div>
+<div>
 <div>iframe (3rd-party)</div>
-<div><iframe style='border: solid 1px gray; width: 80%; height: 50%;' src='{$iframe}'></iframe></div>
+<div><iframe style='border: solid 1px gray; width: 80%; height: 40%;' src='{$iframe2}'></iframe></div>
 </div>
 EOC;
 });
