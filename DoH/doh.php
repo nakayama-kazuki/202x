@@ -1,5 +1,7 @@
 <?php
 
+set_time_limit(3);
+
 class UnitTest
 {
 	private $handlerNo = 1;
