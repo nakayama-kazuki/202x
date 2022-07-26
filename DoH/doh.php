@@ -10,6 +10,7 @@ class UnitTest
 		}
 	}
 	public function register($in_handler, $in_desc = '') {
+		return;
 		if ($in_desc) {
 			$desc = $in_desc;
 		} else {
@@ -520,7 +521,6 @@ define('DISP_SEPARATOR', ' | ');
 
 function formatPrint($in_packed)
 {
-	header('Content-Type: text/plane;');
 	$consumed = 0;
 	$line = '';
 	while ($consumed < strlen($in_packed)) {
@@ -538,34 +538,46 @@ function formatPrint($in_packed)
 			$line .= DISP_CTRLCODE;
 		}
 	}
-	exit;
 }
 
-//define('DNS', '1.1.1.1');
-define('DNS', '8.8.8.8');
+//define('DNSADDR', '1.1.1.1');
+define('DNSADDR', '8.8.8.8');
 
-function resolve($in_domain)
+function getDnsResponse($in_request)
 {
-	$handle = fsockopen('udp://' . DNS, 53);
+	$handle = fsockopen('udp://' . DNSADDR, 53);
 	stream_set_blocking($handle, FALSE);
 	if (!$handle) {
 		return NULL;
 	}
-	$dns = new DNSMsg();
-	fwrite($handle, $dns->createRequest($in_domain));
+	fwrite($handle, $in_request);
 	$response = '';
+	$loop = 0;
 	while (!feof($handle)) {
 		$read = fread($handle, 8192);
 		if (strlen($read) > 0) {
 			$response .= $read;
+			continue;
+		}
+		// can't read any more
+		if (strlen($response) > 0) {
+			break;
 		} else {
-			if (strlen($response) > 0) {
+			// 0.05sec
+			usleep(50000);
+			if ($loop++ > 10) {
 				break;
 			}
 		}
 	}
 	fclose($handle);
-	$parsed = $dns->parse($response);
+	return $response;
+}
+
+function getAnswer($in_response)
+{
+	$dns = new DNSMsg();
+	$parsed = $dns->parse($in_response);
 	foreach ($parsed['ANSECTIONS'] as $answer) {
 		if ($answer['TYPE'] === dnsRecToTypeCode('A')) {
 			return $answer['RDATA'];
@@ -574,54 +586,47 @@ function resolve($in_domain)
 	return NULL;
 }
 
-
-
-
-
-
-
+function resolve($in_domain)
+{
+	$dns = new DNSMsg();
+	$response = getDnsResponse($dns->createRequest($in_domain));
+	return getAnswer($response);
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 	// DoH
+	$response = getDnsResponse(file_get_contents('php://input'));
+	$headers = array(
+		'Content-Type: application/dns-message',
+		'Content-Length: ' . strlen($response),
+		'Cache-Control: max-age=0',
+		'Connection: Close',
+		'Set-Cookie: dohcookie='  . rand(0, 99) . '; Secure; HttpOnly'
+	);
+	foreach ($headers as $header) {
+		header($header);
+	}
+	print $response;
 } else {
+	if (array_key_exists('domain', $_GET)) {
+		header('Content-Type: text/plane;');
+		$dns = new DNSMsg();
+		$request = $dns->createRequest($_GET['domain']);
+		$response = getDnsResponse($request);
+		$ip = getAnswer($response);
+		print "( request : {$_GET['domain']} )" . PHP_EOL . PHP_EOL;
+		formatPrint($request);
+		print PHP_EOL . PHP_EOL;
+		print "( response : {$ip} )" . PHP_EOL . PHP_EOL;
+		formatPrint($response);
+	} else {
+		print <<<EOFORM
+<form method='GET'>
+<input type='text' name='domain' placeholder='domain name' />
+</form>
+EOFORM;
+	}
 }
-
-
-
-
-
-/*
-
-$rand = rand(0, 99);
-if (array_key_exists('doh', $_COOKIE)) {
-	$cookie = $_COOKIE['doh'];
-} else {
-	$cookie = '(none)';
-}
-
-$dns = new cDNSMessage();
-$dns->setByteStream(file_get_contents('php://input'));
-$query = $dns->getQuery();
-$answer = '127.0.0.1';
-$dns->setAnswer($answer);
-$output = $dns->getByteStream();
-
-$responseHeaders = array(
-	"Content-Type: application/dns-message",
-	"Content-Length: " . strlen($output),
-	"Cache-Control: max-age=0",
-	"X-Resolve: {$query} --> {$answer}",
-	"X-Sent-Cookie: {$cookie}",
-	"Connection: Close",
-	"Set-Cookie: doh={$rand}; Secure; HttpOnly"
-);
-
-foreach ($responseHeaders as $header) {
-	header($header);
-}
-
-print $output;
-
-*/
 
 ?>
+
