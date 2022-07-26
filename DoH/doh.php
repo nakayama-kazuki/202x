@@ -516,28 +516,31 @@ $ut->register(function() {
 	}
 }, 'DNS (response)');
 
+define('DISP_HEXPREFIX', '0x');
 define('DISP_CTRLCODE', '.');
 define('DISP_SEPARATOR', ' | ');
 
-function formatPrint($in_packed)
+function debugFormat($in_packed)
 {
 	$consumed = 0;
-	$line = '';
+	$packed = '';
+	$output = '';
 	while ($consumed < strlen($in_packed)) {
 		$dec = unpack_substr1byte($in_packed, $consumed++);
-		print str_pad(base_convert($dec, 10, 16), 2, '0', STR_PAD_LEFT);
+		$output .= DISP_HEXPREFIX . str_pad(base_convert($dec, 10, 16), 2, '0', STR_PAD_LEFT);
 		if ($consumed % OCTET === 0) {
-			print DISP_SEPARATOR . $line . PHP_EOL;
-			$line = '';
+			$output .= DISP_SEPARATOR . $packed . PHP_EOL;
+			$packed = '';
 		} else {
-			print chr(0x20);
+			$output .= chr(0x20);
 		}
 		if ((31 < $dec) && ($dec < 127)) {
-			$line .= pack1byte($dec);
+			$packed .= pack1byte($dec);
 		} else {
-			$line .= DISP_CTRLCODE;
+			$packed .= DISP_CTRLCODE;
 		}
 	}
+	return $output;
 }
 
 //define('DNSADDR', '1.1.1.1');
@@ -593,9 +596,53 @@ function resolve($in_domain)
 	return getAnswer($response);
 }
 
+function stdout($in_value, $in_log = FALSE)
+{
+	if ($in_log) {
+		$parsed = pathinfo($_SERVER['SCRIPT_NAME']);
+		$logfile = "{$_SERVER['DOCUMENT_ROOT']}{$parsed['dirname']}/{$parsed['filename']}.log";
+		$fp = fopen($logfile, 'a');
+		fwrite($fp, $in_value);
+		fclose($fp);
+	} else {
+		print $in_value;
+	}
+}
+
+function EOL($in_cnt)
+{
+	$ret = '';
+	while ($in_cnt-- > 0) {
+		$ret .= PHP_EOL;
+	}
+	return $ret;
+}
+
+function dnsDispAndResponse($in_request, $in_log = FALSE)
+{
+	$response = getDnsResponse($in_request);
+	$ip = getAnswer($response);
+	if (!$ip) {
+		$ip = 'n/a';
+	}
+	stdout("( request : {$_GET['domain']} )" . EOL(2), $in_log);
+	$headers = apache_request_headers();
+	foreach ($headers as $key => $value) {
+		stdout("{$key}: {$value}" . EOL(1), $in_log);
+	}
+	stdout(EOL(1), $in_log);
+	stdout(debugFormat($in_request), $in_log);
+	stdout(EOL(2), $in_log);
+	stdout("( response : {$ip} )" . EOL(2), $in_log);
+	stdout(debugFormat($response), $in_log);
+	stdout(EOL(2), $in_log);
+	return $response;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-	// DoH
-	$response = getDnsResponse(file_get_contents('php://input'));
+	// DoH I/F
+	$request = file_get_contents('php://input');
+	$response = dnsDispAndResponse($request, TRUE);
 	$headers = array(
 		'Content-Type: application/dns-message',
 		'Content-Length: ' . strlen($response),
@@ -608,17 +655,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 	}
 	print $response;
 } else {
+	// Web I/F
 	if (array_key_exists('domain', $_GET)) {
 		header('Content-Type: text/plane;');
 		$dns = new DNSMsg();
 		$request = $dns->createRequest($_GET['domain']);
-		$response = getDnsResponse($request);
-		$ip = getAnswer($response);
-		print "( request : {$_GET['domain']} )" . PHP_EOL . PHP_EOL;
-		formatPrint($request);
-		print PHP_EOL . PHP_EOL;
-		print "( response : {$ip} )" . PHP_EOL . PHP_EOL;
-		formatPrint($response);
+		$response = dnsDispAndResponse($request, FALSE);
 	} else {
 		print <<<EOFORM
 <form method='GET'>
