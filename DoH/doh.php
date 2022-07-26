@@ -197,10 +197,10 @@ define('DMASK1', ~FMASK1);
 define('FMASK2', FMASK1 << OCTET);
 define('DMASK2', ~FMASK2);
 
-function parse_dns_domain($in_packed)
+function unpack_dns_domain($in_packed)
 {
 	$ret = array(
-		'parsed' => array(),
+		'unpacked' => array(),
 		'consumed' => 0
 	);
 	$ret['consumed'] = 0;
@@ -211,19 +211,19 @@ function parse_dns_domain($in_packed)
 			break;
 		} else if ($label & FMASK1) {
 			// offset : is_int() = TRUE
-			array_push($ret['parsed'], unpack_substr2byte($in_packed, $ret['consumed']) & DMASK2);
+			array_push($ret['unpacked'], unpack_substr2byte($in_packed, $ret['consumed']) & DMASK2);
 			$ret['consumed'] += 2;
 			break;
 		} else {
 			// string : is_int() = FALSE
-			array_push($ret['parsed'], substr($in_packed, $ret['consumed'] + 1, $label));
+			array_push($ret['unpacked'], substr($in_packed, $ret['consumed'] + 1, $label));
 			$ret['consumed'] += 1 + ($label & DMASK1);
 		}
 	}
 	return $ret;
 }
 
-function compose_dns_domain($in_labels)
+function pack_dns_domain($in_labels)
 {
 	$ret = '';
 	foreach ($in_labels as $label) {
@@ -247,8 +247,8 @@ $ut->register(function() {
 	);
 	foreach ($tests as $test) {
 		$extra = str_repeat('X', rand(0, 10));
-		$result = parse_dns_domain(compose_dns_domain($test) . $extra);
-		if (count(array_diff($result['parsed'], $test)) > 0) {
+		$result = unpack_dns_domain(pack_dns_domain($test) . $extra);
+		if (count(array_diff($result['unpacked'], $test)) > 0) {
 			return FALSE;
 		}
 	}
@@ -341,9 +341,9 @@ class DNSMsg
 		'RDLEN'		=> 16
 		// 'RDATA'	=> 'variable'
 	];
-	private function _parse($in_packed, $in_bitList) {
+	private function _unpack($in_packed, $in_bitList) {
 		// DOMAIN
-		$domain = parse_dns_domain($in_packed);
+		$domain = unpack_dns_domain($in_packed);
 		$consumed = $domain['consumed'];
 		// TYPE, etc ...
 		$bitListLen = array_sum($in_bitList) / OCTET;
@@ -358,52 +358,52 @@ class DNSMsg
 			$consumed += $unpacked['RDLEN'];
 		}
 		return array(
-			'parsed' => array_merge(array('DOMAIN' => $domain['parsed']), $unpacked),
+			'unpacked' => array_merge(array('DOMAIN' => $domain['unpacked']), $unpacked),
 			'consumed' => $consumed
 		);
 	}
-	private function _parse_loop($in_packed, $in_bitList, $in_count) {
+	private function _unpack_loop($in_packed, $in_bitList, $in_count) {
 		$ret = array(
-			'parsed' => array(),
+			'unpacked' => array(),
 			'consumed' => 0
 		);
 		for ($i = 0; $i < $in_count; $i++) {
-			$buff = $this->_parse(substr($in_packed, $ret['consumed']), $in_bitList);
+			$buff = $this->_unpack(substr($in_packed, $ret['consumed']), $in_bitList);
 			$ret['consumed'] += $buff['consumed'];
-			array_push($ret['parsed'], $buff['parsed']);
+			array_push($ret['unpacked'], $buff['unpacked']);
 		}
 		return $ret;
 	}
-	function parse($in_packed) {
+	function unpack($in_packed) {
 		// HEADER
 		$consumed = 0;
 		$byte = array_sum(self::HEADER) / OCTET;
 		$header = util_unpack(substr($in_packed, $consumed, $byte), self::HEADER);
 		// QDSECTION
 		$consumed += $byte;
-		$qdsections = $this->_parse_loop(
+		$qdsections = $this->_unpack_loop(
 			substr($in_packed, $consumed), self::QDSECTION, $header['QDCOUNT']);
 		// RESRECORD (AN)
 		$consumed += $qdsections['consumed'];
-		$ansections = $this->_parse_loop(
+		$ansections = $this->_unpack_loop(
 			substr($in_packed, $consumed), self::RESRECORD, $header['ANCOUNT']);
 		// RESRECORD (NS)
 		$consumed += $ansections['consumed'];
-		$nssections = $this->_parse_loop(
+		$nssections = $this->_unpack_loop(
 			substr($in_packed, $consumed), self::RESRECORD, $header['NSCOUNT']);
 		// RESRECORD (AR)
 		$consumed += $nssections['consumed'];
-		$arsections = $this->_parse_loop(
+		$arsections = $this->_unpack_loop(
 			substr($in_packed, $consumed), self::RESRECORD, $header['ARCOUNT']);
 		return array(
 			'HEADER'		=> $header,
-			'QDSECTIONS'	=> $qdsections['parsed'],
-			'ANSECTIONS'	=> $ansections['parsed'],
-			'NSSECTIONS'	=> $nssections['parsed'],
-			'ARSECTIONS'	=> $arsections['parsed']
+			'QDSECTIONS'	=> $qdsections['unpacked'],
+			'ANSECTIONS'	=> $ansections['unpacked'],
+			'NSSECTIONS'	=> $nssections['unpacked'],
+			'ARSECTIONS'	=> $arsections['unpacked']
 		);
 	}
-	private function _compose($in_unpacked, $in_bitList) {
+	private function _pack($in_unpacked, $in_bitList) {
 		foreach ($in_unpacked as $key => $value) {
 			if (($key === 'DOMAIN') || ($key === 'RDATA')) {
 				continue;
@@ -412,7 +412,7 @@ class DNSMsg
 			}
 		}
 		// DOMAIN
-		$packed = compose_dns_domain($in_unpacked['DOMAIN']);
+		$packed = pack_dns_domain($in_unpacked['DOMAIN']);
 		// TYPE, etc ...
 		$packed .= util_pack($unpacked, $in_bitList);
 		// RDATA
@@ -425,24 +425,24 @@ class DNSMsg
 		}
 		return $packed;
 	}
-	function compose($in_unpacked) {
+	function pack($in_unpacked) {
 		$packed = util_pack($in_unpacked['HEADER'], self::HEADER);
 		foreach ($in_unpacked['QDSECTIONS'] as $qdsection) {
-			$packed .= $this->_compose($qdsection, self::QDSECTION);
+			$packed .= $this->_pack($qdsection, self::QDSECTION);
 		}
 		foreach ($in_unpacked['ANSECTIONS'] as $ansection) {
-			$packed .= $this->_compose($ansection, self::RESRECORD);
+			$packed .= $this->_pack($ansection, self::RESRECORD);
 		}
 		foreach ($in_unpacked['NSSECTIONS'] as $nssection) {
-			$packed .= $this->_compose($nssection, self::RESRECORD);
+			$packed .= $this->_pack($nssection, self::RESRECORD);
 		}
 		foreach ($in_unpacked['ARSECTIONS'] as $arsection) {
-			$packed .= $this->_compose($arsection, self::RESRECORD);
+			$packed .= $this->_pack($arsection, self::RESRECORD);
 		}
 		return $packed;
 	}
 	function createRequest($in_domain) {
-		$parsed = array(
+		$unpacked = array(
 			'HEADER' => array(
 				'ID' => rand(0, 2 ** 16 - 1),
 				'F_QR' => 0, // request
@@ -471,33 +471,29 @@ class DNSMsg
 			'NSSECTIONS' => array(),
 			'ARSECTIONS' => array()
 		);
-		return $this->compose($parsed);
+		return $this->pack($unpacked);
 	}
-	function createResponse($in_request_mixed, $in_ip) {
-		if (is_array($in_request_mixed)) {
-			$parsed = $in_request_mixed;
-		} else {
-			$parsed = $this->parse($in_request_mixed);
-		}
-		$parsed['HEADER']['F_QR'] = 1; // response
-		$parsed['HEADER']['ANCOUNT'] = 1;
-		$parsed['ANSECTIONS'] = array();
-		array_push($parsed['ANSECTIONS'], array(
-			'DOMAIN' => $parsed['QDSECTIONS'][0]['DOMAIN'],
+	function createResponse($in_unpacked_request, $in_ip) {
+		$unpacked = $this->unpack($in_unpacked_request);
+		$unpacked['HEADER']['F_QR'] = 1; // response
+		$unpacked['HEADER']['ANCOUNT'] = 1;
+		$unpacked['ANSECTIONS'] = array();
+		array_push($unpacked['ANSECTIONS'], array(
+			'DOMAIN' => $unpacked['QDSECTIONS'][0]['DOMAIN'],
 			'TYPE' => dnsRecToTypeCode('A'),
 			'CLASS' => 1, // IN
 			'TTL' => 5,
 			'RDLEN' => 4,
 			'RDATA' => $in_ip
 		));
-		return $this->compose($parsed);
+		return $this->pack($unpacked);
 	}
 }
 
 $ut->register(function() {
 	$dns = new DNSMsg();
 	$packed = $dns->createRequest('www.yahoo.co.jp');
-	$result = $dns->compose($dns->parse($packed));
+	$result = $dns->pack($dns->unpack($packed));
 	if ($result === $packed) {
 		return TRUE;
 	} else {
@@ -508,7 +504,7 @@ $ut->register(function() {
 $ut->register(function() {
 	$dns = new DNSMsg();
 	$packed = $dns->createResponse($dns->createRequest('www.yahoo.co.jp'), '1.2.3.4');
-	$result = $dns->compose($dns->parse($packed));
+	$result = $dns->pack($dns->unpack($packed));
 	if ($result === $packed) {
 		return TRUE;
 	} else {
@@ -545,17 +541,18 @@ function debugFormat($in_packed)
 
 //define('DNSADDR', '1.1.1.1');
 define('DNSADDR', '8.8.8.8');
+define('IOSLEEP', 0.05);
 
 function getDnsResponse($in_request)
 {
 	$handle = fsockopen('udp://' . DNSADDR, 53);
-	stream_set_blocking($handle, FALSE);
 	if (!$handle) {
 		return NULL;
 	}
+	stream_set_blocking($handle, FALSE);
 	fwrite($handle, $in_request);
 	$response = '';
-	$loop = 0;
+	$timeout = 1;
 	while (!feof($handle)) {
 		$read = fread($handle, 8192);
 		if (strlen($read) > 0) {
@@ -566,11 +563,7 @@ function getDnsResponse($in_request)
 		if (strlen($response) > 0) {
 			break;
 		} else {
-			// 0.05sec
-			usleep(50000);
-			if ($loop++ > 10) {
-				break;
-			}
+			usleep(IOSLEEP * 1000000);
 		}
 	}
 	fclose($handle);
@@ -580,8 +573,8 @@ function getDnsResponse($in_request)
 function getAnswer($in_response)
 {
 	$dns = new DNSMsg();
-	$parsed = $dns->parse($in_response);
-	foreach ($parsed['ANSECTIONS'] as $answer) {
+	$unpacked = $dns->unpack($in_response);
+	foreach ($unpacked['ANSECTIONS'] as $answer) {
 		if ($answer['TYPE'] === dnsRecToTypeCode('A')) {
 			return $answer['RDATA'];
 		}
@@ -599,8 +592,8 @@ function resolve($in_domain)
 function stdout($in_value, $in_log = FALSE)
 {
 	if ($in_log) {
-		$parsed = pathinfo($_SERVER['SCRIPT_NAME']);
-		$logfile = "{$_SERVER['DOCUMENT_ROOT']}{$parsed['dirname']}/{$parsed['filename']}.log";
+		$info = pathinfo($_SERVER['SCRIPT_NAME']);
+		$logfile = "{$_SERVER['DOCUMENT_ROOT']}{$info['dirname']}/{$info['filename']}.log";
 		$fp = fopen($logfile, 'a');
 		fwrite($fp, $in_value);
 		fclose($fp);
