@@ -561,8 +561,8 @@ function getDnsResponse($in_request)
 			$response .= $read;
 			continue;
 		}
-		// can't read any more
 		if (strlen($response) > 0) {
+			// can't read any more
 			break;
 		} else {
 			usleep(IOSLEEP * 1000000);
@@ -591,17 +591,15 @@ function resolve($in_domain)
 	return getAnswer($response);
 }
 
-function stdout($in_value, $in_log = FALSE)
+function logging($in_value)
 {
-	if ($in_log) {
-		$info = pathinfo($_SERVER['SCRIPT_NAME']);
-		$logfile = "{$_SERVER['DOCUMENT_ROOT']}{$info['dirname']}/{$info['filename']}.log";
-		$fp = fopen($logfile, 'a');
-		fwrite($fp, $in_value);
-		fclose($fp);
-	} else {
-		print $in_value;
-	}
+	$info = pathinfo($_SERVER['SCRIPT_NAME']);
+	$logfile = "{$_SERVER['DOCUMENT_ROOT']}{$info['dirname']}/{$info['filename']}.log";
+	$fp = fopen($logfile, 'a');
+	flock($fp, LOCK_EX);
+	fwrite($fp, $in_value);
+	flock($fp, LOCK_UN);
+	fclose($fp);
 }
 
 function EOL($in_cnt)
@@ -613,31 +611,33 @@ function EOL($in_cnt)
 	return $ret;
 }
 
-function dnsDispAndResponse($in_request, $in_log = FALSE)
+function handleOutputBuffer($in_request, $in_response, $in_logging = FALSE)
 {
-	$response = getDnsResponse($in_request);
-	$ip = getAnswer($response);
+	$ip = getAnswer($in_response);
 	if (!$ip) {
 		$ip = 'n/a';
 	}
-	stdout("( request : {$_GET['domain']} )" . EOL(2), $in_log);
+	print "( request : {$_GET['domain']} )" . EOL(2);
 	$headers = apache_request_headers();
 	foreach ($headers as $key => $value) {
-		stdout("{$key}: {$value}" . EOL(1), $in_log);
+		print "{$key}: {$value}" . EOL(1);
 	}
-	stdout(EOL(1), $in_log);
-	stdout(debugFormat($in_request), $in_log);
-	stdout(EOL(2), $in_log);
-	stdout("( response : {$ip} )" . EOL(2), $in_log);
-	stdout(debugFormat($response), $in_log);
-	stdout(EOL(2), $in_log);
-	return $response;
+	print EOL(1);
+	print debugFormat($in_request);
+	print EOL(2);
+	print "( response : {$ip} )" . EOL(2);
+	print debugFormat($in_response);
+	print EOL(2);
+	if ($in_logging) {
+		logging(ob_get_clean());
+	}
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 	// DoH I/F
 	$request = file_get_contents('php://input');
-	$response = dnsDispAndResponse($request, TRUE);
+	$response = getDnsResponse($request);
+	handleOutputBuffer($request, $response, TRUE);
 	$headers = array(
 		'Content-Type: application/dns-message',
 		'Content-Length: ' . strlen($response),
@@ -655,7 +655,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 		header('Content-Type: text/plane;');
 		$dns = new DNSMsg();
 		$request = $dns->createRequest($_GET['domain']);
-		$response = dnsDispAndResponse($request, FALSE);
+		$response = getDnsResponse($request);
+		handleOutputBuffer($request, $response);
 	} else {
 		print <<<EOFORM
 <form method='GET'>
