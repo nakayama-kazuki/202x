@@ -543,7 +543,7 @@ function debugFormat($in_packed)
 
 //define('DNSADDR', '1.1.1.1');
 define('DNSADDR', '8.8.8.8');
-define('IOSLEEP', 0.05);
+define('IOSLEEP', 0.01);
 
 function getDnsResponse($in_request)
 {
@@ -572,23 +572,23 @@ function getDnsResponse($in_request)
 	return $response;
 }
 
-function getAnswer($in_response)
+function getDomainFromQd($in_packed)
 {
 	$dns = new DNSMsg();
-	$unpacked = $dns->unpack($in_response);
-	foreach ($unpacked['ANSECTIONS'] as $answer) {
-		if ($answer['TYPE'] === dnsRecToTypeCode('A')) {
-			return $answer['RDATA'];
+	$unpacked = $dns->unpack($in_packed);
+	return implode('.', $unpacked['QDSECTIONS'][0]['DOMAIN']);
+}
+
+function getIpFromAn($in_packed)
+{
+	$dns = new DNSMsg();
+	$unpacked = $dns->unpack($in_packed);
+	foreach ($unpacked['ANSECTIONS'] as $ansection) {
+		if ($ansection['TYPE'] === dnsRecToTypeCode('A')) {
+			return $ansection['RDATA'];
 		}
 	}
 	return NULL;
-}
-
-function resolve($in_domain)
-{
-	$dns = new DNSMsg();
-	$response = getDnsResponse($dns->createRequest($in_domain));
-	return getAnswer($response);
 }
 
 function logging($in_value)
@@ -611,13 +611,13 @@ function EOL($in_cnt)
 	return $ret;
 }
 
-function handleOutputBuffer($in_request, $in_response, $in_logging = FALSE)
+function requestToOutputBuffer($in_request)
 {
-	$ip = getAnswer($in_response);
-	if (!$ip) {
-		$ip = 'n/a';
+	$domain = getDomainFromQd($in_request);
+	if (!$domain) {
+		$domain = 'n/a';
 	}
-	print "( request : {$_GET['domain']} )" . EOL(2);
+	print "( request : {$domain} )" . EOL(2);
 	$headers = apache_request_headers();
 	foreach ($headers as $key => $value) {
 		print "{$key}: {$value}" . EOL(1);
@@ -625,19 +625,28 @@ function handleOutputBuffer($in_request, $in_response, $in_logging = FALSE)
 	print EOL(1);
 	print debugFormat($in_request);
 	print EOL(2);
+}
+
+function responseToOutputBuffer($in_response)
+{
+	$ip = getIpFromAn($in_response);
+	if (!$ip) {
+		$ip = 'n/a';
+	}
 	print "( response : {$ip} )" . EOL(2);
+	$headers = apache_response_headers();
+	foreach ($headers as $key => $value) {
+		print "{$key}: {$value}" . EOL(1);
+	}
+	print EOL(1);
 	print debugFormat($in_response);
 	print EOL(2);
-	if ($in_logging) {
-		logging(ob_get_clean());
-	}
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 	// DoH I/F
 	$request = file_get_contents('php://input');
 	$response = getDnsResponse($request);
-	handleOutputBuffer($request, $response, TRUE);
 	$headers = array(
 		'Content-Type: application/dns-message',
 		'Content-Length: ' . strlen($response),
@@ -648,6 +657,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 	foreach ($headers as $header) {
 		header($header);
 	}
+	requestToOutputBuffer($request);
+	responseToOutputBuffer($response);
+	logging(ob_get_clean());
 	print $response;
 } else {
 	// Web I/F
@@ -656,7 +668,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 		$dns = new DNSMsg();
 		$request = $dns->createRequest($_GET['domain']);
 		$response = getDnsResponse($request);
-		handleOutputBuffer($request, $response);
+		requestToOutputBuffer($request);
+		responseToOutputBuffer($response);
 	} else {
 		print <<<EOFORM
 <form method='GET'>
@@ -667,4 +680,3 @@ EOFORM;
 }
 
 ?>
-
