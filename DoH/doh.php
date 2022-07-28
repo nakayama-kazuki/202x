@@ -554,7 +554,6 @@ function getDnsResponse($in_request)
 	stream_set_blocking($handle, FALSE);
 	fwrite($handle, $in_request);
 	$response = '';
-	$timeout = 1;
 	while (!feof($handle)) {
 		$read = fread($handle, 8192);
 		if (strlen($read) > 0) {
@@ -611,15 +610,10 @@ function EOL($in_cnt)
 	return $ret;
 }
 
-function printRequest($in_packed)
+function printHttp($in_headline, $in_headers, $in_packed)
 {
-	$domain = getDomainFromQd($in_packed);
-	if (!$domain) {
-		$domain = 'n/a';
-	}
-	print "( request : {$domain} )" . EOL(2);
-	$headers = apache_request_headers();
-	foreach ($headers as $key => $value) {
+	print $in_headline . EOL(2);
+	foreach ($in_headers as $key => $value) {
 		print "{$key}: {$value}" . EOL(1);
 	}
 	print EOL(1);
@@ -627,20 +621,30 @@ function printRequest($in_packed)
 	print EOL(2);
 }
 
-function printResponse($in_packed)
+function printHttpRequest($in_packed)
+{
+	$domain = getDomainFromQd($in_packed);
+	if (!$domain) {
+		$domain = 'n/a';
+	}
+	printHttp(
+		"( Browser ---> DoH : {$domain} )",
+		apache_request_headers(),
+		$in_packed
+	);
+}
+
+function printHttpResponse($in_packed)
 {
 	$ip = getIpFromAn($in_packed);
 	if (!$ip) {
 		$ip = 'n/a';
 	}
-	print "( response : {$ip} )" . EOL(2);
-	$headers = apache_response_headers();
-	foreach ($headers as $key => $value) {
-		print "{$key}: {$value}" . EOL(1);
-	}
-	print EOL(1);
-	print debugFormat($in_packed);
-	print EOL(2);
+	printHttp(
+		"( Browser <--- DoH : {$ip} )",
+		apache_response_headers(),
+		$in_packed
+	);
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -657,8 +661,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 	foreach ($headers as $header) {
 		header($header);
 	}
-	printRequest($request);
-	printResponse($response);
+	printHttpRequest($request);
+	printHttpResponse($response);
 	logging(ob_get_clean());
 	print $response;
 } else {
@@ -668,8 +672,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 		$dns = new DNSMsg();
 		$request = $dns->createRequest($_GET['domain']);
 		$response = getDnsResponse($request);
-		printRequest($request);
-		printResponse($response);
+		printHttpRequest($request);
+		printHttpResponse($response);
 	} else {
 		print <<<EOFORM
 <form method='GET'>
