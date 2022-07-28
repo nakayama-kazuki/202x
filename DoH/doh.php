@@ -611,9 +611,9 @@ function EOL($in_cnt)
 	return $ret;
 }
 
-function requestToOutputBuffer($in_request)
+function printRequest($in_packed)
 {
-	$domain = getDomainFromQd($in_request);
+	$domain = getDomainFromQd($in_packed);
 	if (!$domain) {
 		$domain = 'n/a';
 	}
@@ -623,13 +623,13 @@ function requestToOutputBuffer($in_request)
 		print "{$key}: {$value}" . EOL(1);
 	}
 	print EOL(1);
-	print debugFormat($in_request);
+	print debugFormat($in_packed);
 	print EOL(2);
 }
 
-function responseToOutputBuffer($in_response)
+function printResponse($in_packed)
 {
-	$ip = getIpFromAn($in_response);
+	$ip = getIpFromAn($in_packed);
 	if (!$ip) {
 		$ip = 'n/a';
 	}
@@ -639,7 +639,7 @@ function responseToOutputBuffer($in_response)
 		print "{$key}: {$value}" . EOL(1);
 	}
 	print EOL(1);
-	print debugFormat($in_response);
+	print debugFormat($in_packed);
 	print EOL(2);
 }
 
@@ -657,8 +657,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 	foreach ($headers as $header) {
 		header($header);
 	}
-	requestToOutputBuffer($request);
-	responseToOutputBuffer($response);
+	printRequest($request);
+	printResponse($response);
 	logging(ob_get_clean());
 	print $response;
 } else {
@@ -668,8 +668,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 		$dns = new DNSMsg();
 		$request = $dns->createRequest($_GET['domain']);
 		$response = getDnsResponse($request);
-		requestToOutputBuffer($request);
-		responseToOutputBuffer($response);
+		printRequest($request);
+		printResponse($response);
 	} else {
 		print <<<EOFORM
 <form method='GET'>
