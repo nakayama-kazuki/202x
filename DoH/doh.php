@@ -514,33 +514,6 @@ $ut->register(function() {
 	}
 }, 'DNS (response)');
 
-define('DISP_HEXPREFIX', '0x');
-define('DISP_CTRLCODE', '.');
-define('DISP_SEPARATOR', ' | ');
-
-function debugFormat($in_packed)
-{
-	$consumed = 0;
-	$packed = '';
-	$output = '';
-	while ($consumed < strlen($in_packed)) {
-		$dec = unpack_substr1byte($in_packed, $consumed++);
-		$output .= DISP_HEXPREFIX . str_pad(base_convert($dec, 10, 16), 2, '0', STR_PAD_LEFT);
-		if ($consumed % OCTET === 0) {
-			$output .= DISP_SEPARATOR . $packed . PHP_EOL;
-			$packed = '';
-		} else {
-			$output .= chr(0x20);
-		}
-		if ((31 < $dec) && ($dec < 127)) {
-			$packed .= pack1byte($dec);
-		} else {
-			$packed .= DISP_CTRLCODE;
-		}
-	}
-	return $output;
-}
-
 //define('DNSADDR', '1.1.1.1');
 define('DNSADDR', '8.8.8.8');
 define('IOSLEEP', 0.01);
@@ -601,6 +574,33 @@ function logging($in_value)
 	fclose($fp);
 }
 
+define('DISP_HEXPREFIX', '0x');
+define('DISP_CTRLCODE', '.');
+define('DISP_SEPARATOR', ' | ');
+
+function debugFormat($in_packed)
+{
+	$consumed = 0;
+	$packed = '';
+	$output = '';
+	while ($consumed < strlen($in_packed)) {
+		$dec = unpack_substr1byte($in_packed, $consumed++);
+		$output .= DISP_HEXPREFIX . str_pad(base_convert($dec, 10, 16), 2, '0', STR_PAD_LEFT);
+		if ($consumed % OCTET === 0) {
+			$output .= DISP_SEPARATOR . $packed . PHP_EOL;
+			$packed = '';
+		} else {
+			$output .= chr(0x20);
+		}
+		if ((31 < $dec) && ($dec < 127)) {
+			$packed .= pack1byte($dec);
+		} else {
+			$packed .= DISP_CTRLCODE;
+		}
+	}
+	return $output;
+}
+
 function EOL($in_cnt)
 {
 	$ret = '';
@@ -610,14 +610,14 @@ function EOL($in_cnt)
 	return $ret;
 }
 
-function printHttp($in_headline, $in_headers, $in_packed)
+function printHttp($in_headline, $in_headers, $in_entityBody)
 {
 	print $in_headline . EOL(2);
 	foreach ($in_headers as $key => $value) {
 		print "{$key}: {$value}" . EOL(1);
 	}
 	print EOL(1);
-	print debugFormat($in_packed);
+	print $in_entityBody;
 	print EOL(2);
 }
 
@@ -630,7 +630,7 @@ function printHttpRequest($in_packed)
 	printHttp(
 		"( Browser ---> DoH : {$domain} )",
 		apache_request_headers(),
-		$in_packed
+		debugFormat($in_packed)
 	);
 }
 
@@ -643,7 +643,7 @@ function printHttpResponse($in_packed)
 	printHttp(
 		"( Browser <--- DoH : {$ip} )",
 		apache_response_headers(),
-		$in_packed
+		debugFormat($in_packed)
 	);
 }
 
