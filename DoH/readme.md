@@ -16,7 +16,7 @@
 
 DoH を利用することで Web Browser と DNS キャッシュサーバ間の通信を「盗聴」「改竄」「なりすまし」から守り、プライバシーおよびセキュリティーの向上が望める、といった主張ですね。
 
-その一方で [RFC 8484](https://tools.ietf.org/html/rfc8484) では …
+その一方で [RFC 8484](https://tools.ietf.org/html/rfc8484) には …
 
 > The DoH protocol design allows applications to fully leverage the HTTP ecosystem, including features that are not enumerated here. Utilizing the full set of HTTP features enables DoH to be more than an HTTP tunnel, but it is at the cost of opening up implementations to the full set of privacy considerations of HTTP.
 
@@ -24,9 +24,9 @@ HTTP メカニズムを活用するのはよいとしてプラバシーに配慮
 
 > Determining whether or not a DoH implementation requires HTTP cookie [RFC6265] support is particularly important because HTTP cookies are the primary state tracking mechanism in HTTP. HTTP cookies SHOULD NOT be accepted by DOH clients unless they are explicitly required by a use case.
 
-特にプライバシー文脈において Web Browser は基本的には Cookie の受け入れに慎重になるべき、などの記載を見つけることができます。ついでに補足すると代表的な DoH サービスのレスポンスには Set-Cookie は含まれていないようです。
+特にプライバシー文脈において Web Browser は基本的には Cookie の受け入れに慎重になるべき、などの記載があります。補足すると代表的な DoH サービスのレスポンスには Set-Cookie は含まれていないようです。
 
-例えば dns.google の場合（以降 application/dns-message の entity body は整形表示） …
+例えば dns.google の場合（以降 application/dns-message の entity body は整形表示）は …
 
 ```
 HTTP/1.1 200 OK
@@ -50,7 +50,7 @@ Alt-Svc: h3=":443"; ma=2592000,h3-29=":443"; ma=2592000,h3-Q050=":443";
 0x00 0x43 0x00 0x04 0x8e 0xfb 0x2a 0x84 | ..C....*
 ```
 
-cloudflare-dns.com の場合 …
+cloudflare-dns.com の場合は …
 
 ```
 HTTP/1.1 200 OK
@@ -70,7 +70,7 @@ CF-RAY: 733527ee7f88af24-NRT
 0x00 0xec 0x00 0x04 0xac 0xd9 0xa1 0x24 | ........
 ```
 
-doh.opendns.com の場合 …
+doh.opendns.com の場合は …
 
 ```
 HTTP/1.1 200 Success
@@ -86,7 +86,7 @@ Content-Length: 60
 0x01 0x2c 0x00 0x04 0x8e 0xfb 0x2a 0x84 | ..,....*
 ```
 
-とはいえ、もし将来プライバシーを軽視する DoH サービスがユーザー識別子と名前解決要求を紐づけて興味関心情報として蓄積し第三者に提供することを目論んだ場合、それはプライバシー上の脅威になり得ます。
+とはいえ、もし魔が差した DoH サービスがユーザー識別子と名前解決要求を紐づけて興味関心情報として蓄積し第三者に提供することを目論んだ場合、プライバシーの向上どころか重大な脅威になり得ます。
 
 ## DoH x Cookie のテストシナリオ
 
@@ -267,7 +267,7 @@ Pragma: no-cache
 DoH と同じドメインの Web ページに対する HTTP リクエストでも Cookie は送信されませんでした。
 
 ```
-GET /PATH_TO_SCRIPT/doh.php HTTP/1.1
+GET /PATH_TO_SCRIPT/SCRIPT HTTP/1.1
 Host: TEST_SERVER
 User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:103.0) Gecko/20100101 Firefox/103.0
 Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
@@ -303,7 +303,7 @@ Content-Type: text/plane;charset=UTF-8
 
 
 ```
-GET /PATH_TO_SCRIPT/doh.php HTTP/1.1
+GET /PATH_TO_SCRIPT/SCRIPT HTTP/1.1
 Host: TEST_SERVER
 User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:103.0) Gecko/20100101 Firefox/103.0
 Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
@@ -355,7 +355,4 @@ Pragma: no-cache
 
 今回利用した Web Browser の実装ではシナリオ 1-1, 1-2, 2-1 ともに Cookie は送信されず、ゆえに DoH サービスがユーザーを識別して興味関心情報を蓄積することは困難である、ということが確認できました。ですので、Web Browser と DNS キャッシュサーバ間の通信を守りたいという方は DoH の活用をご検討ください！
 
-余談ですが Web アプリケーションの開発 ～ テストの際には hosts を変更することがありますが、設定ミスや元に戻すことを忘れた結果のトラブルをしばしば見かけます。同じ環境で開発 ～ テストをしているグループ向けの設定を社内の DoH サービスで提供し、テスト実施者は Web Browser の DoH を on/off することで利用する環境を切り替える、もしくはテスト専用の Web Browser でのみ DoH を使う ... なんて運用で hosts 変更によるトラブルが減らせるかもしれない？と感じた今日この頃です。
-
-そのような用途向けに [簡易 DoH サーバ + DNS メッセージ解析 & 構築のサンプルコード](https://github.com/nakayama-kazuki/202x/blob/main/DoH/doh.php) を置きましたのでよろしければご活用ください。
-
+蛇足ですが Web アプリケーションの開発 ～ テストの際には hosts を変更することがありますが、設定ミスや元に戻すことを忘れた結果のトラブルをしばしば見かけます。同じ環境で開発 ～ テストをしているグループ向けの設定を社内の DoH サービスで提供し、テスト実施者は Web Browser の DoH を on/off することで利用する環境を切り替える、もしくはテスト専用の Web Browser でのみ DoH を使う ... なんて運用で hosts 変更によるトラブルが減らせるかも … などと感じた今日この頃です。そのような用途向けに [簡易 DoH サーバ + application/dns-message 解析 & 構築のサンプルコード](https://github.com/nakayama-kazuki/202x/blob/main/DoH/doh.php) を置きましたのでよろしければご活用ください。
