@@ -153,7 +153,7 @@ Pragma: no-cache
 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 | ........
 ```
 
-それに対して Set-Cookie を含めた DoH レスポンスです。
+それに対する Set-Cookie を含めた DoH レスポンスです。
 
 ```
 Content-Length: 79
@@ -205,7 +205,7 @@ Pragma: no-cache
 
 次にこの状態からシナリオ 1-2 を確認します。
 
-DoH と同じドメインの Web ページに対する HTTP リクエストで Cookie は送信されませんでした。
+DoH と同じドメインの Web ページに対する HTTP リクエストでも Cookie は送信されませんでした。
 
 ```
 GET /PATH_TO_SCRIPT/doh.php HTTP/1.1
@@ -225,7 +225,7 @@ Sec-Fetch-User: ?1
 
 最後にシナリオ 2-1 の通信を確認します。
 
-Web Browser は DoH と同じドメインの Web ページに対する Set-Cookie を含めた HTTP レスポンスを受け取ります。
+まず Web Browser が DoH と同じドメインの Web ページに対する Set-Cookie を含めた HTTP レスポンスを受け取ります。
 
 ```
 HTTP/1.1 200 OK
