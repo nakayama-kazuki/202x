@@ -6,7 +6,7 @@
 
 今日は DNS over HTTPS（以下 DoH）の気になる … とりわけプライバシー観点における … Web Browser 実装について記事にしてみたいと思います。
 
-ところで、皆さんは既に DoH をお試しでしょうか？
+ところで、皆さんは既に DoH をお試し中でしょうか？
 
 [Mozilla によれば](https://wiki.mozilla.org/Trusted_Recursive_Resolver)
 
@@ -14,17 +14,17 @@
 
 とのことです。
 
-DoH を利用することで Web Browser と DNS キャッシュサーバ間の通信を「盗聴」「改竄」「なりすまし」から守り、プライバシーおよびセキュリティーの向上が望める、との主張があります。
+DoH を利用することで Web Browser と DNS キャッシュサーバ間の通信を「盗聴」「改竄」「なりすまし」から守り、プライバシーおよびセキュリティーの向上が望める、といった主張ですね。
 
 その一方で [RFC 8484](https://tools.ietf.org/html/rfc8484) には …
 
 > The DoH protocol design allows applications to fully leverage the HTTP ecosystem, including features that are not enumerated here. Utilizing the full set of HTTP features enables DoH to be more than an HTTP tunnel, but it is at the cost of opening up implementations to the full set of privacy considerations of HTTP.
 
-HTTP メカニズムを活用するのはよいがプラバシーに配慮しましょう、とう記載や
+HTTP メカニズムを活用するのはよいとしてプラバシーに配慮しましょう、という記載や
 
 > Determining whether or not a DoH implementation requires HTTP cookie [RFC6265] support is particularly important because HTTP cookies are the primary state tracking mechanism in HTTP. HTTP cookies SHOULD NOT be accepted by DOH clients unless they are explicitly required by a use case.
 
-特にプライバシー文脈において Web Browser は基本的には Cookie の受け入れに慎重になるべき、などの記載が見つかります。さらに代表的な DoH サービスのレスポンスには Set-Cookie は含まれていないようです。
+特にプライバシー文脈において Web Browser は基本的には Cookie の受け入れに慎重になるべき、などの記載が見つかります。補足すると代表的な DoH サービスのレスポンスには Set-Cookie は含まれていないようです。
 
 dns.google の場合 …
 
@@ -58,7 +58,7 @@ Content-Length: 60
 
 ```
 
-しかしながら、もしプライバシーを軽視する DoH サービスがユーザー識別子と名前解決要求を紐づけて興味関心情報として蓄積し第三者に提供することを考えた場合、プライバシー上の脅威になり得ます。
+とはいえ、もし将来プライバシーを軽視する DoH サービスがユーザー識別子と名前解決要求を紐づけて興味関心情報として蓄積し第三者に提供することを目論んだ場合、それはプライバシー上の脅威になり得ます。
 
 ## DoH x Cookie のテストシナリオ
 
@@ -132,6 +132,7 @@ print $response;
 	- 1-2. 通常の Web ブラウジング（HTTP リクエスト）でその Cookie を送信するか？
 2. 通常の Web ブラウジング（HTTP レスポンスで）Set-Cookie を受けた Web Browser は …
 	- 2-1. DoH リクエストでその Cookie を送信するか？
+	- ~~2-2. 通常の Web ブラウジング（HTTP リクエスト）でその Cookie を送信するか？~~ → Yes なので割愛
 
 テストに利用した Web Browser のバージョンは以下の通りです。
 
@@ -294,7 +295,7 @@ Sec-Fetch-User: ?1
 
 しかしながら DoH リクエストで Cookie は送信されませんでした。
 
-補足として全てのシナリオにおける DoH リクエストで Cookie のみならず User-Agent や Accept-Language などのユーザー識別に寄与する情報も送信されていないこともわかりました。
+補足として全てのシナリオにおける DoH リクエストでは Cookie のみならず User-Agent や Accept-Language などのユーザー識別に寄与する情報も送信されていないこともわかりました。
 
 ```
 Host: TEST_SERVER
