@@ -24,9 +24,10 @@ HTTP メカニズムを活用するのはよいとしてプラバシーに配慮しましょう、という記載や
 
 > Determining whether or not a DoH implementation requires HTTP cookie [RFC6265] support is particularly important because HTTP cookies are the primary state tracking mechanism in HTTP. HTTP cookies SHOULD NOT be accepted by DOH clients unless they are explicitly required by a use case.
 
-特にプライバシー文脈において Web Browser は基本的には Cookie の受け入れに慎重になるべき、などの記載が見つかります。ついでに補足すると代表的な DoH サービスのレスポンスには Set-Cookie は含まれていないようです（application/dns-message の entity body は整形してます）。
+特にプライバシー文脈において Web Browser は基本的には Cookie の受け入れに慎重になるべき、などの記載が見つかります。ついでに補足すると代表的な DoH サービスのレスポンスには Set-Cookie は含まれていないようです。
 
-dns.google の場合 …
+
+例えば dns.google の場合（以降 application/dns-message の entity body は整形してます） …
 
 ```
 HTTP/1.1 200 OK
