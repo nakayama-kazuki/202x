@@ -321,7 +321,7 @@ Sec-Fetch-User: ?1
 
 しかしながら DoH リクエストで Cookie は送信されませんでした。
 
-補足として全てのシナリオにおける DoH リクエストでは Cookie のみならず User-Agent や Accept-Language などのユーザー識別に寄与する情報も送信されていないこともわかりました。些末ですが Accept-Encoding が空なのは Firefox のバグでしょうか …
+補足として全てのシナリオにおける DoH リクエストでは Cookie のみならず User-Agent や Accept-Language などのユーザー識別に寄与する情報も送信されていないことも確認できました（[参考](https://bugzilla.mozilla.org/show_bug.cgi?id=1543201)）。些末ですが Accept-Encoding が空なのは Firefox のバグでしょうか …
 
 ```
 Host: TEST_SERVER
