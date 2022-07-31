@@ -27,7 +27,7 @@ HTTP メカニズムを活用するのはよいとしてプラバシーに配慮しましょう、という記載や
 特にプライバシー文脈において Web Browser は基本的には Cookie の受け入れに慎重になるべき、などの記載が見つかります。ついでに補足すると代表的な DoH サービスのレスポンスには Set-Cookie は含まれていないようです。
 
 
-例えば dns.google の場合（以降 application/dns-message の entity body は整形してます） …
+例えば dns.google の場合（以降 application/dns-message の entity body は整形表示） …
 
 ```
 HTTP/1.1 200 OK
@@ -49,6 +49,26 @@ Alt-Svc: h3=":443"; ma=2592000,h3-29=":443"; ma=2592000,h3-Q050=":443";
 0x63 0x6f 0x6d 0x00 0x00 0x01 0x00 0x01 | .com....
 0xc0 0x0c 0x00 0x01 0x00 0x01 0x00 0x00 | ........
 0x00 0x43 0x00 0x04 0x8e 0xfb 0x2a 0x84 | ..C....*
+```
+
+cloudflare-dns.com の場合 …
+
+```
+HTTP/1.1 200 OK
+Server: cloudflare
+Date: Sun, 31 Jul 2022 09:02:35 GMT
+Content-Type: application/dns-message
+Connection: keep-alive
+Access-Control-Allow-Origin: *
+Content-Length: 48
+CF-RAY: 733527ee7f88af24-NRT
+
+0x99 0xeb 0x81 0x80 0x00 0x01 0x00 0x01 | .......
+0x00 0x00 0x00 0x00 0x03 0x77 0x77 0x77 | ......ww
+0x06 0x67 0x6f 0x6f 0x67 0x6c 0x65 0x03 | w.google
+0x63 0x6f 0x6d 0x00 0x00 0x01 0x00 0x01 | .com....
+0xc0 0x0c 0x00 0x01 0x00 0x01 0x00 0x00 | ........
+0x00 0xec 0x00 0x04 0xac 0xd9 0xa1 0x24 | ........
 ```
 
 doh.opendns.com の場合 …
@@ -139,7 +159,7 @@ print $response;
 	- 1-2. 通常の Web ブラウジング（HTTP リクエスト）でその Cookie を送信するか？
 2. 通常の Web ブラウジング（HTTP レスポンスで）Set-Cookie を受けた Web Browser は …
 	- 2-1. DoH リクエストでその Cookie を送信するか？
-	- ~~2-2. 通常の Web ブラウジング（HTTP リクエスト）でその Cookie を送信するか？~~ → 自明（= 送信する）なので割愛
+	- ~~2-2. 通常の Web ブラウジング（HTTP リクエスト）でその Cookie を送信するか？~~<br/>→ 自明（= Cookie を送信する）なので割愛
 
 テストに利用した Web Browser のバージョンは以下の通りです。
 
