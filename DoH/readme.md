@@ -105,8 +105,6 @@ $response = getDnsResponse($request);
 $headers = array(
     'Content-Type: application/dns-message',
     'Content-Length: ' . strlen($response),
-    'Cache-Control: max-age=0',
-    'Connection: Close',
     // Set-Cookie Header with DoH Response
     'Set-Cookie: dohcookie='  . rand(0, 99) . '; Secure; HttpOnly'
 );
