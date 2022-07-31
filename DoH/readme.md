@@ -1,33 +1,32 @@
-# DoH �̋C�ɂȂ� Web Browser �������m�F���Ă݂�
+# DoH の気になる Web Browser 実装を確認してみる
 
-����ɂ��́A�L���G���W�j�A�̒��R�ł��B
+こんにちは、広告エンジニアの中山です。
 
-���͑傫���v���C�o�V�[�ی�ƍL���G�R�V�X�e�����W�̗������f���A�����ł� 3rd-party Cookie EOL �̃j���[�X�Ɉ���J������X���߂����Ă���܂��B
+夢は大きくプライバシー保護と広告エコシステム発展の両立を掲げつつ、足元では 3rd-party Cookie EOL のニュースに一喜一憂する日々を過ごしております。
 
-������ DNS over HTTPS�i�ȉ� DoH�j�̋C�ɂȂ� �c �Ƃ�킯�v���C�o�V�[�ϓ_�ɂ����� �c Web Browser �����ɂ��ċL���ɂ��Ă݂����Ǝv���܂��B
+今日は DNS over HTTPS（以下 DoH）の気になる … とりわけプライバシー観点における … Web Browser 実装について記事にしてみたいと思います。
 
-�Ƃ���ŁA�F����͊��� DoH �����������ł��傤���H
+ところで、皆さんは既に DoH をお試し中でしょうか？
 
-[Mozilla �ɂ���](https://wiki.mozilla.org/Trusted_Recursive_Resolver)
+[Mozilla によれば](https://wiki.mozilla.org/Trusted_Recursive_Resolver)
 
 > DNS-over-HTTPS (DoH) allows DNS to be resolved with enhanced privacy, secure transfers and comparable performance
 
-�Ƃ̂��Ƃł��B
+とのことです。
 
-DoH �𗘗p���邱�Ƃ� Web Browser �� DNS �L���b�V���T�[�o�Ԃ̒ʐM���u�����v�u��₁v�u�Ȃ肷�܂��v������A�v���C�o�V�[����уZ�L�����e�B�[�̌��オ�]�߂�A�Ƃ������咣�ł��ˁB
+DoH を利用することで Web Browser と DNS キャッシュサーバ間の通信を「盗聴」「改竄」「なりすまし」から守り、プライバシーおよびセキュリティーの向上が望める、といった主張ですね。
 
-���̈���� [RFC 8484](https://tools.ietf.org/html/rfc8484) �ɂ� �c
+その一方で [RFC 8484](https://tools.ietf.org/html/rfc8484) では …
 
 > The DoH protocol design allows applications to fully leverage the HTTP ecosystem, including features that are not enumerated here. Utilizing the full set of HTTP features enables DoH to be more than an HTTP tunnel, but it is at the cost of opening up implementations to the full set of privacy considerations of HTTP.
 
-HTTP ���J�j�Y�������p����̂͂悢�Ƃ��ăv���o�V�[�ɔz�����܂��傤�A�Ƃ����L�ڂ�
+HTTP メカニズムを活用するのはよいとしてプラバシーに配慮しましょう、という記載や
 
 > Determining whether or not a DoH implementation requires HTTP cookie [RFC6265] support is particularly important because HTTP cookies are the primary state tracking mechanism in HTTP. HTTP cookies SHOULD NOT be accepted by DOH clients unless they are explicitly required by a use case.
 
-���Ƀv���C�o�V�[�����ɂ����� Web Browser �͊�{�I�ɂ� Cookie �̎󂯓���ɐT�d�ɂȂ�ׂ��A�Ȃǂ̋L�ڂ�������܂��B���łɕ⑫����Ƒ�\�I�� DoH �T�[�r�X�̃��X�|���X�ɂ� Set-Cookie �͊܂܂�Ă��Ȃ��悤�ł��B
+特にプライバシー文脈において Web Browser は基本的には Cookie の受け入れに慎重になるべき、などの記載を見つけることができます。ついでに補足すると代表的な DoH サービスのレスポンスには Set-Cookie は含まれていないようです。
 
-
-�Ⴆ�� dns.google �̏ꍇ�i�ȍ~ application/dns-message �� entity body �͐��`�\���j �c
+例えば dns.google の場合（以降 application/dns-message の entity body は整形表示） …
 
 ```
 HTTP/1.1 200 OK
@@ -51,7 +50,7 @@ Alt-Svc: h3=":443"; ma=2592000,h3-29=":443"; ma=2592000,h3-Q050=":443";
 0x00 0x43 0x00 0x04 0x8e 0xfb 0x2a 0x84 | ..C....*
 ```
 
-cloudflare-dns.com �̏ꍇ �c
+cloudflare-dns.com の場合 …
 
 ```
 HTTP/1.1 200 OK
@@ -71,7 +70,7 @@ CF-RAY: 733527ee7f88af24-NRT
 0x00 0xec 0x00 0x04 0xac 0xd9 0xa1 0x24 | ........
 ```
 
-doh.opendns.com �̏ꍇ �c
+doh.opendns.com の場合 …
 
 ```
 HTTP/1.1 200 Success
@@ -87,13 +86,13 @@ Content-Length: 60
 0x01 0x2c 0x00 0x04 0x8e 0xfb 0x2a 0x84 | ..,....*
 ```
 
-�Ƃ͂����A���������v���C�o�V�[���y������ DoH �T�[�r�X�����[�U�[���ʎq�Ɩ��O�����v����R�Â��ċ����֐S���Ƃ��Ē~�ς���O�҂ɒ񋟂��邱�Ƃ�ژ_�񂾏ꍇ�A����̓v���C�o�V�[��̋��ЂɂȂ蓾�܂��B
+とはいえ、もし将来プライバシーを軽視する DoH サービスがユーザー識別子と名前解決要求を紐づけて興味関心情報として蓄積し第三者に提供することを目論んだ場合、それはプライバシー上の脅威になり得ます。
 
-## DoH x Cookie �̃e�X�g�V�i���I
+## DoH x Cookie のテストシナリオ
 
-�ł́A���ۂɂ��̂悤�Ȃ��Ƃ��\�Ȃ̂� Web Browser �̓�������؂��Ă݂܂��傤�B
+では、実際にそのようなことが可能なのか Web Browser の動作を検証してみましょう。
 
-�ȉ��� DoH ���N�G�X�g�� Google �� DNS�i8.8.8.8�j�ɓ]�����A���̌��ʂ� DoH ���X�|���X�Ƃ���Ȉ� DoH �T�[�o�̎����ł��B
+以下は DoH リクエストを Google の DNS（8.8.8.8）に転送し、その結果を DoH レスポンスとする簡易 DoH サーバの実装です。
 
 ```php
 <?php
@@ -145,45 +144,45 @@ print $response;
 ?>
 ```
 
-�ȉ��̃R�[�h�� DoH ���X�|���X�ƈꏏ�� Set-Cookie Header �����X�|���X���Ă��܂��B
+以下のコードで DoH レスポンスと一緒に Set-Cookie Header をレスポンスしています。
 
 ```php
     // Set-Cookie Header with DoH Response
     'Set-Cookie: dohcookie='  . rand(0, 99) . '; Secure; HttpOnly'
 ```
 
-���̊Ȉ� DoH �T�[�o���g���Ď��̃��i���I���e�X�g���Ă݂܂��B
+この簡易 DoH サーバを使って次のリナリオをテストしてみます。
 
-1. DoH ���X�|���X�� Set-Cookie ���󂯂� Web Browser �� �c
-	- 1-1. DoH ���N�G�X�g�ł��� Cookie �𑗐M���邩�H
-	- 1-2. �ʏ�� Web �u���E�W���O�iHTTP ���N�G�X�g�j�ł��� Cookie �𑗐M���邩�H
-2. �ʏ�� Web �u���E�W���O�iHTTP ���X�|���X�ŁjSet-Cookie ���󂯂� Web Browser �� �c
-	- 2-1. DoH ���N�G�X�g�ł��� Cookie �𑗐M���邩�H
-	- ~~2-2. �ʏ�� Web �u���E�W���O�iHTTP ���N�G�X�g�j�ł��� Cookie �𑗐M���邩�H~~<br/>�� �����i= Cookie �𑗐M����j�Ȃ̂Ŋ���
+1. DoH レスポンスで Set-Cookie を受けた Web Browser は …
+	- 1-1. DoH リクエストでその Cookie を送信するか？
+	- 1-2. 通常の Web ブラウジング（HTTP リクエスト）でその Cookie を送信するか？
+2. 通常の Web ブラウジング（HTTP レスポンスで）Set-Cookie を受けた Web Browser は …
+	- 2-1. DoH リクエストでその Cookie を送信するか？
+	- ~~2-2. 通常の Web ブラウジング（HTTP リクエスト）でその Cookie を送信するか？~~<br/>→ 自明（= Cookie を送信する）なので割愛
 
-�e�X�g�ɗ��p���� Web Browser �̃o�[�W�����͈ȉ��̒ʂ�ł��B
+テストに利用した Web Browser のバージョンは以下の通りです。
 
 - Firefox 103.0
 - Chrome 103.0.5060.134
 - Microsoft Edge 103.0.1264.71
 
-���āA�ǂ̂悤�Ȍ��ʂƂȂ�ł��傤���B
+さて、どのような結果となるでしょうか。
 
-## DoH x Cookie �̃e�X�g����
+## DoH x Cookie のテスト結果
 
-���_����q�ׂ�ƁA�S�Ẵ��i���I x Web Browser �� Cookie �����M����邱�Ƃ͂���܂���ł����B
+結論から述べると、全てのリナリオ x Web Browser で Cookie が送信されることはありませんでした。
 
 | Web Browser       | 1-1           | 1-2           | 2-1           |
 | ---               | ---           | ---           | ---           |
-| Firefox           | ���M���Ȃ�    | ���M���Ȃ�    | ���M���Ȃ�    |
-| Chrome            | ���M���Ȃ�    | ���M���Ȃ�    | ���M���Ȃ�    |
-| Microsoft Edge    | ���M���Ȃ�    | ���M���Ȃ�    | ���M���Ȃ�    |
+| Firefox           | 送信しない    | 送信しない    | 送信しない    |
+| Chrome            | 送信しない    | 送信しない    | 送信しない    |
+| Microsoft Edge    | 送信しない    | 送信しない    | 送信しない    |
 
-### Firefox �̒ʐM�L���v�`��
+### Firefox の通信キャプチャ
 
-�V�i���I 1-1 �̒ʐM���m�F���܂��B
+シナリオ 1-1 の通信を確認します。
 
-�܂��͍ŏ��� DoH ���N�G�X�g�ł��B
+まずは最初の DoH リクエストです。
 
 ```
 Host: TEST_SERVER
@@ -213,7 +212,7 @@ Pragma: no-cache
 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 | ........
 ```
 
-����ɑ΂��� Set-Cookie ���܂߂� DoH ���X�|���X�ł��B
+それに対する Set-Cookie を含めた DoH レスポンスです。
 
 ```
 Content-Length: 79
@@ -233,7 +232,7 @@ Set-Cookie: dohcookie=81; Secure; HttpOnly
 0x08 0x00 0x04 0x00 0x01 0x00 0x00 
 ```
 
-���ڈȍ~�� DoH ���N�G�X�g�� Cookie �͑��M����܂���ł����B
+二回目以降の DoH リクエストで Cookie は送信されませんでした。
 
 ```
 Host: TEST_SERVER
@@ -263,9 +262,9 @@ Pragma: no-cache
 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 | ........
 ```
 
-���ɂ��̏�Ԃ���V�i���I 1-2 ���m�F���܂��B
+次にこの状態からシナリオ 1-2 を確認します。
 
-DoH �Ɠ����h���C���� Web �y�[�W�ɑ΂��� HTTP ���N�G�X�g�ł� Cookie �͑��M����܂���ł����B
+DoH と同じドメインの Web ページに対する HTTP リクエストでも Cookie は送信されませんでした。
 
 ```
 GET /PATH_TO_SCRIPT/doh.php HTTP/1.1
@@ -283,9 +282,9 @@ Sec-Fetch-Site: same-origin
 Sec-Fetch-User: ?1
 ```
 
-�Ō�ɃV�i���I 2-1 �̒ʐM���m�F���܂��B
+最後にシナリオ 2-1 の通信を確認します。
 
-�܂� Web Browser �� DoH �Ɠ����h���C���� Web �y�[�W�ɑ΂��� Set-Cookie ���܂߂� HTTP ���X�|���X���󂯎��܂��B
+まず Web Browser が DoH と同じドメインの Web ページに対する Set-Cookie を含めた HTTP レスポンスを受け取ります。
 
 ```
 HTTP/1.1 200 OK
@@ -300,7 +299,7 @@ Content-Type: text/plane;charset=UTF-8
 
 ```
 
-���ڈȍ~�� Web �y�[�W�ɑ΂��郊�N�G�X�g�� Cookie �����M����Ă��邱�Ƃ��m�F�ł��܂��B
+二回目以降の Web ページに対するリクエストで Cookie が送信されていることが確認できます。
 
 
 ```
@@ -320,9 +319,9 @@ Sec-Fetch-Site: none
 Sec-Fetch-User: ?1
 ```
 
-�������Ȃ��� DoH ���N�G�X�g�� Cookie �͑��M����܂���ł����B
+しかしながら DoH リクエストで Cookie は送信されませんでした。
 
-�⑫�Ƃ��đS�ẴV�i���I�ɂ����� DoH ���N�G�X�g�ł� Cookie �݂̂Ȃ炸 User-Agent �� Accept-Language �Ȃǂ̃��[�U�[���ʂɊ�^����������M����Ă��Ȃ����Ƃ��킩��܂����B�����ł��� Accept-Encoding ����Ȃ̂� Firefox �̃o�O�ł��傤�� �c
+補足として全てのシナリオにおける DoH リクエストでは Cookie のみならず User-Agent や Accept-Language などのユーザー識別に寄与する情報も送信されていないこともわかりました。些末ですが Accept-Encoding が空なのは Firefox のバグでしょうか …
 
 ```
 Host: TEST_SERVER
@@ -352,11 +351,11 @@ Pragma: no-cache
 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 | ........
 ```
 
-## �܂Ƃ�
+## まとめ
 
-���񗘗p���� Web Browser �̎����ł̓V�i���I 1-1, 1-2, 2-1 �Ƃ��� Cookie �͑��M���ꂸ�A�䂦�� DoH �T�[�r�X�����[�U�[�����ʂ��ċ����֐S����~�ς��邱�Ƃ͍���ł���A�Ƃ������Ƃ��m�F�ł��܂����B�ł��̂ŁAWeb Browser �� DNS �L���b�V���T�[�o�Ԃ̒ʐM����肽���Ƃ������� DoH �̊��p�����������������I
+今回利用した Web Browser の実装ではシナリオ 1-1, 1-2, 2-1 ともに Cookie は送信されず、ゆえに DoH サービスがユーザーを識別して興味関心情報を蓄積することは困難である、ということが確認できました。ですので、Web Browser と DNS キャッシュサーバ間の通信を守りたいという方は DoH の活用をご検討ください！
 
-�]�k�ł��� Web �A�v���P�[�V�����̊J�� �` �e�X�g�̍ۂɂ� hosts ��ύX���邱�Ƃ�����܂����A�ݒ�~�X�⌳�ɖ߂����Ƃ�Y�ꂽ���ʂ̃g���u�������΂��Ό������܂��B�������ŊJ�� �` �e�X�g�����Ă���O���[�v�����̐ݒ���Г��� DoH �T�[�r�X�Œ񋟂��A�e�X�g���{�҂� Web Browser �� DoH �� on/off ���邱�Ƃŗ��p�������؂�ւ���A�������̓e�X�g��p�� Web Browser �ł̂� DoH ���g�� ... �Ȃ�ĉ^�p�� hosts �ύX�ɂ��g���u�������点�邩������Ȃ��H�Ɗ������������̍��ł��B
+余談ですが Web アプリケーションの開発 ～ テストの際には hosts を変更することがありますが、設定ミスや元に戻すことを忘れた結果のトラブルをしばしば見かけます。同じ環境で開発 ～ テストをしているグループ向けの設定を社内の DoH サービスで提供し、テスト実施者は Web Browser の DoH を on/off することで利用する環境を切り替える、もしくはテスト専用の Web Browser でのみ DoH を使う ... なんて運用で hosts 変更によるトラブルが減らせるかもしれない？と感じた今日この頃です。
 
-���̂悤�ȗp�r������ [�Ȉ� DoH �T�[�o + DNS ���b�Z�[�W��� & �\�z�̃T���v���R�[�h](https://github.com/nakayama-kazuki/202x/blob/main/DoH/doh.php) ��u���܂����̂ł�낵����΂����p���������B
+そのような用途向けに [簡易 DoH サーバ + DNS メッセージ解析 & 構築のサンプルコード](https://github.com/nakayama-kazuki/202x/blob/main/DoH/doh.php) を置きましたのでよろしければご活用ください。
 
