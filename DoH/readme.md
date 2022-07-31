@@ -124,7 +124,7 @@ print $response;
 シナリオ 1-1 の通信を確認します。まずは最初の DoH リクエストです。
 
 ```
-Host: localhost
+Host: TEST_SERVER
 Accept: application/dns-message
 Accept-Encoding: 
 Content-Type: application/dns-message
@@ -171,10 +171,10 @@ Set-Cookie: dohcookie=81; Secure; HttpOnly
 0x08 0x00 0x04 0x00 0x01 0x00 0x00 
 ```
 
-二回目以降の DoH リクエストに Cookie は含まれません。
+二回目以降の DoH リクエストで Cookie は送信されませんでした。
 
 ```
-Host: localhost
+Host: TEST_SERVER
 Accept: application/dns-message
 Accept-Encoding: 
 Content-Type: application/dns-message
@@ -201,10 +201,10 @@ Pragma: no-cache
 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 | ........
 ```
 
-この状態でシナリオ 1-2 も確認します。DoH と同じドメインの Web ページに対する HTTP リクエストにも Cookie は含まれません。
+次にこの状態からシナリオ 1-2 を確認します。DoH と同じドメインの Web ページに対する HTTP リクエストで Cookie は送信されませんでした。
 
 ```
-Host: localhost
+Host: TEST_SERVER
 User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:103.0) Gecko/20100101 Firefox/103.0
 Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
 Accept-Language: ja,en-US;q=0.7,en;q=0.3
@@ -220,13 +220,11 @@ Sec-Fetch-User: ?1
 /* entity body */
 ```
 
-次にシナリオ 2-1 の通信を確認します。まずは DoH と同じドメインの Web ページに対する Set-Cookie を含めた HTTP レスポンスです。
+最後にシナリオ 2-1 の通信を確認します。Web Browser は DoH と同じドメインの Web ページに対する Set-Cookie を含めた HTTP レスポンスを受け取ります。
 
 ```
 HTTP/1.1 200 OK
 Date: Sat, 30 Jul 2022 23:51:20 GMT
-Server: Apache/2.4.41 (Win64) OpenSSL/1.1.1c PHP/7.3.9
-X-Powered-By: PHP/7.3.9
 Set-Cookie: webcookie=77; Secure; HttpOnly
 Content-Length: 1385
 Keep-Alive: timeout=5, max=100
@@ -236,11 +234,12 @@ Content-Type: text/plane;charset=UTF-8
 /* entity body */
 ```
 
-二回目の Web ページに対するリクエストに Cookie が含まれていることを確認できます。
+二回目以降の Web ページに対するリクエストで Cookie が送信されていることが確認できます。
+
 
 ```
 GET /PATH_TO_SCRIPT/doh.php HTTP/1.1
-Host: localhost
+Host: TEST_SERVER
 User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:103.0) Gecko/20100101 Firefox/103.0
 Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
 Accept-Language: ja,en-US;q=0.7,en;q=0.3
@@ -257,10 +256,10 @@ Sec-Fetch-User: ?1
 /* entity body */
 ```
 
-しかしながら DoH リクエストには Cookie は含まれません。
+しかしながら DoH リクエストで Cookie は送信されませんでした。
 
 ```
-Host: localhost
+Host: TEST_SERVER
 Accept: application/dns-message
 Accept-Encoding: 
 Content-Type: application/dns-message
