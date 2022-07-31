@@ -26,7 +26,7 @@ HTTP メカニズムを活用するのはよいとしてプラバシーに配慮
 
 特にプライバシー文脈において Web Browser は基本的には Cookie の受け入れに慎重になるべき、などの記載があります。補足すると代表的な DoH サービスのレスポンスには Set-Cookie は含まれていないようです。
 
-例えば dns.google の場合（以降 application/dns-message の entity body は整形表示）は …
+例えば dns.google → Web Browser の場合（以降 application/dns-message の entity body は整形表示）は …
 
 ```
 HTTP/1.1 200 OK
@@ -50,7 +50,7 @@ Alt-Svc: h3=":443"; ma=2592000,h3-29=":443"; ma=2592000,h3-Q050=":443";
 0x00 0x43 0x00 0x04 0x8e 0xfb 0x2a 0x84 | ..C....*
 ```
 
-cloudflare-dns.com の場合は …
+cloudflare-dns.com → Web Browser の場合は …
 
 ```
 HTTP/1.1 200 OK
@@ -70,7 +70,7 @@ CF-RAY: 733527ee7f88af24-NRT
 0x00 0xec 0x00 0x04 0xac 0xd9 0xa1 0x24 | ........
 ```
 
-doh.opendns.com の場合は …
+doh.opendns.com → Web Browser の場合は …
 
 ```
 HTTP/1.1 200 Success
@@ -182,7 +182,7 @@ print $response;
 
 シナリオ 1-1 の通信を確認します。
 
-まずは最初の DoH リクエストです。
+まずは最初の Web Browser → DoH リクエストです。
 
 ```
 Host: TEST_SERVER
@@ -212,7 +212,7 @@ Pragma: no-cache
 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 | ........
 ```
 
-それに対する Set-Cookie を含めた DoH レスポンスです。
+それに対する Set-Cookie を含めた DoH レスポンス → Web Browser です。
 
 ```
 Content-Length: 79
@@ -232,7 +232,7 @@ Set-Cookie: dohcookie=81; Secure; HttpOnly
 0x08 0x00 0x04 0x00 0x01 0x00 0x00 
 ```
 
-二回目以降の DoH リクエストで Cookie は送信されませんでした。
+二回目以降の Web Browser → DoH リクエストで Cookie は送信されませんでした。
 
 ```
 Host: TEST_SERVER
@@ -264,7 +264,7 @@ Pragma: no-cache
 
 次にこの状態からシナリオ 1-2 を確認します。
 
-DoH と同じドメインの Web ページに対する HTTP リクエストでも Cookie は送信されませんでした。
+DoH と同じドメインの Web ページに対する Web Browser → HTTP リクエストでも Cookie は送信されませんでした。
 
 ```
 GET /PATH_TO_SCRIPT/SCRIPT HTTP/1.1
@@ -284,7 +284,7 @@ Sec-Fetch-User: ?1
 
 最後にシナリオ 2-1 の通信を確認します。
 
-まず Web Browser が DoH と同じドメインの Web ページに対する Set-Cookie を含めた HTTP レスポンスを受け取ります。
+まず DoH と同じドメインの Web ページに対する Set-Cookie を含めた HTTP レスポンス → Web Browser です。
 
 ```
 HTTP/1.1 200 OK
@@ -299,7 +299,7 @@ Content-Type: text/plane;charset=UTF-8
 
 ```
 
-二回目以降の Web ページに対するリクエストで Cookie が送信されていることが確認できます。
+二回目以降の Web ページに対する Web Browser → HTTP リクエストで Cookie が送信されていることが確認できます。
 
 
 ```
@@ -319,9 +319,9 @@ Sec-Fetch-Site: none
 Sec-Fetch-User: ?1
 ```
 
-しかしながら DoH リクエストで Cookie は送信されませんでした。
+しかしながら Web Browser → DoH リクエストでは Cookie は送信されませんでした。
 
-補足として全てのシナリオにおける DoH リクエストでは Cookie のみならず User-Agent や Accept-Language などのユーザー識別に寄与する情報も送信されていないことも確認できました（[参考](https://bugzilla.mozilla.org/show_bug.cgi?id=1543201)）。些末ですが Accept-Encoding が空なのは Firefox のバグでしょうか …
+補足として全てのシナリオにおける Web Browser → DoH リクエストでは Cookie のみならず User-Agent や Accept-Language などのユーザー識別に寄与する情報も送信されていないことも確認できました（[参考](https://bugzilla.mozilla.org/show_bug.cgi?id=1543201)）。細かいですが Accept-Encoding が空なのは Firefox のバグでしょうか …
 
 ```
 Host: TEST_SERVER
