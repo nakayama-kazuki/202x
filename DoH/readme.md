@@ -121,7 +121,7 @@ print $response;
 
 ### Firefox の通信キャプチャ
 
-シナリオ 1-1 の通信を確認します。まずは最初の DoH リクエストです。
+シナリオ 1-1 の通信を確認します。まずは最初の DoH リクエストです（application/dns-message の entity body は整形したものです）。
 
 ```
 Host: TEST_SERVER
@@ -204,6 +204,7 @@ Pragma: no-cache
 次にこの状態からシナリオ 1-2 を確認します。DoH と同じドメインの Web ページに対する HTTP リクエストで Cookie は送信されませんでした。
 
 ```
+GET /PATH_TO_SCRIPT/doh.php HTTP/1.1
 Host: TEST_SERVER
 User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:103.0) Gecko/20100101 Firefox/103.0
 Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
@@ -216,8 +217,6 @@ Sec-Fetch-Dest: document
 Sec-Fetch-Mode: navigate
 Sec-Fetch-Site: same-origin
 Sec-Fetch-User: ?1
-
-/* entity body */
 ```
 
 最後にシナリオ 2-1 の通信を確認します。Web Browser は DoH と同じドメインの Web ページに対する Set-Cookie を含めた HTTP レスポンスを受け取ります。
@@ -231,7 +230,8 @@ Keep-Alive: timeout=5, max=100
 Connection: Keep-Alive
 Content-Type: text/plane;charset=UTF-8
 
-/* entity body */
+/* entity body (omitted) */
+
 ```
 
 二回目以降の Web ページに対するリクエストで Cookie が送信されていることが確認できます。
@@ -252,8 +252,6 @@ Sec-Fetch-Dest: document
 Sec-Fetch-Mode: navigate
 Sec-Fetch-Site: none
 Sec-Fetch-User: ?1
-
-/* entity body */
 ```
 
 しかしながら DoH リクエストで Cookie は送信されませんでした。
