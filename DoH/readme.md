@@ -6,27 +6,27 @@
 
 今日は DNS over HTTPS（以下 DoH）の気になる … とりわけプライバシー観点における … Web Browser 実装について記事にしてみたいと思います。
 
-ところで、皆さんは既に DoH を利用されているでしょうか？
+ところで、皆さんは既に DoH をお試しでしょうか？
 
 [Mozilla によれば](https://wiki.mozilla.org/Trusted_Recursive_Resolver)
 
 > DNS-over-HTTPS (DoH) allows DNS to be resolved with enhanced privacy, secure transfers and comparable performance
 
-とのことで DoH を利用することで Web Browser と DNS キャッシュサーバ間の通信を「盗聴」「改竄」「なりすまし」から守り、プライバシーおよびセキュリティーの向上が望める、としてます。
+とのことです。
+
+DoH を利用することで Web Browser と DNS キャッシュサーバ間の通信を「盗聴」「改竄」「なりすまし」から守り、プライバシーおよびセキュリティーの向上が望める、との主張があります。
 
 その一方で [RFC 8484](https://tools.ietf.org/html/rfc8484) には …
 
 > The DoH protocol design allows applications to fully leverage the HTTP ecosystem, including features that are not enumerated here. Utilizing the full set of HTTP features enables DoH to be more than an HTTP tunnel, but it is at the cost of opening up implementations to the full set of privacy considerations of HTTP.
 
-HTTP メカニズムを活用するのはよいがプラバシーに配慮しましょう、という記載や
+HTTP メカニズムを活用するのはよいがプラバシーに配慮しましょう、とう記載や
 
 > Determining whether or not a DoH implementation requires HTTP cookie [RFC6265] support is particularly important because HTTP cookies are the primary state tracking mechanism in HTTP. HTTP cookies SHOULD NOT be accepted by DOH clients unless they are explicitly required by a use case.
 
-特にプライバシー文脈において Web Browser は基本的には Cookie の受け入れに慎重になるべき、といった記載が見つかります。
+特にプライバシー文脈において Web Browser は基本的には Cookie の受け入れに慎重になるべき、などの記載が見つかります。さらに代表的な DoH サービスのレスポンスには Set-Cookie は含まれていないようです。
 
-確かに代表的な DoH サービスのレスポンスには、ユーザー識別に寄与する Set-Cookie や User-Agent や Accept-Language などは含まれていないようです。
-
-dns.google の場合
+dns.google の場合 …
 
 ```
 HTTP/1.1 200 OK
@@ -39,13 +39,14 @@ Server: HTTP server (unknown)
 Content-Length: 60
 X-XSS-Protection: 0
 X-Frame-Options: SAMEORIGIN
-Alt-Svc: h3=":443"; ma=2592000,h3-29=":443"; ma=2592000,h3-Q050=":443"; ma=2592000,h3-Q046=":443"; ma=2592000,h3-Q043=":443"; ma=2592000,quic=":443"; ma=2592000; v="46,43"
+Alt-Svc: h3=":443"; ma=2592000,h3-29=":443"; ma=2592000,h3-Q050=":443";
+    ma=2592000,h3-Q046=":443"; ma=2592000,h3-Q043=":443"; ma=2592000,quic=":443"; ma=2592000; v="46,43"
 
 /* entity body (omitted) */
 
 ```
 
-doh.opendns.com の場合
+doh.opendns.com の場合 …
 
 ```
 HTTP/1.1 200 Success
@@ -57,11 +58,11 @@ Content-Length: 60
 
 ```
 
-しかしながら、もしプライバシーを軽視する DoH サービスがユーザー識別子と名前解決要求を紐づけて興味関心情報として蓄積し第三者に提供することを考えた場合、それはプライバシー上の脅威になり得ます。
+しかしながら、もしプライバシーを軽視する DoH サービスがユーザー識別子と名前解決要求を紐づけて興味関心情報として蓄積し第三者に提供することを考えた場合、プライバシー上の脅威になり得ます。
 
 ## DoH x Cookie のテストシナリオ
 
-では、実際にそのようなことが可能なのか検証してみましょう。
+では、実際にそのようなことが可能なのか Web Browser の動作を検証してみましょう。
 
 以下は DoH リクエストを Google の DNS（8.8.8.8）に転送し、その結果を DoH レスポンスとする簡易 DoH サーバの実装です。
 
@@ -293,6 +294,8 @@ Sec-Fetch-User: ?1
 
 しかしながら DoH リクエストで Cookie は送信されませんでした。
 
+補足として全てのシナリオにおける DoH リクエストで Cookie のみならず User-Agent や Accept-Language などのユーザー識別に寄与する情報も送信されていないこともわかりました。
+
 ```
 Host: TEST_SERVER
 Accept: application/dns-message
@@ -323,7 +326,7 @@ Pragma: no-cache
 
 ## まとめ
 
-今回利用した Web Browser の実装ではシナリオ 1-1, 1-2, 2-1 ともに Cookie は送信されず、ゆえに DoH サービスがユーザーを識別して興味関心情報を蓄積することは困難である、ということが確認できました。ですので、プライバシーとセキュリティーの向上を望む方は DoH の活用をご検討ください！
+今回利用した Web Browser の実装ではシナリオ 1-1, 1-2, 2-1 ともに Cookie は送信されず、ゆえに DoH サービスがユーザーを識別して興味関心情報を蓄積することは困難である、ということが確認できました。ですので、Web Browser と DNS キャッシュサーバ間の通信を守りたいという方は DoH の活用をご検討ください！
 
 余談ですが Web アプリケーションの開発 ～ テストの際には hosts を変更することがありますが、設定ミスや元に戻すことを忘れた結果のトラブルをしばしば見かけます。同じ環境で開発 ～ テストをしているグループ向けの設定を社内の DoH サービスで提供し、テスト実施者は Web Browser の DoH を on/off することで利用する環境を切り替える、もしくはテスト専用の Web Browser でのみ DoH を使う ... なんて運用で hosts 変更によるトラブルが減らせるかもしれない？と感じた今日この頃です。
 
