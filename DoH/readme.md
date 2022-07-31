@@ -12,7 +12,7 @@
 
 > DNS-over-HTTPS (DoH) allows DNS to be resolved with enhanced privacy, secure transfers and comparable performance
 
-だそうで DoH を利用することで Web Browser と DNS キャッシュサーバ間の通信を「盗聴」「改竄」「なりすまし」から守り、プライバシーおよびセキュリティーの向上が望めます。
+とのことで DoH を利用することで Web Browser と DNS キャッシュサーバ間の通信を「盗聴」「改竄」「なりすまし」から守り、プライバシーおよびセキュリティーの向上が望める、としてます。
 
 その一方で [RFC 8484](https://tools.ietf.org/html/rfc8484) には …
 
@@ -24,9 +24,40 @@ HTTP メカニズムを活用するのはよいがプラバシーに配慮しましょう、という記載や
 
 特にプライバシー文脈において Web Browser は基本的には Cookie の受け入れに慎重になるべき、といった記載が見つかります。
 
-Cloudflare の [Example](https://developers.cloudflare.com/1.1.1.1/encryption/dns-over-https/make-api-requests/dns-wireformat/) にも Set-Cookie を含んだ DoH レスポンスの例が見つかりますが、この扱いによってどのようなプライバシー上の脅威が生じるのでしょうか？
+確かに代表的な DoH サービスのレスポンスには、ユーザー識別に寄与する Set-Cookie や User-Agent や Accept-Language などは含まれていないようです。
 
-例えば悪意ある DoH サービスがユーザー識別子と名前解決要求を紐づけ、興味関心情報として蓄積して第三者提供する等のユースケースが考えられます。もし閲覧履歴（に近しい情報）が自分の知らない間に第三者にわたってしまうとすればプライバシー上の脅威になることは間違いありません。
+dns.google の場合
+
+```
+HTTP/1.1 200 OK
+X-Content-Type-Options: nosniff
+Date: Sun, 31 Jul 2022 03:20:10 GMT
+Expires: Sun, 31 Jul 2022 03:20:10 GMT
+Cache-Control: private, max-age=2359
+Content-Type: application/dns-message
+Server: HTTP server (unknown)
+Content-Length: 60
+X-XSS-Protection: 0
+X-Frame-Options: SAMEORIGIN
+Alt-Svc: h3=":443"; ma=2592000,h3-29=":443"; ma=2592000,h3-Q050=":443"; ma=2592000,h3-Q046=":443"; ma=2592000,h3-Q043=":443"; ma=2592000,quic=":443"; ma=2592000; v="46,43"
+
+/* entity body (omitted) */
+
+```
+
+doh.opendns.com の場合
+
+```
+HTTP/1.1 200 Success
+Date: Sun, 31 July 2022 03:26:02 GMT
+Content-Type: application/dns-message
+Content-Length: 60
+
+/* entity body (omitted) */
+
+```
+
+しかしながら、もしプライバシーを軽視する DoH サービスがユーザー識別子と名前解決要求を紐づけて興味関心情報として蓄積し第三者に提供することを考えた場合、それはプライバシー上の脅威になり得ます。
 
 ## DoH x Cookie のテストシナリオ
 
