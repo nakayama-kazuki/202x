@@ -121,7 +121,9 @@ print $response;
 
 ### Firefox の通信キャプチャ
 
-シナリオ 1-1 の通信を確認します。まずは最初の DoH リクエストです（application/dns-message の entity body は整形したものです）。
+シナリオ 1-1 の通信を確認します。
+
+まずは最初の DoH リクエストです（application/dns-message の entity body は整形してます）。
 
 ```
 Host: TEST_SERVER
@@ -201,7 +203,9 @@ Pragma: no-cache
 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 | ........
 ```
 
-次にこの状態からシナリオ 1-2 を確認します。DoH と同じドメインの Web ページに対する HTTP リクエストで Cookie は送信されませんでした。
+次にこの状態からシナリオ 1-2 を確認します。
+
+DoH と同じドメインの Web ページに対する HTTP リクエストで Cookie は送信されませんでした。
 
 ```
 GET /PATH_TO_SCRIPT/doh.php HTTP/1.1
@@ -219,7 +223,9 @@ Sec-Fetch-Site: same-origin
 Sec-Fetch-User: ?1
 ```
 
-最後にシナリオ 2-1 の通信を確認します。Web Browser は DoH と同じドメインの Web ページに対する Set-Cookie を含めた HTTP レスポンスを受け取ります。
+最後にシナリオ 2-1 の通信を確認します。
+
+Web Browser は DoH と同じドメインの Web ページに対する Set-Cookie を含めた HTTP レスポンスを受け取ります。
 
 ```
 HTTP/1.1 200 OK
