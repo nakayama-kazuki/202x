@@ -24,7 +24,7 @@ HTTP メカニズムを活用するのはよいとしてプラバシーに配慮しましょう、という記載や
 
 > Determining whether or not a DoH implementation requires HTTP cookie [RFC6265] support is particularly important because HTTP cookies are the primary state tracking mechanism in HTTP. HTTP cookies SHOULD NOT be accepted by DOH clients unless they are explicitly required by a use case.
 
-特にプライバシー文脈において Web Browser は基本的には Cookie の受け入れに慎重になるべき、などの記載が見つかります。補足すると代表的な DoH サービスのレスポンスには Set-Cookie は含まれていないようです。
+特にプライバシー文脈において Web Browser は基本的には Cookie の受け入れに慎重になるべき、などの記載が見つかります。ついでに補足すると代表的な DoH サービスのレスポンスには Set-Cookie は含まれていないようです（application/dns-message の entity body は整形してます）。
 
 dns.google の場合 …
 
@@ -42,8 +42,12 @@ X-Frame-Options: SAMEORIGIN
 Alt-Svc: h3=":443"; ma=2592000,h3-29=":443"; ma=2592000,h3-Q050=":443";
     ma=2592000,h3-Q046=":443"; ma=2592000,h3-Q043=":443"; ma=2592000,quic=":443"; ma=2592000; v="46,43"
 
-/* entity body (omitted) */
-
+0x1c 0x05 0x81 0x80 0x00 0x01 0x00 0x01 | .......
+0x00 0x00 0x00 0x00 0x03 0x77 0x77 0x77 | ......ww
+0x06 0x67 0x6f 0x6f 0x67 0x6c 0x65 0x03 | w.google
+0x63 0x6f 0x6d 0x00 0x00 0x01 0x00 0x01 | .com....
+0xc0 0x0c 0x00 0x01 0x00 0x01 0x00 0x00 | ........
+0x00 0x43 0x00 0x04 0x8e 0xfb 0x2a 0x84 | ..C....*
 ```
 
 doh.opendns.com の場合 …
@@ -54,8 +58,12 @@ Date: Sun, 31 July 2022 03:26:02 GMT
 Content-Type: application/dns-message
 Content-Length: 60
 
-/* entity body (omitted) */
-
+0xfb 0xa5 0x81 0x80 0x00 0x01 0x00 0x01 | .......
+0x00 0x00 0x00 0x00 0x03 0x77 0x77 0x77 | ......ww
+0x06 0x67 0x6f 0x6f 0x67 0x6c 0x65 0x03 | w.google
+0x63 0x6f 0x6d 0x00 0x00 0x01 0x00 0x01 | .com....
+0xc0 0x0c 0x00 0x01 0x00 0x01 0x00 0x00 | ........
+0x01 0x2c 0x00 0x04 0x8e 0xfb 0x2a 0x84 | ..,....*
 ```
 
 とはいえ、もし将来プライバシーを軽視する DoH サービスがユーザー識別子と名前解決要求を紐づけて興味関心情報として蓄積し第三者に提供することを目論んだ場合、それはプライバシー上の脅威になり得ます。
@@ -130,7 +138,7 @@ print $response;
 	- 1-2. 通常の Web ブラウジング（HTTP リクエスト）でその Cookie を送信するか？
 2. 通常の Web ブラウジング（HTTP レスポンスで）Set-Cookie を受けた Web Browser は …
 	- 2-1. DoH リクエストでその Cookie を送信するか？
-	- ~~2-2. 通常の Web ブラウジング（HTTP リクエスト）でその Cookie を送信するか？~~ → Yes なので割愛
+	- ~~2-2. 通常の Web ブラウジング（HTTP リクエスト）でその Cookie を送信するか？~~ → 自明（= 送信する）なので割愛
 
 テストに利用した Web Browser のバージョンは以下の通りです。
 
@@ -154,7 +162,7 @@ print $response;
 
 シナリオ 1-1 の通信を確認します。
 
-まずは最初の DoH リクエストです（application/dns-message の entity body は整形してます）。
+まずは最初の DoH リクエストです。
 
 ```
 Host: TEST_SERVER
