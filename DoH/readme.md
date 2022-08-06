@@ -12,7 +12,7 @@
 
 お手持ちの Web Browser の設定画面（以下は Firefox の例）から DoH を有効にすることができます。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/DoH/setting.png' width='300' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/DoH/setting.png' />
 
 従前の DNS を用いた名前解決ではプレーンテキストが送受信されますが、DoH を利用することで Web Browser と DNS キャッシュサーバ間の通信を「盗聴」「改竄」「なりすまし」から守ることができます。
 
