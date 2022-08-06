@@ -4,7 +4,7 @@
 
 広告と聞いて 3rd-party Cookie をイメージされる方も大勢いらっしゃるかと思います。我々も足元では [3rd-party Cookie EOL のニュース](https://blog.google/products/chrome/update-testing-privacy-sandbox-web/) に一喜一憂しつつ、中長期の視点ではプライバシー保護と広告エコシステム発展を両立させるための研究開発に取り組んでいます。
 
-例えば 3rd-party Cookie を中心とした技術基盤の置き換えを推進する [Privacy Sandbox](https://blog.chromium.org/2021/01/privacy-sandbox-in-2021.html) へのコントリビュートにも積極的で、オリジントライアルを通じたフィードバックなどを行ってます。
+例えば 3rd-party Cookie を中心とした技術基盤の置き換えを推進する Privacy Sandbox への [コントリビュート](https://blog.chromium.org/2021/01/privacy-sandbox-in-2021.html) にも積極的で、オリジントライアルを通じたフィードバックなどを行ってます。
 
 今日は Privacy Sandbox の範疇からは外れますが、プライバシー保護の文脈で DNS over HTTPS（以下 DoH）の Web Browser 実装、とりわけ Cookie 関連の実装について記事にしてみたいと思います。
 
@@ -12,7 +12,7 @@
 
 DoH を有効にするにはお手持ちの Web Browser の設定画面（以下は Firefox の例）をご確認ください。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/DoH/setting.png' width='834' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/DoH/setting.png' />
 
 従前の DNS を用いた名前解決ではプレーンテキストが送受信されますが、DoH を利用することで Web Browser と DNS キャッシュサーバ間の通信を「盗聴」「改竄」「なりすまし」から守ることができます。
 
@@ -181,6 +181,8 @@ print $response;
 結論から述べると、全てのリナリオ x Web Browser で Cookie が送信されることはありませんでした。
 
 | Web Browser       | 1-1           | 1-2           | 2-1           | （2-2）       |
+| Set-Cookie by     | DoH           | DoH           | Web           | （Web）       |
+| Cookit to         | DoH           | Web           | DoH           | （Web）       |
 | ---               | ---           | ---           | ---           | ---           |
 | Firefox           | 送信しない    | 送信しない    | 送信しない    | （送信する）  |
 | Chrome            | 送信しない    | 送信しない    | 送信しない    | （送信する）  |
