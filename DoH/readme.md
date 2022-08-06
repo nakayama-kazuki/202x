@@ -1,20 +1,30 @@
-# DoH の気になる Web Browser 実装を確認してみる
+# DoH のちょっと気になる Web Browser 実装を確認
 
 こんにちは、広告エンジニアの中山です。
 
-夢は大きくプライバシー保護と広告エコシステム発展の両立を掲げつつ、足元では 3rd-party Cookie EOL のニュースに一喜一憂する日々を過ごしております。
+広告と聞いて 3rd-party Cookie をイメージされる方も大勢いらっしゃるかと思います。
 
-今日は DNS over HTTPS（以下 DoH）の気になる … とりわけプライバシー観点における … Web Browser 実装について記事にしてみたいと思います。
+我々も足元では [3rd-party Cookie EOL のニュース](https://blog.google/products/chrome/update-testing-privacy-sandbox-web/) に一喜一憂しつつ、中長期視点ではプライバシー保護と広告エコシステム発展を両立させるための研究開発を進めてます。
 
-ところで、皆さんは既に DoH をお試し中でしょうか？
+例えば 3rd-party Cookie を中心とした技術基盤の置き換えを推進する [Privacy Sandbox へのコントリビュート](https://blog.chromium.org/2021/01/privacy-sandbox-in-2021.html) にも積極的で、オリジントライアルを通じたフィードバックなどに取り組んでいます。
+
+そこで、今日はプライバシー保護の文脈で DNS over HTTPS（以下 DoH）の Web Browser 実装、とりわけ Cookie 関連の実装について記事にしてみたいと思います。
+
+## DoH とは
+
+お手持ちの Web Browser の設定画面（以下は Firefox の例）から DoH を有効にすることができます。
+
+<img src='attach:setting.jpg' />
+
+従前の DNS を用いた名前解決ではプレーンテキストが送受信されますが、DoH を利用することで Web Browser と DNS キャッシュサーバ間の通信を「盗聴」「改竄」「なりすまし」から守ることができます。
 
 [Mozilla によれば](https://wiki.mozilla.org/Trusted_Recursive_Resolver)
 
 > DNS-over-HTTPS (DoH) allows DNS to be resolved with enhanced privacy, secure transfers and comparable performance
 
-とのことです。
+DoH を使うことでプライバシーおよびセキュリティーの向上が望めるのだそうです。
 
-DoH を利用することで Web Browser と DNS キャッシュサーバ間の通信を「盗聴」「改竄」「なりすまし」から守り、プライバシーおよびセキュリティーの向上が望める、といった主張ですね。
+## DoH とプライバシー
 
 その一方で [RFC 8484](https://tools.ietf.org/html/rfc8484) には …
 
@@ -321,8 +331,6 @@ Sec-Fetch-User: ?1
 
 しかしながら Web Browser → DoH リクエストでは Cookie は送信されませんでした。
 
-補足として全てのシナリオにおける Web Browser → DoH リクエストでは Cookie のみならず User-Agent や Accept-Language などのユーザー識別に寄与する情報も送信されていないことも確認できました（[参考](https://bugzilla.mozilla.org/show_bug.cgi?id=1543201)）。細かいですが Accept-Encoding が空なのは Firefox のバグでしょうか …
-
 ```
 Host: TEST_SERVER
 Accept: application/dns-message
@@ -351,8 +359,61 @@ Pragma: no-cache
 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 | ........
 ```
 
+補足しますと、全てのシナリオにおける Web Browser → DoH リクエストでは Cookie のみならず User-Agent や Accept-Language などのユーザー識別に寄与する情報も送信されていないことも確認できました（[参考](https://bugzilla.mozilla.org/show_bug.cgi?id=1543201)）。さらに Mozilla は DoH サービスに対して IP の収集を [禁止するポリシー](https://wiki.mozilla.org/Security/DOH-resolver-policy) も策定しています。Cookie のみならず Finger Printing 観点でも追跡行為に対して十分な配慮がなされている、と言えそうです。
+
+あと Accept-Encoding が空の値なのは … 気にしないことにします ^^;
+
 ## まとめ
 
-今回利用した Web Browser の実装ではシナリオ 1-1, 1-2, 2-1 ともに Cookie は送信されず、ゆえに DoH サービスがユーザーを識別して興味関心情報を蓄積することは困難である、ということが確認できました。ですので、Web Browser と DNS キャッシュサーバ間の通信を守りたいという方は DoH の活用をご検討ください！
+今回利用した Web Browser の実装ではシナリオ 1-1, 1-2, 2-1 ともに Cookie は送信されず、ゆえに DoH サービスがユーザーを識別して興味関心情報を蓄積することは困難である、ということが確認できました。ですので、Web Browser と DNS キャッシュサーバ間の通信を「盗聴」「改竄」「なりすまし」から守りたい方は DoH の活用をご検討ください。
 
 蛇足ですが Web アプリケーションの開発 ～ テストの際には hosts を変更することがありますが、設定ミスや元に戻すことを忘れた結果のトラブルをしばしば見かけます。同じ環境で開発 ～ テストをしているグループ向けの設定を社内の DoH サービスで提供し、テスト実施者は Web Browser の DoH を on/off することで利用する環境を切り替える、もしくはテスト専用の Web Browser でのみ DoH を使う、的な運用で hosts 変更によるトラブルが減らせるかも … などと感じた今日この頃です。そのような用途向けに [簡易 DoH サーバ + application/dns-message 解析 & 構築のサンプルコード](https://github.com/nakayama-kazuki/202x/blob/main/DoH/doh.php) を置きましたのでよろしければご活用ください。
+
+```
+// packed application/dns-message
+
+0x29 0xbf 0x01 0x80 0x00 0x01 0x00 0x00 | )......
+0x00 0x00 0x00 0x00 0x03 0x77 0x77 0x77 | ......ww
+0x05 0x79 0x61 0x68 0x6f 0x6f 0x02 0x63 | w.yahoo.
+0x6f 0x02 0x6a 0x70 0x00 0x00 0x01 0x00 | co.jp...
+0x01 
+
+// unpacked array
+
+Array (
+    [HEADER] => Array (
+        [ID] => 10687,
+        [F_QR] => 0,
+        [F_OPCODE] => 0,
+        [F_AA] => 0,
+        [F_TC] => 0,
+        [F_RD] => 1,
+        [F_RA] => 1,
+        [F_Z] => 0,
+        [F_AD] => 0,
+        [F_CD] => 0,
+        [F_RCODE] => 0,
+        [QDCOUNT] => 1,
+        [ANCOUNT] => 0,
+        [NSCOUNT] => 0,
+        [ARCOUNT] => 0
+    ),
+    [QDSECTIONS] => Array (
+        [0] => Array (
+            [DOMAIN] => Array (
+                [0] => www,
+                [1] => yahoo,
+                [2] => co,
+                [3] => jp
+            ),
+            [TYPE] => 1,
+            [CLASS] => 1
+        )
+    ),
+    [ANSECTIONS] => Array (),
+    [NSSECTIONS] => Array (),
+    [ARSECTIONS] => Array ()
+)
+```
+
+あ、言い忘れましたが、ヤフー広告ではプライバシー保護と広告エコシステム発展を両立を志す仲間を募集中です！我こそはという方のご連絡をお待ちしております。
