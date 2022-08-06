@@ -2,19 +2,17 @@
 
 こんにちは、広告エンジニアの中山です。
 
-広告と聞いて 3rd-party Cookie をイメージされる方も大勢いらっしゃるかと思います。
+広告と聞いて 3rd-party Cookie をイメージされる方も大勢いらっしゃるかと思います。我々も足元では [3rd-party Cookie EOL のニュース](https://blog.google/products/chrome/update-testing-privacy-sandbox-web/) に一喜一憂しつつ、中長期の視点ではプライバシー保護と広告エコシステム発展を両立させるための研究開発に取り組んでいます。
 
-我々も足元では [3rd-party Cookie EOL のニュース](https://blog.google/products/chrome/update-testing-privacy-sandbox-web/) に一喜一憂しつつ、中長期視点ではプライバシー保護と広告エコシステム発展を両立させるための研究開発を進めてます。
+例えば 3rd-party Cookie を中心とした技術基盤の置き換えを推進する [Privacy Sandbox](https://blog.chromium.org/2021/01/privacy-sandbox-in-2021.html) へのコントリビュートにも積極的で、オリジントライアルを通じたフィードバックなどを行ってます。
 
-例えば 3rd-party Cookie を中心とした技術基盤の置き換えを推進する [Privacy Sandbox へのコントリビュート](https://blog.chromium.org/2021/01/privacy-sandbox-in-2021.html) にも積極的で、オリジントライアルを通じたフィードバックなどに取り組んでいます。
-
-そこで、今日はプライバシー保護の文脈で DNS over HTTPS（以下 DoH）の Web Browser 実装、とりわけ Cookie 関連の実装について記事にしてみたいと思います。
+今日はプライバシー保護の文脈で DNS over HTTPS（以下 DoH）の Web Browser 実装、とりわけ Cookie 関連の実装について記事にしてみたいと思います。
 
 ## DoH とは
 
 お手持ちの Web Browser の設定画面（以下は Firefox の例）から DoH を有効にすることができます。
 
-<img src='attach:setting.jpg' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/DoH/setting.png' width='300' />
 
 従前の DNS を用いた名前解決ではプレーンテキストが送受信されますが、DoH を利用することで Web Browser と DNS キャッシュサーバ間の通信を「盗聴」「改竄」「なりすまし」から守ることができます。
 
@@ -22,9 +20,9 @@
 
 > DNS-over-HTTPS (DoH) allows DNS to be resolved with enhanced privacy, secure transfers and comparable performance
 
-DoH を使うことでプライバシーおよびセキュリティーの向上が望めるのだそうです。
+DoH を使うことでプライバシーおよびセキュリティーの向上が望めるとのことです。
 
-## DoH とプライバシー
+## RFC 8484 とプライバシー
 
 その一方で [RFC 8484](https://tools.ietf.org/html/rfc8484) には …
 
@@ -34,9 +32,9 @@ HTTP メカニズムを活用するのはよいとしてプラバシーに配慮
 
 > Determining whether or not a DoH implementation requires HTTP cookie [RFC6265] support is particularly important because HTTP cookies are the primary state tracking mechanism in HTTP. HTTP cookies SHOULD NOT be accepted by DOH clients unless they are explicitly required by a use case.
 
-特にプライバシー文脈において Web Browser は基本的には Cookie の受け入れに慎重になるべき、などの記載があります。補足すると代表的な DoH サービスのレスポンスには Set-Cookie は含まれていないようです。
+特にプライバシー文脈において Web Browser は基本的には Cookie の受け入れに慎重になるべき、などの記載があります。さらに代表的な DoH サービスのレスポンスには Set-Cookie は含まれていないようです。
 
-例えば dns.google → Web Browser の場合（以降 application/dns-message の entity body は整形表示）は …
+例えば dns.google → Web Browser の場合（以降の application/dns-message のエンティティーボディーは整形済です）は …
 
 ```
 HTTP/1.1 200 OK
@@ -96,7 +94,7 @@ Content-Length: 60
 0x01 0x2c 0x00 0x04 0x8e 0xfb 0x2a 0x84 | ..,....*
 ```
 
-とはいえ、もし魔が差した DoH サービスがユーザー識別子と名前解決要求を紐づけて興味関心情報として蓄積し第三者に提供することを目論んだ場合、プライバシーの向上どころか重大な脅威になり得ます。
+でした。とはいえ、もし魔が差した DoH サービスがユーザー識別子と名前解決要求を紐づけて興味関心情報として蓄積し第三者に提供することを目論んだ場合、Mozilla の主張するプライバシーの向上どころか重大な脅威になり得ます。
 
 ## DoH x Cookie のテストシナリオ
 
