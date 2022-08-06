@@ -6,13 +6,13 @@
 
 例えば 3rd-party Cookie を中心とした技術基盤の置き換えを推進する [Privacy Sandbox](https://blog.chromium.org/2021/01/privacy-sandbox-in-2021.html) へのコントリビュートにも積極的で、オリジントライアルを通じたフィードバックなどを行ってます。
 
-今日はプライバシー保護の文脈で DNS over HTTPS（以下 DoH）の Web Browser 実装、とりわけ Cookie 関連の実装について記事にしてみたいと思います。
+今日は Privacy Sandbox の範疇からは外れますが、プライバシー保護の文脈で DNS over HTTPS（以下 DoH）の Web Browser 実装、とりわけ Cookie 関連の実装について記事にしてみたいと思います。
 
 ## DoH とは
 
 お手持ちの Web Browser の設定画面（以下は Firefox の例）から DoH を有効にすることができます。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/DoH/setting.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/DoH/setting.png' width='513' />
 
 従前の DNS を用いた名前解決ではプレーンテキストが送受信されますが、DoH を利用することで Web Browser と DNS キャッシュサーバ間の通信を「盗聴」「改竄」「なりすまし」から守ることができます。
 
@@ -357,9 +357,9 @@ Pragma: no-cache
 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 | ........
 ```
 
-補足しますと、全てのシナリオにおける Web Browser → DoH リクエストでは Cookie のみならず User-Agent や Accept-Language などのユーザー識別に寄与する情報も送信されていないことも確認できました（[参考](https://bugzilla.mozilla.org/show_bug.cgi?id=1543201)）。さらに Mozilla は DoH サービスに対して IP の収集を [禁止するポリシー](https://wiki.mozilla.org/Security/DOH-resolver-policy) も策定しています。Cookie のみならず Finger Printing 観点でも追跡行為に対して十分な配慮がなされている、と言えそうです。
+補足しますと、全てのシナリオにおける Web Browser → DoH リクエストでは Cookie のみならず User-Agent や Accept-Language などのユーザー識別に寄与する情報も送信されていないことも確認できました（[参考](https://bugzilla.mozilla.org/show_bug.cgi?id=1543201)）。さらに Mozilla は DoH サービスに対して IP の収集を [禁止するポリシー](https://wiki.mozilla.org/Security/DOH-resolver-policy) も策定しています。このことから Cookie のみならず Finger Printing 観点でも追跡行為に対して十分な配慮がなされている、と言えそうです。
 
-あと Accept-Encoding が空の値なのは … 気にしないことにします ^^;
+あと Firefox の DoH リクエストで Accept-Encoding が空の値なのは … 気にしないことにします ^^;
 
 ## まとめ
 
