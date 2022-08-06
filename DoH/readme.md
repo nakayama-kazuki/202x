@@ -180,11 +180,11 @@ print $response;
 
 結論から述べると、全てのリナリオ x Web Browser で Cookie が送信されることはありませんでした。
 
-| Web Browser<br/>Set-Cookie<br/>Cookie | 1-1<br/>by DoH<br/>to DoH | 1-2<br/>by DoH<br/>to Web | 2-1<br/>by Web<br/>to DoH | （2-2）<br/>by Web<br/>to Web |
-| ---               | ---           | ---           | ---           | ---           |
-| Firefox           | 送信しない    | 送信しない    | 送信しない    | （送信する）  |
-| Chrome            | 送信しない    | 送信しない    | 送信しない    | （送信する）  |
-| Microsoft Edge    | 送信しない    | 送信しない    | 送信しない    | （送信する）  |
+| <br/>***Set-Cookie***<br/>***Cookie*** | （1-1）<br/>***by DoH***<br/>***to DoH*** | （1-2）<br/>***by DoH***<br/>***to Web*** | （2-1）<br/>***by Web***<br/>***to DoH*** | （2-2）<br/>***by Web***<br/>***to Web*** |
+| ---               | ---           | ---           | ---           | ---       |
+| Firefox           | 送信しない    | 送信しない    | 送信しない    | 送信する  |
+| Chrome            | 送信しない    | 送信しない    | 送信しない    | 送信する  |
+| Microsoft Edge    | 送信しない    | 送信しない    | 送信しない    | 送信する  |
 
 ### Firefox の通信キャプチャ
 
