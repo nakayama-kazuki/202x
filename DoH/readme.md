@@ -181,9 +181,9 @@ print $response;
 結論から述べると、全てのリナリオ x Web Browser で Cookie が送信されることはありませんでした。
 
 | Web Browser       | 1-1           | 1-2           | 2-1           | （2-2）       |
-| ---               | ---           | ---           | ---           | ---           |
+| :---:             | :---:         | :---:         | :---:         | :---:         |
 | ***Set-Cookie***  | ***by DoH***  | ***by DoH***  | ***by Web***  | ***by Web***  |
-| ***Cookit***      | ***to DoH***  | ***to Web***  | ***to DoH***  | ***to Web***  |
+| ***Cookie***      | ***to DoH***  | ***to Web***  | ***to DoH***  | ***to Web***  |
 | Firefox           | 送信しない    | 送信しない    | 送信しない    | （送信する）  |
 | Chrome            | 送信しない    | 送信しない    | 送信しない    | （送信する）  |
 | Microsoft Edge    | 送信しない    | 送信しない    | 送信しない    | （送信する）  |
