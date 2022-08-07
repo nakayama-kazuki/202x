@@ -94,7 +94,7 @@ Content-Length: 60
 0x01 0x2c 0x00 0x04 0x8e 0xfb 0x2a 0x84 | ..,....*
 ```
 
-でした。とはいえ、もし魔が差した DoH サービスがユーザー識別子と名前解決要求を紐づけて興味関心情報として蓄積し第三者に提供することを目論んだ場合、Mozilla の主張するプライバシーの向上どころか重大な脅威になり得ます。
+でした。とはいえ、もし魔が差した DoH サービスが Cookie を使ってユーザー識別子と名前解決要求を紐づけ、興味関心情報として蓄積し第三者に提供することを目論んだ場合、Mozilla の主張するプライバシーの向上どころか重大な脅威になり得ます。
 
 ## DoH x Cookie のテストシナリオ
 
@@ -357,7 +357,7 @@ Pragma: no-cache
 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 | ........
 ```
 
-補足しますと、全てのシナリオにおける Web Browser → DoH リクエストでは Cookie のみならず User-Agent や Accept-Language などのユーザー識別に寄与する情報も送信されていないことも確認できました（[参考](https://bugzilla.mozilla.org/show_bug.cgi?id=1543201)）。さらに Mozilla は DoH サービスに対して IP の収集を [禁止するポリシー](https://wiki.mozilla.org/Security/DOH-resolver-policy) も策定しています。このことから Cookie のみならず Finger Printing 観点でも追跡行為に対して十分な配慮がなされている、と言えそうです。
+補足しますと、全てのシナリオにおける Web Browser → DoH リクエストでは Cookie のみならず User-Agent や Accept-Language などのユーザー識別に寄与する情報も送信されていないことが確認できました（[参考](https://bugzilla.mozilla.org/show_bug.cgi?id=1543201)）。さらに Mozilla は DoH サービスに対して IP の収集を [禁止するポリシー](https://wiki.mozilla.org/Security/DOH-resolver-policy) も策定しています。このことから Cookie のみならず Finger Printing 観点でも追跡行為に対して十分な配慮がなされている、と言えそうです。
 
 あと Firefox の DoH リクエストで Accept-Encoding が空の値なのは … 気にしないことにします ^^;
 
