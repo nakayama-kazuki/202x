@@ -6,7 +6,7 @@
 
 例えば 3rd-party Cookie を中心とした技術基盤の置き換えを推進する Privacy Sandbox への [コントリビュート](https://blog.chromium.org/2021/01/privacy-sandbox-in-2021.html) にも積極的で、オリジントライアルを通じたフィードバックなどを行ってます。
 
-今日は Privacy Sandbox の範疇からは外れますが、プライバシー保護の文脈で Web Browser の名前解決に関する実装について記事にしてみたいと思います。具体的には DNS over HTTPS（以降 DoH）の Web Browser 実装、とりわけ Cookie 関連の実装について記事にしてみたいと思います。
+今日は Privacy Sandbox の範疇からは外れますが、プライバシー保護の文脈で Web Browser の名前解決に関する実装について記事にしてみたいと思います。具体的には DNS over HTTPS（以降 DoH）の Web Browser 実装、とりわけ Cookie 関連の実装についての検証結果となります。
 
 | 名前解決          | トランスポート層  |
 | ---               | ---               |
