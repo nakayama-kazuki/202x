@@ -8,15 +8,13 @@
 
 今日は Privacy Sandbox の範疇からは外れますが、プライバシー保護の文脈で DNS over HTTPS（以降 DoH）の Web Browser 実装、とりわけ Cookie 関連の実装について記事にしてみたいと思います。
 
-余談ですが DoH 以外にも DoT, DoQ, DoH3
-
-| 名前解決              | トランスポート層  |
-| ---                   | ---               |
-| DNS                   | udp/53<br/>tcp/53 |
-| DoT                   | tcp/853           |
-| DoQ                   | udp/8853          |
-| DoH<br/>※ 今日はコレ | tcp/443           |
-| DoH3                  | udp/443           |
+| 名前解決          | トランスポート層  |
+| ---               | ---               |
+| DNS               | udp/53, tcp/53    |
+| DoT               | tcp/853           |
+| DoQ               | udp/8853          |
+| DoH（今日はコレ） | tcp/443           |
+| DoH3              | udp/443           |
 
 ## DoH とは
 
