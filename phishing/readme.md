@@ -2,51 +2,60 @@
 
 こんにちは、広告エンジニアの中山です。
 
-以前にも [同様のタイトルの記事](https://www.techscore.com/blog/2017/12/10/phishing/) を書きましたが、今回はそのアップデート版となります。
+広告経由のフィッシング詐欺をはじめ、フィッシング関連ニュースが後を絶ちませんが、今回は騙す側の立場に立って
 
-偽広告経由のフィッシング詐欺をはじめ、関連ニュースが後を絶ちませんが、今回は騙す側の立場に立って
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/0.png' />
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/0.png' width='400' />
+の 1～6 について考察を深め、フィッシング詐欺への耐性を養いたいと思います。ちなみに、以前にも [同様のタイトルの記事](https://www.techscore.com/blog/2017/12/10/phishing/) を書きましたが、今回はそのアップデート版との位置づけです。
 
-の 1～6 について考察を深め、フィッシング詐欺への耐性を養いましょう。
+## 1. メールや SMS から悪意あるサイトに誘導する
 
-## メールや SMS から悪意あるサイトに誘導する
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/1.png' />
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/1.png' width='400' />
+まずは攻撃者が直接メールを送信するケースについて考えてみます。攻撃者はターゲットの警戒をくぐりぬけるために
 
-攻撃者が直接メールを送信し、悪意あるサイトに誘導する手段として
-
-- 疑われにくい題名を使う
+- 疑われにくい題名を使う<br />（例えば「Re: 経費申請」や「退職のご挨拶」）
 - Non-Delivery Report を偽装する
 
-などがあります。前者で典型的な例は「Re: 経費申請について」や「退職のご挨拶」ですね。特に「退職のご挨拶」については、手続きとともにアカウントが削除されたり貸与 PC が回収されることもありますので、社外のドメインからのメールでも違和感がありません。後者はメールアドレスを間違えた時に MTA から送信されるレポートです。レポートの詳細はリンク先ご確認ください、と悪意のあるサイトに誘導します。
+などの手段を用いることがあります。前者の「退職のご挨拶」については、手続きで会社のアカウントが利用できなくなることが想定できるため、社外のドメインからのメールでも違和感が少ない点が攻撃者にとって好都合です。後者はメールアドレスを間違えた時に MTA から送信されるレポートを偽装し、リンク先で詳細情報を確認させる体裁で悪意あるサイトに誘導します。
 
-また、攻撃者が直接メールを送信せずに SaaS の機能を活用して間接的にメールを送信する手段もあります。正規の SaaS を送信元とすることで警戒を解くことが狙いです。例えば Google ドキュメントのメンションから悪意あるサイトの URL を含んだメールを送信することが可能です。Google のブログでは [その対策が示されました](https://workspaceupdates.googleblog.com/2022/03/more-information-in-comment-notifications-gmail.html) が、今後もフィッシング詐欺に SaaS の機能は利用されるでしょう。
+次いで、攻撃者が直接メールを送信せずに SaaS の機能を活用して間接的にメールを送信するケースについて考えてみます。正規の SaaS を送信元とすることで、攻撃の隠れ蓑とすることができます。例えば Google ドキュメントのメンションから悪意あるサイトの URL を含んだメールを送信することが可能でした。この問題については Google から [対策が示されました](https://workspaceupdates.googleblog.com/2022/03/more-information-in-comment-notifications-gmail.html) が、今後も通知機能を有した SaaS は攻撃の隠れ蓑として利用されるのではないかと思います。
 
-最後に SMS の場合は送信者 ID を詐称して本物のように見せかけ警戒を解きます。
+最後に攻撃者が直接 SMS を送信するケースについて考えてみます。SMS の場合は送信者 ID を詐称して本物のように見せかけターゲットの警戒をくぐりぬけます。
 
 - [フィッシング対策協議会からの案内](https://www.antiphishing.jp/news/alert/docomo_20190621.html)
 - [ソフトバンクからの案内](https://www.softbank.jp/mobile/info/personal/news/support/20200304a/)
 
-## Web サービスから悪意あるサイトに誘導する
+## 2. Web サービスから悪意あるサイトに誘導する
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/2.png' width='400' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/2.png' />
 
-## 悪意あるサイトの URL を信頼させる
+掲示板など UGC コンテンツからの誘導や、コミュニケーション機能をもった Web サービスからの誘導が考えられます。前者は「お宝画像はこちら」などの投稿が典型的です。後者は最近ヤフオクから [質問機能を使ったフィッシングサイト誘導](https://auctions.yahoo.co.jp/topic/notice/other/post_3333/) についての注意喚起がありました。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/3.png' width='400' />
+## 3. 悪意あるサイトの URL を信頼させる
 
-## 悪意あるサイトを信頼させる
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/3.png' />
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/4.png' width='400' />
+HTML で Google Drive を指す（★）
+オープンリダイレクトで URL を（★）
 
-## その他
+## 4. 悪意あるサイトを信頼させる
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/5.png' width='400' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/4.png' />
 
-## 悪意ある攻撃を成功に導く
+オートフィルトリック（★）
+中山式デコイ作戦（★）
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/6.png' width='400' />
+
+## 5. その他
+
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/5.png' />
+
+## 6. 悪意ある攻撃を成功に導く
+
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/6.png' />
+
+## まとめ
 
 
 ```
