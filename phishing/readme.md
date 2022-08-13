@@ -2,40 +2,26 @@
 
 こんにちは、広告エンジニアの中山です。
 
-以前にも [同様のタイトルの記事](https://www.techscore.com/blog/2017/12/10/phishing/) を書きましたが、そのアップデート版となります。
+以前にも [同様のタイトルの記事](https://www.techscore.com/blog/2017/12/10/phishing/) を書きましたが、今回はそのアップデート版となります。
 
 偽広告経由のフィッシング詐欺をはじめ、関連ニュースが後を絶ちませんが、今回は騙す側の立場に立って
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/0.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/0.png' width='400' />
 
-の 1～6 について考察を深めることで、フィッシング詐欺への耐性を養いましょう。
+の 1～6 について考察を深め、フィッシング詐欺への耐性を養いましょう。
 
 ## メールや SMS から悪意あるサイトに誘導する
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/1.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/1.png' width='400' />
 
 攻撃者が直接メールを送信し、悪意あるサイトに誘導する手段として
 
 - 疑われにくい題名を使う
 - Non-Delivery Report を偽装する
 
-などがあります。前者で典型的な例は「Re: 経費申請について」や「退職のご挨拶」ですね。
+などがあります。前者で典型的な例は「Re: 経費申請について」や「退職のご挨拶」ですね。特に「退職のご挨拶」については、手続きとともにアカウントが削除されたり貸与 PC が回収されることもありますので、社外のドメインからのメールでも違和感がありません。後者はメールアドレスを間違えた時に MTA から送信されるレポートです。レポートの詳細はリンク先ご確認ください、と悪意のあるサイトに誘導します。
 
-特に「退職のご挨拶」については、手続きとともにアカウントが削除されたり貸与 PC が回収されることもありますので、社外のドメインからのメールでも違和感がありません。
-
-後者はメールアドレスを間違えた時に MTA から送信されるレポートです。
-
-レポートの詳細はリンク先ご確認ください、と悪意のあるサイトに誘導します。
-
-また、攻撃者が直接メールを送信せずに SaaS の機能を活用して間接的にメールを送信する手段もあります。
-
-正規の SaaS を送信元とすることで警戒を解くことが狙いです。
-
-例えば Google ドキュメントのメンションから悪意あるサイトの URL を含んだメールを送信することが可能です。
-
-Google のブログでは [その対策が示されました](https://workspaceupdates.googleblog.com/2022/03/more-information-in-comment-notifications-gmail.html) が、
-
-今後もフィッシング詐欺に SaaS の機能は利用されるでしょう。
+また、攻撃者が直接メールを送信せずに SaaS の機能を活用して間接的にメールを送信する手段もあります。正規の SaaS を送信元とすることで警戒を解くことが狙いです。例えば Google ドキュメントのメンションから悪意あるサイトの URL を含んだメールを送信することが可能です。Google のブログでは [その対策が示されました](https://workspaceupdates.googleblog.com/2022/03/more-information-in-comment-notifications-gmail.html) が、今後もフィッシング詐欺に SaaS の機能は利用されるでしょう。
 
 最後に SMS の場合は送信者 ID を詐称して本物のように見せかけ警戒を解きます。
 
@@ -44,23 +30,23 @@ Google のブログでは [その対策が示されました](https://workspaceu
 
 ## Web サービスから悪意あるサイトに誘導する
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/2.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/2.png' width='400' />
 
 ## 悪意あるサイトの URL を信頼させる
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/3.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/3.png' width='400' />
 
 ## 悪意あるサイトを信頼させる
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/4.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/4.png' width='400' />
 
 ## その他
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/5.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/5.png' width='400' />
 
 ## 悪意ある攻撃を成功に導く
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/6.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/6.png' width='400' />
 
 
 ```
