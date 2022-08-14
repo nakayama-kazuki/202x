@@ -1,53 +1,78 @@
 # ま、また釣りかよ !!
 
-こんにちは、広告エンジニアの中山です。
+こんにちは、広告エンジニア & 安全確保支援士の中山です。
 
 広告経由のフィッシング詐欺をはじめ、フィッシング関連ニュースが後を絶ちませんが、今回は騙す側の立場に立って
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/0.png' />
 
-の 1～6 について考察を深め、フィッシング詐欺への耐性を養いたいと思います。ちなみに、以前にも [同様のタイトルの記事](https://www.techscore.com/blog/2017/12/10/phishing/) を書きましたが、今回はそのアップデート版との位置づけです。
+の 1～6 について考察を深めたいと思います。彼を知り己を知れば百戦殆からず、です。ちなみに、以前にも [同様のタイトルの記事](https://www.techscore.com/blog/2017/12/10/phishing/) を書きましたが、今回はそのアップデート版との位置づけです。
 
-## 1. メールや SMS から悪意あるサイトに誘導する
+## 1. メールや SMS からフィッシングサイトに誘導
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/1.png' />
 
-まずは攻撃者が直接メールを送信するケースについて考えてみます。攻撃者はターゲットの警戒をくぐりぬけるために
+まずは攻撃者が直接メールを送信するケースについて考えてみます。攻撃者はターゲットを警戒させないために
 
 - 疑われにくい題名を使う<br />（例えば「Re: 経費申請」や「退職のご挨拶」）
 - Non-Delivery Report を偽装する
 
-などの手段を用いることがあります。前者の「退職のご挨拶」については、手続きで会社のアカウントが利用できなくなることが想定できるため、社外のドメインからのメールでも違和感が少ない点が攻撃者にとって好都合です。後者はメールアドレスを間違えた時に MTA から送信されるレポートを偽装し、リンク先で詳細情報を確認させる体裁で悪意あるサイトに誘導します。
+などの手段を用いることがあります。前者の「退職のご挨拶」については、手続きにより会社のアカウントが利用できなくなることが想定できるため、社外のドメインからのメールでも違和感が少ない点が攻撃者にとって好都合です。後者はメールアドレスを間違えた時に MTA から送信されるレポートを偽装し、リンク先で詳細情報を確認させる体裁でフィッシングサイトに誘導します。
 
-次いで、攻撃者が直接メールを送信せずに SaaS の機能を活用して間接的にメールを送信するケースについて考えてみます。正規の SaaS を送信元とすることで、攻撃の隠れ蓑とすることができます。例えば Google ドキュメントのメンションから悪意あるサイトの URL を含んだメールを送信することが可能でした。この問題については Google から [対策が示されました](https://workspaceupdates.googleblog.com/2022/03/more-information-in-comment-notifications-gmail.html) が、今後も通知機能を有した SaaS は攻撃の隠れ蓑として利用されるのではないかと思います。
+次いで、攻撃者が直接メールを送信せずに SaaS の機能を活用して間接的にメールを送信するケースについて考えてみます。正規の SaaS を送信元とすることで、攻撃の隠れ蓑とすることができます。例えば Google ドキュメントのメンションからフィッシングサイトの URL を含んだメールを送信することが可能でした。この問題については Google から [対策が示されました](https://workspaceupdates.googleblog.com/2022/03/more-information-in-comment-notifications-gmail.html) が、今後も通知機能を有した SaaS は攻撃の隠れ蓑として利用される可能性があります。
 
-最後に攻撃者が直接 SMS を送信するケースについて考えてみます。SMS の場合は送信者 ID を詐称して本物のように見せかけターゲットの警戒をくぐりぬけます。
+最後に攻撃者が直接 SMS を送信するケースについて考えてみます。SMS の場合はターゲットを警戒させないために送信者 ID を詐称する可能性があることを理解しておきましょう。
 
-- [フィッシング対策協議会からの案内](https://www.antiphishing.jp/news/alert/docomo_20190621.html)
-- [ソフトバンクからの案内](https://www.softbank.jp/mobile/info/personal/news/support/20200304a/)
+- [フィッシング対策協議会からの注意喚起](https://www.antiphishing.jp/news/alert/docomo_20190621.html)
+- [ソフトバンクからの注意喚起](https://www.softbank.jp/mobile/info/personal/news/support/20200304a/)
 
-## 2. Web サービスから悪意あるサイトに誘導する
+## 2. Web サービスからフィッシングサイトに誘導
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/2.png' />
 
-掲示板など UGC コンテンツからの誘導や、コミュニケーション機能をもった Web サービスからの誘導が考えられます。前者は「お宝画像はこちら」などの投稿が典型的です。後者は最近ヤフオクから [質問機能を使ったフィッシングサイト誘導](https://auctions.yahoo.co.jp/topic/notice/other/post_3333/) についての注意喚起がありました。
+Web サービスからの誘導によく使われる手段として
 
-## 3. 悪意あるサイトの URL を信頼させる
+- 掲示板など UGC コンテンツからの誘導
+- コミュニケーション機能をもった Web サービスからの誘導
+
+などがあります。前者は「お宝画像はこちら」などの投稿が典型例です。リンク先で待ち受けているのはお宝画像ではなくフィッシングサイトかもしれません。後者については最近ヤフオクから [質問機能を使ったフィッシングサイト誘導](https://auctions.yahoo.co.jp/topic/notice/other/post_3333/) についての注意喚起がありました。
+
+## 3. フィッシングサイトの URL を詐称
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/3.png' />
 
-HTML で Google Drive を指す（★）
-オープンリダイレクトで URL を（★）
+URL を詐称によく使われる手段として
+
+- プロクシサービスに便乗
+- オープンリダイレクト（脆弱性）に便乗
+- テキストと実際のリンク先の異なる A 要素の活用
+
+などがあります。例えば
+
+```
+https://translate.google.com/translate?u=xn--lhr645fjve.jp
+```
+
+は URL としては Google サービスですが、表示されるのは「総務省.jp」です。punycode を使って IDN をカムフラージュしているため、最初の URL からコンテンツを想像することは困難です。上記「総務省.jp」はフィッシングサイトではありませんが、攻撃者はターゲットを警戒させないためにこのような仕組みを使って URL をミスリードさせます。
+
+また、こちらは昔からよく使われる URL の詐称です。ターゲットが少々警戒心を抱いたとしても Google ドキュメントならまあいいか、と考えてしまうところが攻撃者の狙いです。そしてターゲットが evil-phishing-site.com に誘導されてしまいます。
+
+```
+<a href='https://evil-phishing-site.com/'>
+    https://docs.google.com/document/d/FILE_ID/preview
+</a>
+```
 
 ## 4. 悪意あるサイトを信頼させる
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/4.png' />
 
+ここでは攻撃者も手の込んだ仕掛けを用いますのでデモも交えて解説します。
 オートフィルトリック（★）
 中山式デコイ作戦（★）
 
 
-## 5. その他
+## 5. その他攻撃手段
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/5.png' />
 
