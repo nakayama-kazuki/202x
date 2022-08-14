@@ -23,11 +23,7 @@
 
 次いで、攻撃者が直接メールを送信せずに SaaS の通知機能を活用して間接的にメールを送信するケースについて考えてみます。
 
-正規の SaaS を送信元とすることで、攻撃の隠れ蓑とすることができます。
-★★
-
-
-例えば Google ドキュメントのメンションからフィッシングサイトの URL を含んだメールを送信することが可能でした。この問題については Google から [対策が示されました](https://workspaceupdates.googleblog.com/2022/03/more-information-in-comment-notifications-gmail.html) が、今後も通知機能を有した SaaS は攻撃の隠れ蓑として利用される可能性があります。
+攻撃者はターゲットの警戒を解くために正規の SaaS の通知機能を隠れ蓑として活用します。例えば Google ドキュメントのメンションからフィッシングサイトの URL を含んだメールを送信することが可能でした。この問題については Google から [対策が示されました](https://workspaceupdates.googleblog.com/2022/03/more-information-in-comment-notifications-gmail.html) が、今後も通知機能を有した SaaS は攻撃の隠れ蓑として利用される可能性があります。
 
 最後に攻撃者が直接 SMS を送信するケースについて考えてみます。
 
@@ -63,7 +59,7 @@ URL の詐称によく使われる手段として
 https://translate.google.com/translate?u=xn--lhr645fjve.jp
 ```
 
-は URL としては Google サービスですが、表示されるのは「総務省.jp」です（蛇足ですが punycode を使ってカムフラージュしているため、コンテンツを想像することは困難ですね）。メールや SMS では URL がリンクとして扱われる場合もありますので、ターゲットは Google だと信じて誘導されてしまうかもしれません。攻撃者はこのような仕組みを使って URL をミスリードします。
+は URL としては Google サービスですが、表示されるのは https://www.soumu.go.jp/ のコンテンツです（蛇足ですが punycode を使ってカムフラージュしているため、コンテンツを想像することは一層困難ですね）。メールや SMS では URL がリンクとして扱われる場合もありますので、ターゲットは Google だと信じて誘導されてしまうかもしれません。攻撃者はこのような仕組みを使って URL をミスリードします。
 
 また、こちら …
 
@@ -92,10 +88,10 @@ https://translate.google.com/translate?u=xn--lhr645fjve.jp
 
 二点目は [以前の記事](https://www.techscore.com/blog/2017/12/10/phishing/) でご紹介した方法です。
 
-1. 攻撃者は Web サービスからフィッシングサイトに誘導する
+1. 攻撃者は特定の Web サービスからフィッシングサイトに誘導する
 2. フィッシングサイトはこのタイミングでダミー URL を history.pushState する
-3. ターゲットは期待した情報を得られないためヒストリバックする<br />※ このタイミングではターゲットは元の Web サービスに戻れていない
-4. フィッシングサイトは onpopstate イベントを hook に遷移元の Web サービスを模した偽サイトに遷移する
+3. ターゲットは期待した情報を得られないためヒストリバックする<br />※ 実はこのタイミングではターゲットは元の Web サービスに戻れていない
+4. フィッシングサイトは onpopstate イベントをトリガして遷移元の Web サービスを模した偽サイトに遷移する
 5. ターゲットは元の Web サイトに戻ったつもりになる
 
 ターゲットに「ヒストリバックで元のサイトに戻った」と信じさせることができれば、その後再ログインを促すなどで秘密情報を獲得することも可能になります。
@@ -104,28 +100,40 @@ https://translate.google.com/translate?u=xn--lhr645fjve.jp
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/5.png' />
 
-```
-    QR で特定機能を呼び出す
-    アプリ内カスタムURLスキームの脆弱性を使う
-    Consent Phishing Attack で同意を得て情報収集
-```
+他にもいろいろな攻撃手段があります。
+
+### QR コード
+
+攻撃者が QR コードを利用してターゲットをフィッシングサイトに誘導する可能性のみならず、QR コードから直接攻撃を実行することも考えられます（実は QR コードから実行可能な機能はいろいろとあります）。
+
+### アプリ内カスタム URL スキーム（の脆弱性）
+
+かつては x-avefront というスキームが社会問題となりましたが、同様の問題は WebView を使うアプリにも発生する可能性があります。フィッシングサイトがこの脆弱性を利用する可能性があります。
+
+### Consent Phishing
+
+業務で活用する SaaS が増えると、コラボレーション目的で SaaS から認可を求める通知が来る機会も増えます。認可要求に対して反射的に承諾してしまう層は一定数存在しそうですが、悪意あるアプリが認可を得てしまうとターゲットへの攻撃もしくは攻撃のための情報収集などが可能になります。詳しくは [Microsoft の解説](https://docs.microsoft.com/en-us/azure/active-directory/manage-apps/protect-against-consent-phishing) をご覧ください。
 
 ## 6. 悪意ある攻撃を成功に導く
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/6.png' />
 
+いよいよ攻撃者は目的を達成します。
+
+### Callback Phishing
+
+https://japan.zdnet.com/article/35190291/
+
+### 偽の決済画面
+
+### 偽のソーシャルログイン
+
+### 多要素認証の Man In The Middle
+
+https://xtech.nikkei.com/atcl/nxt/column/18/00676/072100111/
+
 ## まとめ
 
+攻撃側の創意工夫（苦笑）はいかがでしたでしょうか。
 
-```
-
-5. 悪意あるコンバージョン獲得の HOW
-    マルウェアをインストールさせる
-        折り返し電話フィッシング（callback phishing） : https://japan.zdnet.com/article/35190291/
-    偽の決済画面での支払いさせる
-    アカウント情報を奪う
-        Google ログイン
-        多要素認証の Man In The Middle : https://xtech.nikkei.com/atcl/nxt/column/18/00676/072100111/
-
-```
 
