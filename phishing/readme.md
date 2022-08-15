@@ -72,7 +72,7 @@ https://translate.google.com/translate?u=xn--lhr645fjve.jp
 
 は昔からよく使われる URL 詐称の方法で、タグが入稿できる UGC や HTML メールなどで使われます。公的な案内（を偽装したメッセージ）が Google ドキュメントにリンクしているのは違和感は少ないですよね。そしてターゲットは evil-phishing-site.com に誘導されてしまいます。
 
-## 4. 悪意あるサイトを信頼させる
+## 4. フィッシングサイトを信頼させる
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/4.png' />
 
@@ -95,7 +95,12 @@ https://translate.google.com/translate?u=xn--lhr645fjve.jp
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/demo/2-3.png' />
 
-こちらに [デモサイト](https://pj-corridor.net/phishing-demo/trust.html) を用意したので動作をご確認ください。
+こちらに [4.2. のデモサイト](https://pj-corridor.net/phishing-demo/trust.html) を用意したので動作をご確認ください。蛇足ですが、このデモサイトを作る過程で以下の仕様を知りました。
+
+|ユーザーインタラクション   |あり（のページ）           |なし（のページ）           |
+|:---:                      |:---:                      |:---:                      |
+|Firefox 103.0              |onpopstate が発火する      |onpopstate が発火する      |
+|Chrome 103.0.5060.134      |onpopstate がは発火する    |onpopstate が発火しない    |
 
 ## 5. その他攻撃手段
 
@@ -115,11 +120,11 @@ https://translate.google.com/translate?u=xn--lhr645fjve.jp
 
 業務で活用する SaaS が増えると、コラボレーション用途で SaaS から認可を求める通知を受ける機会も増えます。認可要求に対して反射的に承諾してしまう層が一定数存在するかもしれませんが、悪意あるアプリが認可を得てしまうとターゲットへの攻撃もしくはその前段の情報収集が可能になります。詳しくは [Microsoft の解説](https://docs.microsoft.com/en-us/azure/active-directory/manage-apps/protect-against-consent-phishing) をご覧ください。
 
-## 6. 悪意ある攻撃を成功に導く
+## 6. 攻撃を成功に導く
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/6.png' />
 
-そして、いよいよ攻撃者は目的を達成します。
+そして、いよいよ攻撃者は目的を達成します …
 
 #### 6.1. Callback Phishing
 
