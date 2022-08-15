@@ -97,10 +97,10 @@ https://translate.google.com/translate?u=xn--lhr645fjve.jp
 
 こちらに [4.2. のデモサイト](https://pj-corridor.net/phishing-demo/trust.html) を用意したので動作をご確認ください。蛇足ですが、このデモサイトを作る過程で以下の仕様を知りました。
 
-|ユーザーインタラクション   |あり（のページ）           |なし（のページ）           |
-|:---:                      |:---:                      |:---:                      |
-|Firefox 103.0              |onpopstate が発火する      |onpopstate が発火する      |
-|Chrome 103.0.5060.134      |onpopstate がは発火する    |onpopstate が発火しない    |
+|ユーザーインタラクション   |あり（のページ）       |なし（のページ）           |
+|:---:                      |:---:                  |:---:                      |
+|Firefox 103 の場合 …      |onpopstate が発火する  |onpopstate が発火する      |
+|Chrome 103 の場合 …       |onpopstate が発火する  |onpopstate が発火しない    |
 
 ## 5. その他攻撃手段
 
