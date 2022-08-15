@@ -93,6 +93,8 @@ https://translate.google.com/translate?u=xn--lhr645fjve.jp
 
 二つ目は [以前の記事](https://www.techscore.com/blog/2017/12/10/phishing/) でご紹介した方法です。UGC 等からおとりサイトに誘導し、ターゲットは自分が欲しい情報がないためヒストリバックします。しかし、実際には元の UGC を模したフィッシングサイトに誘導されてしまいます。ターゲットに「ヒストリバックで元のサイトに戻った」と信じさせることができれば、その後再ログインを促すなどで秘密情報を盗み出すことも可能になります。
 
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/demo/2-3.png' width='500' />
+
 こちらに [デモサイト](https://pj-corridor.net/phishing-demo/trust.html) を用意したので動作をご確認ください。
 
 ## 5. その他攻撃手段
