@@ -1,4 +1,4 @@
-# DNS over HTTPS (DoH) の気になる Web Browser 実装を確認
+# DNS over HTTPS（DoH）の気になる Web Browser 実装を確認
 
 こんにちは、広告エンジニアの中山です。
 
