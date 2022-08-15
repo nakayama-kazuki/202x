@@ -1,4 +1,4 @@
-# DNS-over-HTTPS (DoH) のちょっと気になる Web Browser 実装を確認
+# DNS over HTTPS (DoH) の気になる Web Browser 実装を確認
 
 こんにちは、広告エンジニアの中山です。
 
@@ -10,7 +10,7 @@
 
 ## DoH とは
 
-従前の DNS を用いた名前解決ではプレーンテキストが送受信されますが、DoH を利用することで Web Browser と DNS キャッシュサーバ間の通信を「盗聴」「改竄」「なりすまし」から守ることができます。余談ですが DoH 以外にも DoT, DoQ, DoH3 などの名前解決手段がありますので、興味があれば調べてみてください。
+従前の DNS を用いた名前解決ではプレーンテキストが送受信されますが、DoH を利用することで Web Browser と DNS キャッシュサーバ間の通信を「盗聴」「改竄」「なりすまし」から守ることができます（余談ですが DoH 以外にも DoT, DoQ, DoH3 などの名前解決手段がありますので、興味があれば調べてみてください）。
 
 [Mozilla によれば](https://wiki.mozilla.org/Trusted_Recursive_Resolver)
 
@@ -378,7 +378,7 @@ Pragma: no-cache
 0x01 
 ```
 
-こんな感じの構造体に解析したり、その逆に構造体から application/dns-message を構築するサンプルコードです。
+こんな感じの構造体に解析したり、その逆に構造体から application/dns-message を構築するサンプルコードとなります。
 
 ```
 Array (
