@@ -1,4 +1,4 @@
-# DoH のちょっと気になる Web Browser 実装を確認
+# DNS-over-HTTPS (DoH) のちょっと気になる Web Browser 実装を確認
 
 こんにちは、広告エンジニアの中山です。
 
@@ -8,27 +8,19 @@
 
 今日は Privacy Sandbox の範疇からは外れますが、プライバシー保護の文脈で Web Browser の名前解決に関する実装について記事にしてみたいと思います。具体的には DNS over HTTPS（以降 DoH）の Web Browser 実装、とりわけ Cookie 関連の実装についての検証結果のご紹介となります。
 
-| 名前解決          | トランスポート層  |
-| ---               | ---               |
-| DNS               | udp/53, tcp/53    |
-| DoT               | tcp/853           |
-| DoQ               | udp/8853          |
-| DoH（今日の題材） | tcp/443           |
-| DoH3              | udp/443           |
-
 ## DoH とは
 
-DoH を有効にするにはお手持ちの Web Browser の設定画面（以下は Firefox の例）をご確認ください。
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/DoH/setting.png' />
-
-従前の DNS を用いた名前解決ではプレーンテキストが送受信されますが、DoH を利用することで Web Browser と DNS キャッシュサーバ間の通信を「盗聴」「改竄」「なりすまし」から守ることができます。
+従前の DNS を用いた名前解決ではプレーンテキストが送受信されますが、DoH を利用することで Web Browser と DNS キャッシュサーバ間の通信を「盗聴」「改竄」「なりすまし」から守ることができます。余談ですが DoH 以外にも DoT, DoQ, DoH3 などの名前解決手段がありますので、興味があれば調べてみてください。
 
 [Mozilla によれば](https://wiki.mozilla.org/Trusted_Recursive_Resolver)
 
 > DNS-over-HTTPS (DoH) allows DNS to be resolved with enhanced privacy, secure transfers and comparable performance
 
 DoH を使うことでプライバシーおよびセキュリティーの向上が望めるとのことです。
+
+DoH を有効にするにはお手持ちの Web Browser の設定画面（以下は Firefox の例）をご確認ください。
+
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/DoH/setting.png' />
 
 ## RFC 8484 とプライバシー
 
@@ -103,9 +95,9 @@ Content-Length: 48
 0x01 0x2c 0x00 0x04 0x8e 0xfa 0xc4 0x84 | ..,.....
 ```
 
-でした。とはいえ、もし魔が差した DoH サービスが Cookie を使ってユーザー識別子と名前解決要求を紐づけ、興味関心情報として蓄積し第三者に提供することを目論んだ場合、Mozilla の主張するプライバシーの向上どころか重大な脅威になり得ます。
+でした。とはいえ、もし魔が差した DoH サービスが Cookie を使ってユーザー識別子と名前解決要求を紐づけ、興味関心情報として蓄積し第三者に提供することをもくろんだ場合、Mozilla の主張するプライバシーの向上どころか重大な脅威になり得ます。
 
-## DoH x Cookie のテストシナリオ
+## DoH で Cookie は使えるのか？（… を確認する DoH x Cookie のテストシナリオ）
 
 では、実際にそのようなことが可能なのか Web Browser の動作を検証してみましょう。
 
@@ -175,7 +167,7 @@ print $response;
 	- 1-2. 通常の Web ブラウジング（HTTP リクエスト）でその Cookie を送信するか？
 2. 通常の Web ブラウジング（HTTP レスポンスで）Set-Cookie を受けた Web Browser は …
 	- 2-1. DoH リクエストでその Cookie を送信するか？
-	- 2-2. 通常の Web ブラウジング（HTTP リクエスト）でその Cookie を送信するか？<br/>→ 1st-party Cookie については確認するまでもなく「Cookie を送信する」ですね
+	- 2-2. 通常の Web ブラウジング（HTTP リクエスト）でその Cookie を送信するか？<br/>※ 1st-party Cookie については確認するまでもなく「Cookie を送信する」となります
 
 テストに利用した Web Browser のバージョンは以下の通りです。
 
@@ -374,19 +366,21 @@ Pragma: no-cache
 
 今回利用した Web Browser の実装ではシナリオ 1-1, 1-2, 2-1 ともに Cookie は送信されず、ゆえに DoH サービスがユーザーを識別して興味関心情報を蓄積することは困難である、ということが確認できました。ですので、Web Browser と DNS キャッシュサーバ間の通信を「盗聴」「改竄」「なりすまし」から守りたい方は DoH の活用をご検討ください。
 
-蛇足ですが Web アプリケーションの開発 ～ テストの際には hosts を変更することがありますが、設定ミスや元に戻すことを忘れた結果のトラブルをしばしば見かけます。同じ環境で開発 ～ テストをしているグループ向けの設定を社内の DoH サービスで提供し、テスト実施者は Web Browser の DoH を on/off することで利用する環境を切り替える、もしくはテスト専用の Web Browser でのみ DoH を使う、的な運用で hosts 変更によるトラブルが減らせるかも … などと感じた今日この頃です。そのような用途向けに [簡易 DoH サーバ + application/dns-message 解析 & 構築のサンプルコード](https://github.com/nakayama-kazuki/202x/blob/main/DoH/doh.php) を置きましたのでよろしければご活用ください。
+蛇足ですが Web アプリケーションの開発 ～ テストの際には hosts を変更することがありますが、設定ミスや元に戻すことを忘れた結果のトラブルをしばしば見かけます。同じ環境で開発 ～ テストをしているグループ向けの設定を社内の DoH サービスで提供し、テスト実施者は Web Browser の DoH を on/off することで利用する環境を切り替える、もしくはテスト専用の Web Browser でのみ DoH を使う、的な運用で hosts 変更によるトラブルが減らせるかも … などと感じた今日この頃です。そのような用途向けに [サンプルコード（個人サイトです）](https://github.com/nakayama-kazuki/202x/blob/main/DoH/doh.php) を用意しましたのでよろしければご活用ください。
+
+こんな感じの application/dns-message を
 
 ```
-// packed application/dns-message
-
 0x29 0xbf 0x01 0x80 0x00 0x01 0x00 0x00 | )......
 0x00 0x00 0x00 0x00 0x03 0x77 0x77 0x77 | ......ww
 0x05 0x79 0x61 0x68 0x6f 0x6f 0x02 0x63 | w.yahoo.
 0x6f 0x02 0x6a 0x70 0x00 0x00 0x01 0x00 | co.jp...
 0x01 
+```
 
-// unpacked array
+こんな感じの構造体に解析したり、その逆に構造体から application/dns-message を構築するサンプルコードです。
 
+```
 Array (
     [HEADER] => Array (
         [ID] => 10687,
@@ -423,4 +417,4 @@ Array (
 )
 ```
 
-あ、言い忘れましたが、ヤフー広告ではプライバシー保護と広告エコシステム発展を両立を志す仲間を募集中です！我こそはという方のご連絡をお待ちしております。
+あ、言い忘れましたが、ヤフー広告ではプライバシー保護と広告エコシステム発展を両立を志す仲間を募集中です！われこそはという方のご連絡をお待ちしております。
