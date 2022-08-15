@@ -95,7 +95,7 @@ https://translate.google.com/translate?u=xn--lhr645fjve.jp
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/demo/2-3.png' />
 
-こちらに [4.2. のデモサイト](https://pj-corridor.net/phishing-demo/trust.html) を用意したので動作をご確認ください。蛇足ですが、このデモサイトを作る過程で以下の仕様を知りました。
+こちらに [4.2. のデモサイト](https://pj-corridor.net/phishing-demo/trust.html) を用意したので動作をご確認ください。蛇足ですが、このデモサイトを作る過程で以下の仕様を知り、Chrome の onpopstate の発火条件を満たすためユーザーインタラクションを挿入しました。
 
 |ユーザーインタラクション   |あり（のページ）       |なし（のページ）           |
 |:---:                      |:---:                  |:---:                      |
