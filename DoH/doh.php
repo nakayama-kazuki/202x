@@ -1,5 +1,12 @@
 <?php
 
+/*
+	doh.php
+	Copyright (c) 2022 Kazuki Nakayama
+	This software is released under the MIT License.
+	http://opensource.org/licenses/mit-license.php
+*/
+
 set_time_limit(3);
 
 class UnitTest
