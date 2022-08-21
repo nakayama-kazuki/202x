@@ -1,8 +1,7 @@
 # ま、また釣りかよ !!
 
 <img src='https://www.techscore.com/blog/wp/wp-content/uploads/2017/12/phishing-shutterstock.jpg' />
-（Yanik Chauvin / Shutterstock.com）
-
+（Yanik Chauvin / Shutterstock.com）<br /><br />
 
 こんにちは、ヤフー広告エンジニア + 安全確保支援士の中山です（写真は私ではありません）。以前シナジーマーケティングでご一緒させて頂いたこともあり、TECHSCORE BLOG への記事掲載を馬場 CTO にご快諾いただきました ^^ どうもありがとうございます。
 
