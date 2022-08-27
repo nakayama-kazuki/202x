@@ -1,6 +1,6 @@
 # ま、また釣りかよ !!
 
-2022.8.27 追記 : [techscore] (https://blog.techscore.com/entry/2022/08/24/150000) に掲載させていただきました。<br /><br />
+※ [techscore](https://blog.techscore.com/entry/2022/08/24/150000) に掲載させていただきました。<br /><br />
 
 <img src='https://www.techscore.com/blog/wp/wp-content/uploads/2017/12/phishing-shutterstock.jpg' />
 （Yanik Chauvin / Shutterstock.com）<br /><br />
