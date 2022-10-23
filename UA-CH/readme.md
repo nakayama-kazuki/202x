@@ -1,31 +1,32 @@
-# 今はもう動かない User-Agent 文字列
+# 今は、もう、動かないその User-Agent 文字列
 
 こんにちは、広告エンジニアの中山です。
 
-みなさまの Web アプリケーションでは User-Agent 文字列を解析して、その内容に応じて制御を分岐させるケースはありますか？また、それはどのような目的の制御でしょうか。私の担当する広告の場合は
+みなさまの Web アプリケーションでは User-Agent 文字列を参照することはありますか？例えば User-Agent 文字列を解析して内容に応じて制御を分岐させたり、機械学習の特徴量として用いたり、否定的な意見の多いものの IP と組み合わせて fingerprinting などの用途が考えられます。ちなみに、私の担当する広告サービスでは
 
-- 不正判定（User-Agent 文字列やその他のリクエストに含まれるシグナルからロボットの可能性をスコアリング）
-- キャリア、デバイス、ブラウザ種別や OS に応じた配信制御（例えば特定のバージョンのバグを回避）<br />キャリアは IP レンジからの判定に加え、User-Agent 文字列に含まれるモデル名称から判定する場合もある
+- 不正判定のための特徴量
+- 属性推定のための特徴量
+- その他配信制御（例えばキャリアのターゲティングや特定バージョンのバグ回避など）
 
-などを行ってます。
+といった用途で参照しています。ちなみにキャリアは通常 IP レンジから判定しますが、Wi-Fi 経由のアクセス時には User-Agent 文字列に含まれるモデル名称から判定できる場合もあります。
 
-そこで今回は従来同様に User-Agent 文字列が使えなくなってしまう未来を想定しつつ User Agent Client Hints（UA-CH）の仕様を調査し、今後どのように Web アプリケーションで対応すべきかをみなさんと一緒に考えてゆきたいと思います。
+そんな User-Agent 文字列ですが、この先 Chrome をはじめ幾つかのブラウザで情報量の削減や凍結が進み、従前の目的で利用できなくなる可能性があります。
+
+そこで今回は User Agent Client Hints（UA-CH）の仕様を調査しつつ、今後どのように Web アプリケーションで対応すべきかをみなさんと一緒に考えてゆきたいと思います。
 
 また、特に断りのない限り、この記事では Chrome に関する内容を述べているものとします。
 
-## User-Agent 文字列は今後どうなるのか？
+## User-Agent 文字列はなぜ情報量を削減され、凍結されるのか？
 
-今後、端的には User-Agent 文字列から情報が削減され、最終的に凍結される見込みです。
-
-そうすべき [モチベーション](https://github.com/WICG/ua-client-hints) として
+そうすべきモチベーションとして [以下のように述べられて](https://github.com/WICG/ua-client-hints) います。
 
 > This header's value has grown in both length and complexity over the years; a complicated dance between server-side sniffing to provide the right experience for the right devices on the one hand, and client-side spoofing in order to bypass incorrect or inconvenient sniffing on the other.
 
-長く、そして複雑怪奇な文字列仕様の解消と
+長く、そして複雑怪奇な文字列仕様を解消し
 
 > There's a lot of entropy wrapped up in the UA string that is sent to servers by default, for all first- and third-party requests.
 
-それゆえの高いエントロピーがユーザー追跡を可能にしてしまう問題の排除、ということが述べられてます。
+あわせて高エントロピー故にユーザー追跡を可能にしてしまう問題を排除すること、がモチベーションだそうです。
 
 Google から [案内されている情報](https://www.chromium.org/updates/ua-reduction/) によればこのようなスケジュールで削除～凍結が進みます。
 
