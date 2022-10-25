@@ -30,9 +30,7 @@ Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) 
 
 > There's a lot of entropy wrapped up in the UA string that is sent to servers by default, for all first- and third-party requests.
 
-あわせて高エントロピー故にユーザー追跡を可能にしてしまう問題 … 冒頭で述べた fingerprinting … を排除すること、がモチベーションだそうです。
-
-Google から [案内されているスケジュール](https://www.chromium.org/updates/ua-reduction/) によれば、以下のタイミングで User-Agent 文字列（の黄色のセルで示した部分）は情報量を削減され、凍結されます。
+あわせて高エントロピー故にユーザー追跡を可能にしてしまう問題 … 冒頭で述べた fingerprinting … を排除するための取り組みだそうす。以下は Google から [案内されているスケジュール](https://www.chromium.org/updates/ua-reduction/) を時間軸にプロットしたものです。表中の黄色のセルは情報量を削減され、凍結されたトークンを示しています。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/UA-CH/i04.png' />
 
@@ -56,13 +54,13 @@ Google から [案内されているスケジュール](https://www.chromium.org
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/UA-CH/i05.png' />
 
-ここで ***androidVersion*** が "10" に ***deviceModel*** が "K" に固定されてしまいます。そうなると …
+ここで ***androidVersion*** が "10" そして ***deviceModel*** が "K" に固定されてしまいます。そうなると …
 
 - ***deviceModel*** はデモグラに対する説明力が高い<br />（例えば Disney Mobile on docomo のユーザーは女性である可能性が高そう、など）
 - ***deviceModel*** からキャリア判定を行うケースがある
 - Mobile の ***androidVersion*** は Desktop の ***unifiedPlatform*** よりもブラックリスト制御やホワイトリスト制御に使われるケースが多い
 
-に対して影響が生じることになります。みなさまの Web アプリケーションへの影響はいかがでしょうか？
+のような用途に対して影響が生じます。みなさまの Web アプリケーションへの影響はいかがでしょうか？
 
 蛇足ですが Chrome 以外のブラウザについては 2022/09/08 現在では以下のような状況です。
 
