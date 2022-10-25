@@ -32,30 +32,37 @@ Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) 
 
 あわせて高エントロピー故にユーザー追跡を可能にしてしまう問題 … 冒頭で述べた fingerprinting … を排除すること、がモチベーションだそうです。
 
-Google から [案内されている情報](https://www.chromium.org/updates/ua-reduction/) によればこのようなスケジュールで削除～凍結が進みます。
+Google から [案内されているスケジュール](https://www.chromium.org/updates/ua-reduction/) によれば、以下のタイミングで User-Agent 文字列（の黄色のセルで示した部分）は情報量を削減され、凍結されます。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/UA-CH/i04.png' />
 
 ## いつ困ることになりそうか？
 
-既に過ぎさった
+過去の
 
 > In Phase 4 we change the <minorVersion> token to "0.0.0".
+
+および
+
 > In Phase 5 we change the <platform> and <oscpu> tokens from their platform-defined values to the relevant <unifiedPlatform> token value (which will never change).
 
 については、広告の例では不正判定や配信制御への影響は考えられるものの、肌感覚としてはそこまで大きな影響はなさそうです。
 
-一方でそれなりの影響がありそうなのは年明けの
+一方でそれなりの影響がありそうなのは年が明けてからの
 
 > In Phase 6, we change the <deviceModel> token to "K" and change the <androidVersion> token to a static "10" string.
 
-です。何故なら
+のタイミングとなります。
 
-- ***deviceModel*** はデモグラに対する説明力が高い<br />（例えば Disney Mobile は女性である可能性が高そう、など）
-- 上述したように ***deviceModel*** からキャリア判定を行うケースがある
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/UA-CH/i05.png' />
+
+ここで ***androidVersion*** が "10" に ***deviceModel*** が "K" に固定されてしまいます。そうなると …
+
+- ***deviceModel*** はデモグラに対する説明力が高い<br />（例えば Disney Mobile on docomo のユーザーは女性である可能性が高そう、など）
+- ***deviceModel*** からキャリア判定を行うケースがある
 - Mobile の ***androidVersion*** は Desktop の ***unifiedPlatform*** よりもブラックリスト制御やホワイトリスト制御に使われるケースが多い
 
-に対して影響が生じるためです。みなさまの Web アプリケーションへの影響はいかがでしょうか？
+に対して影響が生じることになります。みなさまの Web アプリケーションへの影響はいかがでしょうか？
 
 蛇足ですが Chrome 以外のブラウザについては 2022/09/08 現在では以下のような状況です。
 
