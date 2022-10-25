@@ -2,7 +2,13 @@
 
 こんにちは、広告エンジニアの中山です。
 
-みなさまの Web アプリケーションでは User-Agent 文字列を参照することはありますか？例えば User-Agent 文字列を解析して内容に応じて制御を分岐させたり、機械学習の特徴量として用いたり、否定的な意見の多いものの IP と組み合わせて fingerprinting などの用途が考えられます。ちなみに、私の担当する広告サービスでは
+みなさまの Web アプリケーションでは User-Agent 文字列を参照することはありますか？
+
+```
+Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.1234.56 Safari/537.36
+```
+
+例えば User-Agent 文字列を解析して内容に応じて制御を分岐させたり、機械学習の特徴量として用いたり、さらに一般に悪しきユースケースとされる fingerprinting への活用もあるかもしれません。私の担当する広告サービスでは
 
 - 不正判定のための特徴量
 - 属性推定のための特徴量
@@ -10,13 +16,11 @@
 
 といった用途で参照しています。ちなみにキャリアは通常 IP レンジから判定しますが、Wi-Fi 経由のアクセス時には User-Agent 文字列に含まれるモデル名称から判定できる場合もあります。
 
-そんな User-Agent 文字列ですが、この先 Chrome をはじめ幾つかのブラウザで情報量の削減や凍結が進み、従前の目的で利用できなくなる可能性があります。
-
-そこで今回は User Agent Client Hints（UA-CH）の仕様を調査しつつ、今後どのように Web アプリケーションで対応すべきかをみなさんと一緒に考えてゆきたいと思います。
+そんな User-Agent 文字列ですが、この先 Chrome をはじめ幾つかのブラウザで情報量の削減や凍結が進み、従前の目的で利用できなくなる可能性があります。そこで今回は User Agent Client Hints（UA-CH）の仕様を調査しつつ、今後どのように Web アプリケーションで対応すべきかをみなさんと一緒に考えてゆきたいと思います。
 
 また、特に断りのない限り、この記事では Chrome に関する内容を述べているものとします。
 
-## User-Agent 文字列はなぜ情報量を削減され、凍結されるのか？
+## なぜ User-Agent 文字列は情報量を削減され、凍結されるのか？
 
 そうすべきモチベーションとして [以下のように述べられて](https://github.com/WICG/ua-client-hints) います。
 
@@ -26,21 +30,20 @@
 
 > There's a lot of entropy wrapped up in the UA string that is sent to servers by default, for all first- and third-party requests.
 
-あわせて高エントロピー故にユーザー追跡を可能にしてしまう問題を排除すること、がモチベーションだそうです。
+あわせて高エントロピー故にユーザー追跡を可能にしてしまう問題 … 冒頭で述べた fingerprinting … を排除すること、がモチベーションだそうです。
 
 Google から [案内されている情報](https://www.chromium.org/updates/ua-reduction/) によればこのようなスケジュールで削除～凍結が進みます。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/UA-CH/i04.png' />
 
-## その時我々は何に困るのか？
+## いつ困ることになりそうか？
+
+既に過ぎさった
 
 > In Phase 4 we change the <minorVersion> token to "0.0.0".
-
-や
-
 > In Phase 5 we change the <platform> and <oscpu> tokens from their platform-defined values to the relevant <unifiedPlatform> token value (which will never change).
 
-については、広告の例では不正判定やブラックリスト制御やホワイトリスト制御への影響があるかもしれませんが、肌感覚としてはそこまで大きな影響はなさそうです。
+については、広告の例では不正判定や配信制御への影響は考えられるものの、肌感覚としてはそこまで大きな影響はなさそうです。
 
 一方でそれなりの影響がありそうなのは年明けの
 
