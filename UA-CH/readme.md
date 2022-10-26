@@ -2,10 +2,10 @@
 
 こんにちは、広告エンジニアの中山です。
 
-みなさまの Web アプリケーションでは User-Agent 文字列を参照することはありますか？
+みなさまの Web アプリケーションでは（大きなのっぽの）User-Agent 文字列を参照するユースケースはありますか？
 
 ```
-Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.1234.56 Safari/537.36
+User-Agent: Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.1234.56 Safari/537.36
 ```
 
 例えば User-Agent 文字列を解析して内容に応じて制御を分岐させたり、機械学習の特徴量として用いたり、さらに一般に悪しきユースケースとされる fingerprinting への活用もあるかもしれません。私の担当する広告サービスでは
@@ -14,7 +14,7 @@ Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) 
 - 属性推定のための特徴量
 - その他配信制御（例えばキャリアのターゲティングや特定バージョンのバグ回避など）
 
-といった用途で参照しています。ちなみにキャリアは通常 IP レンジから判定しますが、Wi-Fi 経由のアクセス時には User-Agent 文字列に含まれるモデル名称から判定できる場合もあります。
+といった用途で参照しています。ちなみにキャリアは通常 IP レンジから判定しますが、Wi-Fi 経由のアクセス時には User-Agent 文字列に含まれる情報から判定できる場合もあります。
 
 そんな User-Agent 文字列ですが、この先 Chrome をはじめ幾つかのブラウザで情報量の削減や凍結が進み、従前の目的で利用できなくなる可能性があります。そこで今回は User Agent Client Hints（UA-CH）の仕様を調査しつつ、今後どのように Web アプリケーションで対応すべきかをみなさんと一緒に考えてゆきたいと思います。
 
@@ -36,7 +36,7 @@ Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) 
 
 ## いつ困ることになりそうか？
 
-過去の
+過ぎ去った
 
 > In Phase 4 we change the <minorVersion> token to "0.0.0".
 
@@ -54,7 +54,7 @@ Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) 
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/UA-CH/i05.png' />
 
-ここで ***androidVersion*** が "10" そして ***deviceModel*** が "K" に固定されてしまいます。そうなると …
+ここで ***androidVersion*** が "10" に、そして ***deviceModel*** が "K" に固定されてしまいます。そうなると …
 
 - ***deviceModel*** はデモグラに対する説明力が高い<br />（例えば Disney Mobile on docomo のユーザーは女性である可能性が高そう、など）
 - ***deviceModel*** からキャリア判定を行うケースがある
@@ -72,9 +72,29 @@ Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) 
 
 ## User Agent Client Hints（UA-CH）とは何か
 
-では我々はどのように影響を回避もしくは最小化すべきでしょうか？
+では我々はどのようにこの影響を最小化すべきでしょうか？
 
-… 最初に結論から述べると「[User Agent Client Hints（以降 UA-CH）](https://github.com/WICG/ua-client-hints)」を活用する、
+結論を先に述べると「[User Agent Client Hints（以降 UA-CH）](https://github.com/WICG/ua-client-hints)」を活用します。
+
+ブラウザはサーバに対して以下のような UA-CH を HTTP Request Header として送信します。
+
+```
+sec-ch-ua: "Chromium";v="106", "Google Chrome";v="106", "Not;A=Brand";v="99"
+sec-ch-ua-mobile: ?0
+sec-ch-ua-platform: "Windows"
+```
+
+ User-Agent とは別に、
+
+
+
+
+タイミングによっては欲しい情報を得られない
+100% 情報取得するとパフォーマンスが犠牲になる
+将来のプライバシー対策の影響を受ける可能性がある
+ブラウザ互換性の維持
+サブリソースとサブドメイン
+
 
 となりますが Web アプリケーションの動作を担保するためにはさらに幾つか検討すべきことがあります。
 
