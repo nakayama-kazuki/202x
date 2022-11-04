@@ -1,8 +1,8 @@
-# 今は、もう、動かないその User-Agent 文字列
+# 今は、もう、動かない大きなのっぽの User-Agent 文字列
 
 こんにちは、広告エンジニアの中山です。
 
-みなさまの Web アプリケーションでは（大きなのっぽの）User-Agent 文字列を参照するユースケースはありますか？
+みなさまの Web アプリケーションには User-Agent 文字列を参照する処理はありますか？
 
 ```
 User-Agent: Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.1234.56 Safari/537.36
@@ -46,19 +46,19 @@ User-Agent: Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, 
 
 については、広告の例では不正判定や配信制御への影響は考えられるものの、肌感覚としてはそこまで大きな影響はなさそうです。
 
-一方でそれなりの影響がありそうなのは年が明けてからの
+一方でそれなりの影響がありそうなのは 2023 年が明けてからの
 
 > In Phase 6, we change the <deviceModel> token to "K" and change the <androidVersion> token to a static "10" string.
 
-のタイミングとなります。
+のタイミングです。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/UA-CH/i05.png' />
 
 ここで ***androidVersion*** が "10" に、そして ***deviceModel*** が "K" に固定されてしまいます。そうなると …
 
-- ***deviceModel*** はデモグラに対する説明力が高い<br />（例えば Disney Mobile on docomo のユーザーは女性である可能性が高そう、など）
-- ***deviceModel*** からキャリア判定を行うケースがある
-- Mobile の ***androidVersion*** は Desktop の ***unifiedPlatform*** よりもブラックリスト制御やホワイトリスト制御に使われるケースが多い
+- ***deviceModel*** がデモグラに対する説明力を失う<br />（例えば Disney Mobile on docomo のユーザーは女性である可能性が高そう … などの推定ができなくなる）
+- ***deviceModel*** からキャリア判定ができなくなる
+- Mobile の ***androidVersion*** をブラックリスト制御やホワイトリスト制御に使えなくなる<br />（Desktop の ***unifiedPlatform*** と比べ Mobile における特定のバグ回避ニーズは高いと思われます）
 
 のような用途に対して影響が生じます。みなさまの Web アプリケーションへの影響はいかがでしょうか？
 
@@ -72,11 +72,9 @@ User-Agent: Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, 
 
 ## User Agent Client Hints（UA-CH）とは何か
 
-では我々はどのようにこの影響を最小化すべきでしょうか？
+我々はこの影響を甘んじで受け入れる他はないのでしょうか。
 
-結論を先に述べると「[User Agent Client Hints（以降 UA-CH）](https://github.com/WICG/ua-client-hints)」を活用します。
-
-ブラウザはサーバに対して以下のような UA-CH を HTTP Request Header として送信します。
+ブラウザはサーバに対して以下のような「[User Agent Client Hints（以降 UA-CH）](https://github.com/WICG/ua-client-hints)」をリクエストヘッダとして送信しますが、結論としてはこの UA-CH を活用することで影響の最小化を検討することになります。
 
 ```
 sec-ch-ua: "Chromium";v="106", "Google Chrome";v="106", "Not;A=Brand";v="99"
@@ -84,7 +82,10 @@ sec-ch-ua-mobile: ?0
 sec-ch-ua-platform: "Windows"
 ```
 
- User-Agent とは別に、
+ただし、この UA-CH はそのままでは User-Agent 文字列の ***deviceModel*** などに相当する情報を得ることができないため、Accept-CH や UA-CH JS API などの手段が必要になります。そのことについてまとめたのが下の表です。
+
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/UA-CH/i06.png' />
+
 
 
 
