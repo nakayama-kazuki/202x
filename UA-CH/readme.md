@@ -72,9 +72,9 @@ User-Agent: Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, 
 
 ## User Agent Client Hints（UA-CH）とは何か
 
-我々はこの影響を甘んじで受け入れる他はないのでしょうか。
+我々はこの影響を甘んじで受け入れざるを得ないのでしょうか。
 
-ブラウザはサーバに対して以下のような「[User Agent Client Hints（以降 UA-CH）](https://github.com/WICG/ua-client-hints)」をリクエストヘッダとして送信しますが、結論としてはこの UA-CH を活用することで影響の最小化を検討することになります。
+ブラウザはサーバに対して以下のような「[User Agent Client Hints（以降 UA-CH）](https://github.com/WICG/ua-client-hints)」をリクエストヘッダとして送信しておりますが、結論としてはこの UA-CH を活用することで影響を最小化することができます。
 
 ```
 sec-ch-ua: "Chromium";v="106", "Google Chrome";v="106", "Not;A=Brand";v="99"
@@ -82,52 +82,50 @@ sec-ch-ua-mobile: ?0
 sec-ch-ua-platform: "Windows"
 ```
 
-ただし、この UA-CH はそのままでは User-Agent 文字列の ***deviceModel*** などに相当する情報を得ることができないため、Accept-CH や UA-CH JS API などの手段が必要になります。そのことについてまとめたのが下の表です。
+ただし、この UA-CH はそのままでは User-Agent 文字列の ***deviceModel*** などに相当する情報を得ることができないため、
+
+- サーバが追加情報の送信を要求する Accept-CH をレスポンスヘッダとして送信する
+- ブラウザ側で UA-CH JS API を用いて追加情報を取得する
+
+などの手段が必要になります。そのことについてまとめたのがこちらの表です。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/UA-CH/i06.png' />
 
+では、それぞれの選択肢について考察してみましょう。
 
+#### 1. UA-CH JS API
 
+既存の Web アプリケーションが navigator オブジェクトから情報を取得している場合には移行しやすい方法です。一方で、将来 [Privacy Budget（取得可能なデータ量に制限を設ける仕様）](https://developer.chrome.com/docs/privacy-sandbox/privacy-budget/) が導入されたタイミングで影響が生じやすいと思われるため、その際の対応を想定しておく必要がありそうです。
 
+```
+navigator.userAgentData.getHighEntropyValues(['model']).then(ua => {
+    const model = ua.model
+});
+```
 
-タイミングによっては欲しい情報を得られない
-100% 情報取得するとパフォーマンスが犠牲になる
-将来のプライバシー対策の影響を受ける可能性がある
-ブラウザ互換性の維持
-サブリソースとサブドメイン
+#### 2. UA-CH JS API x Cache
 
+取得した追加情報を Cookie に Cache することで Privacy Budget の制限抵触リスクを低くすることができます。
 
-となりますが Web アプリケーションの動作を担保するためにはさらに幾つか検討すべきことがあります。
+#### 3. Accept-CH
 
-- 入手できる情報
-- 入手できるタイミング
-- 入手できるサービス
-- 将来のリスク
+既存の Web アプリケーションが HTTP の User-Agent 文字列から情報を取得している場合には移行しやすい方法です。課題は 1 同様に将来の Privacy Budget 対応が必要なことと、初回ページリクエストのタイミングに機会損失が発生することです。
 
-列挙した観点について User-Agent 文字列の時代と仕様が異なるため、個別に対応方法を検討しましょう。
+```
+Accept-CH: Sec-CH-UA-Model
+```
 
-#### 入手できる情報
+#### 4. Accept-CH x Cache
 
-Sec-CH-UA
-Sec-CH-UA-Mobile
-Sec-CH-UA-Platform
+取得した追加情報を Cookie に Cache し、フォールバックを UA-CH → Cache → User-Agent 文字列 … の順で処理することで機会損失を最小化し、Privacy Budget の制限抵触リスクを低くすることができます。フォールバック処理については [Migrate to User-Agent Client Hints](https://web.dev/migrate-to-ua-ch/) の記載も参考にしてください。
 
-Sec-CH-UA-Model
+> When processing this on the server-side you should first check if the desired Sec-CH-UA header has been sent and then fallback to the User-Agent header parsing if it is not available.
 
+#### 5. Accept-CH x Critical-CH
 
-#### 入手できるタイミング
+Critical-CH を使うことで機会損失を 0 にできますが、この設定ではセッションをまたいだ初回アクセス時にリクエスト + レスポンスが二往復することになるため、アクセスの多い Web アプリケーションの場合は避けたい設定です。
 
-# ハイエントロピー API
+#### 6. Accept-CH x Critical-CH x Cache
 
-https://web.dev/migrate-to-ua-ch/
-
-When processing this on the server-side you should first check if the desired Sec-CH-UA header has been sent and then fallback to the User-Agent header parsing if it is not available.
-
-Cookie も含めたフォールバック
-
-#### 入手できるサービス
-
-ページ、サブリソース
-
-#### 将来のリスク
+取得した追加情報を Cookie に Cache することで 5 の課題を概ね解消できます。が、プライベートブラウジングが多い場合には課題が継続します。とはいえ、機会損失最小化の優先度が高い場合には現実解となりそうです。
 
