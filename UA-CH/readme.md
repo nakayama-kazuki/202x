@@ -140,13 +140,6 @@ Critical-CH を使うことで機会損失を 0 にできますが、この設�
 
 ## Accept-CH の有効範囲について
 
-さて、方針は決めたものの
-
-Accept-CH
-
-の有効範囲についても確認しておきましょう。
-サブリソースに対して追加の UA-CH を送信してもらいたい場合には Permissions-Policy を用いますが
-
-以下のユースケースについても確認しておきます。
+方針は定まりましたが Accept-CH の有効範囲についても確認しておきましょう。サブリソースに対して追加の UA-CH を送信してもらいたい場合には Permissions-Policy を用いることになってますが、それ以外で確認したいユースケースを表にまとめてみました。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/UA-CH/i07.png' />
