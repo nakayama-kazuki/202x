@@ -95,7 +95,7 @@ sec-ch-ua-platform: "Windows"
 
 #### 1. UA-CH JS API
 
-既存の Web アプリケーションが navigator オブジェクトから情報を取得している場合には移行しやすい方法です。一方で、将来 [Privacy Budget（取得可能なデータ量に制限を設ける仕様）](https://developer.chrome.com/docs/privacy-sandbox/privacy-budget/) が導入されたタイミングで影響が生じやすいと思われるため、その際の対応を想定しておく必要がありそうです。
+既存の Web アプリケーションが DOM の Navigator オブジェクトから情報を取得している場合には移行しやすい方法です。一方で、将来 [Privacy Budget（取得可能なデータ量に制限を設ける仕様）](https://developer.chrome.com/docs/privacy-sandbox/privacy-budget/) が導入されたタイミングで影響が生じやすいと思われるため、その際の対応を想定しておく必要がありそうです。
 
 ```
 navigator.userAgentData.getHighEntropyValues(['model']).then(ua => {
@@ -127,25 +127,26 @@ Critical-CH を使うことで機会損失を 0 にできますが、この設�
 
 #### 6. Accept-CH x Critical-CH x Cache
 
-取得した追加情報を Cookie に Cache することで 5 の課題を概ね解消できます。が、プライベートブラウジングが多い場合には課題が継続します。とはいえ、機会損失最小化の優先度が高い場合には現実解となりそうです。
+取得した追加情報を Cookie に Cache することで 5 の課題を概ね解消できます。が、プライベートブラウジングによるアクセスが多い場合には課題は解消されません。とはいえ、機会損失最小化の優先度が高い場合には現実解となりそうです。
 
 #### どの選択肢にすべきか？
 
-ここまでの考察から 5 はデメリットを考慮して除外します。さらに Privacy Budget は導入時期や仕様が明確になってから考えればよしとして 2 も除外します。残りの選択肢については
+ここまでの考察から 5 はデメリットを考慮して除外します。さらに Privacy Budget は導入時期や仕様が明確になってからの検討として 2 も除外します。残りの選択肢については既存の Web アプリケーションが …
 
-- 既存の Web アプリケーションが navigator オブジェクトから情報を取得しているならば 1 を選択
-- 既存の Web アプリケーションが HTTP の User-Agent 文字列から情報を取得しているならば、機会損失に対する受容度とアプリケーションの複雑化の ROI を考慮して 3, 4, 6 から選択
+- DOM の Navigator オブジェクトから情報を取得しているならば 1 を選択
+- HTTP の User-Agent 文字列から情報を取得しているならば、機会損失に対する受容度合とアプリケーションの複雑化のデメリットを勘案して 3, 4, 6 から選択
 
-とするのがよさそうです。
+… とするのがよさそうです。ちなみに我々は 3 から始めることにしました。
 
-## UA-CH と Permissions-Policy
+## Accept-CH の有効範囲について
 
+さて、方針は決めたものの
 
-Permissions-Policy
+Accept-CH
 
-page(1st)
-subresource
-	1st
-	1st(subdomain)
-	3st
+の有効範囲についても確認しておきましょう。
+サブリソースに対して追加の UA-CH を送信してもらいたい場合には Permissions-Policy を用いますが
 
+以下のユースケースについても確認しておきます。
+
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/UA-CH/i07.png' />
