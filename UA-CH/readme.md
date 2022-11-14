@@ -70,9 +70,9 @@ User-Agent: Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, 
 | Safari    | ***unifiedPlatform*** が既に固定されている                    |
 | Firefox   | ***unifiedPlatform*** が既に固定されている                    |
 
-## User Agent Client Hints（UA-CH）とは何か
+## User Agent Client Hints（UA-CH）による対策案
 
-我々はこの影響を甘んじで受け入れざるを得ないのでしょうか。
+我々はこの影響を受け入れるしかないのでしょうか。
 
 ブラウザはサーバに対して以下のような「[User Agent Client Hints（以降 UA-CH）](https://github.com/WICG/ua-client-hints)」をリクエストヘッダとして送信しておりますが、結論としてはこの UA-CH を活用することで影響を最小化することができます。
 
@@ -105,7 +105,7 @@ navigator.userAgentData.getHighEntropyValues(['model']).then(ua => {
 
 #### 2. UA-CH JS API x Cache
 
-取得した追加情報を Cookie に Cache することで Privacy Budget の制限抵触リスクを低くすることができます。
+取得した追加情報を localStorage や Cookie に Cache することで Privacy Budget の制限抵触リスクを低くすることができます。
 
 #### 3. Accept-CH
 
@@ -117,15 +117,35 @@ Accept-CH: Sec-CH-UA-Model
 
 #### 4. Accept-CH x Cache
 
-取得した追加情報を Cookie に Cache し、フォールバックを UA-CH → Cache → User-Agent 文字列 … の順で処理することで機会損失を最小化し、Privacy Budget の制限抵触リスクを低くすることができます。フォールバック処理については [Migrate to User-Agent Client Hints](https://web.dev/migrate-to-ua-ch/) の記載も参考にしてください。
+取得した追加情報を Cookie に Cache し、フォールバックを UA-CH → Cache → User-Agent 文字列 … の順で処理することで機会損失を最小化し、Privacy Budget の制限抵触リスクを低くすることができます。フォールバック処理については [Migrate to User-Agent Client Hints](https://web.dev/migrate-to-ua-ch/) の記載も参考にしてください。このあたりは具合の良いライブラリの登場を期待します（他力本願 ^^;）。
 
 > When processing this on the server-side you should first check if the desired Sec-CH-UA header has been sent and then fallback to the User-Agent header parsing if it is not available.
 
 #### 5. Accept-CH x Critical-CH
 
-Critical-CH を使うことで機会損失を 0 にできますが、この設定ではセッションをまたいだ初回アクセス時にリクエスト + レスポンスが二往復することになるため、アクセスの多い Web アプリケーションの場合は避けたい設定です。
+Critical-CH を使うことで機会損失を 0 にできますが、この設定ではセッションをまたいだ初回アクセス時にリクエスト + レスポンスが 2 往復することになるため、アクセスの多い Web アプリケーションの場合は避けたい設定です。
 
 #### 6. Accept-CH x Critical-CH x Cache
 
 取得した追加情報を Cookie に Cache することで 5 の課題を概ね解消できます。が、プライベートブラウジングが多い場合には課題が継続します。とはいえ、機会損失最小化の優先度が高い場合には現実解となりそうです。
+
+#### どの選択肢にすべきか？
+
+ここまでの考察から 5 はデメリットを考慮して除外します。さらに Privacy Budget は導入時期や仕様が明確になってから考えればよしとして 2 も除外します。残りの選択肢については
+
+- 既存の Web アプリケーションが navigator オブジェクトから情報を取得しているならば 1 を選択
+- 既存の Web アプリケーションが HTTP の User-Agent 文字列から情報を取得しているならば、機会損失に対する受容度とアプリケーションの複雑化の ROI を考慮して 3, 4, 6 から選択
+
+とするのがよさそうです。
+
+## UA-CH と Permissions-Policy
+
+
+Permissions-Policy
+
+page(1st)
+subresource
+	1st
+	1st(subdomain)
+	3st
 
