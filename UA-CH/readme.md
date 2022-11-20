@@ -57,7 +57,7 @@ User-Agent: Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, 
 
 このタイミングで ***androidVersion*** が "10" に、そして ***deviceModel*** が "K" に固定されることになります。そうなると …
 
-- ***deviceModel*** がデモグラに対する説明力を失う<br />（例えば Disney Mobile on docomo のユーザーは女性である可能性が高そう … などの推定ができなくなる）
+- ***deviceModel*** がユーザー属性に対する説明力を失う<br />（例えば Disney Mobile on docomo のユーザーは女性である可能性が高そう … などの推定ができなくなる）
 - ***deviceModel*** からキャリア判定ができなくなる
 - Mobile の ***androidVersion*** をブラックリスト制御やホワイトリスト制御に使えなくなる<br />（Desktop の ***unifiedPlatform*** と比べ Mobile における特定のバグ回避ニーズは高いと思われます）
 
