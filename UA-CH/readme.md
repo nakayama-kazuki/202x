@@ -90,7 +90,7 @@ sec-ch-ua-platform: "Windows"
 
 などの手段が必要になります。追加情報取得手段について表にまとめてみました。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/UA-CH/i06.png' width='672' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/UA-CH/i06.png' />
 
 それぞれの選択肢について考察してみましょう。
 
@@ -141,7 +141,7 @@ Critical-CH を使うことで機会損失を解消できますが、セッシ�
 
 ところで、広告のようなサービスの場合、サブリソースとしての UA-CH 活用を考える必要があります。サブリソースに対して追加の UA-CH 送信を求める場合には Permissions-Policy を用いますが、それ以外で動作確認済みのユースケースついて表にまとめてみました。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/UA-CH/i07.png' width='803' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/UA-CH/i07.png' />
 
 要約すると
 
