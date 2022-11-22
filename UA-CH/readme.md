@@ -9,7 +9,7 @@ User-Agent: Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, 
 ```
 
 例えば User-Agent 文字列を解析して内容に応じて制御を分岐させたり、機械学習の特徴量として用いたり、
-さらには一般に悪しきユースケースとされてますが IP アドレスと組み合わせて fingerprinting に活用する … といった処理があるかもしれませんね。
+さらには一般に悪しきユースケースとされていますが IP アドレスと組み合わせて fingerprinting に活用する … といった処理があるかもしれませんね。
 
 私の担当する広告サービスでは
 
@@ -19,13 +19,13 @@ User-Agent: Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, 
 
 といった用途で参照しています。補足としてキャリア判定には通常 IP レンジを用いますが、Wi-Fi 経由のアクセスに対しては User-Agent 文字列に含まれる情報とモデルのカタログを用いて判定できる場合があります。
 
-さて、そんな User-Agent 文字列ですが、今後 Chrome をはじめ幾つかのブラウザで情報量の削減や凍結が進み、上に挙げた目的での利用は難しくなる見込みです。今回はその対策についてみなさんと一緒に考えてゆきたいと思います。
+さて、そんな User-Agent 文字列ですが、今後 Google Chrome をはじめいくつかのブラウザで情報量の削減や凍結が進み、上に挙げた目的での利用は難しくなる見込みです。今回はその対策についてみなさんと一緒に考えてゆきたいと思います。
 
-また、特に断りのない限り、この記事では Chrome に関する内容を述べているものとします。
+また、特に断りのない限り、この記事では Google Chrome に関する内容を述べているものとします。
 
 ## なぜ User-Agent 文字列は情報量を削減され、凍結されるのか？
 
-そうすべきモチベーションとして [以下のような記載](https://github.com/WICG/ua-client-hints) があります。
+そうすべきモチベーションとして、代替技術（詳しくは後述）のドキュメントに [以下のような記載](https://github.com/WICG/ua-client-hints) があります。
 
 > This header's value has grown in both length and complexity over the years; a complicated dance between server-side sniffing to provide the right experience for the right devices on the one hand, and client-side spoofing in order to bypass incorrect or inconvenient sniffing on the other.
 
@@ -73,7 +73,7 @@ User-Agent: Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, 
 
 ## User Agent Client Hints（UA-CH）による対策案
 
-我々は Phase 6 の影響をどのように回避すべきでしょうか。
+われわれは Phase 6 の影響をどのように回避すべきでしょうか。
 
 ブラウザはサーバに対して以下のような「[User Agent Client Hints（以降 UA-CH）](https://github.com/WICG/ua-client-hints)」をリクエストヘッダとして送信しておりますが、結論としてはこの UA-CH を活用することで影響を最小化することができます。
 
@@ -94,7 +94,7 @@ sec-ch-ua-platform: "Windows"
 
 それぞれの選択肢について考察してみましょう。
 
-#### 1. UA-CH JS API
+### 1. UA-CH JS API
 
 既存の Web アプリケーションが DOM の Navigator オブジェクトから情報を取得している場合には移行しやすい方法です。一方で、将来 [Privacy Budget（取得可能なデータ量に制限を設ける仕様）](https://developer.chrome.com/docs/privacy-sandbox/privacy-budget/) が導入された際の対応を想定しておく必要がありそうです。
 
@@ -104,11 +104,11 @@ navigator.userAgentData.getHighEntropyValues(['model']).then(ua => {
 });
 ```
 
-#### 2. UA-CH JS API x Cache
+### 2. UA-CH JS API x Cache
 
 取得した追加情報を localStorage や Cookie に Cache することで 1 の Privacy Budget の制限抵触リスクを低くすることができます。
 
-#### 3. Accept-CH
+### 3. Accept-CH
 
 既存の Web アプリケーションが HTTP の User-Agent 文字列から情報を取得している場合には移行しやすい方法です。課題は 1 同様に将来 Privacy Budget 対応が必要になりそうなことと、初回ページリクエストのタイミングで機会損失が発生することです。
 
@@ -116,19 +116,19 @@ navigator.userAgentData.getHighEntropyValues(['model']).then(ua => {
 Accept-CH: Sec-CH-UA-Model
 ```
 
-#### 4. Accept-CH x Cache
+### 4. Accept-CH x Cache
 
 取得した追加情報を Cookie に Cache し、フォールバック処理を UA-CH 参照 → Cache 参照 → User-Agent 文字列参照 … とすることで機会損失を最小化し、Privacy Budget の制限抵触リスクを低くすることができます。フォールバック処理については [Migrate to User-Agent Client Hints](https://web.dev/migrate-to-ua-ch/) にも記載があります。このあたりは具合の良いライブラリの登場を期待します（他力本願 ^^;）。
 
 > When processing this on the server-side you should first check if the desired Sec-CH-UA header has been sent and then fallback to the User-Agent header parsing if it is not available.
 
-#### 5. Accept-CH x Critical-CH
+### 5. Accept-CH x Critical-CH
 
 Critical-CH を使うことで機会損失を解消できますが、セッションをまたいだ初回アクセス時にはリクエスト + レスポンスが 2 往復することになるため、アクセスの多い Web アプリケーションの場合は避けたい設定です。
 
-#### 6. Accept-CH x Critical-CH x Cache
+### 6. Accept-CH x Critical-CH x Cache
 
-取得した追加情報を Cookie に Cache することで 5 の課題を概ね解消できますが、プライベートブラウジングによるアクセスが多い場合には解消できません。とはいえ、機会損失最小化の優先度が高い場合には現実解となりそうです。
+取得した追加情報を Cookie に Cache することで 5 の課題をおおむね解消できますが、プライベートブラウジングによるアクセスが多い場合には解消できません。とはいえ、機会損失最小化の優先度が高い場合には現実解となりそうです。
 
 ## Accept-CH の有効範囲について
 
@@ -137,7 +137,7 @@ Critical-CH を使うことで機会損失を解消できますが、セッシ�
 - DOM の Navigator オブジェクトから情報を取得しているならば 1 を採用
 - HTTP の User-Agent 文字列から情報を取得しているならば、機会損失に対する受容度合とアプリケーションの複雑化のデメリットを勘案して 3, 4, 6 から選択
 
-… とするのがよさそうです。今回我々は 3 を選択することにしました。
+… とするのがよさそうです。今回われわれは 3 を選択することにしました。
 
 ところで、広告のようなサービスの場合、サブリソースとしての UA-CH 活用を考える必要があります。サブリソースに対して追加の UA-CH 送信を求める場合には Permissions-Policy を用いますが、それ以外で動作確認済みのユースケースついて表にまとめてみました。
 
@@ -152,6 +152,7 @@ Critical-CH を使うことで機会損失を解消できますが、セッシ�
 
 となります。
 
-蛇足ですが Web アプリケーションに限らず、ログを扱うアプリケーションでも集計や機械学習等で User-Agent 文字列を扱うケースは少なくないと思います。理想的には Web アプリケーションではライブラリで User-Agent 文字列や UA-CH の解析処理やフォールバック処理を隠蔽し、ログには構造化した情報を書き出す形にするのが理想的ですね。
+蛇足ですが Web アプリケーションに限らず、ログを扱うアプリケーションでも集計や機械学習などで User-Agent 文字列を扱うケースは少なくないと思います。理想的には Web アプリケーションではライブラリで User-Agent 文字列や UA-CH の解析処理やフォールバック処理を隠蔽し、ログには構造化した情報を書き出す形にするのが理想的ですね。
 
-今は、もう、動かない User-Agent 文字列 … までの残り時間は少なくなってきましたが、この記事がみなさまの UA-CH 対応の一助となれば幸いです。蛇足ですが、ヤフー広告ではプライバシー保護と広告エコシステム発展を両立を志す仲間を募集中です！われこそはという方のご連絡をお待ちしております。
+今は、もう、動かない User-Agent 文字列 … までの残り時間は少なくなってきましたが、この記事がみなさまの UA-CH 対応の一助となれば幸いです。蛇足ですが、ヤフー広告ではプライバシー保護と広告エコシステム発展の両立を志す仲間を募集中です！われこそはという方のご連絡をお待ちしております。
+
