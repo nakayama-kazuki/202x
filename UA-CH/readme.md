@@ -155,11 +155,12 @@ Critical-CH を使うことで機会損失を解消できますが、セッシ�
 
 ## おわりに
 
-今は、もう、動かない User-Agent 文字列 … までの時間は残りわずかです。UA-CH の [ドキュメント](https://github.com/WICG/ua-client-hints) には
+今は、もう、動かない User-Agent 文字列 … までの時間は残りわずかです。
+
+UA-CH の [ドキュメント](https://github.com/WICG/ua-client-hints) には
 
 > the user agent /* omitted */ can intervene and modify or refuse to provide certain bits of information. This is a privacy win for users.
 
-とありますが ***privacy win for users*** の実現のためにも、この記事がみなさまの UA-CH 対応の一助となれば幸いです。
+とありますが privacy win for users のためにも、この記事がみなさまの UA-CH 対応の一助となれば幸いです。
 
-そして、ヤフー広告では ***privacy win for users*** と広告エコシステム発展の両立を志す仲間を募集中です！われこそはという方のご連絡をお待ちしております。
-
+そして、ヤフー広告では privacy win for users と広告エコシステム発展の両立を志す仲間を募集中です！われこそはという方のご連絡をお待ちしております。
