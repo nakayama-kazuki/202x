@@ -8,8 +8,7 @@
 User-Agent: Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.1234.56 Safari/537.36
 ```
 
-例えば User-Agent 文字列を解析して内容に応じて制御を分岐させたり、機械学習の特徴量として用いたり、
-さらには一般に悪しきユースケースとされていますが IP アドレスと組み合わせて fingerprinting に活用する … といった処理があるかもしれませんね。
+例えば User-Agent 文字列を解析して内容に応じて制御を分岐させたり、機械学習の特徴量として用いたり、さらには一般に悪しきユースケースとされていますが IP アドレスと組み合わせて fingerprinting に活用する … といった処理があるかもしれませんね。
 
 私の担当する広告サービスでは
 
@@ -19,7 +18,7 @@ User-Agent: Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, 
 
 といった用途で参照しています。補足としてキャリア判定には通常 IP レンジを用いますが、Wi-Fi 経由のアクセスに対しては User-Agent 文字列に含まれる情報とモデルのカタログを用いて判定できる場合があります。
 
-さて、そんな User-Agent 文字列ですが、今後 Google Chrome をはじめいくつかのブラウザで情報量の削減や凍結が進み、上に挙げた目的での利用は難しくなる見込みです。今回はその対策についてみなさんと一緒に考えてゆきたいと思います。
+さて、そんな User-Agent 文字列ですが、**今後 Google Chrome をはじめいくつかのブラウザで情報量の削減や凍結が進み、上に挙げた目的での利用は難しくなる見込み** です。今回はその対策についてみなさんと一緒に考えてゆきたいと思います。
 
 また、特に断りのない限り、この記事では Google Chrome に関する内容を述べているものとします。
 
@@ -143,7 +142,7 @@ Critical-CH を使うことで機会損失を解消できますが、セッシ�
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/UA-CH/i07.png' />
 
-要約すると
+表の内容を要約すると
 
 - サブリソースとページのサブドメインが一致する場合、ページが Accept-CH をレスポンスすることでサブリソース側でも追加情報を取得できる
 - それ以外のサブリソースで追加情報が必要な場合、ページが Accept-CH + Permissions-Policy をレスポンスする必要がある
@@ -154,5 +153,13 @@ Critical-CH を使うことで機会損失を解消できますが、セッシ�
 
 蛇足ですが Web アプリケーションに限らず、ログを扱うアプリケーションでも集計や機械学習などで User-Agent 文字列を扱うケースは少なくないと思います。理想的には Web アプリケーションではライブラリで User-Agent 文字列や UA-CH の解析処理やフォールバック処理を隠蔽し、ログには構造化した情報を書き出す形にするのが理想的ですね。
 
-今は、もう、動かない User-Agent 文字列 … までの残り時間は少なくなってきましたが、この記事がみなさまの UA-CH 対応の一助となれば幸いです。蛇足ですが、ヤフー広告ではプライバシー保護と広告エコシステム発展の両立を志す仲間を募集中です！われこそはという方のご連絡をお待ちしております。
+## おわりに
+
+今は、もう、動かない User-Agent 文字列 … までの時間は残りわずかです。UA-CH の [ドキュメント](https://github.com/WICG/ua-client-hints) には
+
+> the user agent /* omitted */ can intervene and modify or refuse to provide certain bits of information. This is a privacy win for users.
+
+とありますが ***privacy win for users*** の実現のためにも、この記事がみなさまの UA-CH 対応の一助となれば幸いです。
+
+そして、ヤフー広告では ***privacy win for users*** と広告エコシステム発展の両立を志す仲間を募集中です！われこそはという方のご連絡をお待ちしております。
 
