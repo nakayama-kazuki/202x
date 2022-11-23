@@ -1,4 +1,4 @@
-# 今は、もう、動かない User-Agent 文字列
+# 今は、もう、動かない、その User-Agent 文字列
 
 こんにちは、広告エンジニアの中山です。
 
@@ -151,16 +151,16 @@ Critical-CH を使うことで機会損失を解消できますが、セッシ�
 
 となります。
 
-蛇足ですが Web アプリケーションに限らず、ログを扱うアプリケーションでも集計や機械学習などで User-Agent 文字列を扱うケースは少なくないと思います。理想的には Web アプリケーションではライブラリで User-Agent 文字列や UA-CH の解析処理やフォールバック処理を隠蔽し、ログには構造化した情報を書き出す形にするのが理想的ですね。
+蛇足ですが Web アプリケーションに限らず、ログを扱うアプリケーションでも集計や機械学習などで User-Agent 文字列を扱うケースは少なくないと思います。理想的には Web アプリケーションではライブラリで User-Agent 文字列や UA-CH の解析処理やフォールバック処理を隠蔽し、ログには構造化した情報を書き出す形にして、ブラウザ依存処理を一か所に集約したいですね。
 
 ## おわりに
 
-今は、もう、動かない User-Agent 文字列 … までの時間は残りわずかです。
+今は、もう、動かない、その User-Agent 文字列 … までの残り時間はあとわずかです。
 
 UA-CH の [ドキュメント](https://github.com/WICG/ua-client-hints) には
 
 > the user agent /* omitted */ can intervene and modify or refuse to provide certain bits of information. This is a privacy win for users.
 
-とありますが privacy win for users のためにも、この記事がみなさまの UA-CH 対応の一助となれば幸いです。
+とありますが privacy win for users の実現に向けて、この記事がみなさまの UA-CH 対応の一助となれば幸いです。
 
-そして、ヤフー広告では privacy win for users と広告エコシステム発展の両立を志す仲間を募集中です！われこそはという方のご連絡をお待ちしております。
+加えて、ヤフー広告では UA-CH 対応に限らず privacy win for users と広告エコシステム発展の両立を志す仲間を募集中です！われこそはという方のご連絡をお待ちしております。
