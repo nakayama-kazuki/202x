@@ -74,7 +74,7 @@ User-Agent: Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, 
 
 われわれは Phase 6 の影響をどのように回避すべきでしょうか。
 
-ブラウザはサーバに対して以下のような「[User Agent Client Hints（以降 UA-CH）](https://github.com/WICG/ua-client-hints)」をリクエストヘッダとして送信しておりますが、結論としてはこの UA-CH を活用することで影響を最小化することができます。
+ブラウザはサーバに対して以下のような「[User Agent Client Hints（以降 UA-CH）](https://github.com/WICG/ua-client-hints)」を要求ヘッダとして送信しますが、結論としてはこの UA-CH を活用することで影響を最小化することができます。
 
 ```
 sec-ch-ua: "Chromium";v="106", "Google Chrome";v="106", "Not;A=Brand";v="99"
@@ -84,7 +84,7 @@ sec-ch-ua-platform: "Windows"
 
 ただし、この UA-CH はそのままでは User-Agent 文字列に含まれる ***deviceModel*** などの情報を得ることができないため、
 
-- サーバが追加情報の送信を要求する Accept-CH をレスポンスヘッダとして送信する
+- サーバが Accept-CH を応答ヘッダとしてブラウザに送信し追加情報を要求する
 - ブラウザ側で UA-CH JS API を用いて追加情報を取得する
 
 などの手段が必要になります。追加情報取得手段について表にまとめてみました。
@@ -138,7 +138,7 @@ Critical-CH を使うことで機会損失を解消できますが、セッシ�
 
 … とするのがよさそうです。今回われわれは 3 を選択することにしました。
 
-ところで、広告のようなサービスの場合、サブリソースとしての UA-CH 活用を考える必要があります。サブリソースに対して追加の UA-CH 送信を求める場合には Permissions-Policy を用いますが、それ以外で動作確認済みのユースケースついて表にまとめてみました。
+ところで、広告のようなサービスの場合、サブリソースとしての UA-CH 活用を考える必要があります。サブリソースに対して追加の UA-CH 送信を求める場合、サーバ（ページ）が Permissions-Policy を応答ヘッダとしてブラウザに送信する必要がありますが、それ以外のユースケースついて表にまとめてみました。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/UA-CH/i07.png' />
 
