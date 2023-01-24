@@ -41,111 +41,126 @@ $ut = new UnitTest();
 
 define('OCTET', 8);
 
-function getInternetFormat($in_byte)
+define('BYTEx1', 1);
+define('BYTEx2', 2);
+define('BYTEx4', 4);
+
+define('BYTES', array(BYTEx1, BYTEx2, BYTEx4));
+define('BITS', array_map(function($e) { return $e * OCTET; }, BYTES));
+
+function get_format_by_rule($in_rule, $in_byte)
 {
 	$formats = array(
-		4 => 'N',
-		2 => 'n',
-		1 => 'C'
+		'INTERNET' => array(
+			BYTEx4 => 'N',
+			BYTEx2 => 'n',
+			BYTEx1 => 'C'
+		),
+		'MACHINE' => array(
+			BYTEx4 => 'L',
+			BYTEx2 => 'S',
+			BYTEx1 => 'C'
+		)
 	);
-	if (array_key_exists($in_byte, $formats)) {
-		return $formats[$in_byte];
-	} else {
-		return NULL;
+	if (array_key_exists($in_rule, $formats)) {
+		if (array_key_exists($in_byte, $formats[$in_rule])) {
+			return $formats[$in_rule][$in_byte];
+		}
 	}
+	exit('get_format_by_rule() : invalid argument');
+}
+
+function get_format($in_byte)
+{
+	return get_format_by_rule('INTERNET', $in_byte);
+	// return get_format_by_rule('MACHINE', $in_byte);
 }
 
 function unpack_substr($in_packed, $in_start, $in_byte)
 {
-	return unpack(getInternetFormat($in_byte), substr($in_packed, $in_start, $in_byte))[1];
+	return unpack(get_format($in_byte), substr($in_packed, $in_start, $in_byte))[1];
 }
 
-function unpack_substr1byte($in_packed, $in_start = 0)
+function pack_number($in_num, $in_byte)
 {
-	return unpack_substr($in_packed, $in_start, 1);
-}
-
-function unpack_substr2byte($in_packed, $in_start = 0)
-{
-	return unpack_substr($in_packed, $in_start, 2);
-}
-
-function unpack_substr4byte($in_packed, $in_start = 0)
-{
-	return unpack_substr($in_packed, $in_start, 4);
-}
-
-function pack1byte($in_num)
-{
-	return pack(getInternetFormat(1), $in_num);
-}
-
-function pack2byte($in_num)
-{
-	return pack(getInternetFormat(2), $in_num);
-}
-
-function pack4byte($in_num)
-{
-	return pack(getInternetFormat(4), $in_num);
+	return pack(get_format($in_byte), $in_num);
 }
 
 $ut->register(function() {
 	$tests = array(0, 1, 10, 100);
 	foreach ($tests as $test) {
-		$result = unpack_substr1byte(pack1byte($test), 0);
-		if ($result !== $test) {
-			return FALSE;
-		}
-		$result = unpack_substr2byte(pack2byte($test), 0);
-		if ($result !== $test) {
-			return FALSE;
+		foreach (BYTES as $byte) {
+			$result = unpack_substr(pack_number($test, $byte), 0, $byte);
+			if ($result !== $test) {
+				return FALSE;
+			}
 		}
 	}
 	return TRUE;
 }, 'pack / unpack');
 
-function packToBinStr($in_pack)
+function handleBitList($in_bitList, $in_buff, $in_callback)
 {
 	$ret = '';
-	$byte = strlen($in_pack);
-	for ($i = 0; $i < $byte; $i++) {
-		$decNum = unpack_substr1byte($in_pack, $i);
-		$binStr = base_convert($decNum, 10, 2);
-		$ret .= str_pad($binStr, OCTET, '0', STR_PAD_LEFT);
-	}
-	return $ret;
-}
-
-function binStrToPack($in_binStr)
-{
-	$ret = '';
-	$byte = strlen($in_binStr) / OCTET;
-	for ($i = 0; $i < $byte; $i++) {
-		$binStr = substr($in_binStr, $i * OCTET, OCTET);
-		$ret .= pack1byte(intval($binStr, 2));
-	}
-	return $ret;
-}
-
-$ut->register(function() {
-	$tests = array(
-		'00000000',
-		'00000001',
-		'11111111',
-		'0000000000000000',
-		'0000000100000000',
-		'0000000000000001',
-		'0000000100000001'
-	);
-	foreach ($tests as $test) {
-		$result = packToBinStr(binStrToPack($test));
-		if ($result !== $test) {
-			return FALSE;
+	$tmp = 0;
+	$offset = 0;
+	$length = 0;
+	foreach ($in_bitList as $itemName => $itemBit) {
+		if ($itemBit % OCTET == 0) {
+			if ($tmp != 0) {
+				exit("handleBitList() : {$itemName} is not octet-aligned.");
+			}
+			// octet-aligned data --> $in_callback
+			$length = $itemBit;
+		} else {
+			$tmp += $itemBit;
+			if ($tmp % OCTET != 0) {
+				// smaller than octet
+				continue;
+			}
+			// octet-aligned data-set --> $in_callback
+			$length = $tmp;
+			$tmp = 0;
+		}
+		// handle $in_buff from $offset to ($offset + $length)
+		if (in_array($length, BITS)) {
+			$ret .= call_user_func($in_callback, $in_buff, $offset, $length);
+			$offset += $length;
+			$length = 0;
+		} else {
+			exit("handleBitList() : can not handle {$length} bit.");
 		}
 	}
-	return TRUE;
-}, 'binary-string');
+	return $ret;
+}
+
+function packToBinStr($in_pack, $in_bitList)
+{
+	return handleBitList(
+		$in_bitList,
+		$in_pack,
+		function($in_buff, $in_offset, $in_length) {
+			// $in_buff is $in_pack, and $in_length is in BITS
+			$decNum = unpack_substr($in_buff, ($in_offset / OCTET), ($in_length / OCTET));
+			$binStr = base_convert($decNum, 10, 2);
+			return str_pad($binStr, $in_length, '0', STR_PAD_LEFT);
+		}
+	);
+}
+
+function binStrToPack($in_binStr, $in_bitList)
+{
+	return handleBitList(
+		$in_bitList,
+		$in_binStr,
+		function($in_buff, $in_offset, $in_length) {
+			// $in_buff is $in_binStr, and $in_length is in BITS
+			$binStr = substr($in_buff, $in_offset, $in_length);
+			$decNum = intval($binStr, 2);
+			return pack_number($decNum, ($in_length / OCTET));
+		}
+	);
+}
 
 function unpackToBinStr($in_unpacked, $in_bitList)
 {
@@ -169,15 +184,45 @@ function binStrToUnpack($in_binStr, $in_bitList)
 	return $ret;
 }
 
+$ut->register(function() {
+	$bitlists = array(
+		8 => array(
+			array(1,7),
+			array(8)
+		),
+		16 => array(
+			array(1,7,8),
+			array(16)
+		),
+		32 => array(
+			array(1,15,16),
+			array(32)
+		)
+	);
+	foreach (array(8, 16, 32) as $bits) {
+		$bitstr = '';
+		for ($bit = 0; $bit < $bits; $bit++) {
+			$bitstr .= rand(0, 1);
+		}
+		foreach ($bitlists[strlen($bitstr)] as $bitlist) {
+			$result = packToBinStr(binStrToPack($bitstr, $bitlist), $bitlist);
+			if ($result !== $bitstr) {
+				return FALSE;
+			}
+		}
+	}
+	return TRUE;
+}, 'binary-string');
+
 function util_pack($in_unpacked, $in_bitList)
 {
 	$binStr = unpackToBinStr($in_unpacked, $in_bitList);
-	return binStrToPack($binStr);
+	return binStrToPack($binStr, $in_bitList);
 }
 
 function util_unpack($in_packed, $in_bitList)
 {
-	$binStr = packToBinStr($in_packed);
+	$binStr = packToBinStr($in_packed, $in_bitList);
 	return binStrToUnpack($binStr, $in_bitList);
 }
 
@@ -214,13 +259,13 @@ function unpack_dns_domain($in_packed)
 	);
 	$ret['consumed'] = 0;
 	while (TRUE) {
-		$label = unpack_substr1byte($in_packed, $ret['consumed']);
+		$label = unpack_substr($in_packed, $ret['consumed'], BYTEx1);
 		if ($label === ROOTLB) {
 			$ret['consumed'] += 1;
 			break;
 		} else if ($label & FMASK1) {
 			// offset : is_int() = TRUE
-			array_push($ret['unpacked'], unpack_substr2byte($in_packed, $ret['consumed']) & DMASK2);
+			array_push($ret['unpacked'], unpack_substr($in_packed, $ret['consumed'], BYTEx2) & DMASK2);
 			$ret['consumed'] += 2;
 			break;
 		} else {
@@ -237,14 +282,14 @@ function pack_dns_domain($in_labels)
 	$ret = '';
 	foreach ($in_labels as $label) {
 		if (is_int($label)) {
-			$ret .= pack2byte($label | FMASK2);
+			$ret .= pack_number(($label | FMASK2), BYTEx2);
 			return $ret;
 		} else {
-			$ret .= pack1byte(strlen($label));
+			$ret .= pack_number(strlen($label), BYTEx1);
 			$ret .= $label;
 		}
 	}
-	$ret .= pack1byte(ROOTLB);
+	$ret .= pack_number(ROOTLB, BYTEx1);
 	return $ret;
 }
 
@@ -283,14 +328,14 @@ function pack_to_ip($in_packed)
 {
 	$octet = str_split($in_packed);
 	array_walk($octet, function(&$value, $key) {
-		$value = strval(unpack_substr1byte($value));
+		$value = strval(unpack_substr($value, 0, BYTEx1));
 	});
 	return implode('.', $octet);
 }
 
 function int32_to_ip($in_int32)
 {
-	return pack_to_ip(pack4byte($in_int32));
+	return pack_to_ip(pack_number($in_int32, BYTEx4));
 }
 
 function ip_to_pack($in_ip)
@@ -298,14 +343,14 @@ function ip_to_pack($in_ip)
 	$octet = explode('.', $in_ip);
 	$packed = '';
 	foreach ($octet as $str) {
-		$packed .= pack1byte(intval($str));
+		$packed .= pack_number(intval($str), BYTEx1);
 	}
 	return $packed;
 }
 
 function ip_to_int32($in_ip)
 {
-	return unpack_substr4byte(ip_to_pack($in_ip));
+	return unpack_substr(ip_to_pack($in_ip), 0, BYTEx4);
 }
 
 $ut->register(function() {
@@ -585,13 +630,19 @@ define('DISP_HEXPREFIX', '0x');
 define('DISP_CTRLCODE', '.');
 define('DISP_SEPARATOR', ' | ');
 
-function debugFormat($in_packed)
+function debugFormatUnpack($in_packed)
+{
+	$dns = new DNSMsg();
+	return var_export($dns->unpack($in_packed), TRUE);
+}
+
+function debugFormatBinary($in_packed)
 {
 	$consumed = 0;
 	$packed = '';
 	$output = '';
 	while ($consumed < strlen($in_packed)) {
-		$dec = unpack_substr1byte($in_packed, $consumed++);
+		$dec = unpack_substr($in_packed, $consumed++, BYTEx1);
 		$output .= DISP_HEXPREFIX . str_pad(base_convert($dec, 10, 16), 2, '0', STR_PAD_LEFT);
 		if ($consumed % OCTET === 0) {
 			$output .= DISP_SEPARATOR . $packed . PHP_EOL;
@@ -600,12 +651,18 @@ function debugFormat($in_packed)
 			$output .= chr(0x20);
 		}
 		if ((31 < $dec) && ($dec < 127)) {
-			$packed .= pack1byte($dec);
+			$packed .= pack_number($dec, BYTEx1);
 		} else {
 			$packed .= DISP_CTRLCODE;
 		}
 	}
 	return $output;
+}
+
+function debugFormat($in_packed)
+{
+	return debugFormatBinary($in_packed);
+	// return debugFormatUnpack($in_packed);
 }
 
 function EOL($in_cnt)
