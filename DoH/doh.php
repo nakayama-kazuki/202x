@@ -87,13 +87,11 @@ function pack_number($in_num, $in_byte)
 }
 
 $ut->register(function() {
-	$tests = array(0, 1, 10, 100);
-	foreach ($tests as $test) {
-		foreach (BYTES as $byte) {
-			$result = unpack_substr(pack_number($test, $byte), 0, $byte);
-			if ($result !== $test) {
-				return FALSE;
-			}
+	foreach (BYTES as $byte) {
+		$test = rand(0, 2 ** ($byte * OCTET) - 1);
+		$result = unpack_substr(pack_number($test, $byte), 0, $byte);
+		if ($result !== $test) {
+			return FALSE;
 		}
 	}
 	return TRUE;
