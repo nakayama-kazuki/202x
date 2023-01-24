@@ -46,7 +46,7 @@ define('BYTEx2', 2);
 define('BYTEx4', 4);
 
 define('BYTES', array(BYTEx1, BYTEx2, BYTEx4));
-define('BITS', array_map(function($e) { return $e * OCTET; }, BYTES));
+define('ALIGNEDBITS', array_map(function($e) { return $e * OCTET; }, BYTES));
 
 function get_format_by_rule($in_rule, $in_byte)
 {
@@ -123,7 +123,7 @@ function handleBitList($in_bitList, $in_buff, $in_callback)
 			$tmp = 0;
 		}
 		// handle $in_buff from $offset to ($offset + $length)
-		if (in_array($length, BITS)) {
+		if (in_array($length, ALIGNEDBITS)) {
 			$ret .= call_user_func($in_callback, $in_buff, $offset, $length);
 			$offset += $length;
 			$length = 0;
@@ -140,7 +140,7 @@ function packToBinStr($in_pack, $in_bitList)
 		$in_bitList,
 		$in_pack,
 		function($in_buff, $in_offset, $in_length) {
-			// $in_buff is $in_pack, and $in_length is in BITS
+			// $in_buff is $in_pack, and $in_length is in ALIGNEDBITS
 			$decNum = unpack_substr($in_buff, ($in_offset / OCTET), ($in_length / OCTET));
 			$binStr = base_convert($decNum, 10, 2);
 			return str_pad($binStr, $in_length, '0', STR_PAD_LEFT);
@@ -154,7 +154,7 @@ function binStrToPack($in_binStr, $in_bitList)
 		$in_bitList,
 		$in_binStr,
 		function($in_buff, $in_offset, $in_length) {
-			// $in_buff is $in_binStr, and $in_length is in BITS
+			// $in_buff is $in_binStr, and $in_length is in ALIGNEDBITS
 			$binStr = substr($in_buff, $in_offset, $in_length);
 			$decNum = intval($binStr, 2);
 			return pack_number($decNum, ($in_length / OCTET));
@@ -184,36 +184,6 @@ function binStrToUnpack($in_binStr, $in_bitList)
 	return $ret;
 }
 
-$ut->register(function() {
-	$bitlists = array(
-		8 => array(
-			array(1,7),
-			array(8)
-		),
-		16 => array(
-			array(1,7,8),
-			array(16)
-		),
-		32 => array(
-			array(1,15,16),
-			array(32)
-		)
-	);
-	foreach (array(8, 16, 32) as $bits) {
-		$bitstr = '';
-		for ($bit = 0; $bit < $bits; $bit++) {
-			$bitstr .= rand(0, 1);
-		}
-		foreach ($bitlists[strlen($bitstr)] as $bitlist) {
-			$result = packToBinStr(binStrToPack($bitstr, $bitlist), $bitlist);
-			if ($result !== $bitstr) {
-				return FALSE;
-			}
-		}
-	}
-	return TRUE;
-}, 'binary-string');
-
 function util_pack($in_unpacked, $in_bitList)
 {
 	$binStr = unpackToBinStr($in_unpacked, $in_bitList);
@@ -227,23 +197,46 @@ function util_unpack($in_packed, $in_bitList)
 }
 
 $ut->register(function() {
-	$bitList = array(
-		'a' => 16,
-		'b' => 16,
-		'c' => 32,
-		'd' => 16
+	$bitlists = array(
+		8 => array(
+			array(1,7),
+			array(8)
+		),
+		16 => array(
+			array(1,7,8),
+			array(1,15),
+			array(16)
+		),
+		32 => array(
+			array(1,15,16),
+			array(1,31),
+			array(32)
+		)
 	);
-	$test = array();
-	foreach ($bitList as $name => $bit) {
-		$test[$name] = rand(0, 2 ** $bit - 1);
+	foreach (ALIGNEDBITS as $bits) {
+		$bitstr = '';
+		for ($bit = 0; $bit < $bits; $bit++) {
+			$bitstr .= rand(0, 1);
+		}
+		foreach ($bitlists[strlen($bitstr)] as $bitlist) {
+			// packToBinStr + binStrToPack
+			$result = packToBinStr(binStrToPack($bitstr, $bitlist), $bitlist);
+			if ($result !== $bitstr) {
+				return FALSE;
+			}
+			// util_unpack + util_pack
+			$unpacked = array();
+			for ($i = 0; $i < count($bitlist); $i++) {
+				$unpacked[$i] = rand(0, 2 ** $bitlist[$i] - 1);
+			}
+			$result = util_unpack(util_pack($unpacked, $bitlist), $bitlist);
+			if (count(array_diff_assoc($result, $unpacked)) > 0) {
+				return FALSE;
+			}
+		}
 	}
-	$result = util_unpack(util_pack($test, $bitList), $bitList);
-	if (count(array_diff_assoc($result, $test)) > 0) {
-		return FALSE;
-	} else {
-		return TRUE;
-	}
-}, 'bit-list');
+	return TRUE;
+}, 'binary-string');
 
 define('ROOTLB', 0b00000000);
 define('FMASK1', 0b11000000);
