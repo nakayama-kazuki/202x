@@ -99,15 +99,19 @@ class SessionController
 		fwrite($fp, $in_value);
 		fclose($fp);
 	}
-	public function renderContent() {
+	public function renderContent($in_contentId = NULL) {
 		if (ob_get_contents()) {
 			return;
 		}
 		$request = array_merge($_GET, $_POST);
-		$contentId = $this->defaultId;
-		if (array_key_exists($this->cid_label, $request)) {
-			$contentId = $request[$this->cid_label];
-			unset($request[$this->cid_label]);
+		if ($in_contentId) {
+			$contentId = $in_contentId;
+		} else {
+			$contentId = $this->defaultId;
+			if (array_key_exists($this->cid_label, $request)) {
+				$contentId = $request[$this->cid_label];
+				unset($request[$this->cid_label]);
+			}
 		}
 		if (array_key_exists($contentId, $this->handlerTable)) {
 			call_user_func($this->handlerTable[$contentId], $request);
