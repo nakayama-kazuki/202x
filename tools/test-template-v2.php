@@ -44,7 +44,7 @@ class SessionController
 	private $script;
 	private $logger;
 	private $defaultId = NULL;
-	private $rendered = FALSE;
+	private $cid_label = '_CID_';
 	function __construct() {
 		$parsed = pathinfo($_SERVER['SCRIPT_NAME']);
 		$urldir = "https://{$_SERVER['HTTP_HOST']}{$parsed['dirname']}";
@@ -71,13 +71,20 @@ class SessionController
 	public function defaultURL() {
 		return $this->script['url'];
 	}
-	public function createURL($in_cid, $in_params = array()) {
+	public function createURL1($in_domain, $in_cid, $in_params = array()) {
 		$buff = array();
-		array_push($buff, "_CID_={$in_cid}");
+		array_push($buff, "{$this->cid_label}={$in_cid}");
 		foreach ($in_params as $key => $value) {
 			array_push($buff, "{$key}=" . rawurlencode($value));
 		}
-		return $this->script['url'] . '?' . implode('&', $buff);
+		$url = $this->script['url'];
+		if ($in_domain) {
+			$url = str_replace($_SERVER['HTTP_HOST'], $in_domain, $url);
+		}
+		return "{$url}?" . implode('&', $buff);
+	}
+	public function createURL2($in_cid, $in_params = array()) {
+		return $this->createURL1(NULL, $in_cid, $in_params);
 	}
 	public function loggerURL() {
 		return $this->logger['url'];
@@ -93,16 +100,14 @@ class SessionController
 		fclose($fp);
 	}
 	public function renderContent() {
-		if ($this->rendered) {
+		if (ob_get_contents()) {
 			return;
-		} else {
-			$this->rendered = TRUE;
 		}
 		$request = array_merge($_GET, $_POST);
 		$contentId = $this->defaultId;
-		if (array_key_exists('_CID_', $request)) {
-			$contentId = $request['_CID_'];
-			unset($request['_CID_']);
+		if (array_key_exists($this->cid_label, $request)) {
+			$contentId = $request[$this->cid_label];
+			unset($request[$this->cid_label]);
 		}
 		if (array_key_exists($contentId, $this->handlerTable)) {
 			call_user_func($this->handlerTable[$contentId], $request);
@@ -219,9 +224,9 @@ define('USERDATA', array('random' => rand()));
 $sc->registerDefaultHandler(function($in_request) {
 	global $sc;
 	// $sc->initLog();
-	$url1 = $sc->createURL('PAGE1_DISP_PARAM', USERDATA);
-	$url2 = $sc->createURL('PAGE2_LOGGING', USERDATA);
-	$url3 = $sc->createURL('PAGE3_DISP_IMG');
+	$url1 = $sc->createURL2('PAGE1_DISP_PARAM', USERDATA);
+	$url2 = $sc->createURL1('localhost', 'PAGE2_LOGGING', USERDATA);
+	$url3 = $sc->createURL1('127.0.0.1', 'PAGE3_DISP_IMG');
 	print <<<EOC
 <div>examples of content behavior</div>
 <div>
