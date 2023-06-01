@@ -1,24 +1,24 @@
 # CSP（Content Security Policy）Fetch ディレクティブ活用の現実解
 
-こんにちは、広告エンジニア + 安全確保支援士の中山です。
+こんにちは、エンジニア & 安全確保支援士の中山です。
 
-この記事では Content Security Policy（以下 CSP）の Fetch ディレクティブを活用したセキュリティー強化の取り組みについて述べたいと思います。
+広告掲載や Web 解析や SNS 連携等を目的として、しばしば Web Application に 3rd-party JavaScript を導入することがあります。一方で 3rd-party JavaScript には Web Application を利用するユーザーに悪影響を与えるリスクが存在するため、導入とあわせたリスク対策も必要となります。そこで、今回の記事では Content Security Policy（以下 CSP）の Fetch ディレクティブを活用した Web Application のセキュリティー強化の取り組みについてお伝えしたいと思います。
 
 ## CSP の Fetch ディレクティブとは
 
-詳しい仕様は [W3C を参照](https://www.w3.org/TR/CSP3/) 頂ければと思いますが
+詳しくは [W3C 仕様](https://www.w3.org/TR/CSP3/) をご確認頂くとして、CSP の Fetch ディレクティブとはサブリソースの読み込みやインライン JavaScript の実行を制限するための Web ブラウザに対する指示のことです。Web Application が
 
 ```
 Content-Security-Policy: script-src 'self'
 ```
 
-のような応答ヘッダや
+のような応答ヘッダを送信したり
 
 ```
 <meta http-equiv="Content-Security-Policy" content="script-src 'self'" />
 ```
 
-のような META 要素をコンテンに記載することで、Web Application のサブリソースの読み込みを制限することができ、以下のようなセキュリティー対策となります。
+のような META 要素をコンテンに記載することで、指示に応じた制限が適用され、結果として以下のようなセキュリティー上の効果が期待できます。
 
 - XSS リスクの軽減
 - ある 3rd-party JavaScript から piggyback で読み込まれる意図しない 3rd-party JavaScript の実行抑制
