@@ -2,49 +2,55 @@
 
 こんにちは、プラットフォームエンジニア & 安全確保支援士の中山です。
 
-Web 解析や SNS 連携、広告掲載等を目的として Web サイトにはしばしば 3rd-party JavaScript が導入されることがあります。一方で 3rd-party JavaScript には Web サイトを閲覧するユーザーに悪影響を与えるリスクが存在するため、その導入とあわせたリスク対策も必要となります。そこで、今回の記事では Content Security Policy（以下 CSP）の Fetch ディレクティブを活用した Web サイトのセキュリティー強化の取り組みについてお伝えしたいと思います。
+Web サイトにはしばしば 3rd-party JavaScript … 例えば Google Analytics のような Web 解析ツール、いいねボタンのような SNS 連携機能、広告掲載のための広告タグなどを導入することがあります。
+
+一方で 3rd-party JavaScript には Web サイトを閲覧するユーザーに悪影響を与えてしまうリスクも存在するため、その導入とあわせた対策が必要となります。
+
+そこで、今回の記事では Content Security Policy（以下 CSP）の Fetch ディレクティブを活用したリスク対策の取り組みについてお伝えしたいと思います。
 
 ## CSP の Fetch ディレクティブとは
 
-詳しくは [W3C 仕様](https://www.w3.org/TR/CSP3/) をご確認頂くとして、CSP の Fetch ディレクティブとはサブリソースの読み込みやインライン JavaScript の実行を制限するための Web ブラウザに対する指示のことで、概念を絵にしたものがこちらです。
+詳しくは [W3C 仕様](https://www.w3.org/TR/CSP3/) を確認頂くとして、概念を絵にしたものがこちらです。
 
-★ここも絵を、Fetch もかく
+（★ここも絵を、Fetch もかく）
 
-例えば Web サイトが
-
-```
-Content-Security-Policy: script-src 'self'
-```
-
-のような応答ヘッダを送信したり
-
-```
-<meta http-equiv="Content-Security-Policy" content="script-src 'self'" />
-```
-
-のような META 要素を定義している場合、CSP の Fetch ディレクティブの内容に応じた制限が適用され、
+Web ブラウザに対してサブリソースの読み込みやインライン JavaScript の実行の制限を指示することで
 
 - XSS リスクの軽減
 - 外部ドメインへの意図しないデータ転送の抑制
 - ある事業者の 3rd-party JavaScript から読み込まれる別な事業者の 3rd-party JavaScript の実行抑制
 
-のようなセキュリティー上の効果が期待できます。
+などの効果が期待できます。
 
-蛇足ですが META 要素に関しては [W3C 仕様](https://www.w3.org/TR/CSP3/) に
+例えば script-src の場合
 
-> The Content-Security-Policy-Report-Only header is not supported inside a meta element.
+> The script-src directive restricts the locations from which scripts may be executed. This includes not only URLs loaded directly into script elements, but also things like inline script blocks and XSLT stylesheets [XSLT] which can trigger script execution. 
 
-とあり、一部の機能が利用できません。その [背景に関する議論](https://github.com/w3c/webappsec-csp/issues/277) では
+Web サイトが
+
+```
+Content-Security-Policy: script-src 'self'
+```
+
+のような応答ヘッダを送信すると同一オリジンから読み込まれた JavaScript の実行のみ許可されます。
+
+ちなみに CSP の Fetch ディレクティブは META 要素にも定義可能ですが
+
+> NOTE: The Content-Security-Policy-Report-Only header is not supported inside a meta element.
+
+との注釈があり、一部の機能が利用できません。その [背景に関する議論](https://github.com/w3c/webappsec-csp/issues/277) では
 
 > I really wish we'd stop with meta-element based policies.
 
-のような意見も出ているため利用には慎重な検討が必要ですね。
+のような意見も出ているため利用に際してはこうした意見も参考にすべきですね。
 
-## Web サイトのセキュリティー課題と対策
+## 3rd-party JavaScript の課題と対策
 
-表記についてもう少し掘り下げてみます。
+Chrome の開発者ツールを使うことで Web サイトに導入されている 3rd-party JavaScript を確認することができます。
 
-Web サイトが 3rd-party JavaScript を読み込むとき、もしその 3rd-party JavaScript を提供する事業者に悪意があったり、悪意はなくとも別な攻撃者によって CDN やリポジトリ上のコードが改変されていた場合、Web サイト上のデータが盗まれたり [フィッシングサイトに誘導](https://blog.techscore.com/entry/2022/08/24/150000) されてしまう、などのリスクが発生します。
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/pict01.png' />
+
+もしその 3rd-party JavaScript を提供する事業者に悪意があったり、悪意はなくとも別な攻撃者によって CDN やリポジトリ上の JavaScript コードが改変されていた場合、Web サイト上のデータが盗まれたり [フィッシングサイトに誘導](https://blog.techscore.com/entry/2022/08/24/150000) されてしまう、などのリスクが発生します。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/sec01.png' />
 
