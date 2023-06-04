@@ -2,9 +2,7 @@
 
 こんにちは、プラットフォームエンジニア & 安全確保支援士の中山です。
 
-Web サイトにはしばしば 3rd-party JavaScript … 例えば Google Analytics のような Web 解析ツール、いいねボタンのような SNS 連携機能、広告掲載のための広告タグなどを導入することがあります。
-
-一方で 3rd-party JavaScript には Web サイトを閲覧するユーザーに悪影響を与えてしまうリスクも存在するため、その導入とあわせた対策が必要となります。
+Web サイトにはしばしば 3rd-party JavaScript … 例えば Google Analytics のような Web 解析ツール、いいねボタンのような SNS 連携機能、広告掲載のための広告タグなど … を導入することがあります。一方で 3rd-party JavaScript には Web サイトを閲覧するユーザーに悪影響を与えてしまうリスクも存在するため、その導入とあわせた対策が必要となります。
 
 そこで、今回の記事では Content Security Policy（以下 CSP）の Fetch ディレクティブを活用したリスク対策の取り組みについてお伝えしたいと思います。
 
@@ -34,31 +32,33 @@ Content-Security-Policy: script-src 'self'
 
 のような応答ヘッダを送信すると同一オリジンから読み込まれた JavaScript の実行のみ許可されます。
 
-ちなみに CSP の Fetch ディレクティブは META 要素にも定義可能ですが
+ちなみに CSP の Fetch ディレクティブは meta 要素にも定義可能ですが
 
 > NOTE: The Content-Security-Policy-Report-Only header is not supported inside a meta element.
 
-との注釈があり、一部の機能が利用できません。その [背景に関する議論](https://github.com/w3c/webappsec-csp/issues/277) では
+との注釈があり一部の機能が利用できず、さらにその [背景に関する議論](https://github.com/w3c/webappsec-csp/issues/277) の中で
 
 > I really wish we'd stop with meta-element based policies.
 
-のような意見も出ているため利用に際してはこうした意見も参考にすべきですね。
+のような意見も出ているので参考にしてください。
 
 ## 3rd-party JavaScript の課題と対策
 
-Chrome の開発者ツールを使うことで Web サイトに導入されている 3rd-party JavaScript を確認することができます。
+Web ブラウザの開発者ツールを使うことで Web サイトに導入されている 3rd-party JavaScript を確認することができます。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/pict01.png' />
 
-もしその 3rd-party JavaScript を提供する事業者に悪意があったり、悪意はなくとも別な攻撃者によって CDN やリポジトリ上の JavaScript コードが改変されていた場合、Web サイト上のデータが盗まれたり [フィッシングサイトに誘導](https://blog.techscore.com/entry/2022/08/24/150000) されてしまう、などのリスクが発生します。
+このとき、もし 3rd-party JavaScript を提供する事業者に悪意があったり、悪意はなくとも別な攻撃者によって CDN やリポジトリ上の JavaScript コードが改変されていた場合、Web サイトに掲載された情報 … 閲覧しているユーザーのログインアカウントに紐づく個人情報が含まれるかもしれません … が盗まれたり、ユーザーが [フィッシングサイトに誘導](https://blog.techscore.com/entry/2022/08/24/150000) されてしまう、などのリスクが発生します。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/sec01.png' />
 
-こうしたリスクには Same Origin Policy を利用して 3rd-party JavaScript が実行されるドメインを分離する対策が有効です。
+こうしたリスクへの対策として Web ブラウザの Same Origin Policy（以下 SOP）という仕様を利用する方法があります。具体的には iframe 要素によってドメインを分離した環境 3rd-party JavaScript を実行することで、万が一悪意のある処理が実行されたとしてもその影響範囲を iframe 内に限定することができます。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/sec02.png' />
 
-ただし 3rd-party JavaScript がその目的を達成するために Web サイトの DOM にアクセスする必要がある場合（例えば広告のビューアビリティー計測など）、ドメインを分離する対策は採用できません。とはいえ、信頼できる安全な 3rd-party JavaScript ならば問題はないでしょう。
+ただし、Web 解析ツールや広告のビューアビリティー計測など 3rd-party JavaScript がその目的を達成するために Web サイトの DOM にアクセスする必要がある場合、SOP を利用した対策は採用できません。とはいえ、信頼できる安全な 3rd-party JavaScript ならば問題はないでしょう。
+
+★★
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/sec03.png' />
 
