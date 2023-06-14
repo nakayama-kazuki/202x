@@ -1,10 +1,10 @@
-# CSP（Content Security Policy）Fetch ディレクティブ活用の現実解
+# CSP（Content Security Policy）Fetch ディレクティブの現実的な活用方法
 
 こんにちは、プラットフォームエンジニア & 安全確保支援士の中山です。
 
-Web サイトにはしばしば 3rd-party JavaScript … 例えば Google Analytics のような Web 解析ツール、いいねボタンのような SNS 連携機能、広告掲載のための広告タグなど … を導入することがあります。一方で 3rd-party JavaScript には Web サイトを閲覧するユーザーに悪影響を与えるリスクも存在するため、その導入とあわせてリスク対策も必要となります。
+Web サイトにはしばしば 3rd-party JavaScript … 例えば Google Analytics のような Web 解析ツール、いいねボタンのような SNS 連携機能、広告掲載のための広告タグなど … を導入することがあります。一方で 3rd-party JavaScript には Web サイトを閲覧するユーザーに悪影響を与えてしまうリスクも存在するため、その導入とあわせたリスク対策も必要となります。
 
-そこで、今回の記事では Content Security Policy（以降 CSP）Fetch ディレクティブを活用したリスク対策の取り組みについてお伝えします。
+そこで、今回の記事では Content Security Policy（以降 CSP）Fetch ディレクティブを活用したリスク対策についてお伝えします。
 
 ## CSP Fetch ディレクティブとは
 
@@ -19,26 +19,26 @@ CSP Fetch ディレクティブについての詳細は [W3C 仕様](https://www
 Web サイトが
 
 ```
-Content-Security-Policy: script-src allowed.example
+Content-Security-Policy: script-src safe.example
 ```
 
-のような指示を応答ヘッダとして送信した場合、Web ブラウザは ***allowed.example*** からロードした JavaScript のみ実行を許可します。
+のような指示を応答ヘッダとして送信した場合、Web ブラウザは ***safe.example*** からロードした JavaScript のみ実行を許可します。
 
 ```
 <html>
 <body>
 
-<!-- This can NOT be executed. -->
+<!-- x : This can NOT be executed. -->
 <script>
-console.log('can not execute');
+console.log('hello world');
 </script>
 
-<!-- This can be loaded, then executed. -->
-<script src='https://allowed.example/allowed.js'>
+<!-- o : This can be loaded, then executed. -->
+<script src='https://safe.example/safe.js'>
 </script>
 
-<!-- This can NOT be loaded, then executed. -->
-<script src='https://denied.example/denied.js'>
+<!-- x : This can NOT be loaded, then executed. -->
+<script src='https://unsafe.example/unsafe.js'>
 </script>
 
 </body>
@@ -47,13 +47,13 @@ console.log('can not execute');
 
 ## 3rd-party JavaScript のリスクと対策
 
-冒頭で述べた 3rd-party JavaScript のリスクと対策について掘り下げてみます。
+冒頭で述べた 3rd-party JavaScript のリスクとその対策について掘り下げてみましょう。
 
 Web ブラウザの開発者ツールを使うことで Web サイトに導入されている 3rd-party JavaScript を確認することができます。
 
 （★２：開発者ツール）
 
-ヤフーにも多数の 3rd-party JavaScript が導入されていますが、もし 3rd-party JavaScript を提供する事業者に悪意があったり、仮に悪意はなくとも別な攻撃者によってホスト先の CDN やリポジトリ上の JavaScript コードが改変されていた場合、Web サイト内の情報 … ユーザーのアカウントに紐づく個人情報が含まれるかもしれません … が盗まれたり、閲覧中のユーザーが [フィッシングサイトに誘導](https://blog.techscore.com/entry/2022/08/24/150000) されてしまう、などのリスクが生じます。
+ヤフーでも多数の 3rd-party JavaScript が導入されていますが、もし 3rd-party JavaScript を提供する事業者に悪意があったり、仮に悪意はなくとも別な攻撃者によってホスト先の CDN やリポジトリ上の JavaScript コードが改変されていた場合、Web サイト内の情報 … ユーザーのアカウントに紐づく個人情報が含まれるかもしれません … が盗まれたり、ユーザーが [フィッシングサイトに誘導](https://blog.techscore.com/entry/2022/08/24/150000) されてしまう、などのリスクが生じます。
 
 （★３）
 
@@ -63,11 +63,11 @@ Web ブラウザの開発者ツールを使うことで Web サイトに導入�
 2. 文書「Ａ」内の iframe 要素経由で（***safe.example*** とは別の）ドメイン ***unsafe.example*** の text/html 文書「Ｂ」をロードする
 3. 文書「Ｂ」内で 3rd-party JavaScript をロードして実行する
 
-こうすることで、文書「Ｂ」で実行される JavaScript は文書「Ａ」の DOM にアクセスできないため、万が一 3rd-party JavaScript を提供する事業者に悪意があったとしてもその影響範囲を iframe 内に限定することができます（蛇足ですが iframe 要素に sandbox 属性を用いることで、影響範囲をさらに細かくコントロールすることも可能です）。
+こうすることで、文書「Ｂ」で実行される JavaScript は文書「Ａ」の DOM にアクセスできないため、万が一 3rd-party JavaScript を提供する事業者に悪意があったとしてもその影響範囲を iframe 内に限定することができます（加えて潜在的にリスクのある動作を制限したい場合、iframe 要素の sandbox 属性を活用することもご検討ください）。
 
 （★４）
 
-ところが、Web 解析ツールや広告のビューアビリティー計測など 3rd-party JavaScript がその目的を達成するために文書「Ａ」の DOM にアクセスする必要がある場合、SOP を利用した対策を採用することができません。このような場合は、信頼できる 3rd-party JavaScript については一定のリスクは受容せざるを得ません。
+ところが、Web 解析ツールや広告のビューアビリティー計測など 3rd-party JavaScript がその目的を達成するために文書「Ａ」の DOM にアクセスする必要がある場合、SOP を利用した対策を採用することができません。信頼できる 3rd-party JavaScript に限り、このような場合に生じるリスクは受容することになります。
 
 （★５）
 
@@ -85,7 +85,22 @@ Web ブラウザの開発者ツールを使うことで Web サイトに導入�
 
 （★６）
 
-それでは、CSP の Fetch ディレクティブを活用してこのリスクに立ち向かいたいと思います。リスクとその対策を表にまとめてみました。
+許可リストベースでサブリソースのロードやインライン JavaScript の実行を制御しようにも、そもそも許可リストの用意や保守が難しかったり、シンプルに影響範囲を iframe 内に限定することができない場合にどうすればよいでしょうか？
+
+3rd-party JavaScript のリスク対策について表にまとめてみましたのでご確認ください。
+
+（★７：表）
+
+
+
+★★サブタイトルをどこにつける
+★★表はティアも含める？
+
+
+
+
+
+
 
 （★７：インラインを抜く）
 
@@ -127,7 +142,8 @@ e. 3rd-party と契約でヤフーやユーザーに被害があった場合の�
 ## その他考察
 
 
-
+★外部へのデータ送信の洗い出し
+https://yj-yahoo-jp.slack.com/archives/CAN47E3PX/p1686553461058799?thread_ts=1685518256.005919&cid=CAN47E3PX
 
 ★Proxy とサンプリング
 ★TM での CSP 配信検討と
