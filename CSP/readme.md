@@ -8,15 +8,11 @@ Web サイトにはしばしば 3rd-party JavaScript … 例えば Google Analyt
 
 ## CSP Fetch ディレクティブとは
 
-CSP Fetch ディレクティブについての詳細は [W3C 仕様](https://www.w3.org/TR/CSP3/) を確認頂くとして、その概念を絵にしたものがこちらです。端的には Web ブラウザに対し、サブリソースのロードやインライン JavaScript の実行に関する許可リスト（以降ソースリストと呼びます）を指示する方法のことです。
+CSP Fetch ディレクティブについての詳細は [W3C 仕様](https://www.w3.org/TR/CSP3/) を確認頂くとして、その概念 … Web ブラウザに対し、サブリソースのロードやインライン JavaScript の実行に関する許可リスト（以降ソースリスト）を指示 … を絵にしたものがこちらです。
 
 （★１：Fetch ディレクティブの説明）
 
-具体例として Web サイトが "script-src + ホスト" を使って
-
-> The script-src directive restricts the locations from which scripts may be executed. This includes not only URLs loaded directly into script elements, but also things like inline script blocks and XSLT stylesheets [XSLT] which can trigger script execution. 
-
-以下のような指示を応答ヘッダとして送信した場合
+例えば Web サイトが以下のような指示を応答ヘッダとして送信した場合
 
 ```
 Content-Security-Policy: script-src safe.example
@@ -28,16 +24,11 @@ Web ブラウザは safe.example からロードした JavaScript のみ実行�
 <html>
 <body>
 
-<!-- NG : This can NOT be executed. -->
-<script>
-console.log('hello world');
-</script>
-
-<!-- OK : This can be loaded, then executed. -->
+<!-- OK -->
 <script src='https://safe.example/safe.js'>
 </script>
 
-<!-- NG : This can NOT be loaded, then executed. -->
+<!-- NG -->
 <script src='https://unsafe.example/unsafe.js'>
 </script>
 
@@ -89,32 +80,34 @@ Web ブラウザの開発者ツールを使うことで Web サイトに導入�
 
 ソースリストベースでサブリソースのロードやインライン JavaScript の実行を制御したくとも、そもそもソースリストを用意～保守すること自体が難しかったり、シンプルに影響範囲を iframe 内に限定することができない場合にどうすればよいでしょうか？
 
-そうしたケースもふまえ 3rd-party JavaScript のリスク対策について表にまとめてみましたのでご確認ください。
+そうしたケースもふまえ 3rd-party JavaScript のリスク対策について表にまとめてみました。
 
 （★７：表）
 
-### 高機密情報を扱う Web サイトの場合
+表中の 1, 2 について補足します。
 
-セキュリティー重視の方法を採用します。加えて、ソースリストに nonce や hash も併用し、3rd-party JavaScript のリスクだけでなく、悪意あるインライン JavaScript の実行リスクにも対策されることをお勧めします。
+### 1. 高機密情報を扱う Web サイトの場合
 
-具体例として Web サイトが "script-src + nonce" を使って、以下のような指示を応答ヘッダとして送信した場合
+セキュリティー重視の方法を採用します。加えて、ソースリストに nonce-source や hash-source も併用し、3rd-party JavaScript のリスクだけでなく、悪意あるインライン JavaScript の実行リスクにも対策しましょう。
+
+例えば Web サイトが以下のような指示を応答ヘッダとして送信した場合
 
 ```
 Content-Security-Policy: script-src 'nonce-ch4hvvbHDpv7xCSvXCs3BrNggHdTzxUA'
 ```
 
-Web ブラウザは同 nonce 属性を持つインライン JavaScript のみ実行を許可します。
+Web ブラウザは同 nonce 属性値を持つインライン JavaScript のみ実行を許可します。
 
 ```
 <html>
 <body>
 
-<!-- OK : This can be executed. -->
+<!-- OK -->
 <script nonce='ch4hvvbHDpv7xCSvXCs3BrNggHdTzxUA'>
 console.log('hello');
 </script>
 
-<!-- NG : This can NOT be executed. -->
+<!-- NG -->
 <script>
 console.log('world');
 </script>
@@ -123,14 +116,11 @@ console.log('world');
 </html>
 ```
 
-### 通常の Web サイトの場合
+### 2. 通常の Web サイトの場合
 
-可用性とセキュリティーのバランスを考え、発見的統制手法を採用します。
-ヤフーの場合、サービス毎に技術管掌担当がアサインされているので、各担当に定期的に 3rd-party JavaScript 実行レポートを確認してもらい潜在的なリスクを検知した場合には是正措置をとってもらいます。
+可用性とセキュリティーのバランスを考え、発見的統制手法を採用します。ヤフーの場合、サービス毎に技術管掌担当がアサインされているので、各担当に定期的に 3rd-party JavaScript 実行レポートを確認してもらい、潜在的なリスクを検知した場合には是正措置を検討してもらうことにします。
 
-インライン JavaScript の実行も制限すべき
-
-
+また、こちらも悪意あるインライン JavaScript の実行リスクには対策すべきですが、先立って 3rd-party JavaScript 実行レポートを確認したいという場合、ソースリストには暫定的に 'unsafe-inline' を指定してください。
 
 ## その他考察
 
