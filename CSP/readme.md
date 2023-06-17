@@ -118,33 +118,56 @@ console.log('world');
 
 ### 2. 通常の Web サイトの場合
 
-可用性とセキュリティーのバランスを考え、発見的統制手法を採用します。ヤフーの場合、サービス毎に技術管掌担当がアサインされているので、各担当に定期的に 3rd-party JavaScript 実行レポートを確認してもらい、潜在的なリスクを検知した場合には是正措置を検討してもらうことにします。
+可用性とセキュリティーのバランスを考え、発見的統制手法を採用します。手法の趣旨からして全量データを必要とするものではないため、適切なサンプリング処理のもと 3rd-party JavaScript 実行レポートを作成します。ヤフーの場合、サービス毎に技術管掌担当がアサインされているので、各担当に定期的に 3rd-party JavaScript 実行レポートを確認してもらい、潜在的なリスクを検知した場合には是正措置を検討してもらうことにします。
 
-また、こちらも悪意あるインライン JavaScript の実行リスクには対策すべきですが、先立って 3rd-party JavaScript 実行レポートを確認したいという場合、ソースリストには暫定的に 'unsafe-inline' を指定してください。
+また、こちらも悪意あるインライン JavaScript の実行リスクには対策すべきですが、先立って 3rd-party JavaScript 実行レポートを確認したい場合、ソースリストには暫定的に 'unsafe-inline' を指定してください。
 
-## その他考察
+## その他の考察
 
+### 外部送信規律への対応
 
-★外部へのデータ送信の洗い出し
-https://yj-yahoo-jp.slack.com/archives/CAN47E3PX/p1686553461058799?thread_ts=1685518256.005919&cid=CAN47E3PX
+総務省は Web サイトから第三者に対して送信される情報に対する透明性を高めるルールとして [外部送信規律](https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/gaibusoushin_kiritsu.html) を定めています。このルールに対応するための事前調査や、ルール違反を回避するための手段として CSP Fetch ディレクティブを活用することができます。
 
-★Proxy とサンプリング
-★TM での CSP 配信検討と
-★nonce 面倒
+### タグマネージャーへの対応
 
-ちなみに CSP の Fetch ディレクティブは meta 要素にも定義可能ですが
+扱う情報に応じて対応方法を変えたい、応答ヘッダを使いたい、適切にサンプリングしたい、適宜運用を見直したい … などのニーズに対してオンデマンドでサービス毎に作業依頼をする場合、依頼される側としては都度調整が必要になり、依頼する側としてもガバナンスの維持が困難です。
+
+CSP Fetch ディレクティブは動的に meta 要素として追加定義することができるため、タグマネージャーにそのためのコードスニペットを登録し、サービス担当者の手を煩わせることなくタグマネージャー経由でソースリストを配信することを検討してみました。
+
+この場合 ReportingObserver を用いてレポート内容を最適化したり、サンプリング処理もコードスニペット内に定義できるため、悪くない方法に思えたのですが
+
+```
+let ro = new ReportingObserver((in_reports, in_observer) => {
+    for (let report of in_reports) {
+        if (report.type !== 'csp-violation') {
+            continue;
+        }
+        // sampling if needed
+        if (Math.random() < 0.1) {
+            let url = 'https://report-to.example/';
+            navigator.sendBeacon(url, report.body.blockedURL);
+        }
+    }
+});
+ro.observe();
+```
+
+残念ながら発見的統制手法が使えないため断念し、サービス担当者の負担軽減のためにはツールによる支援を検討中です。
 
 > NOTE: The Content-Security-Policy-Report-Only header is not supported inside a meta element.
 
-との注釈があり一部の機能が利用できず、さらにその [背景に関する議論](https://github.com/w3c/webappsec-csp/issues/277) の中で
+ちなみに、この仕様に関する [背景議論](https://github.com/w3c/webappsec-csp/issues/277) の中で
 
 > I really wish we'd stop with meta-element based policies.
 
-のような意見も出ているのでご注意を。
+のような意見も出ているため、発見的統制手法を抜きにしても meta 要素での CSP Fetch ディレクティブの利用はリスクがありそうです。
 
------Original Message-----
+### まとめ
 
-★まとめとして（AI 先生に言われたような内容で）セキュリティー強化を
+W3C 仕様の導入部分で
 
+> This document defines Content Security Policy (CSP), a tool which developers can use to lock down their applications in various ways, mitigating the risk of content injection vulnerabilities such as cross-site scripting, and reducing the privilege with which their applications execute.
 
+とありますが the risk of content injection 対策のみならず 3rd-party JavaScript に対する現実的なリスク対策に加え、外部送信規律への対応にも CSP Fetch ディレクティブを活用できることをお伝えできたかと思います。みなさまの Web サイトでも CSP Fetch ディレクティブの活用をご検討ください。
 
+また、ヤフーではサービスの「安心と安全」を実現するための仲間を募集中です！われこそはという方のご連絡をお待ちしております。
