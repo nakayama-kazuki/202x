@@ -17,7 +17,7 @@ Web サイトにはしばしば 3rd-party JavaScript を導入することがあ
 
 （★１：Fetch ディレクティブの説明）
 
-Web ブラウザに対して、サブリソースのロードやインライン JavaScript の実行に関する許可リスト（以降 source-list と呼びます）を指示することで XSS などのリスクを軽減できると説明されてます。
+Web ブラウザに対して、サブリソースのロードや JavaScript の実行に関する許可リスト（以降 ***source-list*** と呼びます）を指示することで、意図しない外部へのデータ送信や、悪意のある JavaScript の実行リスクなどを軽減することができます。
 
 例えば Web サイトが以下のような指示を応答ヘッダとして送信した場合
 
@@ -25,7 +25,7 @@ Web ブラウザに対して、サブリソースのロードやインライン 
 Content-Security-Policy: script-src safe.example
 ```
 
-Web ブラウザは safe.example からロードした JavaScript のみ実行を許可します。
+Web ブラウザは ***safe.example*** からロードした JavaScript のみ実行を許可します。
 
 ```
 <html>
@@ -37,6 +37,11 @@ Web ブラウザは safe.example からロードした JavaScript のみ実行�
 
 <!-- NG -->
 <script src='https://unsafe.example/unsafe.js'>
+</script>
+
+<!-- NG -->
+<script>
+console.log('Hello, world!');
 </script>
 
 </body>
@@ -57,17 +62,17 @@ Web ブラウザの開発者ツールを使うことで Web サイトに導入�
 
 （★３）
 
-このようなリスクに対して、Web ブラウザの Same Origin Policy（以降 SOP と略します）という仕様を活用する対策があります。
+このようなリスクに対して、Web ブラウザの Same Origin Policy（以降 SOP と略します）という仕様を活用した対策があります。
 
-1. ドメイン safe.example から text/html 文書「Ａ」をロードする
-2. 文書「Ａ」内の iframe 要素経由で（safe.example とは別の）ドメイン unsafe.example の text/html 文書「Ｂ」をロードする
+1. ドメイン ***safe.example*** から text/html 文書「Ａ」をロードする
+2. 文書「Ａ」内の iframe 要素経由で（***safe.example*** とは別の）ドメイン ***unsafe.example*** の text/html 文書「Ｂ」をロードする
 3. 文書「Ｂ」内で 3rd-party JavaScript をロードして実行する
 
 こうすることで、もし 3rd-party JavaScript を提供する事業者に悪意があったとしても、その影響範囲を iframe 内に限定することができます。何故なら、文書「Ｂ」で実行される JavaScript は SOP によって文書「Ａ」の DOM にアクセスすることができないためです。
 
 （★４）
 
-ところが、Web 解析ツールや広告のビューアビリティー計測など 3rd-party JavaScript がその目的を達成するために文書「Ａ」の DOM にアクセスする必要がある場合、この対策を採用することができません。であれば、信頼できる 3rd-party JavaScript はリスクを受容（source-list に追記）し、それ以外の 3rd-party JavaScript については CSP Fetch ディレクティブを活用してロードと実行を制限するのがよさそうです。
+ところが、Web 解析ツールや広告のビューアビリティー計測など 3rd-party JavaScript がその目的を達成するために文書「Ａ」の DOM にアクセスする必要がある場合、この対策を採用することができません。であれば、信頼できる 3rd-party JavaScript はリスクを受容（***source-list*** に追記）し、それ以外の 3rd-party JavaScript については CSP Fetch ディレクティブを活用してロードと実行を制限するのがよさそうです。
 
 （★５）
 
@@ -77,7 +82,7 @@ Web ブラウザの開発者ツールを使うことで Web サイトに導入�
 - タグマネージャーを使ってマーケティング担当が（開発担当の与り知らない）3rd-party JavaScript を導入する場合がある
 - ある事業者の 3rd-party JavaScript から別な … しばしば複数の … 事業者の 3rd-party JavaScript がロードされる場合がある
 
-などの前提を置いて運営する必要があるためです。こうなると source-list に基づいてサブリソースのロードやインライン JavaScript の実行を制限しようにも、その source-list を用意すること自体が難しくなります。
+などの前提のもとで運用する必要があるためです。こうなると ***source-list*** に基づいて 3rd-party JavaScript のロードや実行を制限しようにも、その ***source-list*** を用意すること自体が難しくなります。
 
 加えて、箇条書きの最後の項目に関する補足として、総務省の学術雑誌 [オンライン広告におけるトラッキングの現状とその法的考察](https://www.soumu.go.jp/main_content/000599872.pdf) によれば
 
@@ -108,7 +113,7 @@ Content-Security-Policy: script-src 'strict-dynamic' [許可リスト]
 ※ [許可リスト] は直接ロードする全ての 3rd-party JavaScript のドメインリスト
 
 
-加えて、 source-list に nonce-source や hash-source も併用し、3rd-party JavaScript のリスクだけでなく、悪意あるインライン JavaScript の実行リスクにも対策しましょう。
+加えて、 ***source-list*** に nonce-source や hash-source も併用し、3rd-party JavaScript のリスクだけでなく、悪意あるインライン JavaScript の実行リスクにも対策しましょう。
 
 例えば Web サイトが以下のような指示を応答ヘッダとして送信した場合
 
@@ -140,7 +145,7 @@ console.log('world');
 
 可用性とセキュリティーのバランスを考え、発見的統制手法を採用します。手法の趣旨からして全量データを必要とするものではないため、適切なサンプリング処理のもと 3rd-party JavaScript 実行レポートを作成します。ヤフーの場合、サービス毎に技術管掌担当がアサインされているので、各担当に定期的にレポートを確認してもらい、潜在的なリスクを検知した場合には是正措置を検討してもらうことにします。
 
-また、こちらも悪意あるインライン JavaScript の実行リスクには対策すべきですが、先立って 3rd-party JavaScript 実行レポートを確認したい場合、source-list には暫定的に 'unsafe-inline' を指定してください。
+また、こちらも悪意あるインライン JavaScript の実行リスクには対策すべきですが、先立って 3rd-party JavaScript 実行レポートを確認したい場合、***source-list*** には暫定的に 'unsafe-inline' を指定してください。
 
 ## その他の考察
 
@@ -152,7 +157,7 @@ console.log('world');
 
 扱う情報に応じて対応方法を変えたい、応答ヘッダを使いたい、適切にサンプリングしたい、適宜運用を見直したい … などのニーズに対してオンデマンドでサービス毎に作業依頼をする場合、依頼される側としては都度リソース等の調整が必要になり、依頼する側としてもガバナンスの維持が困難です。
 
-CSP Fetch ディレクティブは動的に meta 要素として追加定義することができるため、タグマネージャーにそのためのコードスニペットを登録し、サービス担当者の手を煩わせることなくタグマネージャー経由で source-list を配信することを検討してみました。
+CSP Fetch ディレクティブは動的に meta 要素として追加定義することができるため、タグマネージャーにそのためのコードスニペットを登録し、サービス担当者の手を煩わせることなくタグマネージャー経由で ***source-list*** を配信することを検討してみました。
 
 この場合 ReportingObserver を用いてレポート内容を最適化したり、サンプリング処理もコードスニペット内に定義できるため、悪くない方法に思えたのですが
 
