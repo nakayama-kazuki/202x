@@ -98,54 +98,37 @@ Web ブラウザの開発者ツールを使うことで Web サイトに導入�
 
 （★７：表）
 
-次いで、表中の 1, 2 について掘り下げます。
+方針毎に具体策を掘り下げてゆきます。
 
 ### 1. 高機密情報を扱う Web サイトの場合
 
-★★★
-
-セキュリティー重視の方法を採用します。
-
-基本的には 3rd-party JavaScript の導入は必要最小限とする
-明示的な許可のない 3rd-party JavaScript は実行を停止する
-
-Content-Security-Policy: script-src 'strict-dynamic' [許可リスト]
-※ [許可リスト] は直接ロードする全ての 3rd-party JavaScript のドメインリスト
-
-
-加えて、 ***source-list*** に nonce-source や hash-source も併用し、3rd-party JavaScript のリスクだけでなく、悪意あるインライン JavaScript の実行リスクにも対策しましょう。
-
-例えば Web サイトが以下のような指示を応答ヘッダとして送信した場合
+この場合、セキュリティー重視の方法を採用すべきかと思います。基本的に 3rd-party JavaScript の導入は必要最小限とし、その上で ***source-list*** で明示的に許可しない 3rd-party JavaScript は実行を停止しましょう。
 
 ```
-Content-Security-Policy: script-src 'nonce-ch4hvvbHDpv7xCSvXCs3BrNggHdTzxUA'
+Content-Security-Policy: script-src 'strict-dynamic' safe.example allowed.example ...
 ```
 
-Web ブラウザは同 nonce 属性値を持つインライン JavaScript のみ実行を許可します。
+なお ***'strict-dynamic'*** は信頼する 3rd-party JavaScript からロードされる別な 3rd-party JavaScript についてもロードと実行を許可するための指定です。
+
+さらに 3rd-party JavaScript のリスク対策に留まらず、***source-list*** に ***nonce-source*** や ***hash-source*** も併用して悪意あるインライン JavaScript の実行リスクにも対策することをお勧めします。
 
 ```
-<html>
-<body>
-
-<!-- OK -->
-<script nonce='ch4hvvbHDpv7xCSvXCs3BrNggHdTzxUA'>
-console.log('hello');
-</script>
-
-<!-- NG -->
-<script>
-console.log('world');
-</script>
-
-</body>
-</html>
+Content-Security-Policy: script-src 'strict-dynamic' safe.example allowed.example ... 'nonce-ch4hvvbHDpv7xCSvXCs3BrNggHdTzxUA'
 ```
 
 ### 2. 通常の Web サイトの場合
 
-可用性とセキュリティーのバランスを考え、発見的統制手法を採用します。手法の趣旨からして全量データを必要とするものではないため、適切なサンプリング処理のもと 3rd-party JavaScript 実行レポートを作成します。ヤフーの場合、サービス毎に技術管掌担当がアサインされているので、各担当に定期的にレポートを確認してもらい、潜在的なリスクを検知した場合には是正措置を検討してもらうことにします。
+この場合、可用性とセキュリティーのバランスをふまえた発見的統制手法をお勧めします。手法の趣旨からして全量データを必要とするものではないため、適切なサンプリング処理のもと Web サイト内での 3rd-party JavaScript 実行レポートを作成し、定期的にその内容をチェックします。ヤフーの場合、サービス毎の技術管掌担当に定期的にレポートを確認してもらい、潜在的なリスクを検知した場合には是正措置を検討してもらうことにしています。
 
-また、こちらも悪意あるインライン JavaScript の実行リスクには対策すべきですが、先立って 3rd-party JavaScript 実行レポートを確認したい場合、***source-list*** には暫定的に 'unsafe-inline' を指定してください。
+通常の Web サイトでも悪意あるインライン JavaScript の実行リスクには対策すべきですが、それに先立って 3rd-party JavaScript 実行レポートを確認したい場合は ***source-list*** に ***'unsafe-inline'*** を指定してください。
+
+### それ以外の場合
+
+SOP を活用した対策が採用可能ならばそれを採用、難しい場合にはリスク受容しつつも可能な範囲で保険的対策をご検討ください。
+
+- 3rd-party JavaScript をタグ管理システムで導入し、有事の際にツール上で導入の一時停止を可能にする
+- 3rd-party JavaScript 提供事業者との契約で、問題発生時の対処方法を事前に取り決めておく
+- 3rd-party JavaScript コードをレビューし、可能であれば自社 CDN から配信する
 
 ## その他の考察
 
