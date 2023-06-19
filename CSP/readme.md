@@ -1,6 +1,3 @@
-★★全体構成
-★★下の方変だった
-
 # CSP を活用した 3rd-party JavaScript のリスク対策
 
 こんにちは、プラットフォームエンジニアの中山です。
@@ -102,15 +99,15 @@ Web ブラウザの開発者ツールを使うことで Web サイトに導入�
 
 ### 1. 高機密情報を扱う Web サイトの場合
 
-この場合、セキュリティー重視の方法を採用すべきかと思います。基本的に 3rd-party JavaScript の導入は必要最小限とし、その上で ***source-list*** で明示的に許可しない 3rd-party JavaScript は実行を停止しましょう。
+この場合、セキュリティー重視の方法を採用すべきかと思います。基本的に 3rd-party JavaScript の導入は必要最小限として、加えて ***source-list*** で明示的に許可しない 3rd-party JavaScript はロードや実行を制限しましょう。
 
 ```
 Content-Security-Policy: script-src 'strict-dynamic' safe.example allowed.example ...
 ```
 
-なお ***'strict-dynamic'*** は信頼する 3rd-party JavaScript からロードされる別な 3rd-party JavaScript についてもロードと実行を許可するための指定です。
+ちなみに ***'strict-dynamic'*** は信頼する 3rd-party JavaScript からロードされる別な 3rd-party JavaScript についてもロードと実行を許可するための指定です。
 
-さらに 3rd-party JavaScript のリスク対策に留まらず、***source-list*** に ***nonce-source*** や ***hash-source*** も併用して悪意あるインライン JavaScript の実行リスクにも対策することをお勧めします。
+また、高機密情報を扱う以上、3rd-party JavaScript のリスク対策に加えて ***nonce-source*** なども併用し、悪意あるインライン JavaScript が実行されてしまうリスクにも対策しましょう。
 
 ```
 Content-Security-Policy: script-src 'strict-dynamic' safe.example allowed.example ... 'nonce-ch4hvvbHDpv7xCSvXCs3BrNggHdTzxUA'
@@ -118,31 +115,45 @@ Content-Security-Policy: script-src 'strict-dynamic' safe.example allowed.exampl
 
 ### 2. 通常の Web サイトの場合
 
-この場合、可用性とセキュリティーのバランスをふまえた発見的統制手法をお勧めします。手法の趣旨からして全量データを必要とするものではないため、適切なサンプリング処理のもと Web サイト内での 3rd-party JavaScript 実行レポートを作成し、定期的にその内容をチェックします。ヤフーの場合、サービス毎の技術管掌担当に定期的にレポートを確認してもらい、潜在的なリスクを検知した場合には是正措置を検討してもらうことにしています。
+この場合、可用性とセキュリティーのバランスをふまえた発見的統制手法の採用がおすすめです。手法の趣旨からして全量データを必要とするものではないため、適切なサンプリング処理のもと Web サイト内での 3rd-party JavaScript 実行レポートを作成し、定期的にその内容をチェックします。ヤフーの場合、サービス毎の技術管掌担当に定期的にレポートを確認してもらい、潜在的なリスクを検知した場合には是正措置を検討してもらうことにしています。
 
-通常の Web サイトでも悪意あるインライン JavaScript の実行リスクには対策すべきですが、それに先立って 3rd-party JavaScript 実行レポートを確認したい場合は ***source-list*** に ***'unsafe-inline'*** を指定してください。
+また、通常の Web サイトでも ***nonce-source*** は併用すべきですが、取り急ぎで 3rd-party JavaScript 実行レポートを確認したい場合には暫定的に ***'unsafe-inline'*** を指定してください。
 
 ### それ以外の場合
 
 SOP を活用した対策が採用可能ならばそれを採用、難しい場合にはリスク受容しつつも可能な範囲で保険的対策をご検討ください。
 
-- 3rd-party JavaScript をタグ管理システムで導入し、有事の際にツール上で導入の一時停止を可能にする
+- 3rd-party JavaScript をタグマネージャー経由で導入し、有事の際にツール上で導入の一時停止を可能にする
 - 3rd-party JavaScript 提供事業者との契約で、問題発生時の対処方法を事前に取り決めておく
 - 3rd-party JavaScript コードをレビューし、可能であれば自社 CDN から配信する
 
 ## その他の考察
 
-### 外部送信規律への対応
+CSP Fetch ディレクティブの活用方法についてさらに考察してみます。
 
-総務省は Web サイトから第三者に対して送信される情報に対する透明性を高めるルールとして [外部送信規律](https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/gaibusoushin_kiritsu.html) を定めています。このルールに対応するための事前調査や、ルール違反を回避するための手段として CSP Fetch ディレクティブを活用することができます。
+### 第三者に対する情報送信調査への活用
+
+総務省は Web サイトから第三者に対して送信される情報に対する透明性を高めるルールとして [外部送信規律](https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/gaibusoushin_kiritsu.html) を定めています。このルールに対応するための事前調査や、意図せぬルール違反を回避するための手段として CSP Fetch ディレクティブを活用することができます。
+
+例えば、自社管理 CDN からのサブリソースのロードを除き、全てのサブリソースのロードをレポートすることで、第三者に対して送信されている情報をチェックすることができます。
 
 ### タグマネージャーへの対応
 
-扱う情報に応じて対応方法を変えたい、応答ヘッダを使いたい、適切にサンプリングしたい、適宜運用を見直したい … などのニーズに対してオンデマンドでサービス毎に作業依頼をする場合、依頼される側としては都度リソース等の調整が必要になり、依頼する側としてもガバナンスの維持が困難です。
+以下のようなニーズに対して、都度サービス毎の技術管掌担当に応答ヘッダ等の修正を依頼をすることは少々大変です。
 
-CSP Fetch ディレクティブは動的に meta 要素として追加定義することができるため、タグマネージャーにそのためのコードスニペットを登録し、サービス担当者の手を煩わせることなくタグマネージャー経由で ***source-list*** を配信することを検討してみました。
+- サンプリングの割合を変更したい
+- 運用を一時停止したい（+ 再開したい）
+- 高機密情報を扱うか否かに応じて対応方法を変えたい
 
-この場合 ReportingObserver を用いてレポート内容を最適化したり、サンプリング処理もコードスニペット内に定義できるため、悪くない方法に思えたのですが
+依頼される側としては計画やリソースの調整が発生しますし、依頼する側としてもガバナンスの維持が難しくなるためです。そこで、応答ヘッダではなくタグマネージャーを活用して、この対応を一元管理することはできないか、と考えてみました。
+
+Chrome 114.0.5735.134 で確認した限りでは、
+
+```
+<meta http-equiv="Content-Security-Policy" content="script-src 'self'" />
+```
+
+のような meta 要素を動的に追加することが可能で、さらに ReportingObserver を用いてレポート内容を最適化したりサンプリングする理もコンテナ内に定義できるため、
 
 ```
 let ro = new ReportingObserver((in_reports, in_observer) => {
@@ -160,23 +171,25 @@ let ro = new ReportingObserver((in_reports, in_observer) => {
 ro.observe();
 ```
 
-残念ながら発見的統制手法が使えないため断念し、サービス担当者の負担軽減のためにはツールによる支援を検討中です。
+悪くないアイデアに思えたのですが、残念ながら
 
 > NOTE: The Content-Security-Policy-Report-Only header is not supported inside a meta element.
+
+とのことで発見的統制手法に用いることができず、断念することになりました。サービス毎の手間軽減やガバナンスの維持のためには、運用管理ツールによる支援を検討中です。
 
 ちなみに、この仕様に関する [背景議論](https://github.com/w3c/webappsec-csp/issues/277) の中で
 
 > I really wish we'd stop with meta-element based policies.
 
-のような意見も出ているため、発見的統制手法を抜きにしても meta 要素での CSP Fetch ディレクティブの活用には注意が必要そうです。
+のような意見も出ているため、発見的統制手法を抜きにしても meta 要素経由での活用には注意が必要かもしれません。
 
 ### まとめ
 
-W3C 仕様の導入部分で
+CSP 仕様の導入部分で
 
 > This document defines Content Security Policy (CSP), a tool which developers can use to lock down their applications in various ways, mitigating the risk of content injection vulnerabilities such as cross-site scripting, and reducing the privilege with which their applications execute.
 
-とありますが the risk of content injection 対策のみならず 3rd-party JavaScript に対する現実的なリスク対策に加え、外部送信規律への対応にも CSP Fetch ディレクティブを活用できることをお伝えできたかと思います。みなさまの Web サイトでも CSP Fetch ディレクティブの活用をご検討ください。
+とありますが、the risk of content injection 対策のみならず、状況に応じた 3rd-party JavaScript のリスク対策や、さらには第三者に対する情報送信調査にも CSP Fetch ディレクティブを活用できることをお伝えできたかと思います。みなさまの Web サイトでの CSP Fetch ディレクティブの活用のヒントになれば幸いです。
 
-また、ヤフーではサービスの「安心と安全」を実現するための仲間を募集中です！われこそはという方のご連絡をお待ちしております。
+最後に、ヤフーではサービスの「安心と安全」を実現するための仲間を募集中です！われこそはという方のご連絡をお待ちしております。
 
