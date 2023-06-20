@@ -6,15 +6,15 @@ Web サイトにはしばしば 3rd-party JavaScript を導入することがあ
 
 その一方で 3rd-party JavaScript には Web サイトを閲覧するユーザーに対して悪影響を与えるリスクも存在するため、その導入とあわせたリスク対策も必要となります。
 
-そこで、今回の記事では Content Security Policy（以降 CSP と略します）の Fetch ディレクティブを活用した 3rd-party JavaScript のリスク対策についてお伝えしたいと思います。
+そこで、今回は Content Security Policy（以降 CSP と略します）を活用した 3rd-party JavaScript のリスク対策についてお伝えしたいと思います。なお CSP には複数のセキュリティ関連仕様が含まれますが、この記事内ではサブリソースのロードや JavaScript の実行を制御する [Fetch ディレクティブ](https://www.w3.org/TR/CSP3/#directives-fetch) のことを指して CSP と呼ぶことにします。
 
-## CSP Fetch ディレクティブとは
+## CSP とは
 
-詳しくは [W3C 仕様](https://www.w3.org/TR/CSP3/) を確認頂くとして、その概念を絵にしたものがこちらです。
+まずは概念を絵にしたものがこちらです。
 
 （★１：Fetch ディレクティブの説明）
 
-Web ブラウザに対して、サブリソースのロードや JavaScript の実行に関する許可リスト（以降 ***source-list*** と呼びます）を指示することで、意図しない外部へのデータ送信や、悪意のある JavaScript の実行リスクなどを軽減することができます。
+Web ブラウザに対して、サブリソースのロードや JavaScript の実行に関する許可リストを指示することで、意図しない外部へのデータ送信や、悪意のある JavaScript の実行リスクなどを軽減することができます。
 
 例えば Web サイトが以下のような指示を応答ヘッダとして送信した場合
 
@@ -45,7 +45,7 @@ console.log('Hello, world!');
 </html>
 ```
 
-## 現実は悩ましい？
+## 悩ましい現実
 
 では、冒頭で述べた 3rd-party JavaScript のリスクとその対策について、もう少し掘り下げてみましょう。
 
@@ -69,17 +69,20 @@ Web ブラウザの開発者ツールを使うことで Web サイトに導入�
 
 （★４）
 
-ところが、Web 解析ツールや広告のビューアビリティー計測など 3rd-party JavaScript がその目的を達成するために文書「Ａ」の DOM にアクセスする必要がある場合、この対策を採用することができません。であれば、信頼できる 3rd-party JavaScript はリスクを受容（***source-list*** に追記）し、それ以外の 3rd-party JavaScript については CSP Fetch ディレクティブを活用してロードと実行を制限するのがよさそうです。
+ところが、Web 解析ツールや広告のビューアビリティー計測など 3rd-party JavaScript がその目的を達成するために文書「Ａ」の DOM にアクセスする必要がある場合、この対策を採用することができません。そのような 3rd-party JavaScript についてはリスク受容（信頼できることを前提に）せざるをえませんが、それ以外の 3rd-party JavaScript については CSP を活用してロードと実行が制限された状態を保証する、というのが現実的でしょうか。
 
 （★５）
 
-しかしながら、現実はもう少し複雑で、悩ましくもあります。なぜなら多くの Web サイトでは
+★★★
+
+
+しかしながら現実はもう少し悩ましく、なぜなら多くの Web サイトは
 
 - 3rd-party JavaScript の信頼性判断は容易ではない
 - タグマネージャーを使ってマーケティング担当が（開発担当の与り知らない）3rd-party JavaScript を導入する場合がある
 - ある事業者の 3rd-party JavaScript から別な … しばしば複数の … 事業者の 3rd-party JavaScript がロードされる場合がある
 
-などの前提のもとで運用する必要があるためです。こうなると ***source-list*** に基づいて 3rd-party JavaScript のロードや実行を制限しようにも、その ***source-list*** を用意すること自体が難しくなります。
+などの前提のもとで運用する必要があるためです。こうなると ******source-list***★★*** に基づいて 3rd-party JavaScript のロードや実行を制限しようにも、その ******source-list***★★*** を用意すること自体が難しくなります。
 
 加えて、箇条書きの最後の項目に関する補足として、総務省の学術雑誌 [オンライン広告におけるトラッキングの現状とその法的考察](https://www.soumu.go.jp/main_content/000599872.pdf) によれば
 
@@ -89,23 +92,37 @@ Web ブラウザの開発者ツールを使うことで Web サイトに導入�
 
 （★６）
 
-## CSP Fetch ディレクティブを活用した現実解
+## CSP を活用した現実解
 
 さて、上で述べた悩ましい現実に立ち向かうべく、方針を表にまとめてみました。
 
 （★７：表）
 
+可能であるならば SOP を活用した対策を採用し、それが難しい場合には保険的対策 …
+
+- 3rd-party JavaScript をタグマネージャー経由で導入し、有事の際にツール上で導入の一時停止を可能にする
+- 3rd-party JavaScript 提供事業者との契約で、問題発生時の対処方法を事前に取り決めておく
+- 3rd-party JavaScript の安全性をレビューし、可能であれば自社 CDN から配信する
+
+★★
+
+を検討するとともに
+
+難しい場合にはリスク受容しつつも可能な範囲で保険的対策をご検討ください。
+
+
+
 方針毎に具体策を掘り下げてゆきます。
 
-### 1. 高機密情報を扱う Web サイトの場合
+### No.1 高機密情報を扱う Web サイトの場合
 
-この場合、セキュリティー重視の方法を採用すべきかと思います。基本的に 3rd-party JavaScript の導入は必要最小限として、加えて ***source-list*** で明示的に許可しない 3rd-party JavaScript はロードや実行を制限しましょう。
+この場合、セキュリティ重視の方法を採用すべきです。原則として 3rd-party JavaScript の導入は控え、それに加えて ******source-list***★★*** で明示的に許可していない JavaScript はロードや実行を制限しましょう。
 
 ```
 Content-Security-Policy: script-src 'strict-dynamic' safe.example allowed.example ...
 ```
 
-ちなみに ***'strict-dynamic'*** は信頼する 3rd-party JavaScript からロードされる別な 3rd-party JavaScript についてもロードと実行を許可するための指定です。
+ちなみに ***'strict-dynamic'*** は明示的に許可した 3rd-party JavaScript からロードされる別な 3rd-party JavaScript についてもロードと実行を許可するための指定ですが、可用性を高める分、明示的に許可する 3rd-party JavaScript は必要最小限とすべきです。
 
 また、高機密情報を扱う以上、3rd-party JavaScript のリスク対策に加えて ***nonce-source*** なども併用し、悪意あるインライン JavaScript が実行されてしまうリスクにも対策しましょう。
 
@@ -113,27 +130,24 @@ Content-Security-Policy: script-src 'strict-dynamic' safe.example allowed.exampl
 Content-Security-Policy: script-src 'strict-dynamic' safe.example allowed.example ... 'nonce-ch4hvvbHDpv7xCSvXCs3BrNggHdTzxUA'
 ```
 
-### 2. 通常の Web サイトの場合
 
-この場合、可用性とセキュリティーのバランスをふまえた発見的統制手法の採用がおすすめです。手法の趣旨からして全量データを必要とするものではないため、適切なサンプリング処理のもと Web サイト内での 3rd-party JavaScript 実行レポートを作成し、定期的にその内容をチェックします。ヤフーの場合、サービス毎の技術管掌担当に定期的にレポートを確認してもらい、潜在的なリスクを検知した場合には是正措置を検討してもらうことにしています。
+
+★★★ナンスを付与していないインラインjsを動かすことができます
+★★★それ以外じゃないか、、、順番もかえる
+
+### No.2 通常の Web サイトの場合
+
+この場合、可用性とセキュリティのバランスをふまえた発見的統制手法の採用がおすすめです。手法の趣旨からして全量データを必要とするものではないため、適切なサンプリング処理のもと Web サイト内での 3rd-party JavaScript 実行レポートを作成し、定期的にその内容をチェックします。ヤフーの場合、サービス毎の技術管掌担当に定期的にレポートを確認してもらい、潜在的なリスクを検知した場合には是正措置を検討してもらうことにしています。
 
 また、通常の Web サイトでも ***nonce-source*** は併用すべきですが、取り急ぎで 3rd-party JavaScript 実行レポートを確認したい場合には暫定的に ***'unsafe-inline'*** を指定してください。
 
-### それ以外の場合
-
-SOP を活用した対策が採用可能ならばそれを採用、難しい場合にはリスク受容しつつも可能な範囲で保険的対策をご検討ください。
-
-- 3rd-party JavaScript をタグマネージャー経由で導入し、有事の際にツール上で導入の一時停止を可能にする
-- 3rd-party JavaScript 提供事業者との契約で、問題発生時の対処方法を事前に取り決めておく
-- 3rd-party JavaScript コードをレビューし、可能であれば自社 CDN から配信する
-
 ## その他の考察
 
-CSP Fetch ディレクティブの活用方法についてさらに考察してみます。
+CSP の活用方法についてさらに考察してみます。
 
 ### 第三者に対する情報送信調査への活用
 
-総務省は Web サイトから第三者に対して送信される情報に対する透明性を高めるルールとして [外部送信規律](https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/gaibusoushin_kiritsu.html) を定めています。このルールに対応するための事前調査や、意図せぬルール違反を回避するための手段として CSP Fetch ディレクティブを活用することができます。
+総務省は Web サイトから第三者に対して送信される情報に対する透明性を高めるルールとして [外部送信規律](https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/gaibusoushin_kiritsu.html) を定めています。このルールに対応するための事前調査や、意図せぬルール違反を回避するための手段として CSP を活用することができます。
 
 例えば、自社管理 CDN からのサブリソースのロードを除き、全てのサブリソースのロードをレポートすることで、第三者に対して送信されている情報をチェックすることができます。
 
@@ -189,7 +203,7 @@ CSP 仕様の導入部分で
 
 > This document defines Content Security Policy (CSP), a tool which developers can use to lock down their applications in various ways, mitigating the risk of content injection vulnerabilities such as cross-site scripting, and reducing the privilege with which their applications execute.
 
-とありますが、the risk of content injection 対策のみならず、状況に応じた 3rd-party JavaScript のリスク対策や、さらには第三者に対する情報送信調査にも CSP Fetch ディレクティブを活用できることをお伝えできたかと思います。みなさまの Web サイトでの CSP Fetch ディレクティブの活用のヒントになれば幸いです。
+とありますが、the risk of content injection 対策のみならず、状況に応じた 3rd-party JavaScript のリスク対策や、さらには第三者に対する情報送信調査にも CSP を活用できることをお伝えできたかと思います。みなさまの Web サイトでの CSP の活用のヒントになれば幸いです。
 
 最後に、ヤフーではサービスの「安心と安全」を実現するための仲間を募集中です！われこそはという方のご連絡をお待ちしております。
 
