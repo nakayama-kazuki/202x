@@ -69,11 +69,11 @@ Web ブラウザの開発者ツールを使うことで Web サイトに導入�
 
 （★４）
 
-ところが、Web 解析ツールや広告のビューアビリティー計測など 3rd-party JavaScript がその目的を達成するために文書「Ａ」の DOM にアクセスする必要がある場合、この対策を採用することができません。そのような 3rd-party JavaScript については安全性を評価の上でリスク受容せざるをえませんが、それ以外の 3rd-party JavaScript に対しては CSP を活用してロードと実行が制限された状態を保証する、あたりが現実的でしょうか？
+ところが、Web 解析ツールや広告のビューアビリティー計測など 3rd-party JavaScript がその目的を達成するために文書「Ａ」の DOM にアクセスする必要がある場合、SOP を活用した対策を採用することができません。そのような 3rd-party JavaScript については安全性を評価の上でリスク受容せざるをえませんが、CSP を活用することでそれ以外の 3rd-party JavaScript に対してロードと実行が制限された状態を保証すれば、概ねリスクは解消 … と言えるでしょうか？
 
 （★５）
 
-しかしながら現実はもう少し複雑です。なぜなら多くの Web サイトは
+残念ながら現実はもう少し複雑です。なぜなら多くの Web サイトは
 
 - 3rd-party JavaScript の信頼性判断は容易ではない
 - タグマネージャーを使ってマーケティング担当が（開発担当の与り知らない）3rd-party JavaScript を導入する場合がある
@@ -115,7 +115,7 @@ Content-Security-Policy: script-src 'strict-dynamic' safe.example ...
 
 ちなみに ***'strict-dynamic'*** は、明示的に許可した JavaScript からロードされる別な JavaScript についてもロードと実行を許可するための指定です。過剰な制限を回避しやすくなる反面、潜在的なリスクの増加とならないよう、許可リストを用意する際にはご注意ください。
 
-蛇足ですが、機密情報を扱う以上 XSS のリスクも最小化したいですよね。そこで ***nonce-source*** を併用し、明示的に許可していないインライン JavaScript の実行を制限しましょう。
+機密情報を扱う以上、3rd-party JavaScript のリスク対策に加えて XSS のリスクも最小化したいですよね。そこで ***nonce-source*** を併用し、明示的に許可していないインライン JavaScript の実行を制限しましょう。
 
 ```
 Content-Security-Policy: script-src 'strict-dynamic' safe.example ... 'nonce-ch4hvvbHDpv7xCSvXCs3BrNggHdTzxUA'
@@ -137,17 +137,17 @@ Content-Security-Policy-Report-Only: script-src 'strict-dynamic' safe.example ..
 
 > In either case, developers SHOULD NOT include either 'unsafe-inline', or data: as valid sources in their policies. Both enable XSS attacks by allowing code to be included directly in the document itself; they are best avoided completely.
 
-について頭の片隅におきつつ ***'unsafe-inline'*** の暫定利用をご検討ください。
+を頭の片隅におきつつ ***'unsafe-inline'*** の暫定利用をご検討ください。
 
 ## 活用の幅を広げる
 
-CSP や CSP-RO について、リスク対策以外への活用や運用改善提案（とその失敗）についてお伝えします。
+CSP や CSP-RO について、リスク対策以外への活用や運用改善提案（とその失敗）についてもお伝えしたいと思います。
 
 ### 他の事業者に対する情報送信調査への活用
 
-CSP-RO および Fetch ディレクティブ（script-src 以外も含め）を活用することで、Web サイト内でのサブリソースのロードに関するレポートを作成することができます。さらに、サブリソースのロードのパラメータを確認することで、他の事業者に対して送信されている情報をチェックすることができます。
+CSP-RO および Fetch ディレクティブ（script-src 以外も含め）を活用することで、Web サイト内でのサブリソースのロードに関するレポートを作成することができます。さらに、サブリソースのロード時のパラメータを確認することで、他の事業者に対して送信されている情報をチェックすることができます。
 
-総務省は Web サイトから第三者に対して送信される情報に対する透明性を高めるルールとして [外部送信規律](https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/gaibusoushin_kiritsu.html) を定めています。このルールに対応するための事前調査や、意図せぬルール違反を回避するための手段として CSP-RO や CSP を活用することができます。
+総務省は Web サイトから第三者に対して送信される情報に対する透明性を高めるルールとして [外部送信規律](https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/gaibusoushin_kiritsu.html) を定めています。このルールに対応するための事前調査や、意図せぬルール違反を回避するための手段として CSP-RO や CSP を活用することができそうです。
 
 ### タグマネージャー経由の CSP 活用
 
