@@ -125,48 +125,45 @@ Content-Security-Policy: script-src 'strict-dynamic' safe.example ... 'nonce-ch4
 
 > The Content-Security-Policy-Report-Only HTTP response header field allows web developers to experiment with policies by monitoring (but not enforcing) their effects. 
 
-手法の趣旨として全量データを必要とするものではないため、適切なサンプリング処理のもと Web サイト内での 3rd-party JavaScript 実行レポートを作成し、定期的にその内容をチェックします。ヤフーの場合、サービス毎の技術管掌担当に定期的にレポートを確認してもらい、潜在的なリスクを検知した場合には是正措置を検討してもらうことにしています。
+手法の趣旨からして全量データを必要とするものではないため、適切なサンプリング処理のもと Web サイト内での 3rd-party JavaScript 実行レポートを作成し、定期的にその内容をチェックします。ヤフーの場合、サービス毎の技術管掌担当に定期的にレポートを確認してもらい、潜在的なリスクを検知した場合には是正措置を検討してもらうことにしています。
 
 ```
 Content-Security-Policy-Report-Only: script-src 'strict-dynamic' safe.example ...
 ```
 
-通常の Web サイトとはいえ XSS のリスクは最小化すべきですが、取り急ぎ 3rd-party JavaScript 実行レポートを確認したい場合には
+通常の Web サイトとはいえ XSS のリスクは最小化すべきですが、取り急ぎ 3rd-party JavaScript 実行レポートを確認したい場合は
 
 > In either case, developers SHOULD NOT include either 'unsafe-inline', or data: as valid sources in their policies. Both enable XSS attacks by allowing code to be included directly in the document itself; they are best avoided completely.
 
-を念頭におきつつ、暫定的な ***'unsafe-inline'*** の併用をご検討ください。
+を頭の片隅において ***'unsafe-inline'*** の暫定利用を検討ください。
 
 ## その他の考察
 
-CSP の活用方法についてさらに考察してみます。
+CSP や CSP-RO の活用方法についてさらに考察を進めてみます。
 
-### 第三者に対する情報送信調査への活用
+### 他の事業者に対する情報送信調査への活用
 
-★★★意図しない外部へのデータ送信や、
+CSP-RO および Fetch ディレクティブ（script-src 以外も含め）を活用することで、Web サイト内でのサブリソースのロードに関するレポートを作成することができます。さらに、サブリソースのロードのパラメータを確認することで、他の事業者に対して送信されている情報をチェックすることができます。
 
+総務省は Web サイトから第三者に対して送信される情報に対する透明性を高めるルールとして [外部送信規律](https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/gaibusoushin_kiritsu.html) を定めています。このルールに対応するための事前調査や、意図せぬルール違反を回避するための手段として CSP-RO や CSP を活用することができます。
 
-総務省は Web サイトから第三者に対して送信される情報に対する透明性を高めるルールとして [外部送信規律](https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/gaibusoushin_kiritsu.html) を定めています。このルールに対応するための事前調査や、意図せぬルール違反を回避するための手段として CSP を活用することができます。
+### タグマネージャー経由の CSP 活用
 
-例えば、自社管理 CDN からの★★★サブリソース★★★のロードを除き、全ての★★★サブリソース★★★のロードをレポートすることで、第三者に対して送信されている情報をチェックすることができます。
-
-### タグマネージャーへの対応
-
-以下のようなニーズに対して、都度サービス毎の技術管掌担当に応答ヘッダ等の修正を依頼をすることは少々大変です。
+以下のようなニーズに対し、都度サービス毎の担当者に応答ヘッダ等の修正を依頼をする場合 …
 
 - サンプリングの割合を変更したい
 - 運用を一時停止したい（+ 再開したい）
 - 高機密情報を扱うか否かに応じて対応方法を変えたい
 
-依頼される側としては計画やリソースの調整が発生しますし、依頼する側としてもガバナンスの維持が難しくなるためです。そこで、応答ヘッダではなくタグマネージャーを活用して、この対応を一元管理することはできないか、と考えてみました。
+依頼される側としては計画やリソースの調整が発生し、依頼する側としてもガバナンスの維持が難しくなります。そこで、応答ヘッダではなくタグマネージャーを活用することで、CSP を活用した 3rd-party JavaScript のリスク対策を一元管理することはできなだろうか、と考えてみました。
 
-Chrome 114.0.5735.134 で確認した限りでは、
+Chrome 114.0.5735.134 を用いて
 
 ```
 <meta http-equiv="Content-Security-Policy" content="script-src 'self'" />
 ```
 
-のような meta 要素を動的に追加することが可能で、さらに ReportingObserver を用いてレポート内容を最適化したりサンプリングする理もコンテナ内に定義できるため、
+のような meta 要素の動的な追加と、意図通りのふるまいを確認することができました。さらに ReportingObserver を用いてレポート内容を最適化したり、必要に応じてサンプリングする処理もタグマネージャーのコンテナ内に定義できるため、
 
 ```
 let ro = new ReportingObserver((in_reports, in_observer) => {
@@ -188,13 +185,13 @@ ro.observe();
 
 > NOTE: The Content-Security-Policy-Report-Only header is not supported inside a meta element.
 
-とのことで発見的統制手法に用いることができず、断念することになりました。サービス毎の手間軽減やガバナンスの維持のためには、運用管理ツールによる支援を検討中です。
+とのことで CSP-RO を活用することができず、断念することになりました。依頼される側やする側の課題解消には運用管理ツールによる支援を検討中です。
 
-ちなみに、この仕様に関する [背景議論](https://github.com/w3c/webappsec-csp/issues/277) の中で
+ちなみにこの NOTE に関する [背景議論](https://github.com/w3c/webappsec-csp/issues/277) の中で
 
 > I really wish we'd stop with meta-element based policies.
 
-のような意見も出ているため、発見的統制手法を抜きにしても meta 要素経由での活用には注意が必要かもしれません。
+のような意見も出ているため CSP であっても meta 要素経由での活用には注意が必要かもしれません。
 
 ### まとめ
 
@@ -202,7 +199,7 @@ CSP 仕様の導入部分で
 
 > This document defines Content Security Policy (CSP), a tool which developers can use to lock down their applications in various ways, mitigating the risk of content injection vulnerabilities such as cross-site scripting, and reducing the privilege with which their applications execute.
 
-とありますが、the risk of content injection 対策のみならず、状況に応じた 3rd-party JavaScript のリスク対策や、さらには第三者に対する情報送信調査にも CSP を活用できることをお伝えできたかと思います。みなさまの Web サイトでの CSP の活用のヒントになれば幸いです。
+とありますが、the risk of content injection 対策のみならず、Web サイトに応じた 3rd-party JavaScript のリスク対策や、さらには他の事業者に対する情報送信調査にも CSP を活用できることをお伝えできたかと思います。みなさまの Web サイトにおける CSP の活用のヒントになれば幸いです。
 
 最後に、ヤフーではサービスの「安心と安全」を実現するための仲間を募集中です！われこそはという方のご連絡をお待ちしております。
 
