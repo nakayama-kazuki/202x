@@ -4,7 +4,7 @@
 
 Web サイトにはしばしば 3rd-party JavaScript を導入することがあります。例えば Google Analytics のような Web 解析ツール、いいねボタンのような SNS 連携機能、広告掲載や効果測定目的のコードスニペットなどは多くの Web サイトで導入されています。
 
-その一方で 3rd-party JavaScript には Web サイトを閲覧するユーザーに対して悪影響を与えるリスクも存在するため、導入とあわせたリスク対策も必要となります。
+その一方で 3rd-party JavaScript は Web サイトを閲覧するユーザーに対して悪影響を及ぼしかねないため、導入とあわせたリスク対策も必要となります。
 
 そこで、今回は Content Security Policy（以降 CSP）を活用した 3rd-party JavaScript のリスク対策についてお伝えしたいと思います。なお CSP には複数のセキュリティ関連仕様が含まれますが、この記事では特に断りのない限り JavaScript のロードや実行を制御する [script-src ディレクティブ](https://www.w3.org/TR/CSP3/#directive-script-src) について述べているものとします。
 
@@ -69,17 +69,17 @@ Web ブラウザの開発者ツールを使うことで Web サイトに導入�
 
 （★４）
 
-ところが、Web 解析ツールや広告のビューアビリティー計測など 3rd-party JavaScript がその目的を達成するために文書「Ａ」の DOM にアクセスする必要がある場合、SOP を活用した対策を採用することができません。そのような 3rd-party JavaScript については安全性を評価の上でリスク受容せざるをえませんが、CSP を活用してそれ以外の 3rd-party JavaScript のロードと実行が制限された状態を担保すれば概ねリスクは解消、と判断してもよいでしょうか？
+ところが、Web 解析ツールや広告のビューアビリティー計測など 3rd-party JavaScript がその目的を達成するために文書「Ａ」の DOM にアクセスする必要がある場合、SOP を活用した対策を採用することができません。そのような 3rd-party JavaScript については安全性を評価の上でリスク受容せざるをえませんが、それ以外の 3rd-party JavaScript のロードと実行が制限された状態さえ担保できれば概ねリスクは解消 … ですよね？
 
 （★５）
 
-残念ながら現実はもう少し複雑です。なぜなら多くの Web サイトは
+いいえ、残念ながら現実はもう少し複雑です。多くの Web サイトは
 
 - 3rd-party JavaScript の信頼性判断は容易ではない
 - タグマネージャーを使ってマーケティング担当が（開発担当の与り知らない）3rd-party JavaScript を導入する場合がある
 - ある事業者の 3rd-party JavaScript から別な … しばしば複数の … 事業者の 3rd-party JavaScript がロードされる場合がある
 
-などの前提のもとで運用しなければならないためです。過剰な制限のもとでは必要十分なサービスを提供できず、とはいえ取りこぼしは潜在的なリスクの増加につながるため、CSP を活用したくとも適切な許可リストを用意することが難しくなります。
+などの前提で運用しなければなりません。オーバーブロックが発生すれば必要十分なサービスを提供できず、取りこぼしが発生すれば潜在的なリスクの増加につながるため、CSP を活用したくとも適切な許可リストを用意することが難しくなります。
 
 加えて箇条書きの最後の項目に関する補足ですが、総務省の学術雑誌 [オンライン広告におけるトラッキングの現状とその法的考察](https://www.soumu.go.jp/main_content/000599872.pdf) によれば
 
@@ -97,25 +97,25 @@ Web ブラウザの開発者ツールを使うことで Web サイトに導入�
 
 まず最初に SOP を活用した対策、それが難しい場合には保険的対策 …
 
-- 3rd-party JavaScript をタグマネージャー経由で導入し、有事の際にツール上で導入の一時停止を可能にする
-- 3rd-party JavaScript 提供事業者との契約で、問題発生時の対処方法を事前に取り決めておく
 - 3rd-party JavaScript の安全性をレビューし、可能であれば自社 CDN から配信する
+- 3rd-party JavaScript 提供事業者との契約で、問題発生時の対処方法を事前に取り決めておく
+- 3rd-party JavaScript をタグマネージャー経由で導入し、有事の際にツール上で導入の一時停止を可能にする
 
-をご検討ください。
+などもご検討ください。
 
 次いで No.3 と No.4 について掘り下げます。
 
 ### No.3 機密情報を扱う Web サイトに導入
 
-機密情報を扱う Web サイトの場合、セキュリティ重視の方針を採用すべきです。原則として 3rd-party JavaScript の導入は控え、それに加え CSP を活用して 3rd-party JavaScript のロードと実行が制限された状態を保証しましょう。
+機密情報を扱う Web サイトの場合、セキュリティ重視の方針を採用すべきです。原則として 3rd-party JavaScript の導入は控え、それに加え CSP を活用して 3rd-party JavaScript のロードと実行が制限された状態を担保しましょう。
 
 ```
 Content-Security-Policy: script-src 'strict-dynamic' safe.example ...
 ```
 
-ちなみに ***'strict-dynamic'*** は、明示的に許可した JavaScript からロードされる別な JavaScript についてもロードと実行を許可するための指定です。過剰な制限を回避しやすくなる反面、潜在的なリスクの増加とならないよう、許可リストを用意する際にはご注意ください。
+ちなみに ***'strict-dynamic'*** は、明示的に許可した JavaScript からロードされる別な JavaScript についてもロードと実行を許可するための指定です。オーバーブロックを回避しやすくなる反面、潜在的なリスクの増加とならないよう、許可リストを用意する際にはご注意ください。
 
-機密情報を扱う以上、3rd-party JavaScript のリスク対策に加えて XSS のリスクも最小化したいですよね。そこで ***nonce-source*** を併用し、明示的に許可していないインライン JavaScript の実行を制限しましょう。
+機密情報を扱う以上、3rd-party JavaScript のリスク対策に加えて XSS のリスクも最小化したいですよね。そこで ***nonce-source*** を併用し、明示的に許可していないインライン JavaScript の実行も制限しましょう。
 
 ```
 Content-Security-Policy: script-src 'strict-dynamic' safe.example ... 'nonce-ch4hvvbHDpv7xCSvXCs3BrNggHdTzxUA'
@@ -123,11 +123,11 @@ Content-Security-Policy: script-src 'strict-dynamic' safe.example ... 'nonce-ch4
 
 ### No.4 通常の Web サイトに導入
 
-通常の Web サイトの場合、可用性とセキュリティのバランスをふまえた方針の採用がおすすめです。例えばレポート専用の CSP（以降 CSP-RO）を活用した発見的統制手法はいかがでしょうか。
+通常の Web サイトの場合、可用性とセキュリティのバランスをふまえ、レポート専用の CSP（以降 CSP-RO）を活用した発見的統制手法はいかがでしょうか。
 
 > The Content-Security-Policy-Report-Only HTTP response header field allows web developers to experiment with policies by monitoring (but not enforcing) their effects. 
 
-手法の趣旨からして全量データを必要とするものではないため、適切なサンプリング処理のもと Web サイト内での 3rd-party JavaScript 実行レポートを作成し、定期的にその内容をチェックします。ヤフーの場合、サービス毎の技術管掌担当に定期的にレポートを確認してもらい、潜在的なリスクを検知した場合には是正措置を検討してもらうことにしています。
+手法の趣旨からして全量データを必要とするものではないため、適切なサンプリング処理のもとで Web サイト内での 3rd-party JavaScript 実行レポートを作成し、定期的にその内容をチェックします。ヤフーの場合、サービス毎の技術管掌担当に定期的にレポートを確認してもらい、潜在的なリスクを検知した場合には是正措置を検討してもらうことにしています。
 
 ```
 Content-Security-Policy-Report-Only: script-src 'strict-dynamic' safe.example ...
@@ -141,7 +141,7 @@ Content-Security-Policy-Report-Only: script-src 'strict-dynamic' safe.example ..
 
 ## 活用の幅を広げる
 
-CSP や CSP-RO について、リスク対策以外への活用や運用改善提案（とその失敗）についてもお伝えしたいと思います。
+CSP や CSP-RO について、リスク対策以外への活用や運用改善提案（とその失敗）についての取り組みもお伝えしたいと思います。
 
 ### 他の事業者に対する情報送信調査への活用
 
