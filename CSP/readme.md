@@ -101,9 +101,9 @@ Web ブラウザの開発者ツールを使うことで Web サイトに導入�
 
 などもご検討ください。
 
-次いで No.3 と No.4 について掘り下げます。
+次いで No.4 → No.3 の順に掘り下げます。
 
-### No.3 機密情報を扱う Web サイトに導入
+### No.4 機密情報を扱う Web サイトに導入
 
 機密情報を扱う Web サイトの場合、セキュリティ重視の方針を採用すべきです。原則として 3rd-party JavaScript の導入は控え、それに加え CSP を活用して 3rd-party JavaScript のロードと実行が制限された状態を担保しましょう。
 
@@ -119,7 +119,7 @@ Content-Security-Policy: script-src 'strict-dynamic' safe.example ...
 Content-Security-Policy: script-src 'strict-dynamic' safe.example ... 'nonce-ch4hvvbHDpv7xCSvXCs3BrNggHdTzxUA'
 ```
 
-### No.4 通常の Web サイトに導入
+### No.3 通常の Web サイトに導入
 
 通常の Web サイトの場合、可用性とセキュリティのバランスをふまえ、レポート専用の CSP（以降 CSP-RO）を活用した発見的統制手法はいかがでしょうか。
 
