@@ -155,7 +155,7 @@ CSP-RO および Fetch ディレクティブ（script-src 以外も含め）を�
 - 運用を一時停止したい（+ 再開したい）
 - 高機密情報を扱うか否かに応じて対応方法を変えたい
 
-依頼される側としては計画やリソースの調整が発生し、依頼する側としてもガバナンスの維持が難しくなります。そこで、応答ヘッダではなくタグマネージャーを活用することで、CSP を活用した 3rd-party JavaScript のリスク対策を一元管理することはできなだろうか、と考えてみました。
+依頼される側としては計画やリソースの調整が発生し、依頼する側としてもガバナンスの維持が難しくなります。そこで、応答ヘッダではなくタグマネージャーを活用することで、CSP を活用した 3rd-party JavaScript のリスク対策を一元管理することはできないだろうか、と考えてみました。
 
 Chrome 114.0.5735.134 を用いて
 
@@ -185,13 +185,17 @@ ro.observe();
 
 > NOTE: The Content-Security-Policy-Report-Only header is not supported inside a meta element.
 
-とのことで CSP-RO を活用することができず、断念することになりました。依頼される側やする側の課題解消には運用管理ツールによる支援を検討中です。
+とのことで CSP-RO を活用することができず、さらに CSP についても
+
+> Authors are strongly encouraged to place meta elements as early in the document as possible, because policies in meta elements are not applied to content which precedes them. 
+
+から meta 要素経由の利用は注意が必要とのことですので、断念することになりました。上で述べたサービスを横断した依頼時の課題解消には運用管理ツールによる支援を検討中です。
 
 ちなみにこの NOTE に関する [背景議論](https://github.com/w3c/webappsec-csp/issues/277) の中で
 
 > I really wish we'd stop with meta-element based policies.
 
-のような意見も出ているため CSP であっても meta 要素経由での活用には注意が必要かもしれません。
+のような意見も出ています。
 
 ### まとめ
 
