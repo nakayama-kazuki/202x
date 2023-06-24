@@ -214,7 +214,7 @@ ro.observe();
 
 > Authors are strongly encouraged to place meta elements as early in the document as possible, because policies in meta elements are not applied to content which precedes them. 
 
-のような注意事項が記載されています。これらの点もふまえ meta 要素経由の利用の是非をご判断ください。
+のような注意事項が記載されています。これらの点もふまえ meta 要素を経由した CSP 活用の是非についてご判断ください。
 
 ### まとめ
 
