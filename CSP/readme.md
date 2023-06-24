@@ -19,26 +19,25 @@ Web ブラウザに対して JavaScript のロードや実行に関する許可�
 例えば Web サイトが以下のような指示を応答ヘッダとして送信した場合
 
 ```
-Content-Security-Policy: script-src safe.example
+Content-Security-Policy: script-src green.example orange.example
 ```
 
-Web ブラウザは ***safe.example*** からロードした JavaScript のみ実行を許可します。
+Web ブラウザは ***green.example*** および ***orange.example*** からロードした JavaScript のみ実行を許可します。
 
 ```
 <html>
 <body>
 
 <!-- OK -->
-<script src='https://safe.example/safe.js'>
+<script src='https://green.example/green.js'>
+</script>
+
+<!-- OK -->
+<script src='https://orange.example/orange.js'>
 </script>
 
 <!-- NG -->
-<script src='https://unsafe.example/unsafe.js'>
-</script>
-
-<!-- NG -->
-<script>
-console.log('Hello, world!');
+<script src='https://red.example/red.js'>
 </script>
 
 </body>
@@ -79,7 +78,7 @@ Web ブラウザの開発者ツールを使うことで Web サイトに導入�
 - タグマネージャーを使ってマーケティング担当が（開発担当の与り知らない）3rd-party JavaScript を導入する場合がある
 - ある事業者の 3rd-party JavaScript から別な … しばしば複数の … 事業者の 3rd-party JavaScript がロードされる場合がある
 
-などの前提で運用しなければなりません。オーバーブロックが発生すれば必要十分なサービスを提供できず、取りこぼしが発生すれば潜在的なリスクの増加につながるため、CSP を活用したくとも適切な許可リストを用意することが難しくなります。
+などの前提で運用しなければなりません。オーバーブロックが発生すれば必要十分なサービスを提供できず、取りこぼしが発生すれば潜在的なリスクの増加につながるため、CSP を活用したくとも適切な許可リストを用意するのは簡単なことではありません。
 
 加えて箇条書きの最後の項目に関する補足ですが、総務省の学術雑誌 [オンライン広告におけるトラッキングの現状とその法的考察](https://www.soumu.go.jp/main_content/000599872.pdf) によれば
 
@@ -117,6 +116,26 @@ Content-Security-Policy: script-src 'strict-dynamic' safe.example ...
 
 ```
 Content-Security-Policy: script-src 'strict-dynamic' safe.example ... 'nonce-ch4hvvbHDpv7xCSvXCs3BrNggHdTzxUA'
+```
+
+この場合 Web ブラウザは同 nonce 属性値を持つインライン JavaScript のみ実行を許可します。
+
+```
+<html>
+<body>
+
+<!-- OK -->
+<script nonce='ch4hvvbHDpv7xCSvXCs3BrNggHdTzxUA'>
+console.log('Hello, world!');
+</script>
+
+<!-- NG -->
+<script>
+console.log('This may be injection code by XSS.');
+</script>
+
+</body>
+</html>
 ```
 
 ### No.3 通常の Web サイトに導入
@@ -185,17 +204,17 @@ ro.observe();
 
 > NOTE: The Content-Security-Policy-Report-Only header is not supported inside a meta element.
 
-とのことで CSP-RO を活用することができず、さらに CSP についても
-
-> Authors are strongly encouraged to place meta elements as early in the document as possible, because policies in meta elements are not applied to content which precedes them. 
-
-から meta 要素経由の利用は注意が必要とのことですので、断念することになりました。上で述べたサービスを横断した依頼時の課題解消には運用管理ツールによる支援を検討中です。
+とのことで CSP-RO を活用することができず、断念することになりました。上述のサービスを横断した依頼時の課題解消には運用管理ツールによる支援を検討中です。
 
 ちなみにこの NOTE に関する [背景議論](https://github.com/w3c/webappsec-csp/issues/277) の中で
 
 > I really wish we'd stop with meta-element based policies.
 
-のような意見も出ています。
+のような意見が出ていたり、仕様でも
+
+> Authors are strongly encouraged to place meta elements as early in the document as possible, because policies in meta elements are not applied to content which precedes them. 
+
+のような注意事項が記載されています。これらの点も留意の上で meta 要素経由の利用についてはご判断ください。
 
 ### まとめ
 
