@@ -166,9 +166,9 @@ CSP や CSP-RO について、リスク対策以外への活用や運用改善�
 
 CSP-RO および Fetch ディレクティブ（script-src 以外も含め）を活用することで、Web サイト内でのサブリソースのロードに関するレポートを作成することができます。さらに、サブリソースのロード時のパラメータを確認することで、他の事業者に対して送信されている情報をチェックすることができます。
 
-総務省は Web サイトから第三者に対して送信される情報に対する透明性を高めるルールとして [外部送信規律](https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/gaibusoushin_kiritsu.html) を定めています。このルールに対応するための事前調査に CSO-RO を、意図せぬルール違反を回避するための手段として CSP を活用することができそうです。
-
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/img08.png' />
+
+総務省は Web サイトから第三者に対して送信される情報に対する透明性を高めるルールとして [外部送信規律](https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/gaibusoushin_kiritsu.html) を定めています。このルールに対応するための事前調査に CSO-RO を、意図せぬルール違反を回避するための手段として CSP を活用することができそうです。
 
 ### タグマネージャー経由の CSP 活用
 
