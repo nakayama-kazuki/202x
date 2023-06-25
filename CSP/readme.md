@@ -22,7 +22,7 @@ Web ブラウザに対して JavaScript のロードや実行に関する許可�
 Content-Security-Policy: script-src green.example orange.example
 ```
 
-Web ブラウザは ***green.example*** および ***orange.example*** からロードした JavaScript のみ実行を許可します。
+Web ブラウザは ***green.example*** および ***orange.example*** からのみ JavaScript のロードと実行を許可します。
 
 ```
 <html>
@@ -78,7 +78,7 @@ Web ブラウザの開発者ツールを使うことで Web サイトに導入�
 - タグマネージャーを使ってマーケティング担当が（開発担当の与り知らない）3rd-party JavaScript を導入する場合がある
 - ある事業者の 3rd-party JavaScript から別な … しばしば複数の … 事業者の 3rd-party JavaScript がロードされる場合がある
 
-などの前提で運用しなければなりません。オーバーブロックが発生すれば必要十分なサービスを提供できず、取りこぼしが発生すれば潜在的なリスクの増加につながるため、CSP を活用したくとも適切な許可リストを用意するのは簡単なことではありません。
+などの前提で運用しなければなりません。オーバーブロックが発生すれば必要十分なサービスを利用もしくは提供できず、取りこぼしが発生すれば潜在的なリスクの増加につながるため、CSP を活用したくとも適切な許可リストを用意するのは簡単なことではありません。
 
 加えて箇条書きの最後の項目に関する補足ですが、総務省の学術雑誌 [オンライン広告におけるトラッキングの現状とその法的考察](https://www.soumu.go.jp/main_content/000599872.pdf) によれば
 
@@ -86,11 +86,13 @@ Web ブラウザの開発者ツールを使うことで Web サイトに導入�
 
 だそうです。怖いですね ^^;
 
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/img06.png' />
+
 ## Web サイトに応じた方針
 
 さて、悩ましい現実に立ち向かうべく、方針を表にまとめてみました。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/img06.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/img07.png' />
 
 まず最初に SOP を活用した対策、それが難しい場合には保険的対策 …
 
@@ -158,21 +160,21 @@ Content-Security-Policy-Report-Only: script-src 'strict-dynamic' safe.example ..
 
 ## 活用の幅を広げる
 
-CSP や CSP-RO について、リスク対策以外への活用や運用改善提案（とその失敗）についての取り組みもお伝えしたいと思います。
+CSP や CSP-RO について、リスク対策以外への活用や運用改善提案（とその失敗）についてもご紹介します。
 
 ### 他の事業者に対する情報送信調査への活用
 
 CSP-RO および Fetch ディレクティブ（script-src 以外も含め）を活用することで、Web サイト内でのサブリソースのロードに関するレポートを作成することができます。さらに、サブリソースのロード時のパラメータを確認することで、他の事業者に対して送信されている情報をチェックすることができます。
 
-総務省は Web サイトから第三者に対して送信される情報に対する透明性を高めるルールとして [外部送信規律](https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/gaibusoushin_kiritsu.html) を定めています。このルールに対応するための事前調査や、意図せぬルール違反を回避するための手段として CSP-RO や CSP を活用することができそうです。
+総務省は Web サイトから第三者に対して送信される情報に対する透明性を高めるルールとして [外部送信規律](https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/gaibusoushin_kiritsu.html) を定めています。このルールに対応するための事前調査に CSO-RO を、意図せぬルール違反を回避するための手段として CSP を活用することができそうです。
 
 ### タグマネージャー経由の CSP 活用
 
-以下のようなニーズに対し、都度サービス毎の担当者に応答ヘッダ等の修正を依頼をする場合 …
+以下のようなニーズに対し、都度サービス毎の担当者に応答ヘッダの修正を依頼をする場合 …
 
 - サンプリングの割合を変更したい
 - 運用を一時停止したい（+ 再開したい）
-- 高機密情報を扱うか否かに応じて対応方法を変えたい
+- 高機密情報を扱うか否かに応じて対応方法を変えたい etc ...
 
 依頼される側としては計画やリソースの調整が発生し、依頼する側としてもガバナンスの維持が難しくなります。そこで、応答ヘッダではなくタグマネージャーを活用することで、CSP を活用した 3rd-party JavaScript のリスク対策を一元管理することはできないだろうか、と考えてみました。
 
@@ -204,13 +206,13 @@ ro.observe();
 
 > NOTE: The Content-Security-Policy-Report-Only header is not supported inside a meta element.
 
-とのことで CSP-RO を活用することができず、断念することになりました。上述のサービスを横断した依頼時の課題解消には運用管理ツールによる支援を検討中です。
+とのことで CSP-RO を活用することができません。ですので、このアイデアは断念することになり、サービスを横断した依頼時の課題解消にはツールによる運用支援を検討中です。
 
 ちなみにこの NOTE に関する [背景議論](https://github.com/w3c/webappsec-csp/issues/277) の中で
 
 > I really wish we'd stop with meta-element based policies.
 
-のような意見が出ていたり、仕様でも
+のような意見があり、仕様にも
 
 > Authors are strongly encouraged to place meta elements as early in the document as possible, because policies in meta elements are not applied to content which precedes them. 
 
