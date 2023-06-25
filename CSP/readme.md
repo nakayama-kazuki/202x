@@ -168,6 +168,8 @@ CSP-RO および Fetch ディレクティブ（script-src 以外も含め）を�
 
 総務省は Web サイトから第三者に対して送信される情報に対する透明性を高めるルールとして [外部送信規律](https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/gaibusoushin_kiritsu.html) を定めています。このルールに対応するための事前調査に CSO-RO を、意図せぬルール違反を回避するための手段として CSP を活用することができそうです。
 
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/img08.png' />
+
 ### タグマネージャー経由の CSP 活用
 
 以下のようなニーズに対し、都度サービス毎の担当者に応答ヘッダの修正を依頼をする場合 …
