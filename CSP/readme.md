@@ -1,12 +1,12 @@
-# CSP を活用した 3rd-party JavaScript のリスク対策
+# 3rd-party JavaScript のリスク対策に CSP（Content Security Policy）を活用する
 
 こんにちは、プラットフォームエンジニアの中山です。
 
-Web サイトにはしばしば 3rd-party JavaScript を導入することがあります。例えば Google Analytics のような Web 解析ツール、いいねボタンのような SNS 連携機能、広告掲載や効果測定目的のコードスニペットなどは多くの Web サイトで導入されています。
+Web サイトにはしばしば 3rd-party JavaScript を導入することがあります。たとえば Web 解析ツール、いいねボタンのような SNS 連携機能、広告掲載や効果測定目的のコードスニペットなどは多くの Web サイトで導入されています。
 
 その一方で 3rd-party JavaScript は Web サイトを閲覧するユーザーに対して悪影響を及ぼしかねないため、導入とあわせたリスク対策も必要となります。
 
-そこで、今回は Content Security Policy（以降 CSP）を活用した 3rd-party JavaScript のリスク対策についてお伝えしたいと思います。なお CSP には複数のセキュリティ関連仕様が含まれますが、この記事では特に断りのない限り JavaScript のロードや実行を制御する [script-src ディレクティブ](https://www.w3.org/TR/CSP3/#directive-script-src) について述べているものとします。
+そこで、今回は Content Security Policy（以降 CSP）を活用した 3rd-party JavaScript のリスク対策について、ヤフーでの取り組みも交えてお伝えしたいと思います。なお CSP には複数のセキュリティ関連仕様が含まれますが、この記事ではとくに断りのない限り JavaScript のロードや実行を制御する [script-src ディレクティブ](https://www.w3.org/TR/CSP3/#directive-script-src) について述べているものとします。
 
 ## どのようなもの？
 
@@ -14,9 +14,9 @@ Web サイトにはしばしば 3rd-party JavaScript を導入することがあ
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/img01.png' />
 
-Web ブラウザに対して JavaScript のロードや実行に関する許可リストを指示することで、悪意のある JavaScript が意図せずに実行されてしまうリスクを軽減することができます。
+Web ブラウザに対して JavaScript のロードや実行に関する許可リスト（絵の CSP の部分）を指示することで、悪意のある JavaScript が意図せずに実行されてしまうリスク（絵の赤い部分）を軽減することができます。
 
-例えば Web サイトが以下のような指示を応答ヘッダとして送信した場合
+たとえば Web サイトが以下のような指示を応答ヘッダとして送信した場合
 
 ```
 Content-Security-Policy: script-src green.example orange.example
@@ -28,15 +28,15 @@ Web ブラウザは ***green.example*** および ***orange.example*** からの
 <html>
 <body>
 
-<!-- OK -->
+<!-- 実行される -->
 <script src='https://green.example/green.js'>
 </script>
 
-<!-- OK -->
+<!-- 実行される -->
 <script src='https://orange.example/orange.js'>
 </script>
 
-<!-- NG -->
+<!-- 実行されない -->
 <script src='https://red.example/red.js'>
 </script>
 
@@ -48,27 +48,27 @@ Web ブラウザは ***green.example*** および ***orange.example*** からの
 
 では、冒頭で述べた 3rd-party JavaScript のリスクとその対策について、もう少し掘り下げてみましょう。
 
-Web ブラウザの開発者ツールを使うことで Web サイトに導入されている 3rd-party JavaScript を確認することができます。
+Web ブラウザの開発者ツールを使うことで、Web サイトに導入されている 3rd-party JavaScript を確認することができます。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/img02.png' />
 
 ご覧の通り、ヤフーでも複数の 3rd-party JavaScript をロードしていることがわかります。
 
-このとき、もし 3rd-party JavaScript を提供する事業者に悪意があったり、悪意はなくとも別な攻撃者によってホスト先の CDN やリポジトリ上の JavaScript コードが改変されていた場合、Web サイト内の情報、例えばユーザーのアカウントに紐づく個人情報が盗まれたり、ユーザーが [フィッシングサイトに誘導](https://blog.techscore.com/entry/2022/08/24/150000) されてしまう、などのリスクが生じます。
+このとき、もし 3rd-party JavaScript を提供する事業者に悪意があったり、悪意はなくとも別な攻撃者によってホスト先の CDN やリポジトリ上の JavaScript コードが改変されていた場合、Web サイト内の情報、たとえばユーザーのアカウントに紐づく個人情報が盗まれたり、ユーザーが [フィッシングサイトに誘導](https://blog.techscore.com/entry/2022/08/24/150000) されてしまう、などのリスクが生じます。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/img03.png' />
 
 このようなリスクに対しては、Web ブラウザの仕様である Same Origin Policy（以降 SOP）を活用した対策が有効です。
 
-1. ドメイン ***safe.example*** から text/html 文書「Ａ」をロードする
-2. 文書「Ａ」内の iframe 要素経由で（***safe.example*** とは別の）ドメイン ***unsafe.example*** の text/html 文書「Ｂ」をロードする
-3. 文書「Ｂ」内で 3rd-party JavaScript をロードして実行する
+1. ドメイン ***safe.example*** から text/html 文書「A」をロードする
+2. 文書「A」内の iframe 要素経由で（***safe.example*** とは別の）ドメイン ***unsafe.example*** の text/html 文書「B」をロードする
+3. 文書「B」内で 3rd-party JavaScript をロードして実行する
 
-こうすることで、もし 3rd-party JavaScript に悪意のあるコードが含まれていたとしても、その影響範囲を iframe 内に限定することができます。何故なら、文書「Ｂ」で実行される JavaScript は SOP によって文書「Ａ」の DOM にアクセスすることができないためです。
+こうすることで、もし 3rd-party JavaScript に悪意のあるコードが含まれていたとしても、その影響範囲を iframe 内に限定することができます。なぜなら、文書「B」で実行される JavaScript は SOP によって文書「A」の DOM にアクセスすることができないためです。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/img04.png' />
 
-ところが、Web 解析ツールや広告のビューアビリティー計測など 3rd-party JavaScript がその目的を達成するために文書「Ａ」の DOM にアクセスする必要がある場合、SOP を活用した対策を採用することができません。そのような 3rd-party JavaScript については安全性を評価の上でリスク受容せざるをえませんが、それ以外の 3rd-party JavaScript のロードと実行が制限された状態さえ担保できれば概ねリスクは解消 … ですよね？
+ところが、Web 解析ツールや広告のビューアビリティー計測など 3rd-party JavaScript がその目的を達成するために文書「A」の DOM にアクセスする必要がある場合、SOP を活用した対策を採用することができません。そのような 3rd-party JavaScript については安全性を評価の上でリスク受容せざるをえませんが、それ以外の 3rd-party JavaScript のロードと実行が制限された状態さえ担保できればおおむねリスクは解消 … ですよね？
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/img05.png' />
 
@@ -102,7 +102,7 @@ Web ブラウザの開発者ツールを使うことで Web サイトに導入�
 
 などもご検討ください。
 
-次いで No.4 → No.3 の順に掘り下げます。
+ついで No.4 → No.3 の順に掘り下げます。
 
 ### No.4 機密情報を扱う Web サイトに導入
 
@@ -126,12 +126,12 @@ Content-Security-Policy: script-src 'strict-dynamic' safe.example ... 'nonce-ch4
 <html>
 <body>
 
-<!-- OK -->
+<!-- 実行される -->
 <script nonce='ch4hvvbHDpv7xCSvXCs3BrNggHdTzxUA'>
 console.log('Hello, world!');
 </script>
 
-<!-- NG -->
+<!-- 実行されない -->
 <script>
 console.log('This may be injection code by XSS.');
 </script>
@@ -146,7 +146,7 @@ console.log('This may be injection code by XSS.');
 
 > The Content-Security-Policy-Report-Only HTTP response header field allows web developers to experiment with policies by monitoring (but not enforcing) their effects. 
 
-手法の趣旨からして全量データを必要とするものではないため、適切なサンプリング処理のもとで Web サイト内での 3rd-party JavaScript 実行レポートを作成し、定期的にその内容をチェックします。ヤフーの場合、サービス毎の技術管掌担当に定期的にレポートを確認してもらい、潜在的なリスクを検知した場合には是正措置を検討してもらうことにしています。
+手法の趣旨からして全量データを必要とするものではないため、適切なサンプリング処理のもとで Web サイト内での 3rd-party JavaScript 実行レポートを作成し、定期的にその内容をチェックします。ヤフーの場合、サービスごとの技術管掌担当に定期的にレポートを確認してもらい、潜在的なリスクを検知した場合には是正措置を検討してもらうことにしています。
 
 ```
 Content-Security-Policy-Report-Only: script-src 'strict-dynamic' safe.example ...
@@ -172,7 +172,7 @@ CSP-RO および Fetch ディレクティブ（script-src 以外も含め）を�
 
 ### タグマネージャー経由の CSP 活用
 
-以下のようなニーズに対し、都度サービス毎の担当者に応答ヘッダの修正を依頼をする場合 …
+以下のようなニーズに対し、都度サービスごとの担当者に応答ヘッダの修正を依頼する場合 …
 
 - サンプリングの割合を変更したい
 - 運用を一時停止したい（+ 再開したい）
@@ -180,13 +180,13 @@ CSP-RO および Fetch ディレクティブ（script-src 以外も含め）を�
 
 依頼される側としては計画やリソースの調整が発生し、依頼する側としてもガバナンスの維持が難しくなります。そこで、応答ヘッダではなくタグマネージャーを活用することで、CSP を活用した 3rd-party JavaScript のリスク対策を一元管理することはできないだろうか、と考えてみました。
 
-Chrome 114.0.5735.134 を用いて
+Google Chrome 114.0.5735.134 を用いて
 
 ```
 <meta http-equiv="Content-Security-Policy" content="script-src 'self'" />
 ```
 
-のような meta 要素の動的な追加と、意図通りのふるまいを確認することができました。さらに ReportingObserver を用いてレポート内容を最適化したり、必要に応じてサンプリングする処理もタグマネージャーのコンテナ内に定義できるため悪くないアイデアに思えたのですが …
+のような meta 要素の動的な追加と、意図通りのふるまいを確認することができました。さらに ReportingObserver を用いてレポート内容を最適化したり、必要に応じてサンプリングする処理もタグマネージャーのコンテナ内に定義できるため、悪くないアイデアに思えたのですが …
 
 ```
 let ro = new ReportingObserver((in_reports, in_observer) => {
@@ -216,17 +216,15 @@ ro.observe();
 
 のような意見があり、仕様にも
 
-> Authors are strongly encouraged to place meta elements as early in the document as possible, because policies in meta elements are not applied to content which precedes them. 
+> Authors are strongly encouraged to place meta elements as early in the document as possible, because policies in meta elements are not applied to content which precedes them.
 
 のような注意事項が記載されています。これらの点もふまえ meta 要素を経由した CSP 活用の是非についてご判断ください。
 
-### まとめ
+## まとめ
 
 CSP 仕様の導入部分で
 
 > This document defines Content Security Policy (CSP), a tool which developers can use to lock down their applications in various ways, mitigating the risk of content injection vulnerabilities such as cross-site scripting, and reducing the privilege with which their applications execute.
 
-とありますが、今回 the risk of content injection 対策のみならず、Web サイトに応じた 3rd-party JavaScript のリスク対策や、さらには他の事業者に対する情報送信調査にも CSP を活用できることをお伝えできたかと思います。みなさまの Web サイトにおける CSP の活用のヒントになれば幸いです。
-
-最後に、ヤフーではサービスの「安心と安全」を実現するための仲間を募集中です！われこそはという方のご連絡をお待ちしております。
+とありますが、今回 the risk of content injection 対策のみならず、Web サイトに応じた 3rd-party JavaScript のリスク対策や、さらには他の事業者に対する情報送信調査にも CSP を活用できることをお伝えできたかと思います。この記事がみなさまの Web サイトにおける CSP の活用のヒントになれば幸いです。
 
