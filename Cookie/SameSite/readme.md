@@ -3,19 +3,19 @@
 詳細な仕様は RFC 等を参照頂くとして、記憶と印象への残りやすさを目標に図解シリーズ（… といっても 2 本ですが）なる記事を執筆してみました。
 
 - [図解 Domain@Set-Cookie](https://github.com/nakayama-kazuki/202x/tree/main/Cookie/Domain)
-- [図解 SameSite@Set-Cookie](https://github.com/nakayama-kazuki/202x/tree/main/Cookie/SameSite)
+- [図解 SameSite@Set-Cookie](https://github.com/nakayama-kazuki/202x/tree/main/Cookie/SameSite) ※ 本記事
 
-早速ですが SameSite 属性の値と Cookie 送信の関係性は以下の通りです。矢印上にお菓子のクッキーが記載されているリクエストについて Cookie が送信されます。
+早速ですが SameSite 属性の値と Cookie 送信の関係性は以下の通りです。矢印上にお菓子のクッキーが記載されているリクエストでは Cookie が送信されます。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/SameSite/img1.png' />
 
 ## SameSite=Strict における GET での流入
 
-図の赤い背景部分について補足します。
+SameSite=Strict の Cookie が送信されない図の赤い背景部分について補足します。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/SameSite/img2.png' />
 
-単純なトップレベルナビゲーションに加えて SameSite の判定には [幾つかのルール](https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis#section-5.2) があります。
+SameSite の判定には単純なトップレベルナビゲーションに加えて [幾つかのルール](https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis#section-5.2) があります。
 
 > 1. The request is not the result of a cross-site redirect. That is, the origin of every url in the request's url list is same-site with the request's current url's origin.
 > 2. The request is not the result of a reload navigation triggered through a user interface element (as defined by the user agent; e.g., a request triggered by the user clicking a refresh button on a toolbar).
@@ -23,23 +23,26 @@
 
 Chrome 117 と Firefox 117 を用いて SameSite の判定を確認してみたところ（テストコンテンツは [こちら](https://github.com/nakayama-kazuki/202x/tree/main/Cookie/SameSite/test)）以下のような結果となりました。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/SameSite/strict.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/SameSite/strict-1.png' />
 
-SameSite=Strict を用いる以上は CSRF 対策等 GET での流入時に Cookie を送信させたくない理由があるのだと思いますが、一部の流入経路で暫定的に Cookie を送信させたい、という場合にはクライアントブルを利用することで対応できそうです。
+SameSite=Strict を用いる以上は CSRF 対策等 GET での流入時に Cookie を送信させたくない理由があるのだと思いますが、一部の流入経路で暫定的に Cookie を送信させたい、という場合にはクライアントプル（表の 1.4）の利用をご検討ください。
+
+その他のユースケースについても確認したところ、リダイレクト時の振る舞いに相違がありました。
+
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/SameSite/strict-2.png' />
 
 ## SameSite=Lax における POST での流入
 
-図の赤い背景部分について補足します。
+SameSite=Lax の Cookie が送信されない図の赤い背景部分について補足します。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/SameSite/img3.png' />
 
-外部サイトからも POST を許したいフォームなどでログインセッション Cookie やトラッキング Cookie がが送信されず、加えてトラッキング Cookie はこのタイミングで上書きされてしまう可能性があります。以下のような遷移にしても結果は変わりませんでした。
+外部サイトからも POST を許したいフォームなどでログインセッション Cookie やトラッキング Cookie が送信されず、加えてトラッキング Cookie はこのタイミングで上書きされてしまう可能性があります。
 
-1. you.example
-2. 307, 308 による HTTP Redirect@me.example
-3. me.example
+また SameSite=Strict の 2.3 同様に HTTP Redirect（ステータスコードは 307 か 308）を経由したとしても POST 時に Cookie は送信されませんでしたが、2.4 同様にクライアントプル（ページロード時に POST された情報を埋め込んだフォームを自動送信）にすると Cookie が送信されました。
 
-上記の 2 の代わりに、ページロード時にフォームを自動送信するな形ならば 3 への POST 時に Cookie が送信されました。どうしても救済したいユースケースある場合にはご検討ください。
+
+どうしても救済したいユースケースある場合にはご検討ください。
 
 ## SameSite=None を使えば問題なし？
 
