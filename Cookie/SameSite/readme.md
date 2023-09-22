@@ -43,17 +43,19 @@ SameSite の判定には [細かなルール](https://datatracker.ietf.org/doc/h
 
 外部サイトからも POST を許可したいフォームがあった場合、SameSite=Strict なログインセッション Cookie や SameSite=Lax なトラッキング Cookie がフォームに送信されません。加えて流入のタイミングでトラッキング Cookie が上書きされてしまう場合があります。
 
-POST での流入時に Cookie を送信させたい場合のアイデアは GET の場合と同様です。ステータスコード 307 / 308 の HTTP Redirect を経由させても Cookie は送信されませんが、流入元で POST された情報を埋め込んだフォームを生成し HTMLFormElement.submit() を用いた自動遷移（表の 4-4）の利用をご検討ください。
+POST での流入時に Cookie を送信させたい場合のアイデアは GET の場合と同様です。ステータスコード 307 / 308 の HTTP Redirect を経由させても Cookie は送信されませんが、流入元で POST された情報を埋め込んだフォームを生成し HTMLFormElement.submit() を用いた … 少々面倒な … 自動遷移（表の 4-4）の利用をご検討ください。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/SameSite/lax.png' />
 
-## SameSite=None を使えば機会損失なし？
+## SameSite=None なら機会損失なし？
 
 図の赤い背景部分について補足します。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/SameSite/img4.png' />
 
-遠からず 3rd-party Cookie が廃止され CSRF のリスクも小さくなるので、今は制約条件の少ない SameSite=None にしておけばいいじゃないか … という考え方もあるかもしれませんが、ブラウザのプライバシー関連機能で SameSite=None は不利な扱いを受ける可能性があります。例えば Cookie 削除の UI に「全ての Cookie」と「3rd-party Cookie」の 2 つを設け、後者については SameSite=None の Cookie を削除する、といった具合です。こちらの記事もご参考に。
+遠からず 3rd-party Cookie が廃止され CSRF のリスクも小さくなるので、今は制約条件の少ない SameSite=None にしておけばいいじゃないか … という考え方もあるかもしれませんが、ブラウザのプライバシー関連機能で SameSite=None は不利な扱いを受ける可能性があります。例えば Cookie 削除の UI に「全ての Cookie」と「3rd-party Cookie」の 2 つを設け、後者については SameSite=None の Cookie を削除する、といった具合です。
+
+こちらの記事もご参考まで。
 
 - https://techdows.com/2019/10/google-chrome-canary-now-lets-you-remove-all-third-party-cookies.html
 - https://blogs.windows.com/msedgedev/2021/01/21/edge-88-privacy/
