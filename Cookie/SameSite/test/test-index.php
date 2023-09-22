@@ -9,11 +9,17 @@ $parsed = pathinfo($_SERVER['SCRIPT_NAME']);
 
 $categories = array(
 	'change domain' => array(),
-	'set / show cookies' => array(),
-	'test cases' => array()
+	'test cases (GET)' => array(),
+	'test cases (POST)' => array()
 );
 
 $testcases = array(
+	"set / show cookies @ {$FIRST}" => array(
+		"https://{$FIRST}{$parsed['dirname']}/set-cookies.php"
+	),
+	"set / show cookies @ {$THIRD}" => array(
+		"https://{$THIRD}{$parsed['dirname']}/set-cookies.php"
+	),
 	"HTTP-Redirect @ {$THIRD} --> {$FIRST}" => array(
 		"https://{$THIRD}{$parsed['dirname']}/rd.php?m=rd",
 		"https://{$FIRST}{$parsed['dirname']}/set-cookies.php"
@@ -37,17 +43,16 @@ foreach ($domains as $domain) {
 		"<a href='https://{$domain}{$parsed['dirname']}/{$parsed['basename']}'>move to {$domain}</a>");
 }
 
-foreach ($domains as $domain) {
-	array_push($categories['set / show cookies'],
-		"<a href='https://{$domain}{$parsed['dirname']}/set-cookies.php'>set / show cookies @ {$domain}</a>");
-}
-
 foreach ($testcases as $testcase => $urls) {
 	$url = array_shift($urls);
-	$mark = (strpos($url, '?') === FALSE) ? '?' : '&';
-	$url .= "{$mark}queue=" . rtrim(base64_encode(implode(',', $urls)), '=');
-	array_push($categories['test cases'],
+	if (count($urls) > 0) {
+		$mark = (strpos($url, '?') === FALSE) ? '?' : '&';
+		$url .= "{$mark}queue=" . rtrim(base64_encode(implode(',', $urls)), '=');
+	}
+	array_push($categories['test cases (GET)'],
 		"<a href='{$url}'>{$testcase}</a>");
+	array_push($categories['test cases (POST)'],
+		"<a href='#' data-url='{$url}' class='overwrite'>{$testcase}</a>");
 }
 
 print "<ul>\n";
@@ -63,3 +68,22 @@ foreach ($categories as $categorie => $items) {
 print "</ul>\n";
 
 ?>
+
+<form>
+	<input type='hidden' name='n1' value='v1' />
+	<input type='hidden' name='n2' value='v2' />
+</form>
+
+<script>
+
+let links = document.getElementsByClassName('overwrite');
+for (let i = 0; i < links.length; i++) {
+	links.item(i).addEventListener('click', (in_e) => {
+		let form = document.getElementsByTagName('FORM').item(0);
+		form.action = in_e.target.dataset.url;
+		form.method = 'POST';
+		form.submit();
+	});
+}
+
+</script>
