@@ -20,19 +20,19 @@ $testcases = array(
 	"set / show cookies @ {$THIRD}" => array(
 		"https://{$THIRD}{$parsed['dirname']}/set-cookies.php"
 	),
-	"HTTP-Redirect @ {$THIRD} --> {$FIRST}" => array(
+	"server-side redirect @ {$THIRD} --> show cookies @ {$FIRST}" => array(
 		"https://{$THIRD}{$parsed['dirname']}/rd.php?m=rd",
 		"https://{$FIRST}{$parsed['dirname']}/set-cookies.php"
 	),
-	"HTTP-Redirect @ {$FIRST} --> {$FIRST}" => array(
+	"server-side redirect @ {$FIRST} --> show cookies @ {$FIRST}" => array(
 		"https://{$FIRST}{$parsed['dirname']}/rd.php?m=rd",
 		"https://{$FIRST}{$parsed['dirname']}/set-cookies.php"
 	),
-	"Client-Pull @ {$THIRD} --> {$FIRST}" => array(
+	"client-side redirect @ {$THIRD} --> show cookies @ {$FIRST}" => array(
 		"https://{$THIRD}{$parsed['dirname']}/rd.php?m=cp",
 		"https://{$FIRST}{$parsed['dirname']}/set-cookies.php"
 	),
-	"Client-Pull @ {$FIRST} --> {$FIRST}" => array(
+	"client-side redirect @ {$FIRST} --> show cookies @ {$FIRST}" => array(
 		"https://{$FIRST}{$parsed['dirname']}/rd.php?m=cp",
 		"https://{$FIRST}{$parsed['dirname']}/set-cookies.php"
 	)
