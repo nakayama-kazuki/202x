@@ -19,7 +19,7 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/SameSite/img2.png' />
 
-SameSite の判定には [細かなルール](https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis#section-5.2) があります。
+SameSite の判定には [以下のルール](https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis#section-5.2) があります。
 
 > 1. The request is not the result of a cross-site redirect. That is, the origin of every url in the request's url list is same-site with the request's current url's origin.
 > 2. The request is not the result of a reload navigation triggered through a user interface element (as defined by the user agent; e.g., a request triggered by the user clicking a refresh button on a toolbar).
@@ -29,7 +29,7 @@ SameSite の判定には [細かなルール](https://datatracker.ietf.org/doc/h
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/SameSite/strict-1.png' />
 
-のような結果となりました。SameSite=Strict を用いつつも一部の流入経路で暫定的に Cookie を送信させたい、という場合には location.href を用いた自動遷移（表の 1-4）の利用をご検討ください。
+のような結果となりました。SameSite=Strict を用いつつも一部の流入経路で暫定的に Cookie を送信させたい、という場合には location.href を用いた client-side redirect（表の 1-4）の利用をご検討ください。
 
 その他のユースケースについては以下の通りです。
 
@@ -43,9 +43,13 @@ SameSite の判定には [細かなルール](https://datatracker.ietf.org/doc/h
 
 外部サイトからも POST を許可したいフォームがあった場合、SameSite=Strict なログインセッション Cookie や SameSite=Lax なトラッキング Cookie がフォームに送信されません。加えて流入のタイミングでトラッキング Cookie が上書きされてしまう場合があります。
 
-POST での流入時に Cookie を送信させたい場合のアイデアは GET の場合と同様です。ステータスコード 307 / 308 の HTTP Redirect を経由させても Cookie は送信されませんが、流入元で POST された情報を埋め込んだフォームを生成し HTMLFormElement.submit() を用いた … 少々面倒な … 自動遷移（表の 4-4）の利用をご検討ください。
+POST での流入時に Cookie を送信させたい場合のアイデアは GET の場合と同様で、ステータスコード 307 / 308 の server-side redirect では Cookie は送信されないため client-side redirect（表の 4-4）の利用をご検討ください。流入元で POST された情報を埋め込んだフォームを生成し HTMLFormElement.submit() するというのが少々面倒ですが。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/SameSite/lax.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/SameSite/lax-1.png' />
+
+その他のユースケースについては以下の通りです。
+
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/SameSite/lax-2.png' />
 
 ## SameSite=None なら機会損失なし？
 
