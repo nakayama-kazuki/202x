@@ -68,7 +68,7 @@ POST での流入時に Cookie を送信させたい場合のアイデアは GET
 
 p.s.
 
-蛇足ですが [4 年前](https://www.techscore.com/blog/2019/07/26/samesite/) にもこんな予想をしていました。
+蛇足ですが [4 年前](https://www.techscore.com/blog/2019/07/26/samesite/) にもこんな予想をしていました ^^;
 
 > ある日突然 SameSite=None な Cookie に対するデフォルト動作が変更されるかもしれません …
 
