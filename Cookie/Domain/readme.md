@@ -22,18 +22,19 @@
 
 ## Domain 属性に Set-Cookie を送信するサーバの下位ドメインを指定
 
-図の 1-3 の Set-Cookie は User-Agent が受け入れを拒否します。セキュリティー上の理由でそのようになっているのでしょうか？
+図の 1-3 の Set-Cookie の場合 User-Agent は受け入れを拒否します。セキュリティー上の理由でそのようになっているのでしょうか？
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/Domain/d-2.png' />
 
-仮にそうだとしても左から二番目の Set-Cookie（"Domain=me.example" 属性を持つ）によって、下位ドメイン（例えば sub.me.example）に対して任意の Cookie を送信させることは可能であり、セッション固定化攻撃のリスクは軽減できません。というわけでこの仕様の背景は謎ですね。
+仮にそうだとしても図の 1-2 の Set-Cookie によって、下位ドメイン（例えば sub.me.example）に対して任意の Cookie を送信させることは可能であり、セッション固定化攻撃のリスクを解消することはできていません。というわけでこの仕様の背景は謎ですね。
 
-蛇足ですが、上位ドメインの Cookie ではないことを担保するためには [Cookie Prefixes](https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-cookie-prefixes-00) が利用できます。
+蛇足ですが、下位ドメイン側で上位ドメインの Cookie ではないことを担保するためには [Cookie Prefixes](https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-cookie-prefixes-00) が利用できます。
 
 ## Domain 属性に Set-Cookie を送信するサーバの上位ドメインを指定
 
-図の 2-2 の Set-Cookie は User-Agent が受け入れを許可します。
+図の 2-2 の Set-Cookie の場合 User-Agent は受け入れを許可します。下位ドメインを横断したロギング目的でこの Domain 属性が用いられます。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/Domain/d-3.png' />
 
+ところで 1-2 の Set-Cookie 実行後、同じ名前を使って 2-1, 2-2, 2-3 の Set-Cookie を実行した場合に User-Agent がどのように振舞うのかをテストしてみましょう。
 
