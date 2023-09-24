@@ -40,17 +40,19 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/Domain/d-4.png' />
 
-結論から述べますと 2-2 は 1-2 を上書きします（逆も言えます）。また 2-1, 2-2, 2-3 は全て別の Cookie として扱われ、お菓子のクッキーが記載されているリクエストでは全ての対象 Cookie が送信されます。具体的には
+結論から述べますと 2-2 は 1-2 を上書きします（逆も言えます）。また 2-1, 2-2, 2-3 は全て別の Cookie として扱われ、お菓子のクッキーが記載されているリクエストでは全ての対象 Cookie が送信されます。
+
+例えば
 
 ```
-Cookie: <the same cookie-name>=<set-cookie by 2-1>; <the same cookie-name>=<set-cookie by 1-2>; <the same cookie-name>=<set-cookie by 2-3>
+Cookie: <cookie-name-x>=<set by 2-1>; <cookie-name-x>=<set by 2-2>; <cookie-name-x>=<set by 2-3>
 ```
 
 もしくは
 
 ```
-Cookie: <the same cookie-name>=<set-cookie by 2-1>; <the same cookie-name>=<set-cookie by 2-2>; <the same cookie-name>=<set-cookie by 2-3>
+Cookie: <cookie-name-x>=<set by 2-1>; <cookie-name-x>=<set by 1-2>; <cookie-name-x>=<set by 2-3>
 ```
 
-を送信します。もちろんサーバのアプリケーションは名前で Cookie を区別できなくなってしまうため、同じ名前の Cookie はトラブルの元ですね。
+をのようなイメージです。もちろんサーバのアプリケーションは名前で Cookie を区別できなくなってしまうため、同じ名前の Cookie 利用はトラブルの元ですね。
 
