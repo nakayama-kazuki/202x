@@ -28,7 +28,7 @@
 
 仮にそうだとしても図の 1-2 の Set-Cookie によって、下位ドメイン（例えば sub.me.example）に対して任意の Cookie を送信させることは可能であり、セッション固定化攻撃のリスクを解消することはできていません。というわけでこの仕様の背景は謎ですね。
 
-蛇足ですが [Cookie Prefixes](https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-cookie-prefixes-00) の "__Host" を用いた Set-Cookie は
+ちなみに &lt;cookie-name&gt; に __Host（[Cookie Prefixes](https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-cookie-prefixes-00)）を用いた Set-Cookie は
 
 > MUST NOT contain a "Domain" attribute
 
@@ -40,11 +40,11 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/Domain/d-3.png' />
 
-ところで 1-2 の Set-Cookie 実行後、同じ <cookie-name> を使って 2-1, 2-2, 2-3 の Set-Cookie を実行した場合に User-Agent がどのように振舞うのかをテストしてみましょう。
+ところで 1-2 の Set-Cookie 実行後、同じ &lt;cookie-name&gt; を使って 2-1, 2-2, 2-3 の Set-Cookie を実行した場合に User-Agent がどのように振舞うのかをテストしてみましょう。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/Domain/d-4.png' />
 
-結論から述べますと 2-2 は 1-2 を上書きします（逆も言えます）。また 2-1, 2-2, 2-3 は同じ <cookie-name> であっても別の Cookie として扱われ、お菓子のクッキーが記載されているリクエストでは全ての対象 Cookie が送信されます。
+結論から述べますと 2-2 は 1-2 を上書きします（逆も言えます）。また 2-1, 2-2, 2-3 は同じ &lt;cookie-name&gt; であっても別の Cookie として扱われ、お菓子のクッキーが記載されているリクエストでは全ての対象 Cookie が送信されます。
 
 例えば
 
@@ -58,7 +58,7 @@ Cookie: MyCookie=BY_2-1; MyCookie=BY_2-2; MyCookie=BY_2-3
 Cookie: MyCookie=BY_2-1; MyCookie=BY_1-2; MyCookie=BY_2-3
 ```
 
-のようなイメージです。もちろんサーバのアプリケーションは <cookie-name> で Cookie を区別できなくなってしまうため、同じ <cookie-name> の利用はトラブルの元と言えます。
+のようなイメージです。もちろんサーバのアプリケーションは &lt;cookie-name&gt; で Cookie を区別できなくなってしまうため、同じ &lt;cookie-name&gt; の利用はトラブルの元と言えます。
 
 p.s.
 
