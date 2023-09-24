@@ -58,7 +58,7 @@ Cookie: MyCookie=BY_2-1; MyCookie=BY_2-2; MyCookie=BY_2-3
 Cookie: MyCookie=BY_2-1; MyCookie=BY_1-2; MyCookie=BY_2-3
 ```
 
-のようなイメージです。もちろんサーバのアプリケーションは &lt;cookie-name&gt; で Cookie を区別できなくなってしまうため、同じ &lt;cookie-name&gt; の利用はトラブルの元と言えます。
+のようなイメージです。もちろんサーバアプリケーションは &lt;cookie-name&gt; で Cookie を区別できなくなってしまうため、同じ &lt;cookie-name&gt; の利用はトラブルの元と言えます。
 
 p.s.
 
