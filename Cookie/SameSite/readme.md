@@ -7,7 +7,7 @@
 - [図解 Domain@Set-Cookie](https://github.com/nakayama-kazuki/202x/tree/main/Cookie/Domain)
 - [図解 SameSite@Set-Cookie](https://github.com/nakayama-kazuki/202x/tree/main/Cookie/SameSite) ※ 本記事
 
-早速ですが SameSite 属性の値とブラウザから送信される Cookie の関係性を図にしてみました。矢印上にお菓子のクッキーが記載されているリクエストに限り Cookie が送信されます。
+早速ですが応答ヘッダの Set-Cookie に付随する SameSite 属性の値と User-Agent（ブラウザ）から送信される Cookie の関係性を図にしてみました。矢印上にお菓子のクッキーが記載されているリクエストは Cookie が送信されることを示しています。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/SameSite/img1.png' />
 
