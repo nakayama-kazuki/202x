@@ -30,7 +30,7 @@
 
 ちなみに &lt;cookie-name&gt; に __Host（[Cookie Prefixes](https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-cookie-prefixes-00)）を用いた Set-Cookie は
 
-> MUST NOT contain a "Domain" attribute
+> Sent only to the host which set the cookie.  That is, a cookie named "__Host-cookie1" set from "https://example.com" MUST NOT contain a "Domain" attribute (and will therefore be sent only to "example.com", and not to "subdomain.example.com").
 
 ですので上位ドメインの Cookie ではないことを担保することができます。
 
