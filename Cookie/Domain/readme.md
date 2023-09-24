@@ -56,3 +56,7 @@ Cookie: <cookie-name-x>=<set by 2-1>; <cookie-name-x>=<set by 1-2>; <cookie-name
 
 をのようなイメージです。もちろんサーバのアプリケーションは名前で Cookie を区別できなくなってしまうため、同じ名前の Cookie 利用はトラブルの元ですね。
 
+p.s.
+
+蛇足ですが [6 年前](https://www.techscore.com/blog/2017/10/06/about-cookie/) 似たようなことを試してました ^^;
+
