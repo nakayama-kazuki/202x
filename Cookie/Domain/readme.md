@@ -46,19 +46,19 @@
 
 結論から述べますと 2-2 は 1-2 を上書きします（逆も言えます）。また 2-1, 2-2, 2-3 は同じ &lt;cookie-name&gt; であっても別の Cookie として扱われ、お菓子のクッキーが記載されているリクエストでは全ての対象 Cookie が送信されます。
 
-例えば
+例えば 2-1, 2-2, 2-3 の Set-Cookie 後は User-Agent は sub.me.example に対して
 
 ```
 Cookie: MyCookie=BY_2-1; MyCookie=BY_2-2; MyCookie=BY_2-3
 ```
 
-もしくは
+を送信し、再度 1-2 で上書きすれば
 
 ```
 Cookie: MyCookie=BY_2-1; MyCookie=BY_1-2; MyCookie=BY_2-3
 ```
 
-のようなイメージです。もちろんサーバアプリケーションは &lt;cookie-name&gt; で Cookie を区別できなくなってしまうため、同じ &lt;cookie-name&gt; の利用はトラブルの元と言えます。
+を送信します。もちろんサーバアプリケーションは &lt;cookie-name&gt; で Cookie を区別できなくなってしまうため、同じ &lt;cookie-name&gt; は利用すべきではありません。
 
 p.s.
 
