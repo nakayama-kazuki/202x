@@ -26,7 +26,7 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/Domain/d-2.png' />
 
-仮にそうだとしても図の 1-2 の Set-Cookie によって、下位ドメイン（例えば sub.me.example）に対して任意の Cookie を送信させることは可能であり、セッション固定化攻撃のリスクを解消することはできていません。というわけでこの仕様の背景は謎ですね。
+仮にそうだとしても図の 1-2 の Set-Cookie によって、下位ドメイン（例えば sub.me.example）に対して任意の Cookie を送信させることは可能であり、セッション固定化攻撃のリスクは解消できません。というわけでこの仕様は少々疑問ですね。
 
 ちなみに &lt;cookie-name&gt; に __Host（[Cookie Prefixes](https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-cookie-prefixes-00)）を用いた Set-Cookie は
 
@@ -58,7 +58,9 @@ Cookie: MyCookie=BY_2-1; MyCookie=BY_2-2; MyCookie=BY_2-3
 Cookie: MyCookie=BY_2-1; MyCookie=BY_1-2; MyCookie=BY_2-3
 ```
 
-を送信します。もちろんサーバアプリケーションは &lt;cookie-name&gt; で Cookie を区別できなくなってしまうため、同じ &lt;cookie-name&gt; は利用すべきではありません。
+を送信します。
+
+もちろんサーバアプリケーションは &lt;cookie-name&gt; で Cookie を区別できなくなってしまうため、同じ &lt;cookie-name&gt; の利用はお勧めできません。
 
 p.s.
 
