@@ -6,7 +6,7 @@
 	- techscore blog
 		- 2023.02.01 [列のテキスト選択 + コピーをしたいのだが](https://blog.techscore.com/entry/2023/02/01/080000)
 		- 2022.08.24 [ま、また釣りかよ !!](https://blog.techscore.com/entry/2022/08/24/150000)
-- techblog（2022 より前）
+- techblog（2022 年より前）
 	- [TECHSCORE BLOG Author Archives: 中山一紀](https://techscore.com/blog/author/nakayama-kazuki)
 	- 2017.09.01 [マーケターの危機？ ITP 時代にアドレサブル広告を活用すべき理由](https://www.synergy-marketing.co.jp/blog/itp_and_addressable-advertising)
 	- 2017.08.09 [アドレサブル広告を支える技術～CRMデータを広告に活用するためのマッチング技術とは](https://www.synergy-marketing.co.jp/blog/technology-of-addressable-advertising)
