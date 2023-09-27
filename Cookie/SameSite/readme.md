@@ -43,7 +43,7 @@ SameSite=Strict を用いつつも一部の流入経路で暫定的に Cookie �
 
 外部サイトからも POST を許可したいフォームがあった場合、SameSite=Strict なログインセッション Cookie や SameSite=Lax なトラッキング Cookie がフォームに送信されません。加えて流入のタイミングでトラッキング Cookie が上書きされてしまう場合があります。
 
-POST での流入時に Cookie を送信させたい場合のアイデアは GET の場合と同様で、ステータスコード 307 / 308 の server-side redirect を経由してもは Cookie は送信されないため client-side redirect（表の 4-4）の利用をご検討ください。流入元で POST された情報を埋め込んだフォームを生成し HTMLFormElement.submit() する … というのが GET の場合と比較すると面倒ですね。
+POST での流入時に Cookie を送信させたい場合のアイデアは GET の場合と同様で、ステータスコード 307 / 308 の server-side redirect を経由しても Cookie は送信されないため client-side redirect（表の 4-4）の利用をご検討ください。流入元で POST された情報を埋め込んだフォームを生成し HTMLFormElement.submit() する … というのが GET の場合と比較すると面倒ですね。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/SameSite/lax-1.png' />
 
