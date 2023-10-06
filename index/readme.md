@@ -4,6 +4,8 @@
 		- 2022.12.19 [今は、もう、動かない、その User-Agent 文字列](https://techblog.yahoo.co.jp/entry/2022121930384728/)
 		- 2022.08.17 [DNS over HTTPS（DoH）の気になる Web Browser 実装を確認](https://techblog.yahoo.co.jp/entry/2022081730334612/)
 	- techscore blog
+		- 2023.10.06 [図解 SameSite@Set-Cookie](https://blog.techscore.com/entry/2023/10/06/110100)
+		- 2023.10.06 [図解 Domain@Set-Cookie](https://blog.techscore.com/entry/2023/10/06/110000)
 		- 2023.02.01 [列のテキスト選択 + コピーをしたいのだが](https://blog.techscore.com/entry/2023/02/01/080000)
 		- 2022.08.24 [ま、また釣りかよ !!](https://blog.techscore.com/entry/2022/08/24/150000)
 - techblog（2022 年より前）
