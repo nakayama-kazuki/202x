@@ -2,37 +2,24 @@
 
 こんにちは、プラットフォームエンジニアの中山です。
 
+みなさまのサービスや業務において、データを活用して課題を解決する機会は少なくないと思います。一方でユーザーデータの活用に際しては法律やパートナーとの契約を守ることに加えて、プライバシーへの配慮も重要です。また、取得したデータを個人データ化して活用する際には、データの取得方法によって対応すべきことが異なります。そこで、今回は安心安全のデータ活用のために押さえておきたいポイントについて、表の（１）から（７）の順で述べたいと思います。
 
-プロセスや仕組
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/i0.png' />
 
-## どのようなもの？
+蛇足ですが LINE ヤフーではここで挙げたこと以外も含め、安心安全のデータ活用を推進するための体制やプロセス、仕組を構築しております。興味をお持ちの方は是非お声がけください ^^
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/0.png' />
+## 直接取得の際の目的説明
 
-## 目的説明や選択肢の提示
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/1.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/i1.png' />
 
 - 個人情報の取り扱いにあたっては [利用目的を特定](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-1) する
 - その [目的外では利用できません](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-3)
 
-## ユーザー同意の取得と受領時の法律対応
+## 直接取得の際の同意
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/2-1.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/i2.png' />
 
-- 背景説明（リクナビ）
-- 必要な同意
-- 必要な法律対応
-- 選択肢の提示
--- 第三者提供の場面などでは、優越的地位の濫用による強制同意（サービス利用するためには絶対に同意をしないと進めない）の文脈で問題になることはある
-
-- これって第三者提供？直接取得？
--- 同意は要配慮個人情報（人種、信条、社会的身分、病歴、犯罪の経歴、犯罪により害を被った事実などをいいます）の取得の際にのみ必要
--- 20 条 2 項 : https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-2
-
-## 最近よく見る Cookie 同意
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/3.png' />
+最近よく見る Cookie 同意
 
 - https://businessandlaw.jp/articles/a20230228-1/
 - 個情法では直接取得の同意は必須ではない
@@ -41,9 +28,51 @@
 -- 蛇足だがログインセッション Cookie のようなもの（記事では「ネセサリーCookie」と表現）は同意不要
 - 個情法では↑ではないが、世の同意管理サービスは↑の世界観にあわせて構築されているため昨今よく Cookie 同意を見かけるようになった
 
-## 他事業者への第三者提供時の各種対応
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/2-2.png' />
+> まず、個人情報の取得にあたっての同意は、要配慮個人情報（人種、信条、社会的身分、病歴、犯罪の経歴、犯罪により害を被った事実などをいいます）
+> の取得の際にのみ必要と定められています（法20条2項）
+>
+> 20条2項
+> https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-2?
+
+こちらは、第三者提供の場面ではなく、個人情報取扱業者自身が（本人から）取得する場面の規定です。
+（通常の個人情報については取得そのものについては同意が必要とは定められていませんが、要配慮個人情報については、
+人権等の観点から、慎重に取り扱うべきであるとされており、その観点でこういった規定が定められています）
+
+
+## 第三者提供（受領時）の際の同意や法律対応
+
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/i3.png' />
+
+- 背景説明（リクナビ）
+- 必要な同意
+- 必要な法律対応
+
+- これって第三者提供？直接取得？
+-- 同意は要配慮個人情報（人種、信条、社会的身分、病歴、犯罪の経歴、犯罪により害を被った事実などをいいます）の取得の際にのみ必要
+-- 20 条 2 項 : https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-2
+
+## 自社サービス利用における配慮
+
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/i4.png' />
+
+- 20231023-data-guideline.pptx 参照
+
+## 委託提供と AI 利用
+
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/i5.png' />
+
+- 20231023-data-guideline.pptx 参照
+- 以前の外部弁護士との整理も確認
+
+## 第三者提供（提供時）の際の同意や法律対応
+
+
+- 選択肢の提示
+-- 第三者提供の場面などでは、優越的地位の濫用による強制同意（サービス利用するためには絶対に同意をしないと進めない）の文脈で問題になることはある
+
+
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/i6.png' />
 
 - 個人データは第三者提供同意なくさらに提供をすることはできない
 - それが受領したデータの場合、受領者側での同意が難しい場合提供者側での（代理での）同意を検討する
@@ -57,22 +86,9 @@
 -- ヤフーの記載
 -- https://privacy.lycorp.co.jp/ja/acquisition/thirdparties.html
 
-## 自社サービス利用における配慮
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/4.png' />
-
-- 20231023-data-guideline.pptx 参照
-
-## 委託提供と AI 利用
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/5.png' />
-
-- 20231023-data-guideline.pptx 参照
-- 以前の外部弁護士との整理も確認
-
 ## 越境アクセス対応
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/6.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/i7.png' />
 
 - 海外への委託提供における留意（個情法観点）
 -- https://www.ppc.go.jp/files/pdf/2305_APPI_QA.pdf の #12-1 委託提供であっても、外国にある第三者への提供の場合には本人の同意が必要
@@ -85,7 +101,6 @@
 -- こちらのケースは 27 条 5 項的な「委託の場合は第三者に該当しない」という定めがなく、結果として委託であっても同意が必要
 - 電気通信事業者法観点
 -- 2023 年ヤフーへの行政指導
-
 
 特定社会基盤事業者の指定
 https://www.soumu.go.jp/main_content/000912870.pdf
