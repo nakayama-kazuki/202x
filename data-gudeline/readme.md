@@ -6,19 +6,19 @@
 
 そこで、今回は安心安全のデータ活用のために押さえておきたいポイントについて、表の（１）から（７）の順で述べたいと思います。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/i0.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i0.png' />
 
 蛇足ですが LINE ヤフーでは安心安全のデータ活用を推進するための体制や社内教育やプロセス、環境や仕組化によって、ここで挙げたことを含め広範で細やかなガバナンスを構築しています。興味をお持ちの方は是非お声がけください ^^
 
 ## （１）直接取得の際の目的説明
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/i1.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i1.png' />
 
 個人情報保護法では個人情報の取り扱いにあたり [どのデータを何の目的で活用するのかをユーザーに説明](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-1) することが求められており、さらに [目的外の活用は不可](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-3) とされています。みなさまのサービスや業務においてこの点で問題がないことをご確認ください。
 
 ## （２）直接取得の際の同意
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/i2.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i2.png' />
 
 個人情報保護法では要配慮個人情報（人種、病歴、健康診断の結果、犯罪歴など）について、人権等の観点から取得時の [ユーザー同意が必要](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-2) と定められています。みなさまのサービスや業務では要配慮個人情報を扱いますか？
 
@@ -31,7 +31,7 @@
 
 ## （３）第三者提供（受領時）の際の同意や法律対応
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/i3.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i3.png' />
 
 個人情報を受領するのか、もしくは
 
@@ -41,7 +41,7 @@
 
 などの [個人関連情報](https://www.ppc.go.jp/all_faq_index/faq2-q2-8/) を受領するのか、それぞれの場合でやるべきことが異なります。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/d1-2.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/d1-2.png' />
 
 改正個人情報保護法が 2022 年 4 月に施行されましたが、それ以前は Cookie に紐づけられたウェブサイトの閲覧履歴の授受に対する規制はありませんでした。
 
@@ -58,7 +58,7 @@
 
 ## （４）自社サービス活用における配慮
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/i4.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i4.png' />
 
 以下はユーザーの権利利益を侵害しないために配慮すべきことの例です。
 
@@ -77,13 +77,13 @@
 
 ## （５）委託提供と AI 活用
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/i5.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i5.png' />
 
 まず、原則として委託先は委託元から提供された個人データを [委託された業務の範囲内](https://www.ppc.go.jp/all_faq_index/faq1-q7-38/) でしか扱えません。さらに「[混ぜるな危険](https://www.ppc.go.jp/all_faq_index/faq1-q7-41/)」と呼ばれる操作 … 自社保有のデータと提供された個人データの同意を伴わないユーザー単位の突合 … も禁止されています。
 
 となると、ユーザーデータを活用した AI モデル登載のマルチテナント SaaS を提供する場合、表の No.2 の整理は難しいという結論になるのでしょうか？
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/d2.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/d2.png' />
 
 この点については
 
@@ -95,11 +95,11 @@
 
 ## （６）第三者提供（提供時）の際の同意や法律対応
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/i6.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i6.png' />
 
 前述（３）と逆の立場での対応です。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/d1-3.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/d1-3.png' />
 
 何点か補足します。
 
@@ -121,7 +121,7 @@
 
 ## （７）越境アクセス対応
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/i7.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i7.png' />
 
 - 海外への委託提供における留意（個情法観点）
 -- https://www.ppc.go.jp/files/pdf/2305_APPI_QA.pdf の #12-1 委託提供であっても、外国にある第三者への提供の場合には本人の同意が必要
