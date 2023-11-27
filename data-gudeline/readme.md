@@ -66,7 +66,7 @@
 - その他慎重に扱うべき情報（要配慮個人情報や、経済状況、人間関係など）
 - 適切な活用のタイミング（例えば閲覧後すぐに関連メールが届くと多くのユーザーは心象を害するかもしれない）
 - 社会的な優劣の評価にならない出力
-- 統計活用における十分な N 数
+- 統計活用における十分な N 数の担保
 
 それに加えて
 
@@ -112,22 +112,21 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i7.png' />
 
-- 海外への委託提供における留意（個情法観点）
--- https://www.ppc.go.jp/files/pdf/2305_APPI_QA.pdf の #12-1 委託提供であっても、外国にある第三者への提供の場合には本人の同意が必要
--- LINE の朝日報道
--- 第三者提供は 27 条 1 項で同意取得が求められている
--- 一方で委託については 27 条 5 項で第三者への提供に該当しないとされている（ので同意は不要とされている）
--- https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-6-3
--- 外国の第三者への提供は上記と別に 28 条の規制にもかかる
--- https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-6-4
--- こちらのケースは 27 条 5 項的な「委託の場合は第三者に該当しない」という定めがなく、結果として委託であっても同意が必要
-- 電気通信事業者法観点
--- 2023 年ヤフーへの行政指導
+国内の事業者に対する第三者提供にはユーザー同意の取得が必要なことは上で述べた通りですが、委託提供など [第三者に該当しない場合の定め](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-6-3) があり、その場合はユーザー同意は不要とされています。一方で [海外の事業者に対する提供](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-6-4) については第三者に該当しない場合の定めはなく、委託提供であっても同意が必要とされています。
 
+- LINE の朝日報道
+
+電気通信事業法
 特定社会基盤事業者の指定
 https://www.soumu.go.jp/main_content/000912870.pdf
+
+- 2023 年ヤフーへの行政指導
+- https://www.soumu.go.jp/menu_news/s-news/01kiban18_01000203.html
 
 ## まとめ
 
 その他いろいろな取り組みへの参照
+- https://techblog.yahoo.co.jp/entry/2022052530303179/
+- https://techblog.lycorp.co.jp/ja/20231101a
+混入の検知
 
