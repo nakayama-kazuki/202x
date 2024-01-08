@@ -1,6 +1,8 @@
 # 安心安全のデータ活用
 
 - 表や見出しの文言見直し
+- 情報とデータの使い分け
+- 利用と活用の使い分け
 - https://www.ppc.go.jp/all_faq_index/faq2-q2-3/
 
 こんにちは、プラットフォームエンジニアの中山です。
@@ -32,28 +34,33 @@
 - サービス提供に必須となる Cookie（例えばログインセッションを管理する Cookie）の利用にはユーザー同意が不要
 - マーケティング用途のトラッキング Cookie の利用にはユーザー同意が必要
 
-というルールの存在です。が、この同意ダイアログについてはプライバシー保護の観点で実効性を疑う [意見](https://ln.hixie.ch/?start=1700627373) もあります。
+というルールの存在です。しかし、この同意ダイアログについてはプライバシー保護の観点で [実効性を疑う意見](https://ln.hixie.ch/?start=1700627373) もあり、私もその意見に賛成です。
 
 > one of the most annoying is the prevalence of pointless cookie warnings we have to wade through today
 
-私もこちらに同意見です。今年は Chrome の 3rd-party Cookie が廃止になりますが、その後このダイアログは生き残るのでしょうか？
+今年は Chrome の 3rd-party Cookie が [段階的に廃止](https://japan.googleblog.com/2023/12/chrome-cookie.html) される予定ですが、その後もこのダイアログは生き残るのでしょうか？ますます実効性が薄れると思いますが ^^;
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
-- 要配慮個人情報を取得するか？
+- 要配慮個人情報を取得しているか？
 - 欧州ユーザー（欧州に住む日本人も含め）にも利用されるサービスか？
 
-## （３）第三者提供（受領時）の際の同意や法律対応
+## （３）他事業者からの第三者提供の際の同意や法律対応
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i3.png' />
 
-個人情報を受領するのか、もしくは
+他事業者から提供される情報が
 
+- 氏名や顔写真など特定の個人を識別できる情報
+- 運転免許証番号などの個人識別符号
+
+などの個人情報なのか、もしくは
+
+- 位置情報
 - 性別、年齢、職業などの属性情報
 - ウェブサイトの閲覧情報（例えば閲覧イベントのビーコンなども）
-- 位置情報
 
-などの [個人関連情報](https://www.ppc.go.jp/all_faq_index/faq2-q2-8/) を受領するのか、それぞれの場合でやるべきことが異なります。
+などの [個人関連情報](https://www.ppc.go.jp/all_faq_index/faq2-q2-8/) なのかによって、やるべきことが異なります。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/d1-2.png' />
 
