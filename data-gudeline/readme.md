@@ -13,34 +13,35 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i1.png' />
 
-ユーザーがフォームに入力したデータやトラッキングログを個人データ化する際の留意点として、個人情報保護法では何のデータをどのような目的で活用するのか [具体的に特定](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-1) して [ユーザーに説明](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-3) することを求めており、目的外 … 例えばサービスに関する連絡にしか利用しない、と約束したメールアドレスを広告のオーディエンス連携や類似拡張に使うなど … の [活用は不可](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-3) とされています。
+直接取得 … 例えばユーザーがフォームに入力したデータやトラッキングログを個人データ化する際に、個人情報保護法では何のデータをどのような目的で活用するのか [具体的に特定](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-1) して [ユーザーに説明](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-3) することが必要だと定められています。また、目的外の … 例えばサービスに関する連絡にのみ活用する、と約束したメールアドレスを広告のオーディエンス連携や類似拡張に [使ってはならない](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-3) とされています。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
-- 利用規約やプライバシーポリシー等で目的を説明してるか？
+- 規約やプライバシーポリシーなどで目的を説明してるか？
 - 目的は具体的に特定されているか？
-- 目的外の利用はないか？
+- 目的外の活用はないか？
 
-## （２）直接取得の際の同意
+## （２）直接取得の際の同意取得
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i2.png' />
 
-個人情報保護法では要配慮個人情報（人種、病歴、健康診断の結果、犯罪歴など）について、人権等の観点から取得時の [ユーザー同意が必要](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-2) と定められています。みなさまのサービスや業務では要配慮個人情報を扱いますか？
+要配慮個人情報（人種、病歴、健康診断の結果、犯罪歴など）を直接取得して個人データ化する際、個人情報保護法では人権等の観点から [ユーザー同意](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-2) が必要だと定められています。
 
-また最近のサービスでは Cookie に関する同意ダイアログをしばしば見かけますが、
+一方で最近のサービス（欧米、日本問わず）では Cookie に関する同意ダイアログをしばしば見かけますが、その背景にあるのは欧州の e-privacy 指令における
 
 - サービス提供に必須となる Cookie（例えばログインセッションを管理する Cookie）の利用にはユーザー同意が不要
 - マーケティング用途のトラッキング Cookie の利用にはユーザー同意が必要
 
-ということが欧州の e-privacy 指令で定められています。みなさまのサービスが欧州ユーザー（欧州に住む日本人も含め）にも利用される場合、この点で問題がないことをご確認ください。
+というルールの存在です。が、この同意ダイアログについてはプライバシー保護の観点で実効性を疑う [意見](https://ln.hixie.ch/?start=1700627373) もあります。
 
-★https://ln.hixie.ch/?start=1700627373&count=1
-★https://gigazine.net/news/20231127-ian-hickson-reflecting-18-years-google/
+> one of the most annoying is the prevalence of pointless cookie warnings we have to wade through today
 
-one of the most annoying is the prevalence of pointless cookie warnings we have to wade through today
+私もこちらに同意見です。今年は Chrome の 3rd-party Cookie が廃止になりますが、その後このダイアログは生き残るのでしょうか？
 
-なんて意見もありますが。
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
+- 要配慮個人情報を取得するか？
+- 欧州ユーザー（欧州に住む日本人も含め）にも利用されるサービスか？
 
 ## （３）第三者提供（受領時）の際の同意や法律対応
 
