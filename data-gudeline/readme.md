@@ -1,9 +1,17 @@
 # 安心安全のデータ活用
 
+/*
+
+ToDo :
+
 - 表や見出しの文言見直し
 - 情報とデータの使い分け
 - 利用と活用の使い分け
 - https://www.ppc.go.jp/all_faq_index/faq2-q2-3/
+- パーティショニング / ダブルキーイングに触れる
+- 確認義務と記録義務はあわせる
+
+*/
 
 こんにちは、プラットフォームエンジニアの中山です。
 
@@ -15,7 +23,7 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i1.png' />
 
-直接取得 … 例えばユーザーがフォームに入力したデータやトラッキングログを個人データ化する際に、個人情報保護法では何のデータをどのような目的で活用するのか [具体的に特定](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-1) して [ユーザーに説明](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-3) することが必要だと定められています。また、目的外の … 例えばサービスに関する連絡にのみ活用する、と約束したメールアドレスを広告のオーディエンス連携や類似拡張に [使ってはならない](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-3) とされています。
+直接取得 … 例えばユーザーがフォームに入力したデータやトラッキングログを個人データ化する際に、個人情報保護法では何のデータをどのような目的で活用するのか [具体的に特定](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-1) して [ユーザーに説明](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-3) することが必要だと定めています。また、目的外の … 例えばサービスに関する連絡にのみ活用する、と約束したメールアドレスを広告のオーディエンス連携や類似拡張に [使ってはならない](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-3) とされています。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
@@ -27,18 +35,18 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i2.png' />
 
-要配慮個人情報（人種、病歴、健康診断の結果、犯罪歴など）を直接取得して個人データ化する際、個人情報保護法では人権等の観点から [ユーザー同意](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-2) が必要だと定められています。
+要配慮個人情報（人種、病歴、健康診断の結果、犯罪歴など）を直接取得して個人データ化する際、個人情報保護法では人権等の観点から [ユーザー同意](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-2) が必要だと定めています。
 
-一方で最近のサービス（欧米、日本問わず）では Cookie に関する同意ダイアログをしばしば見かけますが、その背景にあるのは欧州の e-privacy 指令における
+一方、要配慮個人情報ならずとも最近のサービス（欧米、日本問わず）では Cookie に関する同意ダイアログをしばしば見かけます。その背景にあるのは欧州での e-privacy 指令における
 
 - サービス提供に必須となる Cookie（例えばログインセッションを管理する Cookie）の利用にはユーザー同意が不要
 - マーケティング用途のトラッキング Cookie の利用にはユーザー同意が必要
 
-というルールの存在です。しかし、この同意ダイアログについてはプライバシー保護の観点で [実効性を疑う意見](https://ln.hixie.ch/?start=1700627373) もあり、私もその意見に賛成です。
+というルールの存在です。しかし、この同意ダイアログについては
 
 > one of the most annoying is the prevalence of pointless cookie warnings we have to wade through today
 
-今年は Chrome の 3rd-party Cookie が [段階的に廃止](https://japan.googleblog.com/2023/12/chrome-cookie.html) される予定ですが、その後もこのダイアログは生き残るのでしょうか？ますます実効性が薄れると思いますが ^^;
+などプライバシー保護の観点で [実効性を疑う意見](https://ln.hixie.ch/?start=1700627373) もあり、私も同意見です。今年は Chrome の 3rd-party Cookie が [段階的に廃止](https://japan.googleblog.com/2023/12/chrome-cookie.html) され、ますます実効性が低下するように思えますが、それでもこのダイアログは生き残るのでしょうか？
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
@@ -58,24 +66,20 @@
 
 - 位置情報
 - 性別、年齢、職業などの属性情報
-- ウェブサイトの閲覧情報（例えば閲覧イベントのビーコンなども）
+- ウェブサイトの閲覧情報やウェブサイト上での検索、クリック、購買などの情報
 
 などの [個人関連情報](https://www.ppc.go.jp/all_faq_index/faq2-q2-8/) なのかによって、やるべきことが異なります。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/d1-2.png' />
 
-改正個人情報保護法が 2022 年 4 月に施行されましたが、それ以前は Cookie に紐づけられたウェブサイトの閲覧履歴の授受に対する規制はありませんでした。
+受領側が個人関連情報を個人データとして取得する場合、ユーザー同意の取得が必要になる点（表の右下）に着目してください。改正個人情報保護法の施行（2022 年 4 月）以前は、個人関連情報 … 例えばウェブサイトの閲覧情報の授受に関する規制はありませんでした。この場合、ユーザーは自身の知らないところで 3rd-party Cookie 紐づけられたウェブサイトの閲覧履歴によってスコアリングされ、スコアによっては社会的に不利な扱いを受けてしまう、といった事案が発生するかもしれません（[参考事案](https://www.ppc.go.jp/files/pdf/191204_houdou.pdf)）。
 
-そのような状況下では、例えば学生の同意を得ることなく（つまり学生の知らないところで）
+こうした背景から個人関連情報を個人データとして取得する際にはユーザー同意の取得が必要になりました。
 
-1. 学生のウェブサイトの閲覧情報を受領する
-2. ウェブサイトの閲覧履歴から内定辞退の確率を予測する
-3. その予測値を学生を直接特定する情報と紐づけて保存する（= 個人データ化）
-4. クライアント企業に内定辞退の予測値を提供する
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
-のようなサービスを [提供することができてしまい](https://www.ppc.go.jp/files/pdf/191204_houdou.pdf) ました。
-
-こうした背景から個人関連情報に関する対応が新たに必要となりましたが、みなさまのサービスでは個人関連情報の受領の際に必要な対応はできていますか？
+- ウェブサイトの閲覧情報等を個人データとして取得しているか？
+- 記録は作成しているか？
 
 ## （４）自社サービス活用における配慮
 
