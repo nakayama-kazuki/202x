@@ -1,21 +1,24 @@
 # 安心安全のデータ活用
 
+- 表や見出しの文言見直し
+- https://www.ppc.go.jp/all_faq_index/faq2-q2-3/
+
 こんにちは、プラットフォームエンジニアの中山です。
 
-みなさまのサービスや社内業務において、データを活用して課題を解決する機会は少なくないと思います。一方で個人データの扱いに際しては法律やパートナーとの契約を遵守することに加えて、プライバシーへの配慮もかかせません。そこで今回は「安心安全のデータ活用」のため、個人データの取得方法に応じた留意点についてまとめてみました。
+みなさまのサービスや社内業務において、データを活用して課題を解決する機会は少なくないと思います。一方でデータの扱いに際しては法律やパートナーとの契約を遵守することに加えて、プライバシーへの配慮もかかせません。そこで今回は「安心安全のデータ活用」のため、データの取得方法に応じた留意点についてまとめてみました。
 
-各章毎に check point を設けたのでサービスや社内業務におけるデータ活用に照らし合わせてみてください。
+各章ごとにチェックポイントを設けたので、みなさまのデータ活用に照らし合わせてみてください。
 
 ## （１）直接取得の際の目的説明
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i1.png' />
 
-個人情報保護法では何のデータをどのような目的で活用するのか [具体的に特定してユーザーに説明](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-1) することが求められており、さらに [目的外の活用は不可](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-3) とされています。
+ユーザーがフォームに入力したデータやトラッキングログを個人データ化する際の留意点として、個人情報保護法では何のデータをどのような目的で活用するのか [具体的に特定](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-1) して [ユーザーに説明](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-3) することを求めており、目的外の活用 … 例えばサービスに関する連絡にしか利用しない、と約束したメールアドレスを広告のオーディエンス連携や look a like 拡張に使うなど … は [不可](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-3) とされています。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
-
-- 目的を説明していますか？
-- 具体的に特定された目的ですか？
+- 利用規約やプライバシーポリシー等で目的を説明してるか？
+- 目的は具体的に特定されているか？
+- 目的外の利用はないか？
 
 ## （２）直接取得の際の同意
 
