@@ -13,9 +13,10 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i1.png' />
 
-ユーザーがフォームに入力したデータやトラッキングログを個人データ化する際の留意点として、個人情報保護法では何のデータをどのような目的で活用するのか [具体的に特定](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-1) して [ユーザーに説明](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-3) することを求めており、目的外の活用 … 例えばサービスに関する連絡にしか利用しない、と約束したメールアドレスを広告のオーディエンス連携や look a like 拡張に使うなど … は [不可](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-3) とされています。
+ユーザーがフォームに入力したデータやトラッキングログを個人データ化する際の留意点として、個人情報保護法では何のデータをどのような目的で活用するのか [具体的に特定](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-1) して [ユーザーに説明](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-3) することを求めており、目的外 … 例えばサービスに関する連絡にしか利用しない、と約束したメールアドレスを広告のオーディエンス連携や類似拡張に使うなど … の [活用は不可](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-3) とされています。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
+
 - 利用規約やプライバシーポリシー等で目的を説明してるか？
 - 目的は具体的に特定されているか？
 - 目的外の利用はないか？
