@@ -46,7 +46,7 @@ ToDo :
 
 > one of the most annoying is the prevalence of pointless cookie warnings we have to wade through today
 
-などプライバシー保護の観点で [実効性を疑う意見](https://ln.hixie.ch/?start=1700627373) もあり、私も同意見です。今年は Chrome の 3rd-party Cookie が [段階的に廃止](https://japan.googleblog.com/2023/12/chrome-cookie.html) され、ますます実効性が低下するように思えますが、それでもこのダイアログは生き残るのでしょうか？
+のようにプライバシー保護の観点で [実効性を疑う意見](https://ln.hixie.ch/?start=1700627373) もあります。今年は Chrome の 3rd-party Cookie が [段階的に廃止](https://japan.googleblog.com/2023/12/chrome-cookie.html) され、ますます実効性が薄れるように思えますが、それでもこのダイアログは生き残るのでしょうか？
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
@@ -72,14 +72,14 @@ ToDo :
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/d1-2.png' />
 
-受領側が個人関連情報を個人データとして取得する場合、ユーザー同意の取得が必要になる点（表の右下）に着目してください。改正個人情報保護法の施行（2022 年 4 月）以前は、個人関連情報 … 例えばウェブサイトの閲覧情報の授受に関する規制はありませんでした。この場合、ユーザーは自身の知らないところで 3rd-party Cookie 紐づけられたウェブサイトの閲覧履歴によってスコアリングされ、スコアによっては社会的に不利な扱いを受けてしまう、といった事案が発生するかもしれません（[参考事案](https://www.ppc.go.jp/files/pdf/191204_houdou.pdf)）。
+受領側が個人関連情報を個人データとして取得する場合、ユーザー同意の取得が必要になる点（表の右下）に着目してください。改正個人情報保護法の施行（2022 年 4 月）以前は、個人関連情報 … 例えばウェブサイトの閲覧情報の授受に関する規制はありませんでした。この場合、ユーザーは自身の知らないところで 3rd-party Cookie 紐づけられたウェブサイトの閲覧履歴によってスコアリングされ、スコア次第で社会的に不利な扱いを受けてしまう、といった事案が発生するかもしれません（[参考事案](https://www.ppc.go.jp/files/pdf/191204_houdou.pdf)）。
 
 こうした背景から個人関連情報を個人データとして取得する際にはユーザー同意の取得が必要になりました。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
 - ウェブサイトの閲覧情報等を個人データとして取得しているか？
-- 記録は作成しているか？
+- 記録を作成しているか？
 
 ## （４）自社サービス活用における配慮
 
