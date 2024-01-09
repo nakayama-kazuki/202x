@@ -1,4 +1,4 @@
-# 安心安全のデータ活用
+# そのデータ活用、ダウト！
 
 /*
 
@@ -9,7 +9,10 @@ ToDo :
 - 利用と活用の使い分け
 - https://www.ppc.go.jp/all_faq_index/faq2-q2-3/
 - パーティショニング / ダブルキーイングに触れる
-- 確認義務と記録義務はあわせる
+- 個人情報を消す対応
+- 混入検知の方法
+- CBPR とれば越境の委託でも同意不要になる？
+- 当初記載していた LY ではいろいろやってるよ的な文言
 
 */
 
@@ -17,13 +20,13 @@ ToDo :
 
 みなさまのサービスや社内業務において、データを活用して課題を解決する機会は少なくないと思います。一方でデータの扱いに際しては法律やパートナーとの契約を遵守することに加えて、プライバシーへの配慮もかかせません。そこで今回は「安心安全のデータ活用」のため、データの取得方法に応じた留意点についてまとめてみました。
 
-各章ごとにチェックポイントを設けたので、みなさまのデータ活用に照らし合わせてみてください。
+各章ごとに設けた「スクリーニング」をみなさまのデータ活用業務でもご活用ください。
 
 ## （１）直接取得の際の目的説明
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i1.png' />
 
-直接取得 … 例えばユーザーがフォームに入力したデータやトラッキングログを個人データ化する際に、個人情報保護法では何のデータをどのような目的で活用するのか [具体的に特定](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-1) して [ユーザーに説明](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-3) することが必要だと定めています。また、目的外の … 例えばサービスに関する連絡にのみ活用する、と約束したメールアドレスを広告のオーディエンス連携や類似拡張に [使ってはならない](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-3) とされています。
+直接取得 … 例えばユーザーがフォームに入力したデータやトラッキングログを個人データ化する際に、個人情報保護法では何のデータをどのような目的で活用するのか [具体的に特定](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-1) して [ユーザーに説明](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-3) することが必要だと定めています。また、目的外の用途 … 例えばサービスに関する連絡にのみ活用、と説明して取得したメールアドレスを広告のオーディエンス連携や類似拡張に [使ってはならない](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-3) とされています。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
@@ -35,18 +38,19 @@ ToDo :
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i2.png' />
 
-要配慮個人情報（人種、病歴、健康診断の結果、犯罪歴など）を直接取得して個人データ化する際、個人情報保護法では人権等の観点から [ユーザー同意](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-2) が必要だと定めています。
+★ここに法務に聞いた話
 
-一方、要配慮個人情報ならずとも最近のサービス（欧米、日本問わず）では Cookie に関する同意ダイアログをしばしば見かけます。その背景にあるのは欧州での e-privacy 指令における
+
+要配慮個人情報（人種、病歴、健康診断の結果、犯罪歴など）を直接取得して個人データ化する際、個人情報保護法では人権等の観点から [ユーザー同意](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-2) が必要だと定めています。一方、要配慮個人情報ならずとも最近のサービスでは Cookie に関する同意ダイアログをしばしば見かけます。その背景にあるのは
 
 - サービス提供に必須となる Cookie（例えばログインセッションを管理する Cookie）の利用にはユーザー同意が不要
 - マーケティング用途のトラッキング Cookie の利用にはユーザー同意が必要
 
-というルールの存在です。しかし、この同意ダイアログについては
+なる欧州での e-privacy 指令です。しかし、この同意ダイアログについては
 
 > one of the most annoying is the prevalence of pointless cookie warnings we have to wade through today
 
-のようにプライバシー保護の観点で [実効性を疑う意見](https://ln.hixie.ch/?start=1700627373) もあります。今年は Chrome の 3rd-party Cookie が [段階的に廃止](https://japan.googleblog.com/2023/12/chrome-cookie.html) され、ますます実効性が薄れるように思えますが、それでもこのダイアログは生き残るのでしょうか？
+のようにプライバシー保護の観点で [実効性を疑う意見](https://ln.hixie.ch/?start=1700627373) もあります。今年 Chrome の 3rd-party Cookie が [段階的に廃止](https://japan.googleblog.com/2023/12/chrome-cookie.html) されると、ますます実効性が薄れるように思えますが、それでもこのダイアログは生き残るのでしょうか？
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
@@ -99,6 +103,8 @@ ToDo :
 - プラットフォーマーのルールは守っているか？例えば Apple 規約には IDFA を使う際のルールが定められています
 
 なども考慮する必要がありますが、みなさまのサービスや業務においては如何でしょうか？
+
+★混入ケースなどをここで
 
 ## （５）委託提供と AI 活用
 
