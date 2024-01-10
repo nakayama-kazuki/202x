@@ -114,7 +114,7 @@ ToDo :
 - 活用の際に順守すべきルールはないか？
 - 使うべきではないデータ混入の恐れはないか？
 
-## （５）委託提供と AI 活用
+## （５）混ぜるな危険と AI 活用
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i5.png' />
 
