@@ -4,16 +4,15 @@
 
 ToDo :
 
-- 本人とかユーザーとか
-- 情報とデータの使い分け
+- 文言見直し : 本人 vs ユーザー
+- 文言見直し : 情報 vs データ
+- 文言見直し : 利用 vs 活用
 - 表や見出しの文言見直し
-- 利用と活用の使い分け
-- https://www.ppc.go.jp/all_faq_index/faq2-q2-3/
-- パーティショニング / ダブルキーイングに触れる
-- 個人情報を消す対応
-- 混入検知の方法
+- 仕組に言及 : 個人情報を消す対応
+- 仕組に言及 : 混入検知の方法
 - CBPR とれば越境の委託でも同意不要になる？
 - 当初記載していた LY ではいろいろやってるよ的な文言
+- https://www.ppc.go.jp/all_faq_index/faq2-q2-3/
 
 */
 
@@ -27,7 +26,7 @@ ToDo :
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i1.png' />
 
-直接取得 … 例えばユーザーがフォームに入力したデータやトラッキングログを個人データ化する際、個人情報保護法では何のデータをどのような目的で活用するのか [具体的に特定](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-1) して [ユーザーに説明](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-3) することを求めています。加えて、目的外の用途 … 例えばサービスに関する連絡にのみ活用、と説明して取得したメールアドレスを広告のオーディエンス連携や類似拡張に [使ってはならない](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-3) としています。
+直接取得 … 例えばユーザーがフォームに入力したデータやトラッキングログを個人データ化する際、個人情報保護法では何のデータをどのような目的で活用するのか [具体的に特定](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-1) して [ユーザーに説明](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-3) することが求められています。加えて、目的外の用途 … 例えばサービスに関する連絡にのみ活用、と説明して取得したメールアドレスを広告のオーディエンス連携や類似拡張に [使ってはならない](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-3) とされてます。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
@@ -39,18 +38,18 @@ ToDo :
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i2.png' />
 
-要配慮個人情報（人種、病歴、健康診断の結果、犯罪歴など）を直接取得して個人データ化する際、個人情報保護法では人権等の観点から [ユーザーの同意](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-2) を求めています。とはいえ、入力フォーム等で適正に直接取得する限りにおいては、改めての同意ポップアップは不要です。
+要配慮個人情報（人種、病歴、健康診断の結果、犯罪歴など）を直接取得して個人データ化する際、個人情報保護法では人権等の観点から [ユーザーの同意](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-2) が求められています。とはいえ、入力フォーム等で適正に直接取得する限りにおいては、改めての同意ポップアップは不要です。
 
-一方、要配慮個人情報ならずとも最近のサービスで Cookie に関する同意ポップアップに遭遇する機会が増えましたが、その背景にあるのは EU の ePrivacy Regulation における Cookie 規制です。
+一方で、要配慮個人情報ならずとも最近のサービスで Cookie に関する同意ポップアップに遭遇する機会が増えましたが、その背景にあるのは EU の ePrivacy Regulation における Cookie 規制です。
 
-- サービス提供に必須となる Cookie（例えばログインセッションを管理する Cookie）の利用にはユーザー同意は不要
 - マーケティング用途のトラッキング Cookie の利用にはユーザー同意が必要
+- ただしサービス提供に必須（例えばログインセッションの管理）となる Cookie の利用にはユーザー同意は不要
 
-しかし、この同意ポップアップについてはプライバシー保護の観点で実効性を疑う意見（[参考](https://ln.hixie.ch/?start=1700627373#:~:text=one%20of%20the%20most%20annoying%20is%20the%20prevalence%20of%20pointless%20cookie%20warnings%20we%20have%20to%20wade%20through%20today)）もあります。
+しかし、この同意ポップアップについてはプライバシー保護の観点で実効性を疑う意見もあります（例えば [Reflecting on 18 years at Google](https://ln.hixie.ch/?start=1700627373#:~:text=one%20of%20the%20most%20annoying%20is%20the%20prevalence%20of%20pointless%20cookie%20warnings%20we%20have%20to%20wade%20through%20today)）。
 
 > one of the most annoying is the prevalence of pointless cookie warnings we have to wade through today
 
-今年は Chrome の 3rd-party Cookie が [段階的に廃止](https://japan.googleblog.com/2023/12/chrome-cookie.html) され、ますます実効性が失われてゆきますが、その後この規制（そしてポップアップ）はどうなるのでしょうか？
+Safari の 3rd-party Cookie は既に廃止され、Firefox はドメインごとに Cookie を分離して管理するため 3rd-party Cookie による名寄せができません。そして今年は Chrome の 3rd-party Cookie が [段階的に廃止](https://japan.googleblog.com/2023/12/chrome-cookie.html) されます。ますます実効性が失われてゆくこの規制（そしてポップアップ）は今後どうなるのでしょうか？
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
@@ -66,7 +65,7 @@ ToDo :
 - 氏名や顔写真など特定の個人を識別できる情報
 - 運転免許証番号などの個人識別符号
 
-などの個人情報なのか、もしくは
+などの個人情報なのか、
 
 - 位置情報
 - 性別、年齢、職業などの属性情報
