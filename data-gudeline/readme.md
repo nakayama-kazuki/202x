@@ -12,21 +12,22 @@ ToDo :
 - 仕組に言及 : 混入検知の方法
 - CBPR とれば越境の委託でも同意不要になる？
 - 当初記載していた LY ではいろいろやってるよ的な文言
+- 個情法の説明はそれとわかるようにする
 - https://www.ppc.go.jp/all_faq_index/faq2-q2-3/
 
 */
 
 こんにちは、プラットフォームエンジニアの中山です。
 
-みなさまのサービスや社内業務において、データを活用して課題を解決する機会は少なくないと思います。一方でデータの扱いに際しては法律やパートナーとの契約を順守することに加えて、プライバシーへの配慮もかかせません。そこで今回は「安心安全のデータ活用」のため、データの取得方法に応じた留意点についてまとめてみました。
+みなさまのサービスや社内業務において、データを活用して課題を解決する機会は少なくないと思います。一方でデータを取り扱う際には法律やパートナーとの契約を順守することに加えて、プライバシーへの配慮もかかせません。そこで今回は「安心安全のデータ活用」の留意点について、データの取得方法にごとにまとめてみました。
 
-各章ごとに設けた「スクリーニング」を、みなさまのデータ活用に照らし合わせてご活用ください。
+各章ごとに「ダウト！」にチェック項目を列挙したので、みなさまのデータ活用に照らし合わせてご確認ください。
 
 ## （１）直接取得の際の目的説明
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i1.png' />
 
-直接取得 … 例えばユーザーがフォームに入力したデータやトラッキングログを個人データ化する際、個人情報保護法では何のデータをどのような目的で活用するのか [具体的に特定](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-1) して [ユーザーに説明](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-3) することが求められています。加えて、目的外の用途 … 例えばサービスに関する連絡にのみ活用、と説明して取得したメールアドレスを広告のオーディエンス連携や類似拡張に [使ってはならない](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-3) とされてます。
+個人情報保護法では、直接取得した情報（例えばユーザーがフォームに入力したデータやトラッキングログ）を個人データ化する際、何のデータをどのような目的で活用するのか [具体的に特定](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-1) して [ユーザーに説明](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-3) することを求めています。加えて、目的外の活用は [認めない](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-3) と定めています。例えば問い合わせ対応を目的して取得したメールアドレスを、広告のオーディエンス連携や類似拡張に活用することはできません。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
@@ -38,29 +39,29 @@ ToDo :
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i2.png' />
 
-要配慮個人情報（人種、病歴、健康診断の結果、犯罪歴など）を直接取得して個人データ化する際、個人情報保護法では人権等の観点から [ユーザーの同意](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-2) が求められています。とはいえ、入力フォーム等で適正に直接取得する限りにおいては、改めての同意ポップアップは不要です。
+個人情報保護法では、ユーザーの同意を得ずに要配慮個人情報（例えば人種、病歴、健康診断の結果、犯罪歴）を取得しては [ならない](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-2) と定めています。とはいえ、入力フォーム等で適正に直接取得する限りにおいては、改めての同意ポップアップは不要です。
 
-一方で、要配慮個人情報ならずとも最近のサービスで Cookie に関する同意ポップアップに遭遇する機会が増えましたが、その背景には EU の ePrivacy Regulation における Cookie 規制があります。
+ところで、要配慮個人情報ならずとも最近は Cookie に関する同意ポップアップを目にする機会が増えました。この背景には EU の ePrivacy Regulation における Cookie 規制 …
 
 - マーケティング用途のトラッキング Cookie の利用にはユーザー同意が必要
 - ただしサービス提供に必須（例えばログインセッションの管理）となる Cookie の利用にはユーザー同意は不要
 
-しかし、この同意ポップアップについてはプライバシー保護の観点で実効性を疑う意見（[Reflecting on 18 years at Google](https://ln.hixie.ch/?start=1700627373#:~:text=one%20of%20the%20most%20annoying%20is%20the%20prevalence%20of%20pointless%20cookie%20warnings%20we%20have%20to%20wade%20through%20today)）もあります。
+があります。しかし、この同意ポップアップについてはプライバシー保護の観点で実効性を疑う意見（[Reflecting on 18 years at Google](https://ln.hixie.ch/?start=1700627373#:~:text=one%20of%20the%20most%20annoying%20is%20the%20prevalence%20of%20pointless%20cookie%20warnings%20we%20have%20to%20wade%20through%20today)）もあります。
 
 > one of the most annoying is the prevalence of pointless cookie warnings we have to wade through today
 
-既に Safari の 3rd-party Cookie は廃止され、Firefox はドメインごとに Cookie を分離して管理するため 3rd-party Cookie による名寄せができません。そして今年は Chrome の 3rd-party Cookie が [段階的に廃止](https://japan.googleblog.com/2023/12/chrome-cookie.html) されます。ますます実効性が失われてゆくこの規制（そしてポップアップ）は今後どうなるのでしょうか？
+既に Safari の 3rd-party Cookie は廃止され、Firefox はドメインごとに Cookie を分離して管理するため 3rd-party Cookie による名寄せができません。そして今年は Chrome の 3rd-party Cookie が [段階的に廃止](https://japan.googleblog.com/2023/12/chrome-cookie.html) されます。ますます実効性が失われてゆくこの規制（そしてポップアップ）は今後どうなってゆくのでしょうか？
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
 - 要配慮個人情報を取得しているか？
-- EU 域内ユーザー（そこに住む日本人も含め）に利用されるサービスか？
+- EU 域内ユーザー（そこに住む日本人も含め）にも利用されるサービスか？
 
 ## （３）他事業者からの第三者提供の際の同意や法律対応
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i3.png' />
 
-他事業者から提供される情報が
+個人情報保護法では、他事業者から提供される情報が
 
 - 氏名や顔写真など特定の個人を識別できる情報
 - 運転免許証番号などの個人識別符号
@@ -71,7 +72,7 @@ ToDo :
 - 性別、年齢、職業などの属性情報
 - ウェブサイトの閲覧情報やウェブサイト上での検索、クリック、コンバージョンなどの情報
 
-などの [個人関連情報](https://www.ppc.go.jp/all_faq_index/faq2-q2-8/) なのかによって、やるべきことが異なります。
+などの [個人関連情報](https://www.ppc.go.jp/all_faq_index/faq2-q2-8/) なのかによって、定めが異なります。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/d1-2.png' />
 
