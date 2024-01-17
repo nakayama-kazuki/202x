@@ -17,15 +17,13 @@ ToDo :
 
 こんにちは、プラットフォームエンジニアの中山です。
 
-みなさまのサービスや社内業務において、データを活用して課題を解決する機会は少なくないと思います。一方でデータを取り扱う際には法律やパートナーとの契約を順守することに加えて、プライバシーへの配慮もかかせません。そこで今回は「安心安全のデータ活用」の留意点について、データの取得方法にごとにまとめてみました。
-
-各章ごとの「Doubt」アイコンの下にチェック項目を列挙してみました。みなさまのデータ活用の際の参考になれば幸いです。
+みなさまのサービスや社内業務において、データを活用して課題を解決する機会は少なくないと思います。一方でデータを取り扱う際には法律やパートナーとの契約を順守することに加えて、プライバシーへの配慮もかかせません。そこで今回は「安心安全のデータ活用」の際の留意点についてまとめてみました。各章ごとに設けた「Doubt!」アイコンのチェック項目について、みなさまのデータ活用の際に参考にして頂ければ幸いです。
 
 ## （１）直接取得の際の目的説明
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i1.png' />
 
-個人情報保護法によれば、直接取得した情報（例えばユーザーがフォームに入力したデータやトラッキングログ）を個人データ化する際、何のデータをどのような目的で活用するのか [具体的に特定](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-1) し [ユーザーに説明](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-3) することが必要になります。加えて目的外の活用は [できません](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-3) 。例えば問い合わせ対応を目的して取得したメールアドレスを、広告のオーディエンス連携や類似拡張に活用することはできません。
+個人情報保護法によれば、直接取得した情報（例えばユーザーがフォームに入力したデータやトラッキングログなど）を個人データ化する際、何のデータをどのような目的で活用するのか [具体的に特定](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-1) し [ユーザーに説明](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-3) することが必要になります。加えて目的外の活用は [できません](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-3) 。例えば問い合わせ対応を目的して取得したメールアドレスを、広告のオーディエンス連携や類似拡張に活用することはできません。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
@@ -39,7 +37,7 @@ ToDo :
 
 個人情報保護法によれば、ユーザーの同意を得ずに要配慮個人情報（例えば人種、病歴、健康診断の結果、犯罪歴）を取得することは [できません](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-2) 。とはいえ、入力フォーム等で適正に直接取得する限りにおいては、改めての同意ポップアップは不要です。
 
-ところで、要配慮個人情報ならずとも最近は Cookie に関する同意ポップアップを目にする機会が増えました。この背景には EU の ePrivacy Regulation における Cookie 規制 …
+他方、要配慮個人情報ならずとも最近は Cookie に関する同意ポップアップを目にする機会が増えました。この背景には EU の ePrivacy Regulation における Cookie 規制 …
 
 - マーケティング用途のトラッキング Cookie の利用にはユーザー同意が必要
 - ただしサービス提供に必須（例えばログインセッションの管理）となる Cookie の利用にはユーザー同意は不要
@@ -48,7 +46,7 @@ ToDo :
 
 > one of the most annoying is the prevalence of pointless cookie warnings we have to wade through today
 
-既に Safari の 3rd-party Cookie は廃止され、Firefox はドメインごとに Cookie を分離して管理するため 3rd-party Cookie による名寄せができず、そして今年は Chrome の 3rd-party Cookie が [段階的に廃止](https://japan.googleblog.com/2023/12/chrome-cookie.html) されます。ますます実効性が失われてゆくこの規制（そしてポップアップ）は今後どうなってゆくのでしょうか？
+既に Safari の 3rd-party Cookie は廃止され、Firefox はドメインごとに Cookie を分離して管理するため 3rd-party Cookie による名寄せができません。そして今年はいよいよ Chrome の 3rd-party Cookie が [段階的に廃止](https://japan.googleblog.com/2023/12/chrome-cookie.html) されます。ますます実効性が失われてゆくこの規制（そしてポップアップ）は今後どうなってゆくのでしょうか？
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
@@ -75,7 +73,7 @@ ToDo :
 
 改正個人情報保護法の施行（2022 年 4 月）以前は個人関連情報、例えばウェブサイトの閲覧情報を個人データとして取得する場合、ユーザー同意は不要でした。このとき、ユーザーは自身が関与できないところで 3rd-party Cookie 紐づけられたウェブサイトの閲覧情報によってスコアリングされ、スコア次第で社会的に不利な扱いを受けてしまうかもしれません（例えば [個人情報保護法に基づく勧告](https://www.ppc.go.jp/files/pdf/191204_houdou.pdf)）。こうした背景から表の右下にあるようにユーザー同意が必要になりました。
 
-また、今後（３）や（６）のようなユースケースの増加を見込んでいる場合、ガバナンスの強化と効率化を目的として記録の内容、保持期間、そして開示請求への対応について標準化～仕組化を検討してみましょう。
+また、今後（３）や（６）のようなユースケースの増加を見込んでいる場合、ガバナンスの強化と効率化を目的として記録の内容、保持期間、そして開示請求への対応について標準化～仕組化することを検討してみましょう。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
@@ -102,21 +100,21 @@ ToDo :
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/d3.png' />
 
-さらに「安心安全」のために活用してはいけないデータ、例えばリファラやクエリパラメータから誤って混入してしまった個人情報や、本来削除されるべきだが削除されないまま残ってしまった個人情報について、検知の仕組化を検討してみましょう（例えば [アナリストがデータ管理を自動化した話](https://techblog.lycorp.co.jp/ja/20231101a)）。
+さらに「安心安全」を守るために活用してはいけないデータ、例えばリファラやクエリパラメータから誤って混入してしまった個人情報や、本来削除されるべきだが削除されずに残ってしまった個人情報の検知について仕組化することを検討してみましょう（例えば [アナリストがデータ管理を自動化した話](https://techblog.lycorp.co.jp/ja/20231101a)）。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
 - ユーザーの権利利益や体験に配慮できているか？
-- 活用の際に順守すべきルールは他にないか？
-- 活用してはいけないデータの混入の恐れはないか？
+- 他にも順守すべきルールはないか？
+- 活用してはいけないデータはないか？
 
 ## （５）混ぜるな危険と AI 活用
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i5.png' />
 
-個人情報保護法によれば、委託先は委託元から提供された個人データを [委託された業務の範囲内](https://www.ppc.go.jp/all_faq_index/faq1-q7-38/) でしか扱えません。例えば、サービスに蓄積されたデータを活用して作っているホワイトペーパー、この観点で問題ないでしょうか？
+個人情報保護法によれば、委託先は委託元から提供された個人データは [委託された業務の範囲内](https://www.ppc.go.jp/all_faq_index/faq1-q7-38/) でしか扱えません。例えば、御社のホワイトペーパーに掲載されたグラフの元データ、この観点で問題ないでしょうか？
 
-さらに「[混ぜるな危険](https://www.ppc.go.jp/all_faq_index/faq1-q7-41/)」と呼ばれる操作、自社保有のデータと委託提供された個人データのユーザー単位の突合も禁止されています。この場合、ユーザーデータを活用した AI モデル登載のマルチテナント SaaS の提供で表の No.2 の整理は難しいという結論になるのでしょうか？
+さらに「[混ぜるな危険](https://www.ppc.go.jp/all_faq_index/faq1-q7-41/)」と呼ばれる操作、自社保有のデータと委託提供された個人データのユーザー単位の突合も禁止されています。この場合、表の No.2 の整理でユーザーデータを活用した AI モデル登載のマルチテナント SaaS を提供することは難しい、という結論になるのでしょうか？
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/d2.png' />
 
@@ -124,20 +122,20 @@ ToDo :
 
 - サービスの規約に AI での価値提供も含めた委託提供が読み込めること
 - サービスを利用するクライアントのプライバシーポリシーに記載された個人データ利用目的の範囲内であること
-- 上記を前提に [個人情報保護法の FAQ 7-43](https://www.ppc.go.jp/all_faq_index/faq1-q7-43/) などを拠り所としてロジックを検討
+- 上記を前提として [個人情報保護法の FAQ 7-43](https://www.ppc.go.jp/all_faq_index/faq1-q7-43/) などを拠り所としてロジックを検討
 
-とご提案したいのは山々ですが、まずは社内、社外の専門家にご相談ください。
+… とご提案したいのは山々ですが、まずは社内外の専門家にご相談ください。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
 - 委託された業務の範囲内か？
-- 混ぜるな危険に該当しないか？
+- 混ぜるな危険、か？
 
 ## （６）他事業者への第三者提供の際の同意や法律対応
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i6.png' />
 
-個人情報保護法観点の対応が、前述（３）と逆の立場で必要になります。加えて、個人情報を第三者提供する場面において、優越的地位の濫用による強制力の高いユーザー同意の取得が問題視されることがあります。第三者提供によりユーザーの権利利益を侵害する懸念がある場合、ユーザーに複数の選択肢を提示することも検討しましょう。
+前述（３）と逆の立場で個人情報保護法観点の対応が必要になります。加えて、個人情報を第三者提供する場面では、優越的地位の濫用による強制力の高いユーザー同意の取得が問題視されることがあります。第三者提供がユーザーの権利利益に少なからず影響を与える場合、ユーザーに複数の選択肢を提示することも検討しましょう。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/d1-3.png' />
 
@@ -149,6 +147,8 @@ ToDo :
 - 差分プライバシー技術などを導入しプライバシーに配慮している
 
 のようなソリューションです。例えば事業者Ａがアカウントに紐づくメールアドレスとアプリの課金額を持っていて、データクリーンルームを提供する事業者Ｂがメールアドレスとデモグラ情報を持っていたとします。事業者Ａはメールアドレスをマッチキーとしたデータクリーンルームを使うことで、デモグラに応じたアプリの課金傾向を把握し、広告出稿の方針を改善することができます。
+
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/d4.png' />
 
 上記のケースで事業者Ａから事業者Ｂへの委託提供と整理した場合、クロス集計ですので [混ぜるな危険](https://www.ppc.go.jp/all_faq_index/faq1-q7-41/) に抵触してしまいます。なので第三者提供と整理した上で同意を取得するか、混ぜるな危険に対するなにがしかの手当が必要になり、プライバシーに配慮したソリューションとはいえハードルも残っています。この点については LINE ヤフーで推進している [プライバシーテックの研究](https://enterprisezine.jp/news/detail/18737) 成果次第では、ハードルを下げることができるかもしれません。
 
