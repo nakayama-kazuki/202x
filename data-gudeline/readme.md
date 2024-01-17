@@ -20,13 +20,13 @@ ToDo :
 
 みなさまのサービスや社内業務において、データを活用して課題を解決する機会は少なくないと思います。一方でデータを取り扱う際には法律やパートナーとの契約を順守することに加えて、プライバシーへの配慮もかかせません。そこで今回は「安心安全のデータ活用」の留意点について、データの取得方法にごとにまとめてみました。
 
-各章ごとに「ダウト！」にチェック項目を列挙したので、みなさまのデータ活用に照らし合わせてご確認ください。
+各章ごとに「Doubt」なるチェック項目を列挙したので、みなさまのデータ活用に照らし合わせてご確認ください。
 
 ## （１）直接取得の際の目的説明
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i1.png' />
 
-個人情報保護法によれば、直接取得した情報（例えばユーザーがフォームに入力したデータやトラッキングログ）を個人データ化する際、何のデータをどのような目的で活用するのか [具体的に特定](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-1) して [ユーザーに説明](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-3) することが必要です。加えて、目的外の活用は [認められず](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-3) 例えば問い合わせ対応を目的して取得したメールアドレスを、広告のオーディエンス連携や類似拡張に活用することはできません。
+個人情報保護法によれば、直接取得した情報（例えばユーザーがフォームに入力したデータやトラッキングログ）を個人データ化する際、何のデータをどのような目的で活用するのか [具体的に特定](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-1) し [ユーザーに説明](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-3) することが必要です。加えて目的外の活用は [認められず](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-3) 、例えば問い合わせ対応を目的して取得したメールアドレスを、広告のオーディエンス連携や類似拡張に活用することはできません。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
@@ -38,18 +38,18 @@ ToDo :
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i2.png' />
 
-個人情報保護法によれば、ユーザーの同意を得ずに要配慮個人情報（例えば人種、病歴、健康診断の結果、犯罪歴）を取得しては [ならない](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-2) とされてます。とはいえ、入力フォーム等で適正に直接取得する限りにおいては、改めての同意ポップアップは不要です。
+個人情報保護法によれば、ユーザーの同意を得ずに要配慮個人情報（例えば人種、病歴、健康診断の結果、犯罪歴）を取得することは [できません](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-2) 。とはいえ、入力フォーム等で適正に直接取得する限りにおいては、改めての同意ポップアップは不要です。
 
 ところで、要配慮個人情報ならずとも最近は Cookie に関する同意ポップアップを目にする機会が増えました。この背景には EU の ePrivacy Regulation における Cookie 規制 …
 
 - マーケティング用途のトラッキング Cookie の利用にはユーザー同意が必要
 - ただしサービス提供に必須（例えばログインセッションの管理）となる Cookie の利用にはユーザー同意は不要
 
-があります。しかし、この同意ポップアップについてはプライバシー保護の観点で実効性を疑う意見（[Reflecting on 18 years at Google](https://ln.hixie.ch/?start=1700627373#:~:text=one%20of%20the%20most%20annoying%20is%20the%20prevalence%20of%20pointless%20cookie%20warnings%20we%20have%20to%20wade%20through%20today)）もあります。
+があります。しかし、この同意ポップアップについてはプライバシー保護の観点で実効性を疑う意見（例えば [Reflecting on 18 years at Google](https://ln.hixie.ch/?start=1700627373#:~:text=one%20of%20the%20most%20annoying%20is%20the%20prevalence%20of%20pointless%20cookie%20warnings%20we%20have%20to%20wade%20through%20today)）もあります。
 
 > one of the most annoying is the prevalence of pointless cookie warnings we have to wade through today
 
-既に Safari の 3rd-party Cookie は廃止され、Firefox はドメインごとに Cookie を分離して管理するため 3rd-party Cookie による名寄せができません。そして今年は Chrome の 3rd-party Cookie が [段階的に廃止](https://japan.googleblog.com/2023/12/chrome-cookie.html) されます。ますます実効性が失われてゆくこの規制（そしてポップアップ）は今後どうなってゆくのでしょうか？
+既に Safari の 3rd-party Cookie は廃止され、Firefox はドメインごとに Cookie を分離して管理するため 3rd-party Cookie による名寄せができず、そして今年は Chrome の 3rd-party Cookie が [段階的に廃止](https://japan.googleblog.com/2023/12/chrome-cookie.html) されます。ますます実効性が失われてゆくこの規制（そしてポップアップ）は今後どうなってゆくのでしょうか？
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
@@ -67,7 +67,6 @@ ToDo :
 
 などの個人情報なのか、
 
-- 位置情報
 - 性別、年齢、職業などの属性情報
 - ウェブサイトの閲覧情報やウェブサイト上での検索、クリック、コンバージョンなどの情報
 
@@ -75,9 +74,9 @@ ToDo :
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/d1-2.png' />
 
-改正個人情報保護法の施行（2022 年 4 月）以前は個人関連情報、例えばウェブサイトの閲覧情報を個人データとして取得する場合、ユーザー同意は不要でした。このとき、ユーザーは自身が関与できないところで 3rd-party Cookie 紐づけられたウェブサイトの閲覧情報によってスコアリングされ、スコア次第で社会的に不利な扱いを受けてしまう事案（[個人情報保護法に基づく勧告](https://www.ppc.go.jp/files/pdf/191204_houdou.pdf)）が発生するかもしれません。こうした背景から表の右下にあるようにユーザー同意が必要になりました。
+改正個人情報保護法の施行（2022 年 4 月）以前は個人関連情報、例えばウェブサイトの閲覧情報を個人データとして取得する場合、ユーザー同意は不要でした。このとき、ユーザーは自身が関与できないところで 3rd-party Cookie 紐づけられたウェブサイトの閲覧情報によってスコアリングされ、スコア次第で社会的に不利な扱いを受けてしまう事案（例えば [個人情報保護法に基づく勧告](https://www.ppc.go.jp/files/pdf/191204_houdou.pdf)）が発生するかもしれません。こうした背景から表の右下にあるようにユーザー同意が必要になりました。
 
-また、今後（３）や（６）のようなユースケースの増加が見込まれる場合、ガバナンスの強化と効率化を目的として記録の内容、保持期間、そして開示請求への対応について標準化～仕組化を検討してみましょう。
+また、今後（３）や（６）のようなユースケースの増加を見込んでいる場合、ガバナンスの強化と効率化を目的として記録の内容、保持期間、そして開示請求への対応について標準化～仕組化を検討してみましょう。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
@@ -104,7 +103,7 @@ ToDo :
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/d3.png' />
 
-さらに「安心安全のデータ活用」のためには活用してはいけない … 例えばリファラやクエリパラメータから誤って混入してしまった機微情報や、削除が漏れてしまった個人情報の検知について仕組化を検討してみましょう（[アナリストがデータ管理を自動化した話](https://techblog.lycorp.co.jp/ja/20231101a)）。
+さらに「安心安全のデータ活用」のためには活用してはいけない … 例えばリファラやクエリパラメータから誤って混入してしまった機微情報や、削除が漏れてしまった個人情報の検知について仕組化を検討してみましょう（例えば [アナリストがデータ管理を自動化した話](https://techblog.lycorp.co.jp/ja/20231101a)）。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
