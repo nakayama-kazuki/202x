@@ -11,7 +11,6 @@ ToDo :
 - CBPR とれば越境の委託でも同意不要になる？
 - 当初記載していた LY ではいろいろやってるよ的な文言
 - 個情法の説明はそれとわかるようにする
-- 社会的な優劣などを含めるか確認中（４）
 - https://www.ppc.go.jp/all_faq_index/faq2-q2-3/
 
 */
@@ -20,13 +19,13 @@ ToDo :
 
 みなさまのサービスや社内業務において、データを活用して課題を解決する機会は少なくないと思います。一方でデータを取り扱う際には法律やパートナーとの契約を順守することに加えて、プライバシーへの配慮もかかせません。そこで今回は「安心安全のデータ活用」の留意点について、データの取得方法にごとにまとめてみました。
 
-各章ごとに「Doubt」なるチェック項目を列挙したので、みなさまのデータ活用に照らし合わせてご確認ください。
+各章ごとに「Doubt」としてチェック項目を列挙してみました。みなさまのデータ活用の際の参考になれば幸いです。
 
 ## （１）直接取得の際の目的説明
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i1.png' />
 
-個人情報保護法によれば、直接取得した情報（例えばユーザーがフォームに入力したデータやトラッキングログ）を個人データ化する際、何のデータをどのような目的で活用するのか [具体的に特定](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-1) し [ユーザーに説明](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-3) することが必要です。加えて目的外の活用は [認められず](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-3) 、例えば問い合わせ対応を目的して取得したメールアドレスを、広告のオーディエンス連携や類似拡張に活用することはできません。
+個人情報保護法によれば、直接取得した情報（例えばユーザーがフォームに入力したデータやトラッキングログ）を個人データ化する際、何のデータをどのような目的で活用するのか [具体的に特定](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-1) し [ユーザーに説明](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-3) することが必要になります。加えて目的外の活用は [できません](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-3) 。例えば問い合わせ対応を目的して取得したメールアドレスを、広告のオーディエンス連携や類似拡張に活用することはできません。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
@@ -103,21 +102,21 @@ ToDo :
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/d3.png' />
 
-さらに「安心安全のデータ活用」のためには活用してはいけない … 例えばリファラやクエリパラメータから誤って混入してしまった機微情報や、削除が漏れてしまった個人情報の検知について仕組化を検討してみましょう（例えば [アナリストがデータ管理を自動化した話](https://techblog.lycorp.co.jp/ja/20231101a)）。
+さらに「安心安全」のために活用してはいけないデータ、例えばリファラやクエリパラメータから誤って混入してしまった個人情報や、本来削除されるべきだが削除されないまま残ってしまった個人情報について、検知の仕組化を検討してみましょう（例えば [アナリストがデータ管理を自動化した話]](https://techblog.lycorp.co.jp/ja/20231101a)）。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
 - ユーザーの権利利益や体験に配慮できているか？
-- 活用の際に順守すべきルールはないか？
+- 活用の際に順守すべきルールは他にないか？
 - 活用してはいけないデータの混入の恐れはないか？
 
 ## （５）混ぜるな危険と AI 活用
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i5.png' />
 
-まず、原則として委託先は委託元から提供された個人データを [委託された業務の範囲内](https://www.ppc.go.jp/all_faq_index/faq1-q7-38/) でしか扱えません。さらに「[混ぜるな危険](https://www.ppc.go.jp/all_faq_index/faq1-q7-41/)」と呼ばれる操作 … 自社保有のデータと提供された個人データの同意を伴わないユーザー単位の突合 … も禁止されています。
+個人情報保護法によれば、委託先は委託元から提供された個人データを [委託された業務の範囲内](https://www.ppc.go.jp/all_faq_index/faq1-q7-38/) でしか扱えません。みなさまのサービスに蓄積されたデータを活用して作ったそのホワイトペーパー、この観点で問題ないでしょうか。
 
-となると、ユーザーデータを活用した AI モデル登載のマルチテナント SaaS を提供する場合、表の No.2 の整理は難しいという結論になるのでしょうか？
+さらに「[混ぜるな危険](https://www.ppc.go.jp/all_faq_index/faq1-q7-41/)」と呼ばれる操作、自社保有のデータと委託提供された個人データのユーザー単位の突合も禁止されています。この場合、ユーザーデータを活用した AI モデル登載のマルチテナント SaaS の提供で表の No.2 の整理は難しいという結論になるのでしょうか？
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/d2.png' />
 
@@ -127,13 +126,18 @@ ToDo :
 - サービスを利用するクライアントのプライバシーポリシーに記載された個人データ利用目的の範囲内であること
 - 上記を前提に [個人情報保護法の FAQ 7-43](https://www.ppc.go.jp/all_faq_index/faq1-q7-43/) などを拠り所としてロジックを検討
 
-… と提案したいところですが、まずは外部の専門家にご相談頂くべきかと思います。
+とご提案したいのは山々ですが、まずは社内、社外の専門家にご相談ください。
+
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
+
+- 委託された業務の範囲内か？
+- 混ぜるな危険に該当しないか？
 
 ## （６）第三者提供（提供時）の際の同意や法律対応
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i6.png' />
 
-前述（３）と逆の立場での対応です。
+個人情報保護法観点の対応が、前述（３）と逆の立場で必要になります。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/d1-3.png' />
 
@@ -170,8 +174,5 @@ https://www.soumu.go.jp/main_content/000912870.pdf
 
 ## まとめ
 
-その他いろいろな取り組みへの参照
-- https://techblog.yahoo.co.jp/entry/2022052530303179/
-- https://techblog.lycorp.co.jp/ja/20231101a
-混入の検知
+
 
