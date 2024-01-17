@@ -133,7 +133,7 @@ ToDo :
 - 委託された業務の範囲内か？
 - 混ぜるな危険に該当しないか？
 
-## （６）第三者提供（提供時）の際の同意や法律対応
+## （６）他事業者への第三者提供の際の同意や法律対応
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i6.png' />
 
@@ -152,7 +152,7 @@ ToDo :
 
 上記のケースで事業者Ａから事業者Ｂへの委託提供と整理した場合、クロス集計ですので [混ぜるな危険](https://www.ppc.go.jp/all_faq_index/faq1-q7-41/) に抵触してしまいます。なので第三者提供と整理した上で同意を取得するか、混ぜるな危険に対するなにがしかの手当が必要になり、プライバシーに配慮したソリューションとはいえハードルも残っています。この点については LINE ヤフーで推進している [プライバシーテックの研究](https://enterprisezine.jp/news/detail/18737) 成果次第では、ハードルを下げることができるかもしれません。
 
-以下はその他の補足です。
+以下は（６）関連のその他補足です。
 
 - 外部にユーザー識別子を第三者提供する場合、セクトラル型の識別子（例えば Pairwise Pseudonymous Identifier のような）を使うことで、外部での名寄せを防止することができます
 - 利用者の利益に及ぼす影響が少なくない電気通信役務に対し、利用者に関する情報の内容や送信先について、当該利用者に確認の機会を付与する義務が生じます（[外部送信規律](https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/gaibusoushin_kiritsu_00002.html#qa1-1)）。例えば LINE ヤフーでは [このように公表](https://privacy.lycorp.co.jp/ja/acquisition/thirdparties.html) しています。義務に対応するための調査や意図せぬ違反を回避するための手段として [Content Security Policy の活用](https://techblog.yahoo.co.jp/entry/2023071830429434/) もご検討ください
