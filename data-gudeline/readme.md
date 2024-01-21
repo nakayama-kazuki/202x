@@ -73,7 +73,7 @@ ToDo :
 
 改正個人情報保護法の施行（2022 年 4 月）以前は個人関連情報、例えばウェブサイトの閲覧情報を個人データとして取得する場合、ユーザー同意は不要でした。このとき、ユーザーは自身が関与できないところで 3rd-party Cookie 紐づけられたウェブサイトの閲覧情報によってスコアリングされ、スコア次第で社会的に不利な扱いを受けてしまうかもしれません（例えば [個人情報保護法に基づく勧告](https://www.ppc.go.jp/files/pdf/191204_houdou.pdf)）。こうした背景から表の右下にあるようにユーザー同意が必要になりました。
 
-また、今後（３）や（６）のようなユースケースの増加を見込んでいる場合、ガバナンスの強化と効率化を目的として記録の内容、保持期間、そして開示請求への対応について標準化～仕組化することを検討してみましょう。
+また、今後（３）や（６）のようなユースケースの増加を見込んでいる場合、ガバナンスの強化と効率化を目的として記録の内容、保持期間、そして開示請求への対応について標準化～仕組化することを検討してみましょう。余談ですが私も関連する社内プラットフォームの保守開発を担当しています。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
@@ -112,9 +112,9 @@ ToDo :
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i5.png' />
 
-個人情報保護法によれば、委託先は委託元から提供された個人データは [委託された業務の範囲内](https://www.ppc.go.jp/all_faq_index/faq1-q7-38/) でしか扱えません。例えば、御社のホワイトペーパーに掲載されたグラフの元データ、この観点で問題ないでしょうか？
+個人情報保護法によれば、委託提供の際のユーザー同意は不要です（第三者に [該当しない](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-6-3) 場合）。ただし、委託提供された個人データは [委託された業務の範囲内](https://www.ppc.go.jp/all_faq_index/faq1-q7-38/) でしか扱えません。例えば、御社のホワイトペーパーに掲載された統計の元データ、この観点で問題ないでしょうか？
 
-さらに「[混ぜるな危険](https://www.ppc.go.jp/all_faq_index/faq1-q7-41/)」と呼ばれる操作、自社保有のデータと委託提供された個人データのユーザー単位の突合も禁止されています。この場合、表の No.2 の整理でユーザーデータを活用した AI モデル登載のマルチテナント SaaS を提供することは難しい、という結論になるのでしょうか？
+さらに、自社保有のデータと委託提供された個人データのユーザー単位の突合（[混ぜるな危険](https://www.ppc.go.jp/all_faq_index/faq1-q7-41/)）も禁止されています。この場合、表の No.2 の整理でユーザーデータを活用した AI モデル登載のマルチテナント SaaS を提供することは不可、という結論になるのでしょうか？
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/d2.png' />
 
@@ -129,7 +129,7 @@ ToDo :
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
 - 委託された業務の範囲内か？
-- 混ぜるな危険、か？
+- 混ぜるな危険か？
 
 ## （６）他事業者への第三者提供の際の同意や法律対応
 
@@ -168,18 +168,16 @@ ToDo :
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i7.png' />
 
-国内の事業者に対する第三者提供にはユーザー同意の取得が必要なことは上で述べた通りですが、委託提供など [第三者に該当しない場合の定め](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-6-3) があり、その場合はユーザー同意は不要とされています。一方で [海外の事業者に対する提供](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-6-4) については第三者に該当しない場合の定めはなく、委託提供であっても同意が必要とされています。
+個人情報保護法によれば、国内の事業者に対する委託提供については（５）で述べた通りですが、一方で [海外の事業者に対する提供](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-6-4) については第三者に該当しない場合の定めはなく、委託提供であっても同意が必要とされています。この点について LINE ヤフーでは [データの取り扱いの問題](https://linecorp.com/ja/pr/news/ja/2021/3675) の再発防止に努めています。
 
-- LINE の朝日報道
+また、電気通信事業法の観点でも越境アクセスに際しては [十分な安全管理措置](https://about.yahoo.co.jp/pr/release/2023/08/30b/) が求められており、LINE ヤフーではガバナンスのさらなる強化に取り組んでいます。
 
-電気通信事業法
-特定社会基盤事業者の指定
-https://www.soumu.go.jp/main_content/000912870.pdf
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
-- 2023 年ヤフーへの行政指導
-- https://www.soumu.go.jp/menu_news/s-news/01kiban18_01000203.html
+- 越境アクセスに対して必要な措置はとれているか？
 
 ## まとめ
 
+いかがでしたでしょうか。この記事が少しでもみなさまの気付きにつながれば幸いです。
 
-
+ところで LINE ヤフーでは「安心安全のデータ活用」を推進するための組織づくり、社内教育、プロセス構築、環境構築、仕組化などに取り組んでおります。興味をお持ちの方、同様の取り組みに携わっている方、是非情報交換させてください！
