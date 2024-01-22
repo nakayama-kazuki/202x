@@ -97,7 +97,7 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i5.png' />
 
-個人情報保護法によれば、委託提供の際のユーザー同意は不要です（[第三者に該当しない場合](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-6-3)）。ただし、委託提供された個人データは [委託された業務の範囲内](https://www.ppc.go.jp/all_faq_index/faq1-q7-38/) でしか扱えません。例えば、営業が活用するホワイトペーパーに掲載された統計の元データ、この観点で問題ないでしょうか？
+個人情報保護法によれば、委託提供の際のユーザー同意は不要です（[第三者に該当しない場合](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-6-3)）。ただし、委託提供された個人データは [委託された業務の範囲内](https://www.ppc.go.jp/all_faq_index/faq1-q7-38/) でしか扱えません。例えば、営業が活用しているホワイトペーパーに掲載された統計の元データ、この観点で問題ないでしょうか？
 
 さらに、自社保有のデータと委託提供された個人データのユーザー単位の突合（[混ぜるな危険](https://www.ppc.go.jp/all_faq_index/faq1-q7-41/)）も禁止されています。この場合、表の No.2 の整理で個人データを活用した AI モデル登載のマルチテナント SaaS を提供することは不可、という結論になるのでしょうか？
 
