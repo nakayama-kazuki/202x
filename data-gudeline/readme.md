@@ -156,9 +156,9 @@ ToDo :
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
 - ユーザーに複数の選択肢を提示すべきか？
-- データクリーンルームを提供するか？
+- データクリーンルームを利用もしくは提供予定か？
 - 外部に提供する識別子は名寄せ可能か？
-- 外部送信規律を気にすべきか？
+- 外部送信規律を気にしているか？
 
 ## （７）越境アクセスに関する対応
 
