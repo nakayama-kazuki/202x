@@ -112,7 +112,7 @@ ToDo :
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i5.png' />
 
-個人情報保護法によれば、委託提供の際のユーザー同意は不要です（第三者に [該当しない](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-6-3) 場合）。ただし、委託提供された個人データは [委託された業務の範囲内](https://www.ppc.go.jp/all_faq_index/faq1-q7-38/) でしか扱えません。例えば、御社のホワイトペーパーに掲載された統計の元データ、この観点で問題ないでしょうか？
+個人情報保護法によれば、委託提供の際のユーザー同意は不要です（[第三者に該当しない場合](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-6-3)）。ただし、委託提供された個人データは [委託された業務の範囲内](https://www.ppc.go.jp/all_faq_index/faq1-q7-38/) でしか扱えません。例えば、御社のホワイトペーパーに掲載された統計の元データ、この観点で問題ないでしょうか？
 
 さらに、自社保有のデータと委託提供された個人データのユーザー単位の突合（[混ぜるな危険](https://www.ppc.go.jp/all_faq_index/faq1-q7-41/)）も禁止されています。この場合、表の No.2 の整理でユーザーデータを活用した AI モデル登載のマルチテナント SaaS を提供することは不可、という結論になるのでしょうか？
 
@@ -150,12 +150,12 @@ ToDo :
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/d4.png' />
 
-上記のケースで事業者Ａから事業者Ｂへの委託提供と整理した場合、クロス集計ですので [混ぜるな危険](https://www.ppc.go.jp/all_faq_index/faq1-q7-41/) に抵触してしまいます。なので第三者提供と整理した上で同意を取得するか、混ぜるな危険に対するなにがしかの手当が必要になり、プライバシーに配慮したソリューションとはいえハードルも残っています。この点については LINE ヤフーで推進している [プライバシーテックの研究](https://enterprisezine.jp/news/detail/18737) 成果次第では、ハードルを下げることができるかもしれません。
+なお、このケースで事業者Ａから事業者Ｂへの（もしくはその逆方向への）委託提供と整理した場合、クロス集計ゆえに [混ぜるな危険](https://www.ppc.go.jp/all_faq_index/faq1-q7-41/) に抵触してしまいます。なのでユーザー同意のもと第三者提供と整理するか、混ぜるな危険に対するなにがしかの手当が必要となり、プライバシーに配慮したソリューションとはいえまだハードルも残っています。そこで LINE ヤフーではさらなる「安心安全のデータ活用」促進のため、[プライバシーテックの研究](https://research.lycorp.co.jp/jp/research_area/8) にも積極的に取り組んでいます。
 
 その他（６）関連の補足です。
 
 - 外部にユーザー識別子を第三者提供する場合、セクトラル型の識別子（例えば PPID = Pairwise Pseudonymous Identifier のような）を使うことで、外部での名寄せを防止するとともに、インシデント発生時には洗い替えすることもできます
-- 利用者の利益に及ぼす影響が少なくない電気通信役務に対し、利用者に関する情報の内容や送信先について、当該利用者に確認の機会を付与する義務が生じます（[外部送信規律](https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/gaibusoushin_kiritsu_00002.html#qa1-1)）。例えば LINE ヤフーでは [このように公表](https://privacy.lycorp.co.jp/ja/acquisition/thirdparties.html) しています。義務に対応するための調査や意図せぬ違反を回避するための手段として [Content Security Policy の活用](https://techblog.yahoo.co.jp/entry/2023071830429434/) もご検討ください
+- 利用者の利益に及ぼす影響が少なくない電気通信役務に対し、利用者に関する情報の内容や送信先について、当該利用者に確認の機会を付与する義務が生じます（[外部送信規律](https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/gaibusoushin_kiritsu_00002.html#qa1-1)）。例えば LINE ヤフーでは [このように公表](https://privacy.lycorp.co.jp/ja/acquisition/thirdparties.html) しています。義務に対応するための調査や意図せぬ違反を回避するための手段として CSP の活用もご検討ください（記事中ほどの [他の事業者に対する情報送信調査への活用](https://techblog.yahoo.co.jp/entry/2023071830429434/) 参照）
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
@@ -168,9 +168,9 @@ ToDo :
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i7.png' />
 
-個人情報保護法によれば、国内の事業者に対する委託提供については（５）で述べた通りですが、一方で [海外の事業者に対する提供](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-6-4) については第三者に該当しない場合の定めはなく、委託提供であっても同意が必要とされています。この点について LINE ヤフーでは [データの取り扱いの問題](https://linecorp.com/ja/pr/news/ja/2021/3675) の再発防止に努めています。
+個人情報保護法によれば、国内の事業者への委託提供については（５）で述べた通りですが、一方で [海外の事業者に対する提供](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-6-4) については第三者に該当しない場合の定めがなく、委託提供であっても同意が必要とされています。関連する [データの取り扱いの問題](https://linecorp.com/ja/pr/news/ja/2021/3675) について、LINE ヤフーでは再発防止に努めています。
 
-また、電気通信事業法の観点でも越境アクセスに際しては [十分な安全管理措置](https://about.yahoo.co.jp/pr/release/2023/08/30b/) が求められており、LINE ヤフーではガバナンスのさらなる強化に取り組んでいます。
+また、電気通信事業法の観点でも越境アクセスに対して [十分な安全管理措置](https://about.yahoo.co.jp/pr/release/2023/08/30b/) が求められており、LINE ヤフーではガバナンスのさらなる強化に取り組んでいます。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
