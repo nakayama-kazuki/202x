@@ -7,11 +7,7 @@ ToDo :
 - 文言見直し : 本人 vs ユーザー
 - 文言見直し : 情報 vs データ（個人情報、個人データ）
 - 文言見直し : 利用 vs 活用
-- 表や見出しの文言見直し
-- CBPR とれば越境の委託でも同意不要になる？
-- 当初記載していた LY ではいろいろやってるよ的な文言
 - 個情法の説明はそれとわかるようにする
-- https://www.ppc.go.jp/all_faq_index/faq2-q2-3/
 
 */
 
@@ -31,7 +27,7 @@ ToDo :
 - 目的は具体的に特定されているか？
 - 目的外の活用はないか？
 
-## （２）直接取得の際の同意取得
+## （２）直接取得の際の同意
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i2.png' />
 
@@ -154,7 +150,7 @@ ToDo :
 
 その他（６）関連の補足です。
 
-- 外部にユーザー識別子を第三者提供する場合、セクトラル型の識別子（例えば PPID = Pairwise Pseudonymous Identifier のような）を使うことで、外部での名寄せを防止するとともに、インシデント発生時には洗い替えすることもできます
+- 外部にユーザー識別子を第三者提供する場合、セクトラル型の識別子（例えば PPID = Pairwise Pseudonymous Identifier のような）を使うことで、外部での名寄せを防止するとともに、漏洩などのインシデント発生時には洗い替えにも対応できます
 - 利用者の利益に及ぼす影響が少なくない電気通信役務に対し、利用者に関する情報の内容や送信先について、当該利用者に確認の機会を付与する義務が生じます（[外部送信規律](https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/gaibusoushin_kiritsu_00002.html#qa1-1)）。例えば LINE ヤフーでは [このように公表](https://privacy.lycorp.co.jp/ja/acquisition/thirdparties.html) しています。義務に対応するための調査や意図せぬ違反を回避するための手段として CSP の活用もご検討ください（記事中ほどの [他の事業者に対する情報送信調査への活用](https://techblog.yahoo.co.jp/entry/2023071830429434/) 参照）
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
@@ -164,7 +160,7 @@ ToDo :
 - 外部に提供する識別子は名寄せ可能か？
 - 外部送信規律を気にすべきか？
 
-## （７）越境アクセス対応
+## （７）越境アクセスに関する対応
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i7.png' />
 
@@ -176,7 +172,7 @@ ToDo :
 
 - 越境アクセスに対して必要な措置はとれているか？
 
-## まとめ
+## おわりに
 
 いかがでしたでしょうか。この記事が少しでもみなさまの気付きにつながれば幸いです。
 
