@@ -85,7 +85,7 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/d3.png' />
 
-さらに「安心安全」を守るために削除すべきデータ、例えばリファラやクエリパラメータから誤って混入してしまった個人情報や、本来削除されるべきだが削除されずに残ってしまった個人情報の検知について仕組化することを検討してみましょう（例えば [アナリストがデータ管理を自動化した話](https://techblog.lycorp.co.jp/ja/20231101a)）。
+さらに「安心安全」を守るために削除すべきデータ、例えばリファラやクエリパラメータから誤って混入してしまった個人情報や、本来削除されるべきだが削除されずに残ってしまった個人情報の検知の仕組化についても検討してみましょう（例えば [アナリストがデータ管理を自動化した話](https://techblog.lycorp.co.jp/ja/20231101a)）。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
@@ -161,10 +161,10 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
-- 越境アクセスに対して必要な対応はとれているか？
+- 越境アクセスに対して適切な対応はとれているか？
 
 ## おわりに
 
-いかがでしたでしょうか。この記事が少しでも新たな気付きにつながれば幸いです。蛇足になりますが、グローバルな多言語の協業体制の場合、この記事で用いたレベルの用語（例えば個人情報保護法 = Act on the Protection of Personal Information など）については英訳をチーム内で共有しておくこともおすすめです。
+いかがでしたでしょうか。この記事が少しでもお役に立てれば幸いです。蛇足になりますが、グローバルな多言語の協業体制の場合、この記事で用いたレベルの用語（例えば個人情報保護法 = Act on the Protection of Personal Information など）については英訳をチーム内で共有しておくこともおすすめです。
 
 ところで LINE ヤフーでは「安心安全のデータ活用」を推進するための組織づくり、社内教育、プロセス構築、環境構築、仕組化、プライバシーテックの研究などに取り組んでおります。興味をお持ちの方、同様の取り組みに携わっている方、是非情報交換させてください！
