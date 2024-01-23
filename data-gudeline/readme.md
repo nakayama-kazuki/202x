@@ -87,7 +87,7 @@
 
 さらに「安心安全」を守るために削除すべきデータ、例えばリファラやクエリパラメータから誤って混入してしまった個人情報や、本来削除されるべきだが削除されずに残ってしまった個人情報の検知の仕組化についても検討してみましょう（例えば [アナリストがデータ管理を自動化した話](https://techblog.lycorp.co.jp/ja/20231101a)）。
 
-また、最近の記事ですが [データマネージャーが事業部のデータガバナンス意識改善に取り組んだお話](https://techblog.lycorp.co.jp/ja/20240123a) もご紹介させていただきます。
+また、最近の記事ですが、サービスの現場における [データマネージャーが事業部のデータガバナンス意識改善に取り組んだお話](https://techblog.lycorp.co.jp/ja/20240123a) もご紹介させていただきます。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
