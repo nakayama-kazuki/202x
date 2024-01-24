@@ -116,7 +116,7 @@
 - 委託された業務の範囲内か？
 - 混ぜるな危険か？
 
-## （６）他事業者への第三者提供の際の同意や法律対応
+## （６）他事業者にデータが渡る場合の対応
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i6.png' />
 
