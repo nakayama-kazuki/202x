@@ -91,7 +91,7 @@
 - 逸脱や削除漏れの可能性はないか？
 - 現場の意識改善は必要か？
 
-## （５）混ぜるな危険と AI 活用
+## （５）委託提供と AI 活用
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i5.png' />
 
