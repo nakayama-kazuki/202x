@@ -135,7 +135,7 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/d4.png' />
 
-なお、このケースで事業者Ａから事業者Ｂへの（もしくはその逆方向への）個人データの委託提供と整理した場合、クロス集計ゆえに [混ぜるな危険](https://www.ppc.go.jp/all_faq_index/faq1-q7-41/) に抵触してしまいます。なのでユーザー同意にもとづく第三者提供と整理するなどの整理が必要で、プライバシーに配慮したソリューションとはいえまだハードルも残っています。LINE ヤフーではこうしたハードルの解消も含め、さらなる「安心安全のデータ活用」を促進するのため、[プライバシーテックの研究](https://research.lycorp.co.jp/jp/research_area/8) にも積極的に取り組み、実際に [サービスに適用](https://privacy.lycorp.co.jp/ja/acquisition/privacy_techs.html) しています。
+なお、このケースで事業者Ａから事業者Ｂへの（もしくはその逆方向への）個人データの委託提供と整理した場合、クロス集計ゆえに [混ぜるな危険](https://www.ppc.go.jp/all_faq_index/faq1-q7-41/) に抵触してしまいます。なのでユーザー同意にもとづく第三者提供、といった整理も検討が必要であり、プライバシーに配慮したソリューションとはいえまだハードルも残っています。LINE ヤフーではこうしたハードルの解消も含め、さらなる「安心安全のデータ活用」を促進するのため、[プライバシーテックの研究](https://research.lycorp.co.jp/jp/research_area/8) にも積極的に取り組み、実際に [サービスに適用](https://privacy.lycorp.co.jp/ja/acquisition/privacy_techs.html) しています。
 
 その他（６）関連の補足です。
 
