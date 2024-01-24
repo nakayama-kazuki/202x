@@ -47,7 +47,7 @@
 - 位置情報
 - ウェブサイトで発生したイベント情報<br />（例えば閲覧、検索、クリック、コンバージョンなど）
 
-のような [個人関連情報](https://www.ppc.go.jp/all_faq_index/faq2-q2-8/) が提供され、それを受領側でそれを個人データ化するのかによってやるべきことが異なります。
+のような [個人関連情報](https://www.ppc.go.jp/all_faq_index/faq2-q2-8/) が提供され、受領側でそれを個人データ化するのかによってやるべきことが異なります。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/d1-2.png' />
 
@@ -120,6 +120,8 @@
 
 個人データ、もしくは個人関連情報を第三者提供する場合、個人情報保護法観点で前述（３）と逆の立場での対応が必要になります。さらに、個人データを第三者提供する場面において、優越的地位の濫用による強制力の高いユーザー同意が問題視されることがあります。第三者提供がユーザーの権利利益に少なからず影響を与える場合、ユーザーに対して複数の選択肢を提示することも検討しましょう。
 
+技術観点では、外部にユーザー識別子を第三者提供する場合、セクトラル型の識別子（例えば PPID = Pairwise Pseudonymous Identifier のような）を使うことで、外部での名寄せを防止するとともに、漏洩などのインシデント発生時には識別子の洗い替えが可能になります。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/d1-3.png' />
 
 ところで、最近データクリーンルームについて耳にすることが多くなりました。データクリーンルームとは端的には
@@ -133,19 +135,16 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/d4.png' />
 
-なお、このケースで事業者Ａから事業者Ｂへの（もしくはその逆方向への）個人データの委託提供と整理した場合、クロス集計ゆえに [混ぜるな危険](https://www.ppc.go.jp/all_faq_index/faq1-q7-41/) に抵触してしまいます。なのでユーザー同意にもとづく第三者提供、といった整理の検討も必要であり、プライバシーに配慮したソリューションとはいえまだハードルも残っています。LINE ヤフーではこうしたハードルの解消も含め、さらなる「安心安全のデータ活用」を促進するのため、[プライバシーテックの研究](https://research.lycorp.co.jp/jp/research_area/8) にも積極的に取り組み、実際にサービスに [適用している事例](https://privacy.lycorp.co.jp/ja/acquisition/privacy_techs.html) もあります。
+なお、このケースで事業者Ａから事業者Ｂへの（もしくはその逆方向への）個人データの委託提供と整理した場合、クロス集計ゆえに [混ぜるな危険](https://www.ppc.go.jp/all_faq_index/faq1-q7-41/) に抵触してしまいます。なのでユーザー同意にもとづく第三者提供、といった整理の検討も必要であり、プライバシーに配慮したソリューションとはいえまだハードルも残っています。LINE ヤフーではこうしたハードルの解消も含め、さらなる「安心安全のデータ活用」を促進するのため、プライバシーテックの研究にも積極的に取り組み、実際にサービスに [適用している事例](https://privacy.lycorp.co.jp/ja/acquisition/privacy_techs.html) もあります。
 
-その他（６）関連の補足です。
-
-- 外部にユーザー識別子を第三者提供する場合、セクトラル型の識別子（例えば PPID = Pairwise Pseudonymous Identifier のような）を使うことで、外部での名寄せを防止するとともに、漏洩などのインシデント発生時には識別子の洗い替えが可能になります
-- [外部送信規律](https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/gaibusoushin_kiritsu_00002.html#qa1-1) の施行（2023 年 6 月）により、利用者の利益に及ぼす影響が少なくない電気通信役務に対し、利用者に関する情報の内容や送信先について、当該利用者に確認の機会を付与する義務が生じました。例えば LINE ヤフーでは [このように公表](https://privacy.lycorp.co.jp/ja/acquisition/thirdparties.html) しています。外部送信規律に対応するための調査や意図せぬ違反を回避するための手段として CSP の活用もご検討ください（記事中ほどの [他の事業者に対する情報送信調査への活用](https://techblog.yahoo.co.jp/entry/2023071830429434/) 参照）
+最後に [外部送信規律](https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/gaibusoushin_kiritsu_00002.html#qa1-1) についての補足です。2023 年 6 月の施行から、利用者の利益に及ぼす影響が少なくない電気通信役務に対し、利用者に関する情報の内容や送信先について、当該利用者に確認の機会を付与する義務が生じました。例えば LINE ヤフーでは [このように公表](https://privacy.lycorp.co.jp/ja/acquisition/thirdparties.html) しています。外部送信規律に対応するための調査や、意図せぬ違反を回避するための手段として CSP の活用もご検討ください（記事中ほどの [他の事業者に対する情報送信調査への活用](https://techblog.yahoo.co.jp/entry/2023071830429434/) 参照）。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
 - ユーザーに複数の選択肢を提示すべきか？
-- データクリーンルームを利用もしくは提供予定か？
 - 外部に提供する識別子は名寄せ可能か？
-- 外部送信規律を気にしているか？
+- データクリーンルームを利用もしくは提供予定か？
+- 外部送信規律への対応は必要か？
 
 ## （７）越境アクセスに関する対応
 
