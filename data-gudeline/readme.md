@@ -78,9 +78,9 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/d3.png' />
 
-これらを踏まえ、利用目的、個別契約、規約を強制できるが、もしくは逸脱を防げるようなデータの分類や管理方法、プロセスなどを検討しましょう。その定着に向けては [データマネージャーが事業部のデータガバナンス意識改善に取り組んだお話](https://techblog.lycorp.co.jp/ja/20240123a) もご参考まで。
+これらを踏まえ、利用目的、個別契約、規約を強制できるか、もしくは逸脱を防げるようなデータの分類や管理方法、プロセスなどを検討しましょう。その定着に向けては [データマネージャーが事業部のデータガバナンス意識改善に取り組んだお話](https://techblog.lycorp.co.jp/ja/20240123a) もご参考まで。
 
-あとは、活用されるべきではないデータの混入（例えばリファラやクエリパラメータから誤って混入してしまった個人情報や、本来削除されるべきはずのものが削除されずに残ってしまった個人情報）を検知する仕組みもあると助かりますね。例えば [アナリストがデータ管理を自動化した話](https://techblog.lycorp.co.jp/ja/20231101a) もご参考まで。
+あとは、活用されるべきではないデータの混入（例えばリファラやクエリパラメータから誤って混入してしまった個人情報や、本来削除されるべきはずのものが削除されずに残ってしまった個人情報）を検知する仕組みもあると助かりますね。こちらは例えば [アナリストがデータ管理を自動化した話](https://techblog.lycorp.co.jp/ja/20231101a) もご参考まで。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
@@ -132,9 +132,9 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/d4.png' />
 
-なお、このケースで事業者Ａから事業者Ｂへの（もしくはその逆方向への）個人データの委託提供と整理した場合、クロス集計ゆえに [混ぜるな危険](https://www.ppc.go.jp/all_faq_index/faq1-q7-41/) に抵触してしまいます。なのでユーザー同意にもとづく第三者提供、といった整理も検討が必要であり、プライバシーに配慮したソリューションとはいえまだハードルも残っています。LINE ヤフーではこうしたハードルの解消も含め、さらなる「安心安全のデータ活用」促進のため、プライバシーテックの研究にも積極的に取り組み、実際にサービスに [適用している事例](https://privacy.lycorp.co.jp/ja/acquisition/privacy_techs.html) もあります。
+なお、このケースで事業者Ａから事業者Ｂへの（もしくはその逆方向への）個人データの委託提供と整理した場合、クロス集計ゆえに [混ぜるな危険](https://www.ppc.go.jp/all_faq_index/faq1-q7-41/) に抵触してしまいます。なのでユーザー同意にもとづく第三者提供、といった整理も検討が必要であり、プライバシーに配慮したソリューションとはいえまだハードルも残っています。LINE ヤフーではこうしたハードルの解消も含め、さらなる「安心安全のデータ活用」促進のため、プライバシーテックの研究にも積極的に取り組んでいます（実際にサービスに [適用している事例](https://privacy.lycorp.co.jp/ja/acquisition/privacy_techs.html) もあります）。
 
-最後に [外部送信規律](https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/gaibusoushin_kiritsu_00002.html#qa1-1) についての補足です。2023 年 6 月の施行から、利用者の利益に及ぼす影響が少なくない電気通信役務に対し、利用者に関する情報の内容や送信先について、当該利用者に確認の機会を付与する義務が生じました。例えば LINE ヤフーでは [このように公表](https://privacy.lycorp.co.jp/ja/acquisition/thirdparties.html) しています。外部送信規律に対応するための調査や、意図せぬ違反を回避するための手段として CSP の活用もご検討ください（記事中ほどの [他の事業者に対する情報送信調査への活用](https://techblog.yahoo.co.jp/entry/2023071830429434/) 参照）。
+その他の留意点として [外部送信規律](https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/gaibusoushin_kiritsu_00002.html#qa1-1) について補足します。2023 年 6 月の施行から、利用者の利益に及ぼす影響が少なくない電気通信役務に対し、利用者に関する情報の内容や送信先について、当該利用者に確認の機会を付与する義務が生じました。例えば LINE ヤフーでは [このように公表](https://privacy.lycorp.co.jp/ja/acquisition/thirdparties.html) しています。外部送信規律に対応するための調査や、意図せぬ違反を回避するための手段として CSP の活用（記事下方の [他の事業者に対する情報送信調査への活用](https://techblog.yahoo.co.jp/entry/2023071830429434/)）もご検討ください。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
@@ -149,9 +149,9 @@
 
 越境アクセスについて、私たち（LINE ヤフー）の事例を 2 つご紹介しますので、他山の石としてください。
 
-個人情報保護法によれば、国内の事業者への委託提供については（５）で述べた通りですが、一方で [海外の事業者に対する提供](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-6-4) については第三者に該当しない場合の定めがなく、一部の国を除いて委託提供であっても同意が必要とされています。以前 LINE で海外開発拠点からの [越境アクセス](https://linecorp.com/ja/pr/news/ja/2021/3675) があり、説明不足からユーザーのみなさまにご心配をおかけしてしまったことについて、私たちとしても再発防止に努めています。
+個人情報保護法によれば、国内の事業者への委託提供については（５）で述べた通りですが、一方で [海外の事業者に対する提供](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-6-4) については第三者に該当しない場合の定めがなく、一部の国を除いて委託提供であっても同意が必要とされています。以前私たちの海外開発拠点からの [越境アクセス](https://linecorp.com/ja/pr/news/ja/2021/3675) があり、説明不足からユーザーのみなさまにご心配をおかけしてしまったことについて、私たちとしても再発防止に努めています。
 
-また、電気通信事業法の観点でも越境アクセスに対して [十分な安全管理措置](https://about.yahoo.co.jp/pr/release/2023/08/30b/) が求められており、これを踏まえさらなるガバナンスの強化に取り組んでいます。
+また、電気通信事業法の観点でも越境アクセスに対して十分な [利用者周知と安全管理措置](https://about.yahoo.co.jp/pr/release/2023/08/30b/) が求められており、こちらについても改善に向けて取り組んでいます。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
@@ -159,7 +159,7 @@
 
 ## おわりに
 
-いかがでしたでしょうか。この記事がみなさまの「安心安全のデータ活用」に少しでも貢献できれば幸いです。蛇足になりますが、グローバルな多言語の協業体制の場合、この記事で用いたレベルの用語（例えば個人情報保護法 = Act on the Protection of Personal Information など）については英訳をチーム内で共有しておくこともおすすめです。
+いかがでしたでしょうか。この記事を通じてみなさまの「安心安全のデータ活用」に少しでも貢献できれば幸いです。蛇足になりますが、グローバルな多言語の協業体制の場合、この記事で用いたレベルの用語（例えば個人情報保護法 = Act on the Protection of Personal Information など）については英訳をチーム内で共有しておくこともおすすめです。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
