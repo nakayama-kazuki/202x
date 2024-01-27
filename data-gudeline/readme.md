@@ -85,7 +85,7 @@
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
 - ユーザーの権利利益や体験に配慮できているか？
-- そのデータ、マーケティングに活用してもよいか？
+- そのデータ、マーケティングに活用してもよいものか？
 - 削除漏れの可能性はないか？
 
 ## （５）委託提供と AI 活用
