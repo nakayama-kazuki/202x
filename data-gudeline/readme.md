@@ -52,7 +52,7 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/d1-2.png' />
 
-改正個人情報保護法の施行（2022 年 4 月）以前は個人関連情報、例えばウェブサイトの閲覧情報を個人データとして取得する場合、ユーザー同意は不要でした。このとき、ユーザーは自身が関与できないところで 3rd-party Cookie 紐づけられたウェブサイトの閲覧情報によってスコアリングされ、スコア次第で社会的に不利な扱いを受けてしまうかもしれません（例えば [個人情報保護法に基づく勧告](https://www.ppc.go.jp/files/pdf/191204_houdou.pdf)）。こうした背景からユーザー同意（表の右下）が必要になりました。
+改正個人情報保護法の施行（2022 年 4 月）以前は個人関連情報、例えばウェブサイトの閲覧情報を個人データとして取得する場合、ユーザー同意は不要でした。このとき、ユーザーは自身が関与できないところで 3rd-party Cookie に紐づけられたウェブサイトの閲覧情報によってスコアリングされ、スコア次第で社会的に不利な扱いを受けてしまうかもしれません（例えば [個人情報保護法に基づく勧告](https://www.ppc.go.jp/files/pdf/191204_houdou.pdf)）。こうした背景からユーザー同意（表の右下）が必要になりました。
 
 また、今後該当するユースケースの増加を見込んでいる場合、ガバナンスの強化と効率化を目的として記録の内容、保持期間、そして開示請求への対応について標準化～仕組化することを検討してみましょう。余談ですが私も関連する社内プラットフォームの開発を担当しており、一緒に働く仲間も [募集中](https://www.lycorp.co.jp/ja/recruit/career/job-categories/ly00056/) です。
 
@@ -92,7 +92,7 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i5.png' />
 
-個人情報保護法によれば、委託提供の際のユーザー同意は不要です（[第三者に該当しない場合](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-6-3)）。ただし、委託提供された個人データは [委託された業務の範囲内](https://www.ppc.go.jp/all_faq_index/faq1-q7-38/) でしか扱えません。例えば、営業組織が活用しているホワイトペーパー、掲載された統計情報の元データはこの観点で問題ないでしょうか？
+個人情報保護法によれば、国内の事業者への委託提供の際のユーザー同意は不要です（[第三者に該当しない場合](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-6-3)）。ただし、委託提供された個人データは [委託された業務の範囲内](https://www.ppc.go.jp/all_faq_index/faq1-q7-38/) でしか扱えません。例えば、営業組織が活用しているホワイトペーパー、掲載された統計情報の元データはこの観点で問題ないでしょうか？
 
 さらに AI モデル登載のマルチテナント SaaS を提供する場合、課題解決力は高く、かつクライアントの負担は少ないことが理想的です。とはいえ、クライアントの個人データを使ってモデルを改善する場合、黄色のセルのような整理は可能でしょうか？
 
@@ -134,7 +134,7 @@
 
 なお、このケースで事業者Ａから事業者Ｂへの（もしくはその逆方向への）個人データの委託提供と整理した場合、クロス集計ゆえに [混ぜるな危険](https://www.ppc.go.jp/all_faq_index/faq1-q7-41/) に抵触してしまいます。なのでユーザー同意にもとづく第三者提供、といった整理も検討が必要であり、プライバシーに配慮したソリューションとはいえまだハードルも残っています。LINE ヤフーではこうしたハードルの解消も含め、さらなる「安心安全のデータ活用」促進のため、プライバシーテックの研究にも積極的に取り組んでいます（例えば、実際にサービスに [適用している事例](https://privacy.lycorp.co.jp/ja/acquisition/privacy_techs.html)）。
 
-その他の留意点として [外部送信規律](https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/gaibusoushin_kiritsu_00002.html#qa1-1) について補足します。2023 年 6 月の施行から、利用者の利益に及ぼす影響が少なくない電気通信役務に対し、利用者に関する情報の内容や送信先について、当該利用者に確認の機会を付与する義務が生じました。例えば LINE ヤフーでは [このように公表](https://privacy.lycorp.co.jp/ja/acquisition/thirdparties.html) しています。外部送信規律に対応するための調査や、意図せぬ違反を回避するための手段として CSP の活用（例えば [こちらの記事](https://techblog.yahoo.co.jp/entry/2023071830429434/) の「他の事業者に対する情報送信調査への活用」など）もご検討ください。
+その他の留意点として [外部送信規律](https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/gaibusoushin_kiritsu_00002.html#qa1-1) について補足します。改正電気通信事業法の施行（2023 年 6 月）から、利用者の利益に及ぼす影響が少なくない電気通信役務に対し、利用者に関する情報の内容や送信先について、当該利用者に確認の機会を付与する義務が生じました。例えば LINE ヤフーでは [このように公表](https://privacy.lycorp.co.jp/ja/acquisition/thirdparties.html) しています。外部送信規律に対応するための調査や、意図せぬ違反を回避するための手段として CSP の活用（例えば [こちらの記事](https://techblog.yahoo.co.jp/entry/2023071830429434/) の「他の事業者に対する情報送信調査への活用」など）もご検討ください。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
