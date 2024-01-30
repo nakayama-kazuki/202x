@@ -6,22 +6,22 @@
 
 ただし、記事の内容が全てではないことにご注意ください。法律観点はもとより、データのライフサイクル観点でも記載は不十分です。それをふまえ、各章ごとに設けた「Check !」の項目を、データ活用におけるスクリーニングの観点として参考にしてもらえますと幸いです。
 
-## （１）直接取得の際の目的説明
+## （１）自サービスで取得する際の目的説明
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i1.png' />
 
-個人情報保護法によれば、直接取得した情報（例えばユーザーがフォームに入力した情報やトラッキングログなど）を個人データ化する際、何の情報をどのような目的で活用するのか [具体的に特定](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-1) し [ユーザーに説明](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-3) することが必要になります。
+個人情報保護法によれば、取得した情報（例えばユーザーがフォームに入力した情報やトラッキングログなど）を個人データ化する際、何の情報をどのような目的で活用するのか [具体的に特定](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-1) し [ユーザーに説明](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-3) することが必要になります。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
 - 規約やプライバシーポリシーなどで目的を説明してるか？
 - 目的は具体的に特定されているか？
 
-## （２）直接取得の際の同意
+## （２）自サービスで取得する際の同意
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i2.png' />
 
-個人情報保護法によれば、ユーザーの同意を得ずに要配慮個人情報（例えば人種、病歴、健康診断の結果、犯罪歴）を取得することは [できません](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-2) 。とはいえ、入力フォーム等で適正に直接取得する限りにおいては、改めての同意ポップアップは不要です。
+個人情報保護法によれば、ユーザーの同意を得ずに要配慮個人情報（例えば人種、病歴、健康診断の結果、犯罪歴）を取得することは [できません](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-3-2) 。とはいえ、入力フォーム等で適正に取得する限りにおいては、改めての同意ポップアップは不要です。
 
 他方、要配慮個人情報ならずとも最近は Cookie に関する同意ポップアップを目にする機会が増えました。この背景には EU の ePrivacy Regulation における Cookie 規制 …
 
@@ -43,12 +43,11 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i3.png' />
 
-個人情報保護法によれば、他事業者から個人データが提供されるのか、もしくは
+個人情報保護法によれば、他事業者から個人データが提供されるのか、もしくは特定の個人を識別することができない
 
-- 位置情報
-- ウェブサイトで発生したイベント情報<br />（例えば閲覧、検索、クリック、コンバージョンなど）
+- ウェブサイトで発生したイベント情報<br />（例えば閲覧、クリック、コンバージョンや検索キーワードなど）
 
-のような [個人関連情報](https://www.ppc.go.jp/all_faq_index/faq2-q2-8/) が提供され、受領側でそれを個人データ化するのかによってやるべきことが異なります。
+のような [個人関連情報](https://www.ppc.go.jp/all_faq_index/faq2-q2-8/) が提供され、さらにそれを受領側で個人データ化するのか、によってやるべきことが異なります。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/d1-2.png' />
 
@@ -72,7 +71,7 @@
 - 適切な活用のタイミングを考える<br />（例えば閲覧後すぐに関連メールが届くとユーザーは気持ち悪さを感じてしまうかもしれない）
 - 統計活用の場合は十分な N を担保する
 
-また、個人情報保護法によれば、直接取得した個人データについて（１）の目的外の活用は [できません](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-3) 。例えば問い合わせ対応を目的して取得したメールアドレスを、広告のオーディエンス連携や類似拡張に活用することはできません。
+また、個人情報保護法によれば、自サービスで取得する個人データについて（１）の目的外の活用は [できません](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-1-3) 。例えば問い合わせ対応を目的して取得したメールアドレスを、広告のオーディエンス連携や類似拡張に活用することはできません。
 
 さらに、他事業者から第三者提供された個人データについて、個別契約によって活用に制約が生じる場合もあります。加えて、プラットフォーマーが定める規約も守らなければなりません。例えば IDFA / GAID にはこのような規約があります。
 
@@ -149,9 +148,9 @@
 
 越境アクセスについて、私たち（LINE ヤフー）の事例を 2 つご紹介しますので、他山の石としてください。
 
-個人情報保護法によれば、国内の事業者への委託提供については（５）で述べた通りですが、一方で [海外の事業者に対する提供](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-6-4) については第三者に該当しない場合の定めがなく、一部の国を除いて委託提供であっても同意が必要とされています。以前、海外開発拠点からの [越境アクセス](https://linecorp.com/ja/pr/news/ja/2021/3675) について、私たちの説明不足からユーザーのみなさまにご心配をおかけしてしまいましたが、今後については再発防止に努めています。
+個人情報保護法によれば、国内の事業者への委託提供については（５）で述べた通りですが、一方で海外の事業者に対しては [外国にある第三者への提供の制限](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-6-4) が適用されるため、一部の国を除いて委託提供であっても同意が必要とされています。以前、海外開発拠点からの [越境アクセス](https://linecorp.com/ja/pr/news/ja/2021/3675) について、ユーザーのみなさまにご心配をおかけしてしまいましたが、今後については再発防止に努めています。
 
-また、電気通信事業法の観点でも越境アクセスに対して十分な [利用者周知と安全管理措置](https://about.yahoo.co.jp/pr/release/2023/08/30b/) が求められており、こちらについても改善に向けて取り組んでいます。
+また、電気通信事業法の観点でも越境アクセスに対して十分な [利用者周知と安全管理措置](https://about.yahoo.co.jp/pr/release/2023/08/30b/) が求められており、さらに [不正アクセス問題](https://www.lycorp.co.jp/ja/news/announcements/001166/) もふまえ、セキュリティーとガバナンスの強化に向けて取り組んでいます。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
