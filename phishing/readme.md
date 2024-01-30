@@ -146,7 +146,7 @@ QR コードを利用してターゲットをフィッシングサイトに誘�
 
 以下 2024.01 追記。ちなみに QR コードを使ったフィッシングをクイッシングと呼ぶのだそうですが、既にいろいろな攻撃が存在するようです。
 
-- [悪意のある QR コードを上から張り付けて誘導](https://japan.cnet.com/article/35212658/)
+- 悪意のある QR コードを上から張り付けて誘導
 - [ショート URL サービスに挿入される広告経由で誘導](https://www.itmedia.co.jp/news/articles/2311/10/news120.html)
 - [見えないレーザーで QR コードを改変して誘導](https://www.itmedia.co.jp/news/articles/2312/04/news030.html)
 
