@@ -162,6 +162,6 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
-- 英訳をチーム内で共有すべきか？
+- グローバル協業体制か？
 
 ところで LINE ヤフーでは「安心安全のデータ活用」を推進するための組織づくり、社内教育、プロセス構築、環境構築、仕組化、プライバシーテックの研究などに取り組んでおります。興味をお持ちの方、同様の取り組みに携わっている方、是非情報交換させてください！
