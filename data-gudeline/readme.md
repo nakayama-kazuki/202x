@@ -132,6 +132,7 @@
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/d4.png' />
 
 なお、このケースで事業者Ａから事業者Ｂへの（もしくはその逆方向への）個人データの委託提供と整理した場合、クロス集計ゆえに [混ぜるな危険](https://www.ppc.go.jp/all_faq_index/faq1-q7-41/) に抵触してしまいます。なのでユーザー同意にもとづく第三者提供、といった整理も検討が必要であり、プライバシーに配慮したソリューションとはいえまだハードルも残っています。LINE ヤフーではこうしたハードルの解消も含め、さらなる「安心安全のデータ活用」促進のため、[プライバシーテックの研究](https://privacy.lycorp.co.jp/ja/acquisition/privacy_techs.html) にも積極的に取り組んでいます。
+
 その他の留意点として [外部送信規律](https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/gaibusoushin_kiritsu_00002.html#qa1-1) について補足します。改正電気通信事業法の施行（2023 年 6 月）から、利用者の利益に及ぼす影響が少なくない電気通信役務に対し、利用者に関する情報の内容や送信先について、当該利用者に確認の機会を付与する義務が生じました。例えば LINE ヤフーでは [このように公表](https://privacy.lycorp.co.jp/ja/acquisition/thirdparties.html) しています。外部送信規律に対応するための調査や、意図せぬ違反を回避するための手段として CSP の活用（例えば [こちらの記事](https://techblog.yahoo.co.jp/entry/2023071830429434/) の「他の事業者に対する情報送信調査への活用」など）もご検討ください。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
@@ -139,6 +140,7 @@
 - ユーザーに複数の選択肢を提示すべきか？
 - 外部に提供する識別子は名寄せ可能か？
 - データクリーンルームを利用もしくは提供予定か？
+- プライバシーテックで解決できるか？
 - 外部送信規律への対応は必要か？
 
 ## （７）越境アクセスに関する対応
