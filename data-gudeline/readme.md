@@ -147,15 +147,17 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/i7.png' />
 
-越境アクセスについて、私たち LINE ヤフーの事例を 3 つご紹介しますので、他山の石としてください。
+越境アクセスについて、私たち LINE ヤフーの事例も含めてご紹介しますので、他山の石としてください。
 
 個人情報保護法によれば、国内の事業者への委託提供については（５）で述べた通りですが、一方で海外の事業者に対しては [外国にある第三者への提供の制限](https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/#a3-6-4) が適用されるため、一部の国を除いて委託提供であっても同意が必要とされています。以前、私たちの海外開発拠点からの [越境アクセス](https://linecorp.com/ja/pr/news/ja/2021/3675) について、ユーザーのみなさまにご心配をおかけしてしまいましたが、今後の再発防止に努めています。
 
 また、電気通信事業法の観点でも越境アクセスに対して十分な [利用者周知と安全管理措置](https://about.yahoo.co.jp/pr/release/2023/08/30b/) が求められ、さらに [不正アクセス問題](https://www.lycorp.co.jp/ja/news/announcements/001166/) もふまえ、全社を挙げてセキュリティーとガバナンスの強化に向けて取り組んでいます。
 
+蛇足ですが、海外ユーザー向けのサービスを提供する場合、逆方向の越境アクセスについて気にする必要があります。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/data-gudeline/img/check-point.png' />
 
-- 越境アクセスに対して適切な対応はとれているか？
+- QA や開発における越境アクセスに対して適切な対応はとれているか？
 
 ## おわりに
 
