@@ -2,9 +2,7 @@
 
 こんにちは、プラットフォームエンジニアの中山です。
 
-かつて出社が当たり前の時代、私は少人数での活発な議論の際にホワイトボードを好んで活用していました。
-
-改めてホワイトボードを活用した議論を振り返ると
+かつて出社が当たり前の時代、私は少人数での活発な議論の際にホワイトボードを好んで活用していました。改めてホワイトボードを活用した議論を振り返ると
 
 - 自身の考えの整理
 - 関係者の想像性の刺激
@@ -13,70 +11,73 @@
 - 論点へのフォーカス
 - 認識あわせ
 
-など多くの観点で合理的であり、新しいアイデアや複雑なシステムに関する方向性模索の際、生産性高く意思決定につなげることができました。
+など多くの観点で合理的であり、新しいアイデアや複雑なシステムに関する方向性模索の際、生産性高く意思決定につなげることができました。しかし、グローバル協業体制のチームやリモートワーク含め働き方が多様化した状況下において、関係者が集合して物理的なホワイトボードを活用した議論を行うことは難しくなりました。
 
-しかし、グローバル協業体制のチームやリモートワーク含め働き方が多様化した状況下において、関係者が集合して物理的なホワイトボードを活用した議論を行うことは難しくなりました。
+そして、現在の LINE ヤフーはまさにそのような状況下にあります。旧 LINE 組織と旧ヤフー組織からなる異なる文化が混在し、さらに言語の異なるグローバル協業体制において、質の高い連携を実現するためにホワートボードを活用したい … と思いつつも普段のコミュニケーションはオンライン中心です。
 
-そして、現在の LINE ヤフーはまさにそのような状況下にあります。
+そこで今回はホワイトボードを活用した議論のカウンターとして、ポンチ絵を多用したパワーポイントプレゼンテーションをご提案したいと思います。蛇足ですが、パワーポンチなる造語はまあまあのお気に入りです ^^
 
-旧 LINE 組織と旧ヤフー組織からなる異なる文化が混在し、さらに言語の異なるグローバル協業体制において、質の高い連携を実現するためにホワートボードを活用したい … と思いつつも普段のコミュニケーションはオンライン中心です。
-
-そこで今回はホワイトボードを活用した議論のカウンターとして、ポンチ絵を多用したパワーポイントプレゼンテーションをご提案したいと思います。
-
-蛇足ですが、パワーポンチなる造語はまあまあのお気に入りです ^^
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-00.png' />
 
 ## ポンチ絵のメリット
 
-まず、伝えたいことをポンチ絵にする段階で自身の考えの整理につながります。
+まず、伝えたいことをポンチ絵にする段階で、期せずして自身の考えの整理ができます。そしてポンチ絵を用いたプレゼンテーションは具体的な形として捉えやすいため、空中戦のような議論を避けることにつながり、違和感や不明点を探しやすくなります（わからないポイントが明確でないときは質問すら難しい）。さらに視覚的な刺激は関係者の創造性を引き出し、新しいアイデアや解決策を生み出すきっかけにもなります。総じて、ポンチ絵を用いたプレゼンテーションとそれに続く議論は、ホワイトボードを活用した議論と同様の効果を期待することができます。
 
-そしてポンチ絵を用いたプレゼンテーションは具体的な形として捉えやすいため、空中戦のような議論を避けることにつながり、違和感や不明点を探しやすくなります。
-
-さらに視覚的な刺激は関係者の創造性を引き出し、新しいアイデアや解決策を生み出すきっかけにもなります。
-
-総じて、ポンチ絵を用いたプレゼンテーションとそれに続く議論は、ホワイトボードを活用した議論と同様の効果を期待することができます。
+ところで
 
 - パワーポイントの利用を禁止する
 - 準備に時間をかけず、ありものの Confluence 文書を使う
 
-のような考え方もありますが、上述のメリットを最大化したいならばポンチ絵を多用したパワーポイントプレゼンテーション + 議論はお勧めですし、そこにコストをかける価値は十分になると思います。
+のような考え方もありますが、上述のメリットを最大化したいならばポンチ絵を多用したパワーポイントプレゼンテーション + 議論はお勧めですし、そこにコストをかける価値は十分にあるはずです。
 
 ## ポンチ絵を多用したプレゼンテーション Tips のご紹介
 
-是非 <a href='https://github.com/nakayama-kazuki/2021/blob/master/pptx/power-punch.pptx'>パワーポイント資料</a> としてページめくりでもご覧いただきたいですが Design 公式 note への掲載ですので、画像としてページを添付しつつ Tips をご紹介します。
+Design 公式 note への掲載ですので、ページを画像にして掲載しつつ Tips をご紹介しますが、是非 <a href='https://github.com/nakayama-kazuki/2021/blob/master/pptx/power-punch.pptx'>パワーポイント資料</a> としてページめくりでもご覧頂きたく思います。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-00.png' />
+最初にお伝えしたいのは「無駄なものをそぎ落とす」イコール「ページを減らす」ではない、ということです。配布資料ではなくプレゼンテーションである以上、必要ならば躊躇することなくページを増やすことに慣れてください。一例を挙げると、ある情報を参照するためにページを行ったり来たりするプレゼンテーションよりは、必要なタイミングで必要な情報が提示（例えそれが再掲であっても）されるプレゼンテーションの方が UX 観点で優れています。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-01.png' />
 
-まずは躊躇することなくページを増やすことに慣れてください。ある情報を参照するためにページを行ったり来たりするプレゼンテーションを見たことがありますが、繰り返し利用する情報ならば繰り返し登場してもなんら問題はありません。
+再掲が増えると、修正が必要になった場合に複数ページの修正が大変だし修正が漏れてしまう懸念も生じるかもしれません。そんなときは「スライドマスター」から「レイアウトの挿入」で繰り返し利用する情報を編集しましょう。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-02.png' />
-
-修正が必要になった場合に複数個所を直す手間を避けたいならば「スライドマスター」から「レイアウトの挿入」で
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-03.png' />
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-04.png' />
 
-繰り返し利用する情報を登録しておきましょう。
+再掲の都度「新しいスライド」から該当する情報を挿入できます。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-05.png' />
 
-登場の都度「新しいスライド」から呼び出します。
+ページを増やすべき理由は他にもあります。この図は技術ブログ記事の <a href='https://techblog.yahoo.co.jp/entry/2023071830429434/'>3rd-party JavaScript のリスク対策に CSP（Content Security Policy）を活用する</a> からの引用ですが、記事ならばこの図一枚で済ますところ、プレゼンテーションで説明する場合以下の方法で「順序」を誤解無く伝えることができます。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-06.png' />
 
-この図は techblog の <a href='https://techblog.yahoo.co.jp/entry/2023071830429434/'>3rd-party JavaScript のリスク対策に CSP（Content Security Policy）を活用する</a> からの引用です。記事ならばこの図一枚でよいのですが、プレゼンテーションで説明する場合以下の方法で「順序」を誤解無く伝えることができます。
-
+まずは図を複製して塗りつぶしも枠線も薄い灰色にして「スライドマスター」の「レイアウト」に貼り付けます。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-07.png' />
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-08.png' />
+
+その上に元の図を貼り付けます。これで準備完了です。このページを「順序」の説明必要な分複製して …
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-09.png' />
+
+順序 #1 に必要な部分以外をカットします。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-10.png' />
+
+順序 #2 に必要な部分以外をカットします。以下繰り返しです。一枚の絵を用いて言葉で「順序」を説明することと比較して誤解が生じるリスクも少なくなるかと思います。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-11.png' />
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-12.png' />
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-13.png' />
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-14.png' />
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-15.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-16.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-17.png' />
