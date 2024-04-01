@@ -68,6 +68,7 @@
 
 この図は techblog の <a href='https://techblog.yahoo.co.jp/entry/2023071830429434/'>3rd-party JavaScript のリスク対策に CSP（Content Security Policy）を活用する</a> からの引用です。記事ならばこの図一枚でよいのですが、プレゼンテーションで説明する場合以下の方法で「順序」を誤解無く伝えることができます。
 
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-07.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-08.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-09.png' />
