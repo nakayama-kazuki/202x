@@ -2,193 +2,216 @@
 
 こんにちは、プラットフォームエンジニアの中山です。
 
-かつて出社が当たり前の時代、私は少人数での活発な議論の際にホワイトボードを好んで活用していました。改めてホワイトボードを活用した議論を振り返ると
+かつて出社が当たり前の時代、ホワイトボードを活用した活発な議論の風景をオフィスのあちこちで見ることができました。改めてホワイトボードを活用した議論を振り返ると
 
 - 自身の考えの整理
 - 関係者の想像性の刺激
 - 関係者の視点や疑問の引き出しに伴う問題の早期発見
-- コンテキストや理解度のばらつき補正
-- 論点へのフォーカス
-- 認識あわせ
+- 関係者の認識あわせや理解度向上
+- 関係者の論点へのフォーカス
 
-など多くの観点で合理的であり、新しいアイデアや複雑なシステムに関する方向性模索の際、生産性高く意思決定につなげることができました。しかし、グローバル協業体制のチームやリモートワーク含め働き方が多様化した状況下において、関係者が集合して物理的なホワイトボードを活用した議論を行うことは難しくなりました。
+など多くの観点で合理性があり、新しいアイデアや複雑なシステムを扱う際の強力な手段でした。
 
-そして、現在の LINE ヤフーはまさにそのような状況下にあります。旧 LINE 組織と旧ヤフー組織からなる異なる文化が混在し、さらに言語の異なるグローバル協業体制において、質の高い連携を実現するためにホワートボードを活用したい … と思いつつも普段のコミュニケーションはオンライン中心です。
+しかし、グローバル協業体制や働き方が多様化した状況下において、関係者が集合するというのは簡単なことではありません。
 
-そこで今回はホワイトボードを活用した議論のカウンターとして、ポンチ絵を多用したパワーポイントプレゼンテーションをご提案したいと思います。蛇足ですが、パワーポンチなる造語はまあまあのお気に入りです ^^
+現在 LINE ヤフーは旧 LINE 組織文化と旧ヤフー組織文化の融合途上にあり、加えてグローバル協業体制で開発を進めています。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-00.png' />
+コミュニケーションの質を高めるため、以前のようにホワートボードを活用した議論をしたいとは思いつつ、普段は Zoom や Slack を使っています。
+
+そこで今回はホワイトボードを活用した議論の代替案として、ポンチ絵を多用したパワーポイントプレゼンテーション（パワーポンチと名付けてみました :-p）をご提案したいと思います。
+
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-001.png' />
 
 ## ポンチ絵のメリット
 
-まず、伝えたいことをポンチ絵にする段階で、期せずして自身の考えの整理ができます。そしてポンチ絵を用いたプレゼンテーションは具体的な形として捉えやすいため、空中戦のような議論を避けることにつながり、違和感や不明点を探しやすくなります（わからないポイントが明確でないときは質問すら難しい）。さらに視覚的な刺激は関係者の創造性を引き出し、新しいアイデアや解決策を生み出すきっかけにもなります。総じて、ポンチ絵を用いたプレゼンテーションとそれに続く議論は、ホワイトボードを活用した議論と同様の効果を期待することができます。
+幾つものメリットがありますが、まず最初に、伝えたいことをポンチ絵にする段階で自身の考えが整理されてゆきます。
 
-ところで
+次いで、ポンチ絵は受け手が具体的な形として捉えやすいため、空中戦を回避し、違和感や不明点を探しやすくなります。
+
+さらに、視覚的な刺激は関係者の創造性を引き出し、新しいアイデアや解決策を生み出すきっかけにもなります。
+
+総じて、ポンチ絵を多用したプレゼンテーションとそれに続く議論は、ホワイトボードを活用した議論と同様の効果を期待することができます。
+
+蛇足ですがプレゼンテーションには
 
 - パワーポイントの利用を禁止する
-- 準備に時間をかけず、ありものの Confluence 文書を使う
+- 準備に時間をかけずありもののドキュメントを流用する
 
-のような考え方もありますが、上述のメリットを最大化したいならばポンチ絵を多用したパワーポイントプレゼンテーション + 議論はお勧めですし、そこにコストをかける価値は十分にあるはずです。
+のような考え方もありますが、上で述べたメリットを最大化したいならばポンチ絵を多用したプレゼンテーション（とそれに続く議論）にはコストをかける価値があると思います。
 
-## ポンチ絵を多用したプレゼンテーション Tips のご紹介
+## ポンチ絵を多用したプレゼンテーション解説
 
-Design 公式 note への掲載ですので、ページを画像にして掲載しつつ Tips をご紹介しますが、是非 <a href='https://github.com/nakayama-kazuki/2021/blob/master/pptx/power-punch.pptx'>パワーポイント資料</a> としてページめくりでもご覧頂きたく思います。
+画像化したスライド（元ファイルは <a href='https://github.com/nakayama-kazuki/2021/blob/master/pptx/power-punch.pptx'>こちら</a>）を用いてポイントを解説します。ちなみに、パワーポイントで以下のマクロを実行することで全てのスライドを PNG 画像として保存することができます。
 
-最初にお伝えしたいのは「無駄なものをそぎ落とす」イコール「ページを減らす」ではない、ということです。配布資料ではなくプレゼンテーションである以上、必要ならば躊躇することなくページを増やすことに慣れてください。一例を挙げると、ある情報を参照するためにページを行ったり来たりするプレゼンテーションよりは、必要なタイミングで必要な情報が提示（例えそれが再掲であっても）されるプレゼンテーションの方が UX 観点で優れています。
+```
+Sub SaveSlidesAsPNG8()
+    Dim pptSlide As Slide
+    Dim outputPath As String
+    Dim slideIndex As Integer
+    outputPath = "your output path"
+    For Each pptSlide In ActivePresentation.Slides
+        slideIndex = pptSlide.slideIndex
+        pptSlide.Export outputPath & "page-" & Format(slideIndex, "000") & ".png", "PNG", 1600
+    Next pptSlide
+End Sub
+```
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-01.png' />
+まず「無駄をそぎ落とす」ことと「ページ数を減らす」ことは同じではありません。
+
+プレゼンテーションに必要であるならば躊躇せずにページ数を増やしましょう。
+
+例えば、ある特定のスライドを参照するためにプレゼンテーション中にページを行ったり来たりするのではなく、必要なタイミングで（何度でも）同じスライドを再掲しましょう。
+
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-002.png' />
 
 再掲が増えると、修正が必要になった場合に複数ページの修正が大変だし修正が漏れてしまう懸念も生じるかもしれません。そんなときは「スライドマスター」から「レイアウトの挿入」で繰り返し利用する情報を編集しましょう。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-02.png' />
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-03.png' />
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-04.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-003.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-004.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-005.png' />
 
 再掲の都度「新しいスライド」から該当する情報を挿入できます。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-05.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-006.png' />
 
 ページを増やすべき理由は他にもあります。この図は技術ブログ記事の <a href='https://techblog.yahoo.co.jp/entry/2023071830429434/'>3rd-party JavaScript のリスク対策に CSP（Content Security Policy）を活用する</a> からの引用ですが、記事ならばこの図一枚で済ますところ、プレゼンテーションで説明する場合以下の方法で「順序」を誤解無く伝えることができます。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-06.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-007.png' />
 
 まずは図を複製して塗りつぶしも枠線も薄い灰色にして「スライドマスター」の「レイアウト」に貼り付けます。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-07.png' />
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-08.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-008.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-009.png' />
 
 その上に元の図を貼り付けます。これで準備完了です。このページを「順序」の説明必要な分複製して …
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-09.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-010.png' />
 
 順序 #1 に必要な部分以外をカットします。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-10.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-011.png' />
 
 順序 #2 に必要な部分以外をカットします。以下繰り返しです。一枚の絵を用いて言葉で「順序」を説明することと比較して誤解が生じるリスクも少なくなるかと思います。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-11.png' />
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-12.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-012.png' />
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-13.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-013.png' />
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-14.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-014.png' />
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-15.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-16.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-17.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-18.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-19.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-20.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-21.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-22.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-23.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-24.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-25.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-26.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-27.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-28.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-29.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-30.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-31.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-32.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-33.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-34.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-35.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-36.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-37.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-38.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-39.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-40.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-41.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-42.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-43.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-44.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-45.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-46.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-47.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-48.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-49.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-50.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-51.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-52.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-53.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-54.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-55.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-56.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-57.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-58.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-59.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-60.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-61.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-62.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-63.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-64.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-65.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-66.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-67.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-68.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-69.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-70.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-71.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-72.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-73.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-74.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-75.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-76.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-77.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-78.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-79.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-80.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-81.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-82.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-83.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-84.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-85.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-86.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-87.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-88.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-89.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-90.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-91.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-92.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-93.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-94.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-95.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-96.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-97.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-98.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-99.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-100.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-101.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-102.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-103.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-104.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-105.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-106.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-107.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-108.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-109.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-110.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-111.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-112.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-113.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-114.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-115.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-116.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-117.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-118.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-119.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-120.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-121.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-122.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-123.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-124.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/copied-image-as-png-125.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-015.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-016.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-017.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-018.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-019.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-020.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-021.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-022.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-023.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-024.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-025.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-026.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-027.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-028.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-029.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-030.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-031.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-032.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-033.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-034.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-035.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-036.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-037.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-038.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-039.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-040.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-041.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-042.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-043.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-044.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-045.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-046.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-047.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-048.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-049.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-050.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-051.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-052.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-053.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-054.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-055.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-056.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-057.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-058.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-059.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-060.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-061.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-062.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-063.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-064.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-065.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-066.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-067.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-068.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-069.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-070.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-071.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-072.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-073.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-074.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-075.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-076.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-077.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-078.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-079.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-080.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-081.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-082.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-083.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-084.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-085.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-086.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-087.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-088.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-089.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-090.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-091.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-092.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-093.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-094.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-095.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-096.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-097.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-098.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-099.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-100.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-101.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-102.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-103.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-104.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-105.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-106.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-107.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-108.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-109.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-110.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-111.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-112.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-113.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-114.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-115.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-116.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-117.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-118.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-119.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-120.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-121.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-122.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-123.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-124.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-125.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-126.png' />
 
 
 
