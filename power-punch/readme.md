@@ -12,15 +12,15 @@
 
 など多くの観点で合理性があり、新しいアイデアや複雑なシステムを扱う際の強力な手段でした。
 
-しかし、グローバル協業体制や働き方が多様化した状況下では、オフィスへの集合も気軽にできることではありません。私たち LINE ヤフーはまさにそのような状況にあり、加えて旧 LINE と旧ヤフーの組織文化の融合途上にあります。あらゆるギャップを軽減するためにも、以前のようにホワイトボードを活用した議論をしたいところですが、日常的には Zoom を使ったコミュニケーションの質を高めてゆく必要があります。
+しかし、グローバル協業体制や働き方が多様化した状況下では、オフィスに集合することは少々ハードルが高くなりました。私たち LINE ヤフーもまさにそのような状況にあり、加えて旧 LINE と旧ヤフーの組織文化の融合途上にあります。あらゆるギャップを軽減するためにも、以前のようにホワイトボードを活用した議論をしたいところですが、日常的にはオンラインコミュニケーションの質を高めてゆく必要があります。
 
-そこで今回はホワイトボードを活用した議論の代替案として、ポンチ絵を多用したパワーポイントプレゼンテーション（パワーポンチと名付けてみました :-p）をご提案したいと思います。
+そこで今回はホワイトボードを活用した議論の代替案として、ポンチ絵を多用したパワーポイントプレゼンテーション（パワーポンチと名付けてみました :-p）をご提案させていただきます。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-001.png' />
 
 ## ポンチ絵のメリット
 
-まず最初に、伝えたいことをポンチ絵にして伝え方を工夫する副作用として、自身の考えが整理されてゆきます。次いで、ポンチ絵は具体的な形として捉えやすいため、議論の空中戦を回避し、関係者が違和感や不明点を探しやすくなります。さらに、視覚的な刺激は関係者の創造性を引き出し、新しいアイデアや解決策を生み出すきっかけにもなります。
+「作ることは考えることである」という言葉がありますが、伝え方に工夫をこらしつつポンチ絵を作る副作用として、自身の考えが整理されてゆくという効果は確実にあります。さらに、ポンチ絵は具体的な形として捉えやすいため、関係者が違和感や不明点を探しやすくなるとともに、視覚的な刺激が関係者の創造性を引き出し、新しいアイデアや解決策を生み出すきっかけにもなります。
 
 総じて、ポンチ絵を多用したプレゼンテーションとそれに続く議論は、ホワイトボードを活用した議論に近しい効果を期待することができます。
 
@@ -29,70 +29,65 @@
 - パワーポイントの利用を禁止する
 - 準備に時間をかけずありもののドキュメントを流用する
 
-などの考え方も否定はしませんが、上で述べたメリットを最大化したいならばポンチ絵を多用したプレゼンテーション（とそれに続く議論）にコストをかけることをお勧めします。
+などの考え方はあるものの、上で述べたメリットを最大化したいならば、ポンチ絵を多用したプレゼンテーション（とそれに続く議論）にコストをかけることはお勧めです。
 
-## ポンチ絵を多用したプレゼンテーションのポイント
+## ポイント解説
 
-画像化したスライド（元ファイルは <a href='https://github.com/nakayama-kazuki/2021/blob/master/pptx/power-punch.pptx'>こちら</a>）を用いてポンチ絵を多用したプレゼンテーションのポイントを解説します。ちなみに、パワーポイントで以下のマクロを実行すると全てのスライドを PNG 画像として保存することができます。
+それではスライド（元ファイルは <a href='https://github.com/nakayama-kazuki/2021/blob/master/pptx/power-punch.pptx'>こちら</a>）を用いてポンチ絵を多用したプレゼンテーションのポイントについて解説します。
 
-```
-Sub SaveSlidesAsPNG8()
-    Dim pptSlide As Slide
-    Dim outputPath As String
-    Dim slideIndex As Integer
-    outputPath = "your output path"
-    For Each pptSlide In ActivePresentation.Slides
-        slideIndex = pptSlide.slideIndex
-        pptSlide.Export outputPath & "page-" & Format(slideIndex, "000") & ".png", "PNG", 1600
-    Next pptSlide
-End Sub
-```
-
-まず「無駄をそぎ落とす」ことと「ページ数を減らす」ことは同じではありません。
-
-プレゼンテーションに必要であるならば躊躇せずにページ数を増やしましょう。
-
-例えば、ある特定のスライドを参照するためにプレゼンテーション中にページを行ったり来たりするのではなく、必要なタイミングで（何度でも）同じスライドを再掲しましょう。
+まず、プレゼンテーション（とそれに続く議論）に有益であるならば、躊躇せずにページ数を増やすことに慣れましょう。例えば、ある特定のスライドを参照するためにプレゼンテーション中にページを行ったり来たりするくらいならば、同じスライドを再掲（必要なら何度でも）しましょう。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-002.png' />
 
-再掲が増えると、修正が必要になった場合に複数ページの修正が大変だし修正が漏れてしまう懸念も生じるかもしれません。そんなときは「スライドマスター」から「レイアウトの挿入」で繰り返し利用する情報を編集しましょう。
+再掲に伴う修正時の負担が懸念ならば「スライドマスター」から「レイアウトの挿入」で、繰り返し利用する情報をレイアウトとして一元管理し、再掲の都度「新しいスライド」から挿入することで対応できます。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-003.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-004.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-005.png' />
-
-再掲の都度「新しいスライド」から該当する情報を挿入できます。
-
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-006.png' />
 
-ページを増やすべき理由は他にもあります。この図は技術ブログ記事の <a href='https://techblog.yahoo.co.jp/entry/2023071830429434/'>3rd-party JavaScript のリスク対策に CSP（Content Security Policy）を活用する</a> からの引用ですが、記事ならばこの図一枚で済ますところ、プレゼンテーションで説明する場合以下の方法で「順序」を誤解無く伝えることができます。
+さて、ページを増やすことに抵抗がなくなったら <a href='https://techblog.yahoo.co.jp/entry/2023071830429434/'>技術ブログ記事</a> からの引用したこのポンチ絵を、プレゼンテーションで説明する方法を考えてみましょう。例えば 5 つのステップに分けて説明したいとします。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-007.png' />
 
-まずは図を複製して塗りつぶしも枠線も薄い灰色にして「スライドマスター」の「レイアウト」に貼り付けます。
+まずはポンチ絵を複製して全体をグレーにしたものをレイアウトに貼り付けます。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-008.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-009.png' />
 
-その上に元の図を貼り付けます。これで準備完了です。このページを「順序」の説明必要な分複製して …
+そのレイアウトを使った新しいスライドに元のポンチ絵を貼り付け、そのスライドをステップ数分（今回は 5）複製します。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-010.png' />
 
-順序 #1 に必要な部分以外をカットします。
+各ステップで説明したいところ以外を削除して完成です。こうすることで
+
+- 全体のどこを説明しているのかが自明（説明部分は着色で、それ以外はグレー）で参加者が誤解しにくい
+- 副次的な効果として、短時間で画面が変化するので参加者が眠くならない
+
+といった効果を望めます。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-011.png' />
-
-順序 #2 に必要な部分以外をカットします。以下繰り返しです。一枚の絵を用いて言葉で「順序」を説明することと比較して誤解が生じるリスクも少なくなるかと思います。
-
-
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-012.png' />
-
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-013.png' />
-
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-014.png' />
-
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-015.png' />
+
+一枚のスライドの説明同様、プレゼンテーション全体でも「いまこのへん」を示すことには価値があります。
+
+示し方はこのスライドのように通常スライドとの違いを明確に
+
+
+このタイミング
+
+
+で問いかけや確認をしたり、参加者が質問を挟みやすくな
+
+
+
+
+
+
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-016.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-017.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-018.png' />
@@ -206,6 +201,23 @@ End Sub
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-126.png' />
 
 
+
+
+
+画像化したスライド（元ファイルは <a href='https://github.com/nakayama-kazuki/2021/blob/master/pptx/power-punch.pptx'>こちら</a>）を用いてポンチ絵を多用したプレゼンテーションのポイントを解説します。ちなみに、パワーポイントで以下のマクロを実行すると全てのスライドを PNG 画像として保存することができます。
+
+```
+Sub SaveSlidesAsPNG8()
+    Dim pptSlide As Slide
+    Dim outputPath As String
+    Dim slideIndex As Integer
+    outputPath = "your output path"
+    For Each pptSlide In ActivePresentation.Slides
+        slideIndex = pptSlide.slideIndex
+        pptSlide.Export outputPath & "page-" & Format(slideIndex, "000") & ".png", "PNG", 1600
+    Next pptSlide
+End Sub
+```
 
 
 図解 SameSite
