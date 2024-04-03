@@ -12,7 +12,7 @@
 
 など多くの観点で合理性があり、新しいアイデアや複雑なシステムを扱う際の強力な手段でした。
 
-しかし、グローバル協業体制や働き方が多様化した状況下では、オフィスに集合することは少々ハードルが高くなりました。私たち LINE ヤフーもまさにそのような状況にあり、加えて旧 LINE と旧ヤフーの組織文化の融合途上にあります。あらゆるギャップを軽減するためにも、以前のようにホワイトボードを活用した議論をしたいところですが、日常的にはオンラインコミュニケーションの質を高めてゆく必要があります。
+しかし、グローバル協業体制や働き方が多様化した状況下では、オフィスに集合することは少々ハードルが高くなりました。私たち LINE ヤフーもそのような状況にあり、加えて旧 LINE と旧ヤフーの組織文化の融合途上にあります。あらゆるギャップを軽減するためにも、以前のようにホワイトボードを活用した議論をしたいところですが、日常的にはオンラインコミュニケーションの質を高めてゆく必要があります。
 
 そこで今回はホワイトボードを活用した議論の代替案として、ポンチ絵を多用したパワーポイントプレゼンテーション（パワーポンチと名付けてみました :-p）をご提案させていただきます。
 
@@ -20,22 +20,22 @@
 
 ## ポンチ絵のメリット
 
-「作ることは考えることである」という言葉がありますが、伝え方に工夫をこらしつつポンチ絵を作る副作用として、自身の考えが整理されてゆくという効果は確実にあります。さらに、ポンチ絵は具体的な形として捉えやすいため、関係者が違和感や不明点を探しやすくなるとともに、視覚的な刺激が関係者の創造性を引き出し、新しいアイデアや解決策を生み出すきっかけにもなります。
+第一に「作ることは考えることである」という言葉がありますが、伝え方に工夫をこらしつつポンチ絵を作る副作用として、自身の考えが整理されてゆくという効果があります。さらに、ポンチ絵は具体的な形として捉えやすいため、関係者が違和感や不明点を探しやすくなるとともに、視覚的な刺激が関係者の創造性を引き出し、新しいアイデアや解決策を生み出すきっかけにもなります。
 
 総じて、ポンチ絵を多用したプレゼンテーションとそれに続く議論は、ホワイトボードを活用した議論に近しい効果を期待することができます。
 
-蛇足ですが
+蛇足ですが、目的に応じて
 
 - パワーポイントの利用を禁止する
 - 準備に時間をかけずありもののドキュメントを流用する
 
-などの考え方はあるものの、上で述べたメリットを最大化したいならば、ポンチ絵を多用したプレゼンテーション（とそれに続く議論）にコストをかけることはお勧めです。
+など採用することはあるものの、上で述べたメリットを最大化したいならば、ポンチ絵を多用したプレゼンテーション（とそれに続く議論）にコストをかけることはお勧めです。
 
 ## ポイント解説
 
 それではスライド（元ファイルは <a href='https://github.com/nakayama-kazuki/2021/blob/master/pptx/power-punch.pptx'>こちら</a>）を用いてポンチ絵を多用したプレゼンテーションのポイントについて解説します。
 
-まず、プレゼンテーション（とそれに続く議論）に有益であるならば、躊躇せずにページ数を増やすことに慣れましょう。例えば、ある特定のスライドを参照するためにプレゼンテーション中にページを行ったり来たりするくらいならば、同じスライドを再掲（必要なら何度でも）しましょう。
+まず、プレゼンテーション（とそれに続く議論）に有益である限り、躊躇せずにページ数を増やすことに慣れましょう。例えば、ある特定のスライドを参照するためにプレゼンテーション中にページを行ったり来たりするくらいならば、同じスライドを再掲しましょう（必要ならば何度でも）。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-002.png' />
 
@@ -46,23 +46,29 @@
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-005.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-006.png' />
 
-さて、ページを増やすことに抵抗がなくなったら <a href='https://techblog.yahoo.co.jp/entry/2023071830429434/'>技術ブログ記事</a> からの引用したこのポンチ絵を、プレゼンテーションで説明する方法を考えてみましょう。例えば 5 つのステップに分けて説明したいとします。
+ページ数を増やすことに抵抗がなくなったところで <a href='https://techblog.yahoo.co.jp/entry/2023071830429434/'>CSP の記事</a> から引用したポンチ絵について、プレゼンテーションで説明する方法を考えてみましょう。例えば 5 つのステップに分けて説明したいとします。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-007.png' />
 
-まずはポンチ絵を複製して全体をグレーにしたものをレイアウトに貼り付けます。
+まずはポンチ絵を複製し、全体をグレーアウト表現 …
+
+- 塗りつぶしを白に近い灰色
+- 枠線を白に近い灰色
+- テキストは白
+
+のポンチ絵に変換してレイアウトに貼り付けます。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-008.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-009.png' />
 
-そのレイアウトを使った新しいスライドに元のポンチ絵を貼り付け、そのスライドをステップ数分（今回は 5）複製します。
+そのレイアウトを使った新しいスライドに元のポンチ絵を貼り付け、そのスライドを 5 つのステップ分複製します。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-010.png' />
 
-各ステップで説明したいところ以外を削除して完成です。こうすることで
+各ステップで説明したいところ以外を削除（結果として説明と関係のない部分がグレーアウト表現となる）して完成です。プレゼンテーションの際にスライドあたりにかける時間は 10 秒以内が目安です。こうすることで
 
-- 全体のどこを説明しているのかが自明（説明部分は着色で、それ以外はグレー）で参加者が誤解しにくい
-- 副次的な効果として、短時間で画面が変化するので参加者が眠くならない
+- 全体のどこを説明しているのかが自明で参加者が誤解しにくい
+- 短時間で画面が変化するので参加者が眠くならない
 
 といった効果を望めます。
 
@@ -72,48 +78,81 @@
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-014.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-015.png' />
 
-一枚のスライドの説明同様、プレゼンテーション全体でも「いまこのへん」を示すことには価値があります。
+プレゼンテーション全体でも「いまこのへん」を示すことで
 
-示し方はこのスライドのように通常スライドとの違いを明確に
+- 参加者が質問をするタイミングをつかめる
+- 参加者に対して理解度確認などの投げかけができる
 
-
-このタイミング
-
-
-で問いかけや確認をしたり、参加者が質問を挟みやすくな
-
-
-
-
-
-
+のような双方向性を促進しやすくなります。例えばこのスライドのように明度を反転させたスライドで章の狭間であることと、大雑把な進行状況を示します。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-016.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-017.png' />
+
+次に注目を引き付ける手段を幾つかご紹介します。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-018.png' />
+
+今回は <a href='https://github.com/nakayama-kazuki/202x/tree/main/data-gudeline'>データ活用の記事</a> から引用したポンチ絵を用い、ステップを分けてプライバシー保護の仕組を説明してみます。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-019.png' />
+
+一つ目の方法は既にご紹介したグレーアウト表現を用いた方法です。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-020.png' />
+
+クリーンルーム内へのデータ転送を説明し
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-021.png' />
+
+その後は個人データの取り出しができないことを説明します。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-022.png' />
+
+クロス集計を行い
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-023.png' />
+
+その結果の統計値のみが取り出せることを説明します。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-024.png' />
+
+グレーアウト表現を用いた方法が面倒ならば、もっと簡単な方法もあります。二つ目の方法は透明度が低い背景色の矩形を重ねる方法です。この例では透明度 10% の白を使っています。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-025.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-026.png' />
+
+あとは一つ目の方法と同じです。少々色使いがノイジーかもしれませんが、こちらの方が手間はかかりません。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-027.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-028.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-029.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-030.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-031.png' />
+
+三つ目は型抜きを使った方法です。スライドと同じサイズの矩形を使い、注目させたい部分を型抜きします。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-032.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-033.png' />
+
+そして全体を適当な透明度と色に調整します。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-034.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-035.png' />
+
+それを元画像に重ねることで、特定の対象に注目を引き付けることができます。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-036.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-037.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-038.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-039.png' />
+
+四つ目は放射線や背景画像を用いる方法です。これらのパーツはテンプレートを用意しておくと便利です。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-040.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-041.png' />
+
+★
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-042.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-043.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-044.png' />
