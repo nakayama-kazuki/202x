@@ -396,13 +396,13 @@ Sub SaveSlidesAsPNG8()
 End Sub
 ```
 
-加えて、マクロで生成した画像は PNG24（が 100 枚以上）なので、通信制限を気にする人のために減色～サイズ削減（およそ 6.8 MB のファイルが 3.0 MB）しました。
+加えて、マクロで生成した画像は PNG24（が 100 枚以上）なので、通信制限を気にする人のために以下のスクリプト（PHP）を用いて減色～サイズ削減（およそ 6.8 MB のファイルが 3.0 MB）してあります。
 
 ```
 define('MAX_BIT', 7);
 define('MINIMUM', 0);
 
-function detect_palette2($in_im, $in_w, $in_h)
+function detect_colors($in_im, $in_w, $in_h)
 {
     $palette = array();
     for ($y = 0; $y < $in_h; $y++) {
@@ -444,7 +444,7 @@ while (($file = readdir($dh)) !== FALSE) {
     $h = imagesy($im);
     $im_original_color = imagecreatetruecolor($w, $h);
     imagecopy($im_original_color, $im, 0, 0, 0, 0, $w, $h);
-    $colors = detect_palette2($im, $w, $h);
+    $colors = detect_colors($im, $w, $h);
     imagetruecolortopalette($im, FALSE, $colors);
     imagecolormatch($im_original_color, $im);
     imagedestroy($im_original_color);
