@@ -61,22 +61,16 @@
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-008.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-009.png' />
 
-そのレイアウトを使った新しいスライドに元のポンチ絵を貼り付け、そのスライドを 5 つのステップ分複製します。
+そのレイアウトを使った新しいスライドに元のポンチ絵を貼り付け、そのスライドを 5 つのステップ分複製します。各ステップで説明したいところ以外を削除（結果として説明と関係のない部分がグレーアウト表現となる）して完成です。プレゼンテーションの際にスライドあたりにかける時間は 10 秒以内が目安です。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-010.png' />
-
-各ステップで説明したいところ以外を削除（結果として説明と関係のない部分がグレーアウト表現となる）して完成です。プレゼンテーションの際にスライドあたりにかける時間は 10 秒以内が目安です。こうすることで
+こうすることで
 
 - 全体のどこを説明しているのかが自明で参加者が誤解しにくい
 - 短時間で見た目が変化するので参加者が退屈しない
 
 といった効果を望めます。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-011.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-012.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-013.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-014.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-015.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-010-015.gif' />
 
 プレゼンテーション全体でも「いまこのへん」を示すことで
 
@@ -92,42 +86,16 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-018.png' />
 
-今回は <a href='https://github.com/nakayama-kazuki/202x/tree/main/data-gudeline'>データ活用の記事</a> から引用したポンチ絵を用い、ステップを分けてプライバシー保護の仕組を説明してみます。
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-019.png' />
-
-一つ目の方法は既にご紹介したグレーアウト表現を用いた方法です。
+今回は <a href='https://github.com/nakayama-kazuki/202x/tree/main/data-gudeline'>データ活用の記事</a> から引用したポンチ絵を用います。一つ目の方法は既にご紹介したグレーアウト表現を用いた方法です。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-020.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-019-024.gif' />
 
-クリーンルーム内へのデータ転送を説明し、
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-021.png' />
-
-その後は個人データの取り出しができないことを説明します。
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-022.png' />
-
-クロス集計を行い、
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-023.png' />
-
-その結果の統計値のみが取り出せることを説明します。
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-024.png' />
-
-グレーアウト表現を用いた方法が面倒ならば、もっと簡単な方法もあります。二つ目の方法は透明度が低い背景色の矩形を重ねる方法です。この例では透明度 10% の白を使っています。
+グレーアウト表現を用いた方法が面倒ならば、もっと簡単な方法もあります。二つ目の方法は透明度が低い背景色の矩形を重ねる方法です。この例では透明度 10% の白を使っています。色使いが少々ノイジーですが、こちらの方が手間はかかりません。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-025.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-026.png' />
-
-あとは一つ目の方法と同じです。色使いが少々ノイジーですが、こちらの方が手間はかかりません。
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-027.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-028.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-029.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-030.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-031.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-027-031.gif' />
 
 三つ目は型抜きを使った方法です。スライドと同じサイズの矩形を使い、注目させたい部分を型抜きします。
 
@@ -141,10 +109,7 @@
 
 それを元画像に重ねることで、特定の対象に注目を引き付けることができます。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-036.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-037.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-038.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-039.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-036-039.gif' />
 
 四つ目は放射線や背景画像を用いる方法です。これらのパーツは再利用のためのテンプレートを用意しておくと便利です。
 
@@ -157,31 +122,19 @@
 
 これは実際にアカウント連携のトポトジーを議論しているときに用いたポンチ絵ですが、変化の Before と After のみを示した場合、関係者から良質な気付きのフィードバックを得ることはできません。これは Before と After に複数の変化が含まれ、思考が追いつかないためです。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-043.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-044.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-045.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-043-044.gif' />
 
 そこで検討の時系列に従って、まずは 2 つのエンティティーが統合されることを表現してみます。残像を使ったパラパラまんがで参加者のメンタルモデルに働きかけます。すると参加者は統合される両エンティティーが既に保持している属性情報や、他のエンティティーとの関係性がどのように変化するのだろうか？という疑問に至り、同時に問題を解消するための創造性を発揮することができます。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-046.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-047.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-048.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-049.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-050.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-046-050.gif' />
 
 次にあるエンティティーのみ特別な扱いが必要になったことを表現します。しかし、この結果 UI でエンティティーの関係性を表現することが困難であることが参加者にもイメージしやすくなります。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-051.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-052.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-053.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-054.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-050-054.gif' />
 
 そこで全体のトポロジーに一貫性を持たせる案に至ったことを表現します。このように検討の経緯や中間段階における課題の表現を通じ、参加者から多くの視点を引き出し問題の早期発見につなげることができました。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-055.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-056.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-057.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-058.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-054-058.gif' />
 
 参加者には予断や誤解をあたえることなく、フラットにプレゼンテーションを聞いてもらいましょう。
 
@@ -199,98 +152,33 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-062.png' />
 
-最初よりはマシですが、まだ誤解の余地があるので、
+最初よりはマシですが、まだ誤解の余地があるので、線に背景色の矩形を重ね上を通る線を「最前面へ移動」することで誤解の余地を軽減できます。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-063.png' />
-
-線に背景色の矩形を重ね、上を通る線を「最前面へ移動」することで誤解の余地を軽減できます。
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-064.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-065.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-066.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-063-066.gif' />
 
 面倒でなければ交点をずらすことでさらに改善できます。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-067.png' />
 
-次に正三角形をパワーポイントのガイドにあわせて中央に配置します。
+次に、正三角形をパワーポイントのガイドにあわせて中央に配置した場合、正三角形の重心とのズレが生じます。従って、ガイドの中央から各頂点を連結したポンチ絵の場合、頂点Ａのエンティティーが特別な存在であるかのような予断を与えてしまいます。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-068.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-068-071.gif' />
 
-しかし、このガイドの中央と正三角形の重心にはズレがあります。
+正三角形の重心の位置は垂線の交点となります。そこから各頂点を連結したポンチ絵ならば頂点Ａと頂点Ｂと頂点Ｃは対等です。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-069.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-070.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-072-077.gif' />
 
-なのでガイドの中央から各頂点を連結したポンチ絵の場合、頂点Ａのエンティティーが特別な存在であるとの予断を持たせてしまう懸念が生じます。
+おまけで、正五角形をパワーポイントのガイドにあわせて中央に配置してみました。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-071.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-078-083.gif' />
 
-正三角形の重心の位置は、
+重心から各頂点を連結したポンチ絵ならば、
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-072.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-084-091.gif' />
 
-垂線の交点となります。
+回転しても美しい正五角形を保てます。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-073.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-074.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-075.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-076.png' />
-
-これならば頂点Ａと頂点Ｂと頂点Ｃは対等です。
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-077.png' />
-
-おまけで正五角形の重心を考えてみましょう。正五角形をパワーポイントのガイドにあわせて中央に配置した場合
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-078.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-079.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-080.png' />
-
-若干アンバランスな印象を抱かせるポンチ絵になりました。
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-081.png' />
-
-回転させてみると
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-082.png' />
-
-アンバランス感も目立ちます。
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-083.png' />
-
-そこで、こんな感じで頂点と辺、および頂点同士を結び、
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-084.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-085.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-086.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-087.png' />
-
-最後は目測で交点にあわせて、
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-088.png' />
-
-ここが正五角形の重心です。
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-089.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-090.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-091.png' />
-
-回転させてみても
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-092.png' />
-
-正五角形です。
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-093.png' />
-
-さらに回転させてみても
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-094.png' />
-
-やはり正五角形です。
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-095.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-091-095.gif' />
 
 エンジニアはストレージが大好きなのでポンチ絵にも頻出しますが、図形には円柱が二種類存在します。
 
@@ -299,30 +187,16 @@
 
 Ａの円柱は底面を手動で調整できないため、縦長にすると残念な感じです ^^;
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-098.png' />
-
-ＡやＢを使わず、矩形と楕円形の組み合わせでも円柱を表現できます。
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-099.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-100.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-098-100.gif' />
 
 ここでグラデーション塗りつぶしを使い、ストレージへのデータ蓄積を表現してみます。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-101.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-102.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-103.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-104.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-102-104.gif' />
 
-Ｂの円柱の場合はグラデーション塗りつぶしではなく、重ね合わせで蓄積や割合を表現することができます。
+Ｂの円柱の場合はグラデーション塗りつぶしは使わず、重ね合わせで蓄積や割合を表現することができるので、結論としてＡの円柱よりはＢの円柱を使った方が良さそうですね。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-105.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-106.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-107.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-108.png' />
-
-結論としてＡの円柱よりはＢの円柱を使った方が良さそうですね。
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-109.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-105-109.gif' />
 
 次は <a href='https://blog.techscore.com/entry/2023/10/06/110100'>SameSite の記事</a> から引用したポンチ絵を用いた表について考えてみます。
 
@@ -341,31 +215,27 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-114.png' />
 
-まずは三角形を組み合わせたダイヤモンドです。
+例えばダイヤモンドを作ってみましょう。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-115.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-116.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-117.png' />
+1. 三角形を組み合わせる
+2. 各パーツを適当（本当に適当）にグラデーションで着色する
+3. 各パーツをグループ化する
 
-着色は適当に（本当に適当）グラデーションを付けます。
+これをコピーして拡大縮小、回転すればダイヤモンドがざくざくです。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-118.png' />
-
-グループ化して拡大縮小、回転すればダイヤモンドがざくざくです。
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-119.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-115-119.gif' />
 
 バッグや財布なども簡単に作れます。お買い物や広告のユースケースなどで使いまわせます。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-120.png' />
 
-矩形の周囲を曲線で囲み
+より自由度の高いポンチ絵に挑戦してみましょう。まずは矩形の周囲を曲線で囲み
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-121.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-122.pn0g' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-122.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-123.png' />
 
-丸みを帯びた矩形を作れます。
+丸みを帯びた矩形を作ります。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-124.png' />
 
@@ -373,7 +243,7 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-125.png' />
 
-例えば、これらをつなげて接合すれば棒人間の一丁あがり、です。
+これらをつなげて接合すれば棒人間の一丁あがり、です。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-126.png' />
 
@@ -453,4 +323,9 @@ while (($file = readdir($dh)) !== FALSE) {
     imagedestroy($im);
 }
 closedir($dh);
+```
+必要に応じてアニメーション GIF にまとめています。
+
+```
+convert -delay 100 -loop 0 page-a.png page-b.png page-c.png page-a-c.gif
 ```
