@@ -379,6 +379,8 @@
 
 以上になりますが、ポンチ絵を多用したパワーポイントプレゼンテーションがみなさまのオンラインコミュニケーションの改善のヒントになれば幸いです。
 
+p.s.
+
 蛇足ですが、今回の記事には 100 枚以上の画像を張り付けていますが、パワーポイントで以下のマクロを実行すると全てのスライドを PNG 画像として保存することができます。
 
 ```
@@ -394,4 +396,61 @@ Sub SaveSlidesAsPNG8()
 End Sub
 ```
 
-加えて、この画像は PNG24（が 100 枚以上）なので、通信制限を気にする人に配慮してまとめて減色済みです。
+加えて、マクロで生成した画像は PNG24（が 100 枚以上）なので、通信制限を気にする人のために減色～サイズ削減（およそ 6.8 MB のファイルが 3.0 MB）しました。
+
+```
+define('MAX_BIT', 7);
+define('MINIMUM', 0);
+
+function detect_palette2($in_im, $in_w, $in_h)
+{
+    $palette = array();
+    for ($y = 0; $y < $in_h; $y++) {
+        for ($x = 0; $x < $in_w; $x++) {
+            $color = imagecolorat($in_im, $x, $y);
+            if (array_key_exists($color, $palette)) {
+                $palette[$color]++;
+            } else {
+                $palette[$color] = 1;
+            }
+        }
+    }
+    $colors = 1;
+    for ($i = 1; $i <= MAX_BIT; $i++) {
+        $colors *= 2;
+        if ($colors >= count($palette)) {
+            break;
+        }
+    }
+    return $colors;
+}
+
+define('INPUT_DIR', 'YOUR INPUT PATH');
+define('OUTPUT_DIR', 'YOUR OUTPUT PATH');
+
+if (!is_dir(INPUT_DIR)) {
+    exit;
+}
+
+$dh = opendir(INPUT_DIR);
+while (($file = readdir($dh)) !== FALSE) {
+    $path = INPUT_DIR . "/{$file}";
+    if (!is_file($path)) {
+        continue;
+    }
+    $im = @imagecreatefrompng($path);
+    imagepalettetotruecolor($im);
+    $w = imagesx($im);
+    $h = imagesy($im);
+    $im_original_color = imagecreatetruecolor($w, $h);
+    imagecopy($im_original_color, $im, 0, 0, 0, 0, $w, $h);
+    $colors = detect_palette2($im, $w, $h);
+    imagetruecolortopalette($im, FALSE, $colors);
+    imagecolormatch($im_original_color, $im);
+    imagedestroy($im_original_color);
+    echo "filename : {$file}, colors : {$colors}\n";
+    imagepng($im, OUTPUT_DIR . "/{$file}");
+    imagedestroy($im);
+}
+closedir($dh);
+```
