@@ -10,7 +10,7 @@
 - 関係者の認識あわせや理解度向上
 - 関係者の論点へのフォーカス
 
-など多くの観点で合理性がありました。新しいアイデアや複雑なシステムを扱う際の強力な手段として、オフィスのあちこちでホワイトボードが活用されていました。
+など多くの観点で合理性が高く、新しいアイデアや複雑なシステムを扱う際の強力な手段として、オフィスのあちこちでホワイトボードが活用されていました。
 
 しかし、グローバル協業体制や働き方が多様化した状況下でオフィスに集合することは、少々ハードルが高くなります。私たち LINE ヤフーもそのような状況にあり、加えて旧 LINE と旧ヤフーの組織文化の融合途上にあります。あらゆるギャップを軽減するためにも、以前のようにホワイトボードを活用した議論を重ねたいところですが、日常的にはオンラインコミュニケーションの質を高めてゆく必要があります。
 
@@ -161,7 +161,7 @@
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-044.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-045.png' />
 
-そこで検討の時系列に従って、まずは 2 つのエンティティーが統合されることを表現してみます。残像を使ったパラパラまんがで参加者のメンタルモデルに働きかけます。すると参加者は統合される両エンティティーの属性情報や、他のエンティティーとの関係性がどのように変化するのだろうか？という疑問に思い至り、同時に問題を解消するための創造性を発揮することができます。
+そこで検討の時系列に従って、まずは 2 つのエンティティーが統合されることを表現してみます。残像を使ったパラパラまんがで参加者のメンタルモデルに働きかけます。すると参加者は統合される両エンティティーが既に保持している属性情報や、他のエンティティーとの関係性がどのように変化するのだろうか？という疑問に至り、同時に問題を解消するための創造性を発揮することができます。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-046.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-047.png' />
@@ -222,7 +222,7 @@
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-069.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-070.png' />
 
-なのでガイドの中央から各頂点を連結したポンチ絵の場合、頂点Ａが特別な存在であるように予断を与えてしまう懸念があります。
+なのでガイドの中央から各頂点を連結したポンチ絵の場合、頂点Ａのエンティティーが特別な存在であるとの予断を持たせてしまう懸念が生じます。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-071.png' />
 
@@ -292,16 +292,16 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-095.png' />
 
-ストレージはポンチ絵に頻出しますが、図形には円柱が二種類存在します。
+エンジニアはストレージが大好きなのでポンチ絵にも頻出しますが、図形には円柱が二種類存在します。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-096.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-097.png' />
 
-Ａの円柱は縦長にすると不細工ですね ^^;
+Ａの円柱は底面を手動で調整できないため、縦長にすると残念な感じです ^^;
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-098.png' />
 
-ちなみに矩形と楕円形の組み合わせでも円柱を表現できます。
+ＡやＢを使わず、矩形と楕円形の組み合わせでも円柱を表現できます。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-099.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-100.png' />
