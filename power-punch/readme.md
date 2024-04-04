@@ -68,7 +68,7 @@
 各ステップで説明したいところ以外を削除（結果として説明と関係のない部分がグレーアウト表現となる）して完成です。プレゼンテーションの際にスライドあたりにかける時間は 10 秒以内が目安です。こうすることで
 
 - 全体のどこを説明しているのかが自明で参加者が誤解しにくい
-- 短時間で画面が変化するので参加者が眠くならない
+- 短時間で見た目が変化するので参加者が退屈しない
 
 といった効果を望めます。
 
@@ -100,7 +100,7 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-020.png' />
 
-クリーンルーム内へのデータ転送を説明し
+クリーンルーム内へのデータ転送を説明し、
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-021.png' />
 
@@ -108,7 +108,7 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-022.png' />
 
-クロス集計を行い
+クロス集計を行い、
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-023.png' />
 
@@ -121,7 +121,7 @@
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-025.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-026.png' />
 
-あとは一つ目の方法と同じです。少々色使いがノイジーかもしれませんが、こちらの方が手間はかかりません。
+あとは一つ目の方法と同じです。色使いが少々ノイジーですが、こちらの方が手間はかかりません。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-027.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-028.png' />
@@ -146,111 +146,247 @@
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-038.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-039.png' />
 
-四つ目は放射線や背景画像を用いる方法です。これらのパーツはテンプレートを用意しておくと便利です。
+四つ目は放射線や背景画像を用いる方法です。これらのパーツは再利用のためのテンプレートを用意しておくと便利です。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-040.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-041.png' />
 
-★
+次に変化の表現について考えてみます。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-042.png' />
+
+これは実際にアカウント連携のトポトジーを議論しているときに用いたポンチ絵ですが、変化の Before と After のみを示した場合、関係者から良質な気付きのフィードバックを得ることはできません。これは Before と After に複数の変化が含まれ、思考が追いつかないためです。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-043.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-044.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-045.png' />
+
+そこで検討の時系列に従って、まずは 2 つのエンティティーが統合されることを表現してみます。残像を使ったパラパラまんがで参加者のメンタルモデルに働きかけます。すると参加者は統合される両エンティティーの属性情報や、他のエンティティーとの関係性がどのように変化するのだろうか？という疑問に思い至り、同時に問題を解消するための創造性を発揮することができます。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-046.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-047.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-048.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-049.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-050.png' />
+
+次にあるエンティティーのみ特別な扱いが必要になったことを表現します。しかし、この結果 UI でエンティティーの関係性を表現することが困難であることが参加者にもイメージしやすくなります。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-051.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-052.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-053.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-054.png' />
+
+そこで全体のトポロジーに一貫性を持たせる案に至ったことを表現します。このように検討の経緯や中間段階における課題の表現を通じ、参加者から多くの視点を引き出し問題の早期発見につなげることができました。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-055.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-056.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-057.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-058.png' />
+
+参加者には予断や誤解をあたえることなく、フラットにプレゼンテーションを聞いてもらいましょう。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-059.png' />
+
+同じアルファベットのコンポーネントを連結したいとして、
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-060.png' />
+
+これを使う人はいませんよね。予断どころか誤解を招いてしまいます。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-061.png' />
+
+ではこれならどうでしょうか？
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-062.png' />
+
+最初よりはマシですが、まだ誤解の余地があるので、
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-063.png' />
+
+線に背景色の矩形を重ね、上を通る線を「最前面へ移動」することで誤解の余地を軽減できます。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-064.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-065.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-066.png' />
+
+面倒でなければ交点をずらすことでさらに改善できます。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-067.png' />
+
+次に正三角形をパワーポイントのガイドにあわせて中央に配置します。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-068.png' />
+
+しかし、このガイドの中央と正三角形の重心にはズレがあります。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-069.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-070.png' />
+
+なのでガイドの中央から各頂点を連結したポンチ絵の場合、頂点Ａが特別な存在であるように予断を与えてしまう懸念があります。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-071.png' />
+
+正三角形の重心の位置は、
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-072.png' />
+
+垂線の交点となります。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-073.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-074.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-075.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-076.png' />
+
+これならば頂点Ａと頂点Ｂと頂点Ｃは対等です。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-077.png' />
+
+おまけで正五角形の重心を考えてみましょう。正五角形をパワーポイントのガイドにあわせて中央に配置した場合
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-078.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-079.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-080.png' />
+
+若干アンバランスな印象を抱かせるポンチ絵になりました。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-081.png' />
+
+回転させてみると
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-082.png' />
+
+アンバランス感も目立ちます。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-083.png' />
+
+そこで、こんな感じで頂点と辺、および頂点同士を結び、
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-084.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-085.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-086.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-087.png' />
+
+最後は目測で交点にあわせて、
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-088.png' />
+
+ここが正五角形の重心です。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-089.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-090.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-091.png' />
+
+回転させてみても
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-092.png' />
+
+正五角形です。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-093.png' />
+
+さらに回転させてみても
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-094.png' />
+
+やはり正五角形です。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-095.png' />
+
+ストレージはポンチ絵に頻出しますが、図形には円柱が二種類存在します。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-096.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-097.png' />
+
+Ａの円柱は縦長にすると不細工ですね ^^;
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-098.png' />
+
+ちなみに矩形と楕円形の組み合わせでも円柱を表現できます。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-099.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-100.png' />
+
+ここでグラデーション塗りつぶしを使い、ストレージへのデータ蓄積を表現してみます。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-101.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-102.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-103.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-104.png' />
+
+Ｂの円柱の場合はグラデーション塗りつぶしではなく、重ね合わせで蓄積や割合を表現することができます。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-105.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-106.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-107.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-108.png' />
+
+結論としてＡの円柱よりはＢの円柱を使った方が良さそうですね。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-109.png' />
+
+次は <a href='https://blog.techscore.com/entry/2023/10/06/110100'>SameSite の記事</a> から引用したポンチ絵を用いた表について考えてみます。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-110.png' />
+
+ポンチ絵と表を分離することで、見やすくまとまります。しかし、どのような場合に Cookie が送信されるのかを理解するためには、両方のページを行ったり来たりする必要があり、それは参加者の理解の妨げにもなります。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-111.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-112.png' />
+
+ならばポンチ絵ごと表にしてしまうのもひとつの案です。ぱっとみた印象ではごちゃごちゃしていますが、どのような場合に Cookie が送信されるのかを端的に表現することができました。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-113.png' />
+
+最後に、おもったよりも簡単に何でも描けるということをお伝えします。ポンチ絵を駆使して参加者の想像性をおおいに刺激してください。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-114.png' />
+
+まずは三角形を組み合わせたダイヤモンドです。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-115.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-116.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-117.png' />
+
+着色は適当に（本当に適当）グラデーションを付けます。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-118.png' />
+
+グループ化して拡大縮小、回転すればダイヤモンドがざくざくです。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-119.png' />
+
+バッグや財布なども簡単に作れます。お買い物や広告のユースケースなどで使いまわせます。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-120.png' />
+
+矩形の周囲を曲線で囲み
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-121.png' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-122.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-122.pn0g' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-123.png' />
+
+丸みを帯びた矩形を作れます。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-124.png' />
+
+他の多角形でも同様です。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-125.png' />
+
+例えば、これらをつなげて接合すれば棒人間の一丁あがり、です。
+
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/page-126.png' />
 
+以上になりますが、ポンチ絵を多用したパワーポイントプレゼンテーションがみなさまのオンラインコミュニケーションの改善のヒントになれば幸いです。
 
-
-
-
-画像化したスライド（元ファイルは <a href='https://github.com/nakayama-kazuki/2021/blob/master/pptx/power-punch.pptx'>こちら</a>）を用いてポンチ絵を多用したプレゼンテーションのポイントを解説します。ちなみに、パワーポイントで以下のマクロを実行すると全てのスライドを PNG 画像として保存することができます。
+蛇足ですが、今回の記事には 100 枚以上の画像を張り付けていますが、パワーポイントで以下のマクロを実行すると全てのスライドを PNG 画像として保存することができます。
 
 ```
 Sub SaveSlidesAsPNG8()
     Dim pptSlide As Slide
     Dim outputPath As String
     Dim slideIndex As Integer
-    outputPath = "your output path"
+    outputPath = "YOUR OUTPUT PATH"
     For Each pptSlide In ActivePresentation.Slides
         slideIndex = pptSlide.slideIndex
         pptSlide.Export outputPath & "page-" & Format(slideIndex, "000") & ".png", "PNG", 1600
@@ -258,153 +394,4 @@ Sub SaveSlidesAsPNG8()
 End Sub
 ```
 
-
-図解 SameSite
-https://blog.techscore.com/entry/2023/10/06/110100
-
-
-これと似たことを
-
-
-パワポやスライドでお絵描き & 発表しながら自己解決と自己気付き（自分や他人のイメージを触発しやすい）
-
-
-ページは無限に増やす。必要ならとにかく増やす。何ページ参照とかではなく、必要なら何度も同じスライドが登場する
-文字文字しない。絵とキャプション
-半分動画。話しながらパラパラ動かす。注意を引き付ける効果
-
-マトリクスですら絵（CSRF の）
-ここを見ろ、のノウハウ（薄影方式、背景ハイライト、マンガ放射線）（1）
-流れを見せる
-違い（変化）をの表現（検討経緯を見せる、時間軸の変化を見せる）
-先入観を与えない（五角形、三角形）（2. 五角形の重心★奇数角形の重心）
-データの蓄積を表現したい（3. 図形選びの失敗）
-誤解は避ける（矢印交差）
-たまには具体も（4. ダイヤとバッグ）
-意外になんでも描ける（5. 便利だけどあまり使われない図形）
-
-
-★ファイル
-
-
-
-
-唐突ですが、パワーポンチ絵とはパワーポイントで作ったポンチ絵のことで、もちろん私の造語です。
-
-
-
-* 会社合併でコンテキストもそろっていない
-* グローバル協業体制
-
-
-
-どうやって解決するか
-	マトリクスも絵で作る（CSRF の）
-	全体構造を見せる
-	ベン図的なのは得意
-	注目させる HOW
-		・薄影法 … 既にいろいろな色を使っている場合に
-		・光ってる法（説明会のスライド使う）
-	流れを見せる
-	違い（変化）を見せる
-		検討経緯を見せる、時間軸の変化を見せる
-	先入観を与えない（五角形、三角形）
-	大事な情報は省かない（図形選びの失敗）
-	誤解は避ける（矢印の白抜き）
-	線はいろいろ使える
-
------Original Message-----
-
-パワーポンチ絵
-
-パワーポンチ絵を構成する技術
-
-いつ、どこで、何を解決したいのか
-	今回のテーマではないが WHY にも効果的
-	壁打ちは話しながら自己解決する
-	パワポやスライドでお絵描き & 発表しながら自己解決と自己気付き（自分や他人のイメージを触発しやすい）
-	資料に時間をかけないのでコンフルを使う…ではない
-	ホワイトボードでお絵描きしながら議論
-
-	概念に関係の大きそうな要素はできるだけ入れる（でも見せる部分はフォーカス）
-	詳細になったらより適切なツールを
-	ページは無限に増やしていい
-		Pxx 参照とかではなく、必要ならなんども出す
-	文字はあまり書かずに絵とキャプションで思い出す
-	自由な表現を奪うテンプレは使わない（会社のルールによる）
-	半分動画。話しながらパラパラ動かす。注意を引き付ける効果
-	拡大縮小もらくちん。細部は見えなくてもいい。言いたいことが伝われば
-
-どうやって解決するか
-	マトリクスも絵で作る（CSRF の）
-	全体構造を見せる
-	ベン図的なのは得意
-	注目させる HOW
-		・薄影法 … 既にいろいろな色を使っている場合に
-		・光ってる法（説明会のスライド使う）
-	流れを見せる
-	違い（変化）を見せる
-		検討経緯を見せる、時間軸の変化を見せる
-	先入観を与えない（五角形、三角形）
-	大事な情報は省かない（図形選びの失敗）
-	誤解は避ける（矢印の白抜き）
-	線はいろいろ使える
-
-	WHY を語る小道具（4, 5）
-
-＠1. ここを見ろ
-＠2. 五角形の重心★奇数角形の重心
-＠3. 図形選びの失敗
-＠4. ダイヤとバッグ
-＠5. 便利だけどあまり使われない図形
-
-	・パワポマンの追加と記事化
-		・追加で抽象化した議論を
-			・まず具体案で議論
-			・絵が必要な理由 : 文字や言葉は間違える
-			・広いイメージ
-		・資料に時間をかけないのでコンフルを使う…ではない
-		・抽象度の高いうちはちょうどよいツール（詳細になったらより適切なツールを）
-		・巨大サイズで表現の自由を奪うテンプレは使わない
-		・ページ増加は恐れない。むしろ無限に増やす
-			・話しながらパラパラ動かす。注意を引き付ける効果
-		・進捗を示す、段落を示す
-		・直感を絵にしやすい
-		・ポンチ絵
-		・diff を見せやすい
-			・検討経緯を見せやすい
-		・何がわからないのかわからないと質問も意見も出ない
-			・質問や意見が出やすい
-		・半分動画
-
-1. ここを見ろ
-2. 五角形の重心★奇数角形の重心
-3. 図形選びの失敗
-4. ダイヤとバッグ
-5. 便利だけどあまり使われない図形
-
-新しいアイデアや複雑なシステムを扱う際には、その価値が大いに発揮されます。
-
-議論しながら答えを固めてゆく
-
-グローバル協業体制
-
-初期段階: 議論の初期段階で、アイデアのブレインストーミングや概念の設定を行う際に特に有効です。まだアイデアが固まっていない段階で、方向性を模索するための手がかりとして役立ちます。
-
-コミュニケーションの促進: ポンチ絵は、アイデアや概念を視覚的に表現することで、言葉だけでは伝わりにくい情報を明確に伝えることができます。
-
-共通理解の構築: 関係者間での認識の齟齬を減らし、共通の理解を築くための基盤となります。
-
-アイデアの具体化: 抽象的なアイデアを視覚化することで、具体的な形として捉えやすくなり、議論が具体的な方向性を持ちやすくなります。
-
-問題点の早期発見: 概念図を見ることで、潜在的な問題や漏れがあればそれを早期に発見し、対処することができます。
-
-創造性の刺激: 視覚的な刺激は、関係者の創造性を引き出し、新しいアイデアや解決策を生み出すきっかけになります。
-
-議論の焦点の明確化: ポンチ絵を中心に議論を進めることで、議論の焦点を絞り込みやすくなります。
-
-記録としての利用: ポンチ絵は、会議や議論の内容を簡潔に記録し、後で振り返る資料としても有効です。
-
-参加者の関与促進: 視覚的な要素が加わることで、参加者がより積極的に議論に参加しやすくなります。
-
-
+加えて、この画像は PNG24（が 100 枚以上）なので、通信制限を気にする人に配慮してまとめて減色済みです。
