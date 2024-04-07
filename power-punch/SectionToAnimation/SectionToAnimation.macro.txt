@@ -1,6 +1,14 @@
-' depends on your system
+' 1. open pptx
+' 2. alt + F11
+' 3. insert standard module
+' 4. paste this script & edit it
+' 5. exec macro (F5)
+
+' edit here : depends on your system
 Public Const PATH_SEPARATOR As String = "\"
-' path to ImageMagick
+' edit here : XXXX + [number].gif
+Public Const OUTPUT_FILE_PREFIX As String = "sec-"
+' edit here : path to ImageMagick
 Public Const IMAGE_MAGICK As String = """C:\Program Files\ImageMagick-7.1.1-Q16-HDRI\convert.exe"""
 Public Const IMAGE_MAGICK_PARAMS As String = "-delay 100 -loop 0 -layers Optimize"
 
@@ -76,7 +84,7 @@ Sub main()
 		Next page
 
 		' PNG24 to Animation GIF
-		createAnimationGif "sec-" & section & ".gif", path
+		createAnimationGif OUTPUT_FILE_PREFIX & section & ".gif", path
 
 		' finalize
 		fso.DeleteFolder path, True
