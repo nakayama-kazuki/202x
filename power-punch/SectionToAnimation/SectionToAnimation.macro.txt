@@ -1,0 +1,84 @@
+' depends on your system
+Public Const PATH_SEPARATOR As String = "\"
+' path to ImageMagick
+Public Const IMAGE_MAGICK As String = """C:\Program Files\ImageMagick-7.1.1-Q16-HDRI\convert.exe"""
+Public Const IMAGE_MAGICK_PARAMS As String = "-delay 100 -loop 0 -layers Optimize"
+
+Sub moveToFilePath()
+	Dim path As String
+	path = ActivePresentation.FullName
+	If path <> "" Then
+		ChDir Left(path, InStrRev(path, PATH_SEPARATOR))
+	Else
+		MsgBox "There is not saved file"
+	End If
+End Sub
+
+Sub createAnimationGif(in_gif As String, in_path As String)
+	Dim fso As Object
+	Dim folder As Object
+	Dim file As Object
+	Dim commandArray() As String
+    Dim ix As Integer
+
+	Set fso = CreateObject("Scripting.FileSystemObject")
+	Set folder = fso.GetFolder(in_path)
+
+	' build command
+	ReDim commandArray(folder.Files.Count - 1 + 3)
+	commandArray(0) = IMAGE_MAGICK
+	commandArray(1) = IMAGE_MAGICK_PARAMS
+	ix = 2
+	For Each file In folder.Files
+		commandArray(ix) = in_path & PATH_SEPARATOR & file.Name
+		ix = ix + 1
+	Next file
+	commandArray(ix) = in_gif
+
+	' exec command
+	Dim shell As Object
+	Set shell = CreateObject("WScript.Shell")
+	shell.Run Join(commandArray, " "), 0, True
+End Sub
+
+Sub main()
+	Dim fso As Object
+	Dim pptx As Presentation
+
+	moveToFilePath
+	Set fso = CreateObject("Scripting.FileSystemObject")
+	Set pptx = ActivePresentation
+
+	For section = 1 To pptx.SectionProperties.Count
+		Dim ix_s As Integer
+		Dim ix_e As Integer
+		Dim path As String
+		Dim page As Integer
+		ix_s = pptx.SectionProperties.FirstSlide(section)
+		ix_e = ix_s + pptx.SectionProperties.SlidesCount(section) - 1
+		path = "." & PATH_SEPARATOR & section
+
+		' initialize
+		If fso.FolderExists(path) Then
+			Dim folder As Object
+			Dim file As Object
+			Set folder = fso.GetFolder(path)
+		    For Each file In folder.files
+		        file.Delete Force:=True
+		    Next file
+		Else
+			fso.CreateFolder path
+		End If
+
+		' pptx to PNG24
+		For page = ix_s To ix_e
+			pptx.Slides(page).Export path & PATH_SEPARATOR & page & ".png", "PNG", 1600
+		Next page
+
+		' PNG24 to Animation GIF
+		createAnimationGif "sec-" & section & ".gif", path
+
+		' finalize
+		fso.DeleteFolder path, True
+	Next section
+End Sub
