@@ -27,7 +27,7 @@ Sub createAnimationGif(in_gif As String, in_path As String)
 	Dim folder As Object
 	Dim file As Object
 	Dim commandArray() As String
-    Dim ix As Integer
+	Dim ix As Integer
 
 	Set fso = CreateObject("Scripting.FileSystemObject")
 	Set folder = fso.GetFolder(in_path)
@@ -61,19 +61,27 @@ Sub main()
 		Dim ix_s As Integer
 		Dim ix_e As Integer
 		Dim path As String
+		Dim agif As String
 		Dim page As Integer
+		
 		ix_s = pptx.SectionProperties.FirstSlide(section)
 		ix_e = ix_s + pptx.SectionProperties.SlidesCount(section) - 1
 		path = "." & PATH_SEPARATOR & section
+		agif = "." & PATH_SEPARATOR & OUTPUT_FILE_PREFIX & section & ".gif"
+
+		' re-make only deleted Animation GIF
+		If Dir(agif) <> "" Then
+			GoTo ContinueLoop
+		End If
 
 		' initialize
 		If fso.FolderExists(path) Then
 			Dim folder As Object
 			Dim file As Object
 			Set folder = fso.GetFolder(path)
-		    For Each file In folder.files
-		        file.Delete Force:=True
-		    Next file
+			For Each file In folder.Files
+				file.Delete Force:=True
+			Next file
 		Else
 			fso.CreateFolder path
 		End If
@@ -84,9 +92,11 @@ Sub main()
 		Next page
 
 		' PNG24 to Animation GIF
-		createAnimationGif OUTPUT_FILE_PREFIX & section & ".gif", path
+		createAnimationGif agif, path
 
 		' finalize
 		fso.DeleteFolder path, True
+
+		ContinueLoop:
 	Next section
 End Sub
