@@ -67,7 +67,7 @@ Sub main()
 		ix_s = pptx.SectionProperties.FirstSlide(section)
 		ix_e = ix_s + pptx.SectionProperties.SlidesCount(section) - 1
 		path = "." & PATH_SEPARATOR & section
-		agif = "." & PATH_SEPARATOR & OUTPUT_FILE_PREFIX & section & ".gif"
+		agif = "." & PATH_SEPARATOR & OUTPUT_FILE_PREFIX & Format(section, "000") & ".gif"
 
 		' re-make only deleted Animation GIF
 		If Dir(agif) <> "" Then
