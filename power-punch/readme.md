@@ -1,4 +1,4 @@
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-024.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-024.png' />
 
 # パワーポンチ
 
@@ -140,9 +140,9 @@
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-015.gif' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-016.gif' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-017.gif' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-018.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-018.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-019.gif' />
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-020.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-020.png' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-021.gif' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-022.gif' />
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-023.gif' />
