@@ -10,7 +10,11 @@ Public Const PATH_SEPARATOR As String = "\"
 Public Const OUTPUT_FILE_PREFIX As String = "sec-"
 ' edit here : path to ImageMagick
 Public Const IMAGE_MAGICK As String = """C:\Program Files\ImageMagick-7.1.1-Q16-HDRI\convert.exe"""
-Public Const IMAGE_MAGICK_PARAMS As String = "-delay 100 -loop 0 -layers Optimize"
+
+' does not need to edit
+Public Const IMAGE_MAGICK_PARAMS1 As String = "-delay 100 -loop 0 -layers Optimize"
+Public Const IMAGE_MAGICK_PARAMS2 As String = "-kmeans 8"
+Public Const TMPDIR_PREFIX As String = ".tmp-"
 
 Sub moveToFilePath()
 	Dim path As String
@@ -22,11 +26,12 @@ Sub moveToFilePath()
 	End If
 End Sub
 
-Sub createAnimationGif(in_gif As String, in_path As String)
+Function convertImage(in_dst As String, in_path As String) As String
 	Dim fso As Object
 	Dim folder As Object
 	Dim file As Object
 	Dim commandArray() As String
+	Dim extension As String
 	Dim ix As Integer
 
 	Set fso = CreateObject("Scripting.FileSystemObject")
@@ -35,23 +40,29 @@ Sub createAnimationGif(in_gif As String, in_path As String)
 	' build command
 	ReDim commandArray(folder.Files.Count - 1 + 3)
 	commandArray(0) = IMAGE_MAGICK
-	commandArray(1) = IMAGE_MAGICK_PARAMS
+	commandArray(1) = IMAGE_MAGICK_PARAMS1
 	ix = 2
 	For Each file In folder.Files
 		commandArray(ix) = in_path & PATH_SEPARATOR & file.Name
 		ix = ix + 1
 	Next file
 	If ix = 3 Then
-		' 1 file : remove option for animation
-		commandArray(1) = ""
+		' only 1 file
+		commandArray(1) = IMAGE_MAGICK_PARAMS2
+		extension = ".png"
+	Else
+		extension = ".gif"
 	End If
-	commandArray(ix) = in_gif
+	commandArray(ix) = in_dst & extension
 
 	' exec command
 	Dim shell As Object
 	Set shell = CreateObject("WScript.Shell")
 	shell.Run Join(commandArray, " "), 0, True
-End Sub
+
+	' return
+	convertImage = extension
+End Function
 
 Sub main()
 	Dim fso As Object
@@ -64,43 +75,44 @@ Sub main()
 	For section = 1 To pptx.SectionProperties.Count
 		Dim ix_s As Integer
 		Dim ix_e As Integer
-		Dim path As String
-		Dim agif As String
+		Dim src As String
+		Dim dst As String
 		Dim page As Integer
-		
+
 		ix_s = pptx.SectionProperties.FirstSlide(section)
 		ix_e = ix_s + pptx.SectionProperties.SlidesCount(section) - 1
-		path = "." & PATH_SEPARATOR & section
-		agif = "." & PATH_SEPARATOR & OUTPUT_FILE_PREFIX & Format(section, "000") & ".gif"
+		src = "." & PATH_SEPARATOR & TMPDIR_PREFIX & section
+		dst = "." & PATH_SEPARATOR & OUTPUT_FILE_PREFIX & Format(section, "000")
 
-		' re-make only deleted Animation GIF
-		If Dir(agif) <> "" Then
-			GoTo ContinueLoop
-		End If
-
-		' initialize
-		If fso.FolderExists(path) Then
-			Dim folder As Object
-			Dim file As Object
-			Set folder = fso.GetFolder(path)
-			For Each file In folder.Files
-				file.Delete Force:=True
-			Next file
+		If Dir(dst & ".*") <> "" Then
+			Debug.Print "already exist : " & dst
 		Else
-			fso.CreateFolder path
+			Dim extension As String
+
+			' initialize
+			If fso.FolderExists(src) Then
+				Dim folder As Object
+				Dim file As Object
+				Set folder = fso.GetFolder(src)
+				For Each file In folder.Files
+					file.Delete Force:=True
+				Next file
+			Else
+				fso.CreateFolder src
+			End If
+
+			' pptx to PNG24
+			For page = ix_s To ix_e
+				pptx.Slides(page).Export src & PATH_SEPARATOR & page & ".png", "PNG", 1600
+			Next page
+
+			' PNG24 to Animation GIF / PNG8
+			extension = convertImage(dst, src)
+
+			' finalize
+			fso.DeleteFolder src, True
+			Debug.Print "created : " & dst & extension
 		End If
-
-		' pptx to PNG24
-		For page = ix_s To ix_e
-			pptx.Slides(page).Export path & PATH_SEPARATOR & page & ".png", "PNG", 1600
-		Next page
-
-		' PNG24 to Animation GIF
-		createAnimationGif agif, path
-
-		' finalize
-		fso.DeleteFolder path, True
-
-		ContinueLoop:
 	Next section
 End Sub
+
