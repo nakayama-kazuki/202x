@@ -41,6 +41,10 @@ Sub createAnimationGif(in_gif As String, in_path As String)
 		commandArray(ix) = in_path & PATH_SEPARATOR & file.Name
 		ix = ix + 1
 	Next file
+	If ix = 3 Then
+		' 1 file : remove option for animation
+		commandArray(1) = ""
+	End If
 	commandArray(ix) = in_gif
 
 	' exec command
