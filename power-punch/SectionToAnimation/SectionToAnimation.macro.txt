@@ -119,24 +119,23 @@ Sub main()
 
 	Set pptx = ActivePresentation
 	For section = 1 To pptx.SectionProperties.Count
+		Dim dst_file As String
+		Dim src_folder As String
 		Dim ix_s As Integer
 		Dim ix_e As Integer
-		Dim src_folder As String
-		Dim dst_file As String
 		Dim page As Integer
 
-		ix_s = pptx.SectionProperties.FirstSlide(section)
-		ix_e = ix_s + pptx.SectionProperties.SlidesCount(section) - 1
-		src_folder = "." & PATH_SEPARATOR & TMPDIR_PREFIX & section
 		dst_file = "." & PATH_SEPARATOR & OUTPUT_FILE_PREFIX & Format(section, "000")
-
 		If Dir(dst_file & ".*") <> "" Then
 			Debug.Print "already exist : " & dst_file
 		Else
 			' initialize
+			src_folder = "." & PATH_SEPARATOR & TMPDIR_PREFIX & section
 			setUpFolder src_folder
 
 			' pptx to PNG24
+			ix_s = pptx.SectionProperties.FirstSlide(section)
+			ix_e = ix_s + pptx.SectionProperties.SlidesCount(section) - 1
 			For page = ix_s To ix_e
 				pptx.Slides(page).Export src_folder & PATH_SEPARATOR & page & ".png", "PNG", 1600
 			Next page
