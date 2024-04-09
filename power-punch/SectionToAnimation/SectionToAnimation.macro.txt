@@ -11,19 +11,49 @@ Public Const OUTPUT_FILE_PREFIX As String = "sec-"
 ' edit here : path to ImageMagick
 Public Const IMAGE_MAGICK As String = """C:\Program Files\ImageMagick-7.1.1-Q16-HDRI\convert.exe"""
 
-' does not need to edit
+' do not need to edit
 Public Const IMAGE_MAGICK_PARAMS1 As String = "-delay 100 -loop 0 -layers Optimize"
 Public Const IMAGE_MAGICK_PARAMS2 As String = "-kmeans 8"
 Public Const TMPDIR_PREFIX As String = ".tmp-"
 
-Sub moveToFilePath()
+Function moveToFilePath() As Boolean
 	Dim path As String
+
 	path = ActivePresentation.FullName
 	If path <> "" Then
 		ChDir Left(path, InStrRev(path, PATH_SEPARATOR))
+		moveToFilePath = True
 	Else
-		MsgBox "There is not saved file"
+		moveToFilePath = False
 	End If
+End Function
+
+Sub setUpFolder(in_folder As String)
+	Dim fso As Object
+
+	Set fso = CreateObject("Scripting.FileSystemObject")
+	If fso.FolderExists(in_folder) Then
+		Dim folder As Object
+		Dim file As Object
+
+		Set folder = fso.GetFolder(in_folder)
+		For Each file In folder.Files
+			file.Delete Force:=True
+		Next file
+		Set file = Nothing
+		Set folder = Nothing
+	Else
+		fso.CreateFolder in_folder
+	End If
+	Set fso = Nothing
+End Sub
+
+Sub deleteFolder(in_folder As String)
+	Dim fso As Object
+
+	Set fso = CreateObject("Scripting.FileSystemObject")
+	fso.DeleteFolder in_folder, True
+	Set fso = Nothing
 End Sub
 
 Function convertImage(in_dst As String, in_path As String) As String
@@ -34,10 +64,9 @@ Function convertImage(in_dst As String, in_path As String) As String
 	Dim extension As String
 	Dim ix As Integer
 
+	' build command
 	Set fso = CreateObject("Scripting.FileSystemObject")
 	Set folder = fso.GetFolder(in_path)
-
-	' build command
 	ReDim commandArray(folder.Files.Count - 1 + 3)
 	commandArray(0) = IMAGE_MAGICK
 	commandArray(1) = IMAGE_MAGICK_PARAMS1
@@ -46,8 +75,12 @@ Function convertImage(in_dst As String, in_path As String) As String
 		commandArray(ix) = in_path & PATH_SEPARATOR & file.Name
 		ix = ix + 1
 	Next file
+	Set file = Nothing
+	Set folder = Nothing
+	Set fso = Nothing
+
 	If ix = 3 Then
-		' only 1 file
+		' this is not animation
 		commandArray(1) = IMAGE_MAGICK_PARAMS2
 		extension = ".png"
 	Else
@@ -65,54 +98,44 @@ Function convertImage(in_dst As String, in_path As String) As String
 End Function
 
 Sub main()
-	Dim fso As Object
 	Dim pptx As Presentation
+	Dim section As Integer
 
-	moveToFilePath
-	Set fso = CreateObject("Scripting.FileSystemObject")
+	If Not moveToFilePath Then
+		Debug.Print "Error : there is not saved file"
+		Exit Sub
+	End If
+
 	Set pptx = ActivePresentation
-
 	For section = 1 To pptx.SectionProperties.Count
 		Dim ix_s As Integer
 		Dim ix_e As Integer
-		Dim src As String
-		Dim dst As String
+		Dim in_src_folder As String
+		Dim in_dst_file As String
 		Dim page As Integer
 
 		ix_s = pptx.SectionProperties.FirstSlide(section)
 		ix_e = ix_s + pptx.SectionProperties.SlidesCount(section) - 1
-		src = "." & PATH_SEPARATOR & TMPDIR_PREFIX & section
-		dst = "." & PATH_SEPARATOR & OUTPUT_FILE_PREFIX & Format(section, "000")
+		in_src_folder = "." & PATH_SEPARATOR & TMPDIR_PREFIX & section
+		in_dst_file = "." & PATH_SEPARATOR & OUTPUT_FILE_PREFIX & Format(section, "000")
 
-		If Dir(dst & ".*") <> "" Then
-			Debug.Print "already exist : " & dst
+		If Dir(in_dst_file & ".*") <> "" Then
+			Debug.Print "already exist : " & in_dst_file
 		Else
-			Dim extension As String
-
 			' initialize
-			If fso.FolderExists(src) Then
-				Dim folder As Object
-				Dim file As Object
-				Set folder = fso.GetFolder(src)
-				For Each file In folder.Files
-					file.Delete Force:=True
-				Next file
-			Else
-				fso.CreateFolder src
-			End If
+			setUpFolder in_src_folder
 
 			' pptx to PNG24
 			For page = ix_s To ix_e
-				pptx.Slides(page).Export src & PATH_SEPARATOR & page & ".png", "PNG", 1600
+				pptx.Slides(page).Export in_src_folder & PATH_SEPARATOR & page & ".png", "PNG", 1600
 			Next page
 
 			' PNG24 to Animation GIF / PNG8
-			extension = convertImage(dst, src)
+			Debug.Print "created : " & in_dst_file & convertImage(in_dst_file, in_src_folder)
 
 			' finalize
-			fso.DeleteFolder src, True
-			Debug.Print "created : " & dst & extension
+			deleteFolder in_src_folder
 		End If
 	Next section
+	Set pptx = Nothing
 End Sub
-
