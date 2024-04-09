@@ -56,46 +56,57 @@ Sub deleteFolder(in_folder As String)
 	Set fso = Nothing
 End Sub
 
-Function convertImage(in_dst As String, in_path As String) As String
+Function getFiles(in_folder As String) As Variant
 	Dim fso As Object
 	Dim folder As Object
 	Dim file As Object
-	Dim commandArray() As String
-	Dim extension As String
+	Dim fileArray() As String
 	Dim ix As Integer
 
-	' build command
 	Set fso = CreateObject("Scripting.FileSystemObject")
-	Set folder = fso.GetFolder(in_path)
-	ReDim commandArray(folder.Files.Count - 1 + 3)
-	commandArray(0) = IMAGE_MAGICK
-	commandArray(1) = IMAGE_MAGICK_PARAMS1
-	ix = 2
+	Set folder = fso.GetFolder(in_folder)
+	ReDim fileArray(folder.Files.Count - 1)
+	ix = 0
 	For Each file In folder.Files
-		commandArray(ix) = in_path & PATH_SEPARATOR & file.Name
+		fileArray(ix) = in_folder & PATH_SEPARATOR & file.Name
 		ix = ix + 1
 	Next file
 	Set file = Nothing
 	Set folder = Nothing
 	Set fso = Nothing
+	getFiles = fileArray
+End Function
 
-	If ix = 3 Then
+Sub convertImage(in_dst_file As String, in_folder As String)
+	Dim fileArray As Variant
+	Dim commandArray() As String
+	Dim dst_file As String
+	Dim ix As Integer
+	Dim shell As Object
+
+	' build command
+	fileArray = getFiles(in_folder)
+	ReDim commandArray(UBound(fileArray) - LBound(fileArray) + 1 + 3)
+	commandArray(0) = IMAGE_MAGICK
+	If UBound(fileArray) > 1 Then
+		commandArray(1) = IMAGE_MAGICK_PARAMS1
+		dst_file = in_dst_file & ".gif"
+	Else
 		' this is not animation
 		commandArray(1) = IMAGE_MAGICK_PARAMS2
-		extension = ".png"
-	Else
-		extension = ".gif"
+		dst_file = in_dst_file & ".png"
 	End If
-	commandArray(ix) = in_dst & extension
+    For ix = LBound(fileArray) To UBound(fileArray)
+		commandArray(2 + ix) = fileArray(ix)
+    Next ix
+	commandArray(UBound(commandArray)) = dst_file
+	Debug.Print "creating : " & dst_file
 
 	' exec command
-	Dim shell As Object
 	Set shell = CreateObject("WScript.Shell")
 	shell.Run Join(commandArray, " "), 0, True
-
-	' return
-	convertImage = extension
-End Function
+	Set shell = Nothing
+End Sub
 
 Sub main()
 	Dim pptx As Presentation
@@ -110,31 +121,31 @@ Sub main()
 	For section = 1 To pptx.SectionProperties.Count
 		Dim ix_s As Integer
 		Dim ix_e As Integer
-		Dim in_src_folder As String
-		Dim in_dst_file As String
+		Dim src_folder As String
+		Dim dst_file As String
 		Dim page As Integer
 
 		ix_s = pptx.SectionProperties.FirstSlide(section)
 		ix_e = ix_s + pptx.SectionProperties.SlidesCount(section) - 1
-		in_src_folder = "." & PATH_SEPARATOR & TMPDIR_PREFIX & section
-		in_dst_file = "." & PATH_SEPARATOR & OUTPUT_FILE_PREFIX & Format(section, "000")
+		src_folder = "." & PATH_SEPARATOR & TMPDIR_PREFIX & section
+		dst_file = "." & PATH_SEPARATOR & OUTPUT_FILE_PREFIX & Format(section, "000")
 
-		If Dir(in_dst_file & ".*") <> "" Then
-			Debug.Print "already exist : " & in_dst_file
+		If Dir(dst_file & ".*") <> "" Then
+			Debug.Print "already exist : " & dst_file
 		Else
 			' initialize
-			setUpFolder in_src_folder
+			setUpFolder src_folder
 
 			' pptx to PNG24
 			For page = ix_s To ix_e
-				pptx.Slides(page).Export in_src_folder & PATH_SEPARATOR & page & ".png", "PNG", 1600
+				pptx.Slides(page).Export src_folder & PATH_SEPARATOR & page & ".png", "PNG", 1600
 			Next page
 
 			' PNG24 to Animation GIF / PNG8
-			Debug.Print "created : " & in_dst_file & convertImage(in_dst_file, in_src_folder)
+			convertImage dst_file, src_folder
 
 			' finalize
-			deleteFolder in_src_folder
+			deleteFolder src_folder
 		End If
 	Next section
 	Set pptx = Nothing
