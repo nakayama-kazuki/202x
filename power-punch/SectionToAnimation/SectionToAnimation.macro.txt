@@ -91,25 +91,28 @@ Sub main()
 		gif_path = "." & PATH_SEPARATOR & OUTPUT_FILE_PREFIX & Format(section, "000") & ".gif"
 		If Dir(gif_path & ".*") <> "" Then
 			Debug.Print "already exist : " & gif_path
-		Else
-			' initialize
-			tmp_path = "." & PATH_SEPARATOR & TMPDIR_PREFIX & section
-			setUpFolder tmp_path
-
-			' pptx to PNG24
-			ix_s = pptx.SectionProperties.FirstSlide(section)
-			ix_e = ix_s + pptx.SectionProperties.SlidesCount(section) - 1
-			For page = ix_s To ix_e
-				pptx.Slides(page).Export tmp_path & PATH_SEPARATOR & page & ".png", "PNG", 1600
-			Next page
-
-			' PNG24 to Animation GIF
-			convertImage tmp_path & PATH_SEPARATOR & "*.png", gif_path
-			Debug.Print "created : " & gif_path
-
-			' finalize
-			deleteFolder tmp_path
+			GoTo ContinueLoop
 		End If
+
+		' initialize
+		tmp_path = "." & PATH_SEPARATOR & TMPDIR_PREFIX & section
+		setUpFolder tmp_path
+
+		' pptx to PNG24
+		ix_s = pptx.SectionProperties.FirstSlide(section)
+		ix_e = ix_s + pptx.SectionProperties.SlidesCount(section) - 1
+		For page = ix_s To ix_e
+			pptx.Slides(page).Export tmp_path & PATH_SEPARATOR & page & ".png", "PNG", 1600
+		Next page
+
+		' PNG24 to Animation GIF
+		convertImage tmp_path & PATH_SEPARATOR & "*.png", gif_path
+		Debug.Print "created : " & gif_path
+
+		' finalize
+		deleteFolder tmp_path
+
+		ContinueLoop:
 	Next section
 	Set pptx = Nothing
 End Sub
