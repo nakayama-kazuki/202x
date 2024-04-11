@@ -102,7 +102,7 @@ Sub main()
 		ix_s = pptx.SectionProperties.FirstSlide(section)
 		ix_e = ix_s + pptx.SectionProperties.SlidesCount(section) - 1
 		For page = ix_s To ix_e
-			pptx.Slides(page).Export tmp_path & PATH_SEPARATOR & page & ".png", "PNG", 1600
+			pptx.Slides(page).Export tmp_path & PATH_SEPARATOR & Format(page, "000") & ".png", "PNG", 1600
 		Next page
 
 		' PNG24 to Animation GIF
