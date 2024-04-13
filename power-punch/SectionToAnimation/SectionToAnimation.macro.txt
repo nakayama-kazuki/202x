@@ -13,7 +13,10 @@ Public Const IMAGE_MAGICK As String = """C:\Program Files\ImageMagick-7.1.1-Q16-
 
 ' do not need to edit
 Public Const IMAGE_MAGICK_PARAMS As String = "+dither -delay 100 -loop 0 -layers Optimize"
-Public Const TMPDIR_PREFIX As String = ".tmp-"
+Public Const TMPIMG_EXT As String = ".bmp"
+' Public Const TMPIMG_EXT As String = ".png"
+Public Const TMPIMG_TYPE As String = "BMP"
+' Public Const TMPIMG_TYPE As String = "PNG"
 
 Function moveToFilePath() As Boolean
 	Dim path As String
@@ -98,15 +101,15 @@ Sub main()
 		tmp_path = "." & PATH_SEPARATOR & TMPDIR_PREFIX & section
 		setUpFolder tmp_path
 
-		' pptx to PNG24
+		' pptx to TMPIMG_TYPE
 		ix_s = pptx.SectionProperties.FirstSlide(section)
 		ix_e = ix_s + pptx.SectionProperties.SlidesCount(section) - 1
 		For page = ix_s To ix_e
-			pptx.Slides(page).Export tmp_path & PATH_SEPARATOR & Format(page, "000") & ".png", "PNG", 1600
+			pptx.Slides(page).Export tmp_path & PATH_SEPARATOR & Format(page, "000") & TMPIMG_EXT, TMPIMG_TYPE, 1600
 		Next page
 
-		' PNG24 to Animation GIF
-		convertImage tmp_path & PATH_SEPARATOR & "*.png", gif_path
+		' TMPIMG_TYPE to Animation GIF
+		convertImage tmp_path & PATH_SEPARATOR & "*" & TMPIMG_EXT, gif_path
 		Debug.Print "created : " & gif_path
 
 		' finalize
