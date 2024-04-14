@@ -12,7 +12,7 @@ Public Const OUTPUT_FILE_PREFIX As String = "sec-"
 Public Const IMAGE_MAGICK As String = """C:\Program Files\ImageMagick-7.1.1-Q16-HDRI\convert.exe"""
 
 ' do not need to edit
-Public Const IMAGE_MAGICK_PARAMS As String = "+dither -delay 100 -loop 0 -layers Optimize"
+Public Const IMAGE_MAGICK_PARAMS As String = "+dither -resize 800x -delay 100 -loop 0 -layers Optimize"
 Public Const TMPIMG_EXT As String = ".bmp"
 ' Public Const TMPIMG_EXT As String = ".png"
 Public Const TMPIMG_TYPE As String = "BMP"
