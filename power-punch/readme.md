@@ -35,9 +35,9 @@
 
 例えば、ある特定のスライドを参照するためにページを進んだり戻ったりするくらいならば、スライドを（何度でも）再掲するほうが合理的です。コピーに伴う修正時の負担が気になるならば、スライドマスターのレイアウトとして繰り返し利用するスライドを一元管理する方法をお勧めします。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/slide-master-1.png />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/slide-master-1.png' />
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/slide-master-2.png />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/slide-master-2.png' />
 
 続いての 2～4 はページ数大増量前提 :-p の具体的な手法（2～4）をご紹介します。
 
