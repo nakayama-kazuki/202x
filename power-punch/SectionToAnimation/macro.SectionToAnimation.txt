@@ -12,7 +12,7 @@ Public Const OUTPUT_FILE_PREFIX As String = "sec-"
 Public Const IMAGE_MAGICK As String = """C:\Program Files\ImageMagick-7.1.1-Q16-HDRI\convert.exe"""
 
 ' do not need to edit
-Public Const IMAGE_MAGICK_PARAMS As String = "+dither -resize 800x -delay 100 -loop 0 -layers Optimize"
+Public Const IMAGE_MAGICK_PARAMS As String = "+dither -resize 640x -delay 75 -loop 0 -layers Optimize"
 Public Const TMPIMG_EXT As String = ".bmp"
 ' Public Const TMPIMG_EXT As String = ".png"
 Public Const TMPIMG_TYPE As String = "BMP"
@@ -74,6 +74,21 @@ Sub convertImage(in_src_path As String, in_dst_path As String)
 	Set shell = Nothing
 End Sub
 
+Sub adhoc()
+	Dim notAnimation As Variant
+	Dim num As Variant
+
+	notAnimation = Array(1, 18, 20, 24)
+	For Each num In notAnimation
+		Dim prefix As String
+
+		prefix = "." & PATH_SEPARATOR & OUTPUT_FILE_PREFIX & Format(num, "000")
+		Debug.Print "adhoc process for : " & prefix & ".gif"
+		convertImage prefix & ".gif", prefix & ".png"
+		Kill prefix & ".gif"
+	Next num
+End Sub
+
 Sub main()
 	Dim pptx As Presentation
 	Dim section As Integer
@@ -105,7 +120,7 @@ Sub main()
 		ix_s = pptx.SectionProperties.FirstSlide(section)
 		ix_e = ix_s + pptx.SectionProperties.SlidesCount(section) - 1
 		For page = ix_s To ix_e
-			pptx.Slides(page).Export tmp_path & PATH_SEPARATOR & Format(page, "000") & TMPIMG_EXT, TMPIMG_TYPE, 1600
+			pptx.Slides(page).Export tmp_path & PATH_SEPARATOR & Format(page, "000") & TMPIMG_EXT, TMPIMG_TYPE, 1280
 		Next page
 
 		' TMPIMG_TYPE to Animation GIF
@@ -117,5 +132,6 @@ Sub main()
 
 		ContinueLoop:
 	Next section
+	adhoc
 	Set pptx = Nothing
 End Sub

@@ -1,0 +1,11 @@
+Sub MoveSelectedObjects()
+	Dim shp As Shape
+	Dim moveDistance As Single
+
+	moveDistance = -100
+	If Not ActiveWindow.Selection.Type = ppSelectionNone Then
+		For Each shp In ActiveWindow.Selection.ShapeRange
+			shp.Left = shp.Left + moveDistance
+		Next shp
+	End If
+End Sub
