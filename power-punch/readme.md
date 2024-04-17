@@ -126,7 +126,7 @@
 
 図形の書式 → オブジェクトの選択と表示、でマスクとコネクタの上下関係を変更できます。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/layer.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/layer.png' />
 
 次に正三角形の頂点の関係性をポンチ絵で表現してみます。パワーポイントのガイドにあわせて正三角形をスライド中央に配置した場合、中央と正三角形の重心は一致しません。従って、中央から各頂点を連結したポンチ絵は、頂点Ａが特別な存在であるかのような印象を与えてしまい、対等な関係性を表現する場合には不適切です。
 
@@ -144,11 +144,13 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-014.gif' />
 
-少々具体的すぎるトピックですが、ポンチ絵で API の提供やデータの授受を表現することがしばしばあります。このとき API を呼び出す HTTP リクエストの方向とデータ授受の方向は、同じ向きの場合もあれば逆向きの場合もあります。ポンチ絵の矢印が何を意図しているのかは予断や誤解を与えないように注意しましょう。
+次は少々具体的すぎるトピックですが、ポンチ絵で API の提供やデータの授受を表現することがしばしばあります。このとき API を呼び出す HTTP リクエストの方向とデータ授受の方向は、同じ向きの場合もあれば逆向きの場合もあります。ポンチ絵の矢印が何を意図しているのかは予断や誤解を与えないように注意しましょう。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-025.gif' />
 
 ## 6. どちらのストレージ？
+
+★１★
 
 ストレージはポンチ絵におけるニーズも高そうですが、パワーポイントの図形にはそれらしき円柱が二種類存在します。どちらの円柱を使えばいいのでしょうか？Ａの円柱は底面の形を手動で調整できないため、縦長にしたときに違和感があります。
 
@@ -198,7 +200,13 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-023.gif' />
 
+★２★
+
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/img.png' />
+
 ## まとめ
+
+★３★ここにテキストと音声の差をもってくる？上に入れる？
 
 実は、ポンチ絵を多用した★★プレゼンテーション（とそれを用いた議論）★★は未だ試行錯誤と改善の過程にあり、十分に体形化～言語化できておりません。またポンチ絵を描くための負担の軽減も残課題です。ですが、この記事にまとめた範囲においては効果を実感できているため、記事を読んだみなさまのオンラインコミュニケーション改善の手段として是非試して頂きたく思います。
 
