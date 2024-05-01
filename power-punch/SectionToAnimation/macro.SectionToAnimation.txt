@@ -132,6 +132,6 @@ Sub main()
 
 		ContinueLoop:
 	Next section
-	adhoc
+	' adhoc
 	Set pptx = Nothing
 End Sub
