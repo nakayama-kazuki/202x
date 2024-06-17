@@ -1,0 +1,716 @@
+<html>
+<head>
+<meta charset='utf-8' />
+<script type='importmap'>
+{
+	"imports": {
+		"three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+		"utils": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/utils/BufferGeometryUtils.js"
+	}
+}
+</script>
+</head>
+<body>
+<script type='module'>
+
+import * as THREE from 'three';
+import * as UTILS from 'utils';
+
+//const DEBUG = true;
+const DEBUG = false;
+
+const DEVICE_PIXEL_RATIO = window.devicePixelRatio;
+const WORLD_RADIUS = 1000;
+
+function randomString(in_length = 5)
+{
+	return Math.floor(Math.random() * (10 ** in_length)).toString(16).padStart(in_length, '0');
+}
+
+function convertUnit(in_src_x, in_src_y, in_src_rect, in_dst_rect)
+{
+	const src_w = in_src_rect.r - in_src_rect.l;
+	const src_h = in_src_rect.b - in_src_rect.t;
+	const dst_w = in_dst_rect.r - in_dst_rect.l;
+	const dst_h = in_dst_rect.b - in_dst_rect.t;
+	return (new THREE.Vector2(
+		((in_src_x - in_src_rect.l) * dst_w / src_w + in_dst_rect.l) * 1,
+		((in_src_y - in_src_rect.t) * dst_h / src_h + in_dst_rect.t) * -1
+	));
+}
+
+function convertRaycasterUnit(in_src_x, in_src_y, in_src_w, in_src_h)
+{
+	const src_rect = {
+		l : 0,
+		t : 0,
+		r : in_src_w,
+		b : in_src_h
+	};
+	const dst_rect = {
+		l : -1,
+		t : -1,
+		r : 1,
+		b : 1
+	};
+	return convertUnit(in_src_x, in_src_y, src_rect, dst_rect);
+}
+
+function eventPos2RaycasterPos(in_ev)
+{
+	const elem = in_ev.currentTarget
+	return convertRaycasterUnit(
+		in_ev.clientX - elem.offsetLeft,
+		in_ev.clientY - elem.offsetTop,
+		elem.offsetWidth,
+		elem.offsetHeight);
+}
+
+/*
+	Object
+	|
+	+-- Scene
+	|
+	+-- WebGLRenderer
+	|
+	+-- Object3D ( to control camera )
+		|
+		+- PerspectiveCamera
+*/
+
+class cSphericalWorld {
+	static #defaultCameraSetting = 2;
+	static #view = [
+		{
+			cameraFrom : new THREE.Vector3(0, 0, -1),
+			cameraTo : new THREE.Vector3(0, 0, 0),
+			cameraUp : new THREE.Vector3(0, 1, 0),
+			dxDir : -1,
+			dyDir : -1
+		},
+		{
+			cameraFrom : new THREE.Vector3(0, 0, -1),
+			cameraTo : new THREE.Vector3(0, 0, 0),
+			cameraUp : new THREE.Vector3(0, -1, 0),
+			dxDir : 1,
+			dyDir : 1
+		},
+		{
+			cameraFrom : new THREE.Vector3(0, 0, 1),
+			cameraTo : new THREE.Vector3(0, 0, 0),
+			cameraUp : new THREE.Vector3(0, 1, 0),
+			dxDir : -1,
+			dyDir : 1
+		},
+		{
+			cameraFrom : new THREE.Vector3(0, 0, 1),
+			cameraTo : new THREE.Vector3(0, 0, 0),
+			cameraUp : new THREE.Vector3(0, -1, 0),
+			dxDir : 1,
+			dyDir : -1
+		}
+	][cSphericalWorld.#defaultCameraSetting];
+	#scene = null;
+	#renderer = null;
+	#cameraCtrl = null;
+	#cameraName = randomString();
+	#anchorVec2 = null;
+	#zoomMin = -1;
+	#zoomMax = -1;
+	#animationHooks = new Set();
+	static #deltaThreshold = 0.05;
+	static #speed = 3;
+	constructor(in_radius) {
+		// scene
+		this.#scene = new THREE.Scene();
+		// renderer
+		this.#renderer = new THREE.WebGLRenderer();
+		this.#renderer.setPixelRatio(DEVICE_PIXEL_RATIO);
+		// camera
+		const camera = new THREE.PerspectiveCamera();
+		camera.name = this.#cameraName;
+		camera.fov = 45;
+		camera.near = 1;
+		camera.far = in_radius * 2;
+		camera.position.set(0, 0, in_radius * cSphericalWorld.#view.cameraFrom.z);
+		camera.up.set(
+			cSphericalWorld.#view.cameraUp.x,
+			cSphericalWorld.#view.cameraUp.y,
+			cSphericalWorld.#view.cameraUp.z
+		);
+		camera.lookAt(cSphericalWorld.#view.cameraTo);
+		if (DEBUG) {
+			for (let i = 0; i < 32; i++) {
+				camera.layers.enable(i);
+			}
+		}
+		this.#cameraCtrl = new THREE.Object3D();
+		this.#cameraCtrl.add(camera);
+		// other
+		this.resize(this.canvas.width, this.canvas.height);
+		this.canvas.addEventListener('mousedown', this.#moveStart.bind(this));
+		this.canvas.addEventListener('mousemove', this.#moveUpdate.bind(this));
+		this.canvas.addEventListener('mouseleave', this.#moveStop.bind(this));
+		this.canvas.addEventListener('mouseup', this.#moveStop.bind(this));
+		this.canvas.addEventListener('wheel', this.#zoom.bind(this));
+		this.#zoomMin = in_radius * 2;
+		this.#zoomMax = in_radius / 2;
+	}
+	get canvas() {
+		return this.#renderer.domElement;
+	}
+	get #camera() {
+		return this.#cameraCtrl.getObjectByName(this.#cameraName);
+	}
+	#moveStart(in_ev) {
+		const vec2 = eventPos2RaycasterPos(in_ev);
+		if (this.intersectPositive(vec2).length > 0) {
+			return;
+		}
+		this.#anchorVec2 = vec2;
+	}
+	#moveUpdate(in_ev) {
+		if (!this.#anchorVec2) {
+			return;
+		}
+		const vec2 = eventPos2RaycasterPos(in_ev);
+		const delta = vec2.clone().sub(this.#anchorVec2);
+		if (delta.length() < cSphericalWorld.#deltaThreshold) {
+			return;
+		}
+		this.#cameraCtrl.rotateY(delta.x * cSphericalWorld.#speed * cSphericalWorld.#view.dxDir);
+		this.#cameraCtrl.rotateX(delta.y * cSphericalWorld.#speed * cSphericalWorld.#view.dyDir);
+		this.#anchorVec2 = vec2;
+	}
+	#moveStop(in_ev) {
+		if (!this.#anchorVec2) {
+			return;
+		}
+		this.#anchorVec2 = null;
+	}
+	#zoom(in_ev) {
+		const distance = this.#camera.position.length() + in_ev.deltaY;
+		if ((this.#zoomMax < distance) && (distance < this.#zoomMin)) {
+			const vec3 = this.#camera.position.normalize();
+			this.#camera.position.set(vec3.x * distance, vec3.y * distance, vec3.z * distance);
+		}
+	}
+	#intersectObjects(in_vec2, in_direction, in_layer) {
+		const raycaster = new THREE.Raycaster();
+		raycaster.layers.set(in_layer);
+		// camera ---[ raycast ]---> object
+		raycaster.setFromCamera(in_vec2, this.#camera);
+		const intersects = raycaster.intersectObjects(this.#scene.children);
+		if (in_direction || (intersects.length === 0)) {
+			return intersects;
+		}
+		// camera ---> object ( intersects[0].point ) ---[ raycaster.ray.direction ]---> opposit
+		const opposit = (intersects[0].point.clone()).add(raycaster.ray.direction.multiplyScalar(this.#camera.far));
+		// camera ---> object <---[ raycast again ]--- opposit
+		raycaster.set(opposit, (raycaster.ray.direction.clone()).negate());
+		return raycaster.intersectObjects(this.#scene.children);
+	}
+	intersectPositive(in_vec2, in_layer = 0) {
+		return this.#intersectObjects(in_vec2, true, in_layer);
+	}
+	intersectNegative(in_vec2, in_layer = 0) {
+		return this.#intersectObjects(in_vec2, false, in_layer);
+	}
+	copyCameraPosition() {
+		return this.#camera.getWorldPosition(new THREE.Vector3());
+	}
+	addAnimationHook(in_hook) {
+		this.#animationHooks.add(in_hook);
+	}
+	removeAnimationHook(in_hook) {
+		this.#animationHooks.delete(in_hook);
+	}
+	defaultView(in_animation = true) {
+		if (in_animation) {
+			const initQuat = new THREE.Quaternion();
+			const interval = 0.1;
+			const error = 0.001;
+			const hook = () => {
+				this.#cameraCtrl.quaternion.slerp(initQuat, interval);
+				if (this.#cameraCtrl.quaternion.angleTo(initQuat) < error) {
+					this.removeAnimationHook(hook);
+				}
+			};
+			this.addAnimationHook(hook);
+		} else {
+			this.#cameraCtrl.rotation.set(0, 0, 0);
+		}
+	}
+	resize(in_w, in_h) {
+		this.#renderer.setSize(in_w, in_h);
+		this.#camera.aspect = in_w / in_h;
+		this.#camera.updateProjectionMatrix();
+	}
+	add(in_obj) {
+		this.#scene.add(in_obj)
+	}
+	start() {
+		this.add(this.#cameraCtrl);
+		this.#renderer.setAnimationLoop(() => {
+			this.#renderer.render(this.#scene, this.#camera);
+			this.#animationHooks.forEach(in_hook => {
+				(in_hook)();
+			});
+		});
+	}
+}
+
+/*
+	cPart
+	|
+	+-- in_geometry
+	|
+	+-- receiver ( not visible & to control arm.lookAt )
+		|
+		+-- in_type == 1 : SphereGeometry + PlaneGeometry
+		|
+		+-- in_type == 2 : CylinderGeometry
+*/
+
+class cPart extends THREE.Mesh {
+	static #debug = DEBUG;
+	// to draw this layer, camera.layers.enable must be called
+	static receiverLayer = 1;
+	static #receiverWidenRatio = (cPart.#debug ? 3 : 1000);
+	static #receiverMaterial = new THREE.MeshNormalMaterial();
+	static #cacheKeys = {
+		frontvec : Symbol(),
+		receiver : Symbol(),
+		raycastn : Symbol()
+	};
+	#getCache(in_key) {
+		return this.userData[cPart.#cacheKeys[in_key]];
+	}
+	#setCache(in_key, in_value) {
+		this.userData[cPart.#cacheKeys[in_key]] = in_value;
+	}
+	constructor(in_length, in_geometry, in_material, in_type) {
+		/*
+			default object :
+
+			     y    
+			     |   -z : front (0, 0, -1)
+			     |  /
+			     | /
+			    ###
+			    #*#-------x
+			    /##
+			   /
+			  /
+			 /
+			z : obj.lookAt(0, 0, 1)
+
+			converted object :
+
+			     y : front (0, 1, 0)
+			     |
+			     |  /
+			     | /
+			     |/
+			    #*#-------x
+			   ###
+			  ###
+			  /
+			 /
+			z : obj.lookAt(0, 0, 1)
+
+			* in_type = 1 : fixed point is (0, 0, 0) 
+			* in_type = 2 : fixed side is (1, 0, 0) 
+		*/
+		const angle = Math.PI / 2;
+		const front = new THREE.Vector3(0, 0, -1);
+		super(in_geometry.rotateX(angle).translate(0, 0, in_length / 2), in_material);
+		this.#setCache('frontvec', front.applyMatrix4(new THREE.Matrix4().makeRotationX(angle)));
+		// receive intersection from raycast
+		const receivers = [];
+		switch (in_type) {
+		case 1 :
+			const thin = 0.01;
+			const wide = in_length * cPart.#receiverWidenRatio;
+			receivers.push(new THREE.BoxGeometry(wide, wide, thin));
+			receivers.push(new THREE.SphereGeometry(in_length));
+			break;
+		case 2 :
+			in_geometry.computeBoundingSphere();
+			const height = in_geometry.boundingSphere.radius * 2;
+			receivers.push((new THREE.CapsuleGeometry(in_length, height)).rotateZ(Math.PI / 2));
+			break;
+		default :
+			console.log('invalid in_type : ' + in_type);
+			break;
+		}
+		const merged = new THREE.Mesh(UTILS.mergeGeometries(receivers), cPart.#receiverMaterial);
+		receivers.forEach(in_geo => {
+			in_geo.dispose();
+		});
+		this.#setCache('receiver', merged);
+		merged.layers.set(cPart.receiverLayer);
+		if (cPart.#debug) {
+			merged.visible = true;
+		} else {
+			merged.visible = false;
+		}
+	}
+	receiverStart(in_vec3 = null) {
+		const recv = this.#getCache('receiver');
+		if (in_vec3) {
+			// in_vec3 : assume raycaster.ray.direction.negate()
+			this.#setCache('raycastn', in_vec3);
+			recv.lookAt(in_vec3);
+		}
+		this.add(recv);
+	}
+	receiverStop() {
+		this.#setCache('raycastn', null);
+		this.remove(this.#getCache('receiver'));
+	}
+	#lookAtWithoutRotation(in_vec3) {
+		const dir1 = in_vec3.sub(this.position).normalize();
+		const dir2 = (this.#getCache('frontvec')).clone().applyQuaternion(this.quaternion);
+		const quat = (new THREE.Quaternion()).setFromUnitVectors(dir2, dir1);
+		this.quaternion.multiplyQuaternions(quat, this.quaternion);
+	}
+	lookAt(in_vec3, in_normal = null) {
+		if (in_normal) {
+			in_vec3.projectOnPlane(in_normal);
+			this.#lookAtWithoutRotation(in_vec3);
+		} else {
+			super.lookAt(in_vec3);
+		}
+		const direction = this.#getCache('raycastn');
+		if (direction) {
+			this.#getCache('receiver').lookAt(direction);
+		}
+	}
+}
+
+/*
+	cArm
+	|
+	+-- CapsuleGeometry
+	|
+	+-- cArm
+		|
+		+-- CapsuleGeometry
+		|
+		+-- cArm ...
+*/
+
+class cArm extends cPart {
+	static create(in_length, in_circumference, in_material, in_pathCnt, in_recurse = false) {
+		if (in_pathCnt == 0) {
+			return null;
+		}
+		const curr = new cArm(in_length, in_circumference, in_material);
+		const next = cArm.create(in_length, in_circumference, in_material, in_pathCnt - 1, true);
+		if (next) {
+			curr.add(next);
+		}
+		if (in_recurse) {
+			// local position of parent
+			curr.position.z = in_length - in_circumference * 2;
+		}
+		return curr;
+	}
+	constructor(in_length, in_circumference, in_material) {
+		/*
+			++-----++ : arm + joint = in_length
+			  -----   : arm = in_length - in_circumference * 2
+		*/
+		const receiverTypeIs3D = 1;
+		const receiverRadius = in_length - in_circumference * 2;
+		const geometry = new THREE.CapsuleGeometry(in_circumference, receiverRadius);
+		super(receiverRadius, geometry, in_material, receiverTypeIs3D);
+	}
+}
+
+class cHead extends cPart {
+	constructor(in_radius, in_material) {
+		const receiverTypeIs3D = 1;
+		const receiverRadius = in_radius * 2;
+		const geometry = new THREE.SphereGeometry(in_radius);
+		super(receiverRadius, geometry, in_material, receiverTypeIs3D);
+	}
+}
+
+/*
+	cBody
+	|
+	+-- cPart ( chest )
+	|	|
+	|	+-- trapezoidGeometry
+	|	|
+	|	+-- cHead
+	|	|
+	|	+-- cArm ( right arm )
+	|	|
+	|	+-- cArm ( left arm )
+	|
+	+-- cPart ( waist )
+		|
+		+-- trapezoidGeometry
+		|
+		+-- cArm ( right leg )
+		|
+		+-- cArm ( left leg )
+*/
+
+function trapezoidGeometry(in_tLen, in_bLen, in_height, in_thickness) {
+	// common
+	const geoArr = [];
+	const rad = in_thickness / 2;
+	const dx = (in_tLen + in_bLen) / 2 / 2;
+	const dy = in_height / 2;
+	const sLen = (in_height ** 2 + ((in_tLen - in_bLen) / 2) ** 2) ** (1/2);
+	const sRad = Math.atan2((in_tLen - in_bLen) / 2, in_height);
+	// top
+	geoArr[0] = new THREE.CapsuleGeometry(rad, in_tLen);
+	geoArr[0].rotateZ((Math.PI / 2) * +1);
+	geoArr[0].translate(0, dy * +1, 0);
+	// bottom
+	geoArr[1] = new THREE.CapsuleGeometry(rad, in_bLen);
+	geoArr[1].rotateZ((Math.PI / 2) * -1);
+	geoArr[1].translate(0, dy * -1, 0);
+	// left
+	geoArr[2] = new THREE.CapsuleGeometry(rad, sLen);
+	geoArr[2].rotateZ(sRad * +1);
+	geoArr[2].translate(dx * -1, 0, 0);
+	// right
+	geoArr[3] = new THREE.CapsuleGeometry(rad, sLen);
+	geoArr[3].rotateZ(sRad * -1);
+	geoArr[3].translate(dx * +1, 0, 0);
+	// center
+	geoArr[4] = new THREE.BoxGeometry(in_tLen, in_height, in_thickness);
+	const attr = geoArr[4].getAttribute('position');
+	for (let i = 0; i < attr.count; i++) {
+		const vertex = new THREE.Vector3();
+		vertex.fromBufferAttribute(attr, i);
+		if (vertex.y < 0) {
+			vertex.x *= (in_bLen / in_tLen);
+		}
+		attr.setXYZ(i, vertex.x, vertex.y, vertex.z);
+	}
+	const merged = UTILS.mergeGeometries(geoArr);
+	geoArr.forEach(in_geo => {
+		in_geo.dispose();
+	});
+	return merged;
+}
+
+class cBody extends THREE.Object3D {
+	static #cacheKeys = {
+		chest : Symbol(),
+		waist : Symbol(),
+		headRoot : Symbol(),
+		armNRoot : Symbol(),
+		armPRoot : Symbol(),
+		legNRoot : Symbol(),
+		legPRoot : Symbol()
+	};
+	#getCache(in_key) {
+		return this.userData[cBody.#cacheKeys[in_key]];
+	}
+	#setCache(in_key, in_value) {
+		this.userData[cBody.#cacheKeys[in_key]] = in_value;
+	}
+	constructor(in_tLen, in_bLen, in_height, in_thickness, in_material) {
+		super();
+		const receiverTypeIs2D = 2;
+		const chest = new cPart(
+			in_height / 2,
+			// z : moved side : in_tLen
+			// 0 : fixed side : (in_tLen + in_bLen) / 2 
+			trapezoidGeometry(in_tLen, (in_tLen + in_bLen) / 2, in_height / 2, in_thickness),
+			in_material,
+			receiverTypeIs2D
+		);
+		this.add(chest);
+		this.#setCache('chest', chest);
+		this.#setCache('headRoot', new THREE.Vector3(0, 0, in_height / 2 + in_thickness / 4));
+		this.#setCache('armNRoot', new THREE.Vector3(in_tLen / 2 * -1, 0, in_height / 2));
+		this.#setCache('armPRoot', new THREE.Vector3(in_tLen / 2 * +1, 0, in_height / 2));
+		const waist = new cPart(
+			in_height / 2,
+			// z : moved side : in_bLen 
+			// 0 : fixed side : (in_tLen + in_bLen) / 2 
+			trapezoidGeometry(in_bLen, (in_tLen + in_bLen) / 2, in_height / 2, in_thickness),
+			in_material,
+			receiverTypeIs2D
+		);
+		waist.rotateX(Math.PI);
+		this.add(waist);
+		this.#setCache('waist', waist);
+		this.#setCache('legNRoot', new THREE.Vector3(in_bLen / 2 * -1, 0, in_height / 2));
+		this.#setCache('legPRoot', new THREE.Vector3(in_bLen / 2 * +1, 0, in_height / 2));
+		this.rotateX(Math.PI / 2 * -1);
+	}
+	#setObject(in_obj, in_target, in_name, in_vec3) {
+		if (in_vec3) {
+			in_obj.lookAt(in_vec3);
+		} else {
+			in_obj.lookAt(this.#getCache(in_name));
+		}
+		in_obj.position.copy(this.#getCache(in_name));
+		this.#getCache(in_target).add(in_obj);
+	}
+	setHead(in_obj, in_vec3 = null) {
+		this.#setObject(in_obj, 'chest', 'headRoot', in_vec3);
+	}
+	setArmNegative(in_obj, in_vec3 = null) {
+		this.#setObject(in_obj, 'chest', 'armNRoot', in_vec3);
+	}
+	setArmPositive(in_obj, in_vec3 = null) {
+		this.#setObject(in_obj, 'chest', 'armPRoot', in_vec3);
+	}
+	setLegNegative(in_obj, in_vec3 = null) {
+		this.#setObject(in_obj, 'waist', 'legNRoot', in_vec3);
+	}
+	setLegPositive(in_obj, in_vec3 = null) {
+		this.#setObject(in_obj, 'waist', 'legPRoot', in_vec3);
+	}
+}
+
+const gWorld = new cSphericalWorld(WORLD_RADIUS);
+
+document.addEventListener('DOMContentLoaded', (() => {
+	let resizeWorld = (() => {
+		gWorld.resize(
+			window.innerWidth,
+			window.innerHeight);
+	});
+	window.addEventListener('resize', resizeWorld);
+	(resizeWorld)();
+	if (!document.body) {
+		document.documentElement.appendChild(document.createElement('BODY'));
+	}
+	document.body.style.margin = '0';
+	document.body.appendChild(gWorld.canvas);
+	gWorld.start();
+}));
+
+const material = new THREE.MeshNormalMaterial();
+
+const HEAD_HIGHT = 100;
+const BODY_THICKNESS = 50;
+const BODY_SHOULDER = 160;
+const BODY_WAIST = 120;
+const BODY_HEIGHT = 200;
+const ARM_LENGTH = 200;
+const LEG_LENGTH = 250;
+
+// ugh! : this calculation should be hidden by class
+
+const gNewBody = new cBody(BODY_SHOULDER - BODY_THICKNESS, BODY_WAIST - BODY_THICKNESS, BODY_HEIGHT - BODY_THICKNESS, BODY_THICKNESS, material);
+
+gNewBody.setHead(new cHead(HEAD_HIGHT / 2, material));
+gNewBody.setArmNegative(cArm.create((ARM_LENGTH - BODY_THICKNESS) / 2 + BODY_THICKNESS, BODY_THICKNESS / 2, material, 2));
+gNewBody.setArmPositive(cArm.create((ARM_LENGTH - BODY_THICKNESS) / 2 + BODY_THICKNESS, BODY_THICKNESS / 2, material, 2));
+gNewBody.setLegNegative(cArm.create((LEG_LENGTH - BODY_THICKNESS) / 2 + BODY_THICKNESS, BODY_THICKNESS / 2, material, 2));
+gNewBody.setLegPositive(cArm.create((LEG_LENGTH - BODY_THICKNESS) / 2 + BODY_THICKNESS, BODY_THICKNESS / 2, material, 2));
+
+gWorld.add(gNewBody);
+
+// ＠（１）intersectNegative で [] が戻る問題 → 平面は裏からキャッチできないので薄い box で
+// ＠（２）cBody の一回転の理由と修正
+// ＠（３）intersectObjects でエラーが発生する問題 : TypeError: Cannot read properties of undefined (reading 'point')
+// ＠（４）addAnimationHook あたりで気になったアロー関数のスコープ（静的スコーピング）
+
+// MeshNormalMaterial は透明にできるか？
+// lookAtWithoutRotation のコード理解
+// 胴体まわりはどうにも UX 改善したい
+
+// ★（３）レシーバを透明にしたりデバッグとテストでセグメントやマテリアル変えたり
+// ★（４）＠正面、写真、ポーズ機能
+// ★（５）男性キャラ、女性キャラ
+
+// ★（６）ugh! のところ直す
+// ★（７）関節部分をなめらかにするのはどうやるのか（フィレット、マーチングキューブ）
+// ★（８）適当なポーズをとる処理。多分 rotate で実装
+
+
+const gDrag = {
+	vec : null,
+	obj : null,
+	far : false,
+	isActive : function() {
+		if (!this.vec) {
+			return false;
+		}
+		if (!this.obj) {
+			return false;
+		}
+		return true;
+	}
+};
+
+gWorld.canvas.addEventListener('mousedown', in_ev => {
+	let vec2 = eventPos2RaycasterPos(in_ev);
+	let intersects = gWorld.intersectPositive(vec2);
+	if (intersects.length > 0) {
+		const rayHit = intersects[0];
+		if (!(rayHit.object instanceof cPart)) {
+			// uncontrollable object
+			return;
+		}
+		const cameraPos = gWorld.copyCameraPosition();
+		const objectPos = rayHit.object.getWorldPosition(new THREE.Vector3());
+		gDrag.far = (rayHit.distance > cameraPos.distanceTo(objectPos));
+		if (DEBUG) {
+			console.log('drag ' + (gDrag.far ? 'far' : 'near') + '-side');
+		}
+		gDrag.vec = vec2;
+		gDrag.obj = rayHit.object;
+		// not lookAt(cameraPos), but lookAt(raycaster.ray.direction.negate())
+		if ((gDrag.obj instanceof cArm) || (gDrag.obj instanceof cHead)) {
+			gDrag.obj.receiverStart(objectPos.add(cameraPos));
+		} else {
+			gDrag.obj.receiverStart();
+		}
+	}
+});
+
+gWorld.canvas.addEventListener('mousemove', in_ev => {
+	if (!gDrag.isActive()) {
+		return;
+	}
+	let vec2 = eventPos2RaycasterPos(in_ev);
+	let delta = vec2.clone().sub(gDrag.vec);
+	if (delta.length() < 0.01) {
+		return;
+	}
+	let intersects;
+	if (gDrag.far) {
+		intersects = gWorld.intersectNegative(vec2, cPart.receiverLayer);
+	} else {
+		intersects = gWorld.intersectPositive(vec2, cPart.receiverLayer);
+	}
+	if (intersects.length > 0) {
+		if ((gDrag.obj instanceof cArm) || (gDrag.obj instanceof cHead)) {
+			gDrag.obj.lookAt(intersects[0].point);
+		} else {
+			gDrag.obj.lookAt(intersects[0].point, new THREE.Vector3(1, 0, 0));
+		}
+		gDrag.vec = vec2;
+	}
+});
+
+function dragstop() {
+	if (!gDrag.isActive()) {
+		return;
+	}
+	gDrag.obj.receiverStop();
+	gDrag.vec = null;
+	gDrag.obj = null;
+}
+
+gWorld.canvas.addEventListener('mouseleave', dragstop);
+gWorld.canvas.addEventListener('mouseup', dragstop);
+
+</script>
+</body>
+</html>
