@@ -1,11 +1,21 @@
 <html>
 <head>
 <meta charset='utf-8' />
+<!--
 <script type='importmap'>
 {
 	"imports": {
 		"three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
 		"utils": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/utils/BufferGeometryUtils.js"
+	}
+}
+</script>
+-->
+<script type='importmap'>
+{
+	"imports": {
+		"three": "./lib/three.module.js",
+		"utils": "./lib/BufferGeometryUtils.js"
 	}
 }
 </script>
@@ -20,7 +30,6 @@ import * as UTILS from 'utils';
 const DEBUG = false;
 
 const DEVICE_PIXEL_RATIO = window.devicePixelRatio;
-const WORLD_RADIUS = 1000;
 
 function randomString(in_length = 5)
 {
@@ -124,15 +133,21 @@ class cSphericalWorld {
 		// scene
 		this.#scene = new THREE.Scene();
 		// renderer
-		this.#renderer = new THREE.WebGLRenderer();
+		this.#renderer = new THREE.WebGLRenderer({alpha: true});
 		this.#renderer.setPixelRatio(DEVICE_PIXEL_RATIO);
+		if (false) {
+			this.#renderer.shadowMap.enabled = true;
+		}
 		// camera
 		const camera = new THREE.PerspectiveCamera();
 		camera.name = this.#cameraName;
 		camera.fov = 45;
 		camera.near = 1;
 		camera.far = in_radius * 2;
-		camera.position.set(0, 0, in_radius * cSphericalWorld.#view.cameraFrom.z);
+		camera.position.set(
+			0,
+			0,
+			in_radius * cSphericalWorld.#view.cameraFrom.z);
 		camera.up.set(
 			cSphericalWorld.#view.cameraUp.x,
 			cSphericalWorld.#view.cameraUp.y,
@@ -146,6 +161,18 @@ class cSphericalWorld {
 		}
 		this.#cameraCtrl = new THREE.Object3D();
 		this.#cameraCtrl.add(camera);
+		// light
+		const lightColor = 0xFFFFFF;
+		const light = new THREE.DirectionalLight(lightColor);
+		light.position.set(
+			0,
+			in_radius * cSphericalWorld.#view.cameraUp.y,
+			in_radius * cSphericalWorld.#view.cameraFrom.z);
+		if (false) {
+			light.castShadow = true;
+		}
+		this.#cameraCtrl.add(light);
+		this.add(new THREE.AmbientLight(lightColor));
 		// other
 		this.resize(this.canvas.width, this.canvas.height);
 		this.canvas.addEventListener('mousedown', this.#moveStart.bind(this));
@@ -153,7 +180,7 @@ class cSphericalWorld {
 		this.canvas.addEventListener('mouseleave', this.#moveStop.bind(this));
 		this.canvas.addEventListener('mouseup', this.#moveStop.bind(this));
 		this.canvas.addEventListener('wheel', this.#zoom.bind(this));
-		this.#zoomMin = in_radius * 2;
+		this.#zoomMin = this.#camera.far * 0.8;
 		this.#zoomMax = in_radius / 2;
 	}
 	get canvas() {
@@ -247,16 +274,79 @@ class cSphericalWorld {
 		this.#camera.updateProjectionMatrix();
 	}
 	add(in_obj) {
-		this.#scene.add(in_obj)
+		this.#scene.add(in_obj);
+	}
+	replaceTo(in_obj) {
+		while (this.#scene.children.length > 0) {
+			/*
+				*** note #1 ***
+				As remove is idempotent,
+				children will be removed safety.
+			*/
+			this.#scene.remove(this.#scene.children[0]);
+		}
+		this.add(in_obj);
+	}
+	render() {
+		this.#renderer.render(this.#scene, this.#camera);
 	}
 	start() {
 		this.add(this.#cameraCtrl);
 		this.#renderer.setAnimationLoop(() => {
-			this.#renderer.render(this.#scene, this.#camera);
+			this.render();
 			this.#animationHooks.forEach(in_hook => {
 				(in_hook)();
 			});
 		});
+	}
+}
+
+/*
+	factory function controls segments of geometry (depends on debug setting).
+*/
+
+function getSegments(in_className) {
+	const IX_ROUGH = 0;
+	const IX_SMOOTH = 1;
+	const settings = {
+		SphereGeometry : {
+			width : [16, 64],
+			height : [16, 64]
+		},
+		CylinderGeometry : {
+			radial : [16, 64],
+			height : [1, 4]
+		},
+		CapsuleGeometry : {
+			cap : [8, 32],
+			radial : [16, 64]
+		}
+	}[in_className];
+	const segments = [];
+	for (let prop in settings) {
+		segments.push(settings[prop][(DEBUG ? IX_ROUGH : IX_SMOOTH)]);
+	}
+	return segments;
+}
+
+class CustomSphere extends THREE.SphereGeometry {
+	constructor(in_radius) {
+		const segments = getSegments('SphereGeometry');
+		super(in_radius, ...segments);
+	}
+}
+
+class CustomCylinder extends THREE.CylinderGeometry {
+	constructor(in_radiusTop, in_radiusBottom, in_height) {
+		const segments = getSegments('CylinderGeometry');
+		super(in_radiusTop, in_radiusBottom, in_height, ...segments);
+	}
+}
+
+class CustomCapsule extends THREE.CapsuleGeometry {
+	constructor(in_radius, in_height) {
+		const segments = getSegments('CapsuleGeometry');
+		super(in_radius, in_height, ...segments);
 	}
 }
 
@@ -267,17 +357,16 @@ class cSphericalWorld {
 	|
 	+-- receiver ( not visible & to control arm.lookAt )
 		|
-		+-- in_type == 1 : SphereGeometry + PlaneGeometry
+		+-- SphereGeometry
 		|
-		+-- in_type == 2 : CylinderGeometry
+		+-- PlaneGeometry
 */
 
 class cPart extends THREE.Mesh {
-	static #debug = DEBUG;
 	// to draw this layer, camera.layers.enable must be called
 	static receiverLayer = 1;
-	static #receiverWidenRatio = (cPart.#debug ? 3 : 1000);
-	static #receiverMaterial = new THREE.MeshNormalMaterial();
+	static #receiverWidenRatio = (DEBUG ? 4 : 1000);
+	static #receiverMaterial = new THREE.MeshNormalMaterial({transparent: true, opacity: 0.5});
 	static #cacheKeys = {
 		frontvec : Symbol(),
 		receiver : Symbol(),
@@ -289,7 +378,7 @@ class cPart extends THREE.Mesh {
 	#setCache(in_key, in_value) {
 		this.userData[cPart.#cacheKeys[in_key]] = in_value;
 	}
-	constructor(in_length, in_geometry, in_material, in_type) {
+	constructor(in_length, in_geometry, in_material) {
 		/*
 			default object :
 
@@ -318,39 +407,33 @@ class cPart extends THREE.Mesh {
 			  /
 			 /
 			z : obj.lookAt(0, 0, 1)
-
-			* in_type = 1 : fixed point is (0, 0, 0) 
-			* in_type = 2 : fixed side is (1, 0, 0) 
 		*/
 		const angle = Math.PI / 2;
 		const front = new THREE.Vector3(0, 0, -1);
 		super(in_geometry.rotateX(angle).translate(0, 0, in_length / 2), in_material);
+		if (false) {
+			this.castShadow = true;
+			this.receiveShadow = true;
+		}
 		this.#setCache('frontvec', front.applyMatrix4(new THREE.Matrix4().makeRotationX(angle)));
 		// receive intersection from raycast
 		const receivers = [];
-		switch (in_type) {
-		case 1 :
-			const thin = 0.01;
-			const wide = in_length * cPart.#receiverWidenRatio;
-			receivers.push(new THREE.BoxGeometry(wide, wide, thin));
-			receivers.push(new THREE.SphereGeometry(in_length));
-			break;
-		case 2 :
-			in_geometry.computeBoundingSphere();
-			const height = in_geometry.boundingSphere.radius * 2;
-			receivers.push((new THREE.CapsuleGeometry(in_length, height)).rotateZ(Math.PI / 2));
-			break;
-		default :
-			console.log('invalid in_type : ' + in_type);
-			break;
-		}
+		const thin = 0.01;
+		const wide = in_length * cPart.#receiverWidenRatio;
+		/*
+			*** note #2 ***
+			As PlaneGeometry can't catch raycast from opposite side,
+			use thin BoxGeometry instead of PlaneGeometry.
+		*/
+		receivers.push(new THREE.BoxGeometry(wide, wide, thin));
+		receivers.push(new THREE.SphereGeometry(in_length));
 		const merged = new THREE.Mesh(UTILS.mergeGeometries(receivers), cPart.#receiverMaterial);
 		receivers.forEach(in_geo => {
 			in_geo.dispose();
 		});
 		this.#setCache('receiver', merged);
 		merged.layers.set(cPart.receiverLayer);
-		if (cPart.#debug) {
+		if (DEBUG) {
 			merged.visible = true;
 		} else {
 			merged.visible = false;
@@ -370,9 +453,16 @@ class cPart extends THREE.Mesh {
 		this.remove(this.#getCache('receiver'));
 	}
 	#lookAtWithoutRotation(in_vec3) {
-		const dir1 = in_vec3.sub(this.position).normalize();
-		const dir2 = (this.#getCache('frontvec')).clone().applyQuaternion(this.quaternion);
-		const quat = (new THREE.Quaternion()).setFromUnitVectors(dir2, dir1);
+		// target direction
+		const dstVec3 = in_vec3.clone().normalize();
+		/*
+			*** note #3 ***
+			Cached current frontvec should be cloned before applyQuaternion.
+			Without it cached will be broken.
+		*/
+		const srcVec3 = (this.#getCache('frontvec')).clone().applyQuaternion(this.quaternion);
+		// get quaternion to rotate from srcVec3 to dstVec3
+		const quat = (new THREE.Quaternion()).setFromUnitVectors(srcVec3, dstVec3);
 		this.quaternion.multiplyQuaternions(quat, this.quaternion);
 	}
 	lookAt(in_vec3, in_normal = null) {
@@ -422,19 +512,17 @@ class cArm extends cPart {
 			++-----++ : arm + joint = in_length
 			  -----   : arm = in_length - in_circumference * 2
 		*/
-		const receiverTypeIs3D = 1;
 		const receiverRadius = in_length - in_circumference * 2;
-		const geometry = new THREE.CapsuleGeometry(in_circumference, receiverRadius);
-		super(receiverRadius, geometry, in_material, receiverTypeIs3D);
+		const geometry = new CustomCapsule(in_circumference, receiverRadius);
+		super(receiverRadius, geometry, in_material);
 	}
 }
 
 class cHead extends cPart {
 	constructor(in_radius, in_material) {
-		const receiverTypeIs3D = 1;
 		const receiverRadius = in_radius * 2;
-		const geometry = new THREE.SphereGeometry(in_radius);
-		super(receiverRadius, geometry, in_material, receiverTypeIs3D);
+		const geometry = new CustomSphere(in_radius);
+		super(receiverRadius, geometry, in_material);
 	}
 }
 
@@ -447,17 +535,17 @@ class cHead extends cPart {
 	|	|
 	|	+-- cHead
 	|	|
-	|	+-- cArm ( right arm )
+	|	+-- cArm ( r-arm )
 	|	|
-	|	+-- cArm ( left arm )
+	|	+-- cArm ( l-arm )
 	|
 	+-- cPart ( waist )
 		|
 		+-- trapezoidGeometry
 		|
-		+-- cArm ( right leg )
+		+-- cArm ( r-leg )
 		|
-		+-- cArm ( left leg )
+		+-- cArm ( l-leg )
 */
 
 function trapezoidGeometry(in_tLen, in_bLen, in_height, in_thickness) {
@@ -469,19 +557,19 @@ function trapezoidGeometry(in_tLen, in_bLen, in_height, in_thickness) {
 	const sLen = (in_height ** 2 + ((in_tLen - in_bLen) / 2) ** 2) ** (1/2);
 	const sRad = Math.atan2((in_tLen - in_bLen) / 2, in_height);
 	// top
-	geoArr[0] = new THREE.CapsuleGeometry(rad, in_tLen);
+	geoArr[0] = new CustomCapsule(rad, in_tLen);
 	geoArr[0].rotateZ((Math.PI / 2) * +1);
 	geoArr[0].translate(0, dy * +1, 0);
 	// bottom
-	geoArr[1] = new THREE.CapsuleGeometry(rad, in_bLen);
+	geoArr[1] = new CustomCapsule(rad, in_bLen);
 	geoArr[1].rotateZ((Math.PI / 2) * -1);
 	geoArr[1].translate(0, dy * -1, 0);
 	// left
-	geoArr[2] = new THREE.CapsuleGeometry(rad, sLen);
+	geoArr[2] = new CustomCapsule(rad, sLen);
 	geoArr[2].rotateZ(sRad * +1);
 	geoArr[2].translate(dx * -1, 0, 0);
 	// right
-	geoArr[3] = new THREE.CapsuleGeometry(rad, sLen);
+	geoArr[3] = new CustomCapsule(rad, sLen);
 	geoArr[3].rotateZ(sRad * -1);
 	geoArr[3].translate(dx * +1, 0, 0);
 	// center
@@ -520,14 +608,12 @@ class cBody extends THREE.Object3D {
 	}
 	constructor(in_tLen, in_bLen, in_height, in_thickness, in_material) {
 		super();
-		const receiverTypeIs2D = 2;
 		const chest = new cPart(
 			in_height / 2,
 			// z : moved side : in_tLen
 			// 0 : fixed side : (in_tLen + in_bLen) / 2 
 			trapezoidGeometry(in_tLen, (in_tLen + in_bLen) / 2, in_height / 2, in_thickness),
-			in_material,
-			receiverTypeIs2D
+			in_material
 		);
 		this.add(chest);
 		this.#setCache('chest', chest);
@@ -539,8 +625,7 @@ class cBody extends THREE.Object3D {
 			// z : moved side : in_bLen 
 			// 0 : fixed side : (in_tLen + in_bLen) / 2 
 			trapezoidGeometry(in_bLen, (in_tLen + in_bLen) / 2, in_height / 2, in_thickness),
-			in_material,
-			receiverTypeIs2D
+			in_material
 		);
 		waist.rotateX(Math.PI);
 		this.add(waist);
@@ -549,33 +634,64 @@ class cBody extends THREE.Object3D {
 		this.#setCache('legPRoot', new THREE.Vector3(in_bLen / 2 * +1, 0, in_height / 2));
 		this.rotateX(Math.PI / 2 * -1);
 	}
-	#setObject(in_obj, in_target, in_name, in_vec3) {
-		if (in_vec3) {
-			in_obj.lookAt(in_vec3);
+	#addObject(in_added, in_target, in_where, in_dx, in_dy, in_dirVec3) {
+		if (in_dirVec3) {
+			in_added.lookAt(in_dirVec3);
 		} else {
-			in_obj.lookAt(this.#getCache(in_name));
+			in_added.lookAt(this.#getCache(in_where));
 		}
-		in_obj.position.copy(this.#getCache(in_name));
-		this.#getCache(in_target).add(in_obj);
+		in_added.position.copy(this.#getCache(in_where));
+		in_added.position.x += in_dx;
+		in_added.position.y += in_dy;
+		this.#getCache(in_target).add(in_added);
 	}
-	setHead(in_obj, in_vec3 = null) {
-		this.#setObject(in_obj, 'chest', 'headRoot', in_vec3);
+	addHead(in_added, in_dx = 0, in_dy = 0, in_dirVec3 = null) {
+		this.#addObject(in_added, 'chest', 'headRoot', in_dx, in_dy, in_dirVec3);
 	}
-	setArmNegative(in_obj, in_vec3 = null) {
-		this.#setObject(in_obj, 'chest', 'armNRoot', in_vec3);
+	addArmNegative(in_added, in_dx = 0, in_dy = 0, in_dirVec3 = null) {
+		this.#addObject(in_added, 'chest', 'armNRoot', in_dx, in_dy, in_dirVec3);
 	}
-	setArmPositive(in_obj, in_vec3 = null) {
-		this.#setObject(in_obj, 'chest', 'armPRoot', in_vec3);
+	addArmPositive(in_added, in_dx = 0, in_dy = 0, in_dirVec3 = null) {
+		this.#addObject(in_added, 'chest', 'armPRoot', in_dx, in_dy, in_dirVec3);
 	}
-	setLegNegative(in_obj, in_vec3 = null) {
-		this.#setObject(in_obj, 'waist', 'legNRoot', in_vec3);
+	addLegNegative(in_added, in_dx = 0, in_dy = 0, in_dirVec3 = null) {
+		this.#addObject(in_added, 'waist', 'legNRoot', in_dx, in_dy, in_dirVec3);
 	}
-	setLegPositive(in_obj, in_vec3 = null) {
-		this.#setObject(in_obj, 'waist', 'legPRoot', in_vec3);
+	addLegPositive(in_added, in_dx = 0, in_dy = 0, in_dirVec3 = null) {
+		this.#addObject(in_added, 'waist', 'legPRoot', in_dx, in_dy, in_dirVec3);
+	}
+	#reset(in_callback) {
+		const recursive = (in_obj) => {
+			if (in_obj instanceof THREE.Mesh) {
+				(in_callback)(in_obj);
+			}
+			in_obj.children.forEach(in_child => {
+				(recursive)(in_child);
+			});
+		};
+		(recursive)(this);
+	}
+	resetColor(in_hex) {
+		this.#reset(in_mesh => {
+			in_mesh.material.color.setHex(in_hex);
+		});
+	}
+	resetMaterial(in_material) {
+		this.#reset(in_mesh => {
+			in_mesh.material = in_material;
+		});
 	}
 }
 
+/*
+	dom setting : show canvas element as size of all over body element.
+*/
+
+const WORLD_RADIUS = 1000;
+
 const gWorld = new cSphericalWorld(WORLD_RADIUS);
+
+const TRANSPARENT_IMAGE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAADBJREFUOE9jTEtL+8+ABxgbG+OTZmAcNWBYhMHMmTPxpoOzZ8/iTwejBjAwDv0wAADSgj/p4jinSwAAAABJRU5ErkJggg==';
 
 document.addEventListener('DOMContentLoaded', (() => {
 	let resizeWorld = (() => {
@@ -590,48 +706,318 @@ document.addEventListener('DOMContentLoaded', (() => {
 	}
 	document.body.style.margin = '0';
 	document.body.appendChild(gWorld.canvas);
+	const css = document.body.style;
+	css.backgroundImage = 'url(' + TRANSPARENT_IMAGE + ')';
+	css.backgroundRepeat = 'repeat';
+	css.backgroundSize = 'auto';
 	gWorld.start();
 }));
 
-const material = new THREE.MeshNormalMaterial();
+/*
+	figure setting : color, material, and figure
+*/
 
-const HEAD_HIGHT = 100;
-const BODY_THICKNESS = 50;
-const BODY_SHOULDER = 160;
-const BODY_WAIST = 120;
-const BODY_HEIGHT = 200;
-const ARM_LENGTH = 200;
-const LEG_LENGTH = 250;
+class CyclicValues extends Array {
+	constructor(...args) {
+		super(...args);
+		this.currentIndex = 0;
+	}
+	currentValue() {
+		return this[this.currentIndex];
+	}
+	nextValue() {
+		const value = this[this.currentIndex];
+		this.currentIndex = (this.currentIndex + 1) % this.length;
+		return value;
+	}
+}
 
-// ugh! : this calculation should be hidden by class
+const COLORS = new CyclicValues(
+	0x5588DD,
+	0x8855DD,
+	0xDD5588,
+	0xDD8855,
+	0x88DD55,
+	0x55DD88,
+	0x555555,
+	0xDDDDDD
+);
 
-const gNewBody = new cBody(BODY_SHOULDER - BODY_THICKNESS, BODY_WAIST - BODY_THICKNESS, BODY_HEIGHT - BODY_THICKNESS, BODY_THICKNESS, material);
+const ROUGHNESS = 0.4;
 
-gNewBody.setHead(new cHead(HEAD_HIGHT / 2, material));
-gNewBody.setArmNegative(cArm.create((ARM_LENGTH - BODY_THICKNESS) / 2 + BODY_THICKNESS, BODY_THICKNESS / 2, material, 2));
-gNewBody.setArmPositive(cArm.create((ARM_LENGTH - BODY_THICKNESS) / 2 + BODY_THICKNESS, BODY_THICKNESS / 2, material, 2));
-gNewBody.setLegNegative(cArm.create((LEG_LENGTH - BODY_THICKNESS) / 2 + BODY_THICKNESS, BODY_THICKNESS / 2, material, 2));
-gNewBody.setLegPositive(cArm.create((LEG_LENGTH - BODY_THICKNESS) / 2 + BODY_THICKNESS, BODY_THICKNESS / 2, material, 2));
+const initColor = COLORS.nextValue();
 
-gWorld.add(gNewBody);
+const MATERIALS = new CyclicValues(
+	new THREE.MeshStandardMaterial({color: initColor, roughness: ROUGHNESS}),
+	new THREE.MeshBasicMaterial({color: initColor}),
+	new THREE.MeshNormalMaterial()
+);
 
-// ＠（１）intersectNegative で [] が戻る問題 → 平面は裏からキャッチできないので薄い box で
-// ＠（２）cBody の一回転の理由と修正
-// ＠（３）intersectObjects でエラーが発生する問題 : TypeError: Cannot read properties of undefined (reading 'point')
-// ＠（４）addAnimationHook あたりで気になったアロー関数のスコープ（静的スコーピング）
+const INITFUNCS = {
+	ARM : {
+		NEGATIVE : 'addArmNegative',
+		POSITIVE : 'addArmPositive'
+	},
+	LEG : {
+		NEGATIVE : 'addLegNegative',
+		POSITIVE : 'addLegPositive'
+	}
+}
 
-// MeshNormalMaterial は透明にできるか？
-// lookAtWithoutRotation のコード理解
-// 胴体まわりはどうにも UX 改善したい
+const FIGURES = new CyclicValues(
+	{
+		HEAD_HIGHT : 100,
+		THICKNESS : 50,
+		BODY : {
+			SHOULDER : 160,
+			WAIST : 120,
+			HEIGHT : 200
+		},
+		ARM : {
+			LENGTH : 200,
+			NEGATIVE : {
+				DX : 0,
+				DY : 0,
+				DIR : null
+			},
+			POSITIVE : {
+				DX : 0,
+				DY : 0,
+				DIR : null
+			}
+		},
+		LEG : {
+			LENGTH : 250,
+			NEGATIVE : {
+				DX : 0,
+				DY : 0,
+				DIR : null
+			},
+			POSITIVE : {
+				DX : 0,
+				DY : 0,
+				DIR : null
+			}
+		},
+		OBJECT : null
+	},
+	{
+		HEAD_HIGHT : 100,
+		THICKNESS : 45,
+		BODY : {
+			SHOULDER : 100,
+			WAIST : 180,
+			HEIGHT : 200
+		},
+		ARM : {
+			LENGTH : 190,
+			NEGATIVE : {
+				DX : 0,
+				DY : 0,
+				DIR : new THREE.Vector3(-1, 0, -1)
+			},
+			POSITIVE : {
+				DX : 0,
+				DY : 0,
+				DIR : new THREE.Vector3(+1, 0, -1)
+			}
+		},
+		LEG : {
+			LENGTH : 220,
+			NEGATIVE : {
+				DX : +35,
+				DY : 0,
+				DIR : new THREE.Vector3(0, 0, 1)
+			},
+			POSITIVE : {
+				DX : -35,
+				DY : 0,
+				DIR : new THREE.Vector3(0, 0, 1)
+			}
+		},
+		OBJECT : null
+	},
+	{
+		HEAD_HIGHT : 100,
+		THICKNESS : 45,
+		BODY : {
+			SHOULDER : 120,
+			WAIST : 120,
+			HEIGHT : 200
+		},
+		ARM : {
+			LENGTH : 200,
+			NEGATIVE : {
+				DX : 0,
+				DY : 0,
+				DIR : new THREE.Vector3(-1, 0, -1)
+			},
+			POSITIVE : {
+				DX : 0,
+				DY : 0,
+				DIR : new THREE.Vector3(+1, 0, -1)
+			}
+		},
+		LEG : {
+			LENGTH : 230,
+			NEGATIVE : {
+				DX : 0,
+				DY : 0,
+				DIR : new THREE.Vector3(0, 0, 1)
+			},
+			POSITIVE : {
+				DX : 0,
+				DY : 0,
+				DIR : new THREE.Vector3(0, 0, 1)
+			}
+		},
+		OBJECT : null
+	}
+);
 
-// ★（３）レシーバを透明にしたりデバッグとテストでセグメントやマテリアル変えたり
-// ★（４）＠正面、写真、ポーズ機能
-// ★（５）男性キャラ、女性キャラ
+const initMaterial = MATERIALS.nextValue();
 
-// ★（６）ugh! のところ直す
-// ★（７）関節部分をなめらかにするのはどうやるのか（フィレット、マーチングキューブ）
-// ★（８）適当なポーズをとる処理。多分 rotate で実装
+FIGURES.forEach(in_fig => {
+	// ugh! : this calculation should be hidden by class
+	let thick = in_fig.THICKNESS;
+	let head = in_fig.HEAD_HIGHT / 2;
+	let shoulder = in_fig.BODY.SHOULDER - thick;
+	let waist = in_fig.BODY.WAIST - thick;
+	let height = in_fig.BODY.HEIGHT - thick;
+	// body
+	in_fig.OBJECT = new cBody(shoulder, waist, height, thick, initMaterial);
+	// head
+	in_fig.OBJECT.addHead(new cHead(head, initMaterial));
+	// arm x2 + leg x2
+	for (let part in INITFUNCS) {
+		for (let subpart in INITFUNCS[part]) {
+			let length = (in_fig[part].LENGTH - thick) / 2 + thick;
+			let circumference = thick / 2
+			let dx = in_fig[part][subpart].DX;
+			let dy = in_fig[part][subpart].DY;
+			let dir = in_fig[part][subpart].DIR;
+			let obj = cArm.create(length, circumference, initMaterial, 2);
+			(in_fig.OBJECT[INITFUNCS[part][subpart]])(obj, dx, dy, dir);
+		}
+	}
+});
 
+function uiChangeColor() {
+	const color = COLORS.nextValue();
+	FIGURES.forEach(in_fig => {
+		in_fig.OBJECT.resetColor(color);
+	});
+}
+
+function uiChangeMaterial() {
+	const material = MATERIALS.nextValue();
+	FIGURES.forEach(in_fig => {
+		in_fig.OBJECT.resetMaterial(material);
+	});
+}
+
+function uiChangeFigure() {
+	const figure = (FIGURES.nextValue()).OBJECT;
+	gWorld.replaceTo(figure);
+}
+
+// init figure
+uiChangeFigure();
+
+const boundBox = Symbol();
+
+HTMLCanvasElement.prototype[boundBox] = function(in_margin) {
+	const w = this.width;
+	const h = this.height;
+	let ctx = this.getContext('2d');
+	if (!ctx) {
+		/*
+			*** note #4 ***
+			Sometimes can't get 2D context ( ex. Three.js ).
+			So, to get it, copy bitmap to alternative canvas.
+		*/
+		const alternative = document.createElement('canvas');
+		alternative.width = w;
+		alternative.height = h;
+		ctx = alternative.getContext('2d');
+		ctx.drawImage(this, 0, 0);
+	}
+	const rgbaMap = (ctx.getImageData(0, 0, w, h)).data;
+	let l = Number.POSITIVE_INFINITY;
+	let t = Number.POSITIVE_INFINITY;
+	let r = Number.NEGATIVE_INFINITY;
+	let b = Number.NEGATIVE_INFINITY;
+	for (let y = 0; y < h; y++) {
+		for (let x = 0; x < w; x++) {
+			if (rgbaMap[(y * w + x) * 4 + 3] > 0) {
+				if (x < l) {
+					l = x;
+				}
+				if (y < t) {
+					t = y;
+				}
+				if (x > r) {
+					r = x;
+				}
+				if (y > b) {
+					b = y;
+				}
+			}
+		}
+	}
+	l = Math.max(l - in_margin, 0);
+	t = Math.max(t - in_margin, 0);
+	r = Math.min(r + in_margin, w - 1);
+	b = Math.min(b + in_margin, h - 1);
+	return {
+		l : l,
+		t : t,
+		r : r,
+		b : b,
+		w : r - l + 1,
+		h : b - t + 1
+	};
+};
+
+const CLIPMARGIN = 10;
+
+async function uiGetScreenShot() {
+	/*
+		*** note #5 ***
+		Before getting betmap, you need re-render.
+		Without it, for example, you can't use canvas.toDataURL('image/png') etc. 
+	*/
+	gWorld.render();
+	const box = gWorld.canvas[boundBox](CLIPMARGIN);
+	const tmpElem = document.createElement('canvas');
+	tmpElem.width = box.w;
+	tmpElem.height = box.h;
+	const ctx = tmpElem.getContext('2d');
+	ctx.drawImage(gWorld.canvas, box.l, box.t, box.w, box.h, 0, 0, box.w, box.h);
+	/*
+		*** note #6 ***
+		The browser treats the data URL as a resource when using fetch.
+		The fetch function retrieves the data and allows us to convert it into a Blob.
+	*/
+	const dataUrl = tmpElem.toDataURL('image/png');
+	const response = await fetch(dataUrl);
+	const blob = await response.blob();
+	try {
+		await navigator.clipboard.write([
+			new ClipboardItem({'image/png': blob})
+		]);
+	} catch (err) {
+		alert(err);
+	}
+}
+
+function uiDefaultView() {
+	const figure = (FIGURES.currentValue()).OBJECT;
+	figure.defaultView();
+}
+
+function uiHelp() {
+}
 
 const gDrag = {
 	vec : null,
@@ -666,11 +1052,7 @@ gWorld.canvas.addEventListener('mousedown', in_ev => {
 		gDrag.vec = vec2;
 		gDrag.obj = rayHit.object;
 		// not lookAt(cameraPos), but lookAt(raycaster.ray.direction.negate())
-		if ((gDrag.obj instanceof cArm) || (gDrag.obj instanceof cHead)) {
-			gDrag.obj.receiverStart(objectPos.add(cameraPos));
-		} else {
-			gDrag.obj.receiverStart();
-		}
+		gDrag.obj.receiverStart(objectPos.add(cameraPos));
 	}
 });
 
