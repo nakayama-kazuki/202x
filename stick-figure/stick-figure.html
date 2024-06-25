@@ -1,7 +1,6 @@
 <html>
 <head>
 <meta charset='utf-8' />
-<!--
 <script type='importmap'>
 {
 	"imports": {
@@ -10,7 +9,7 @@
 	}
 }
 </script>
--->
+<!--
 <script type='importmap'>
 {
 	"imports": {
@@ -19,6 +18,7 @@
 	}
 }
 </script>
+-->
 </head>
 <body>
 <script type='module'>
@@ -124,8 +124,9 @@ class cSphericalWorld {
 	#cameraCtrl = null;
 	#cameraName = randomString();
 	#anchorVec2 = null;
-	#zoomMin = -1;
-	#zoomMax = -1;
+	#zoomMin = Number.NEGATIVE_INFINITY;
+	#zoomMax = Number.POSITIVE_INFINITY;
+	#removables = new Set();
 	#animationHooks = new Set();
 	static #deltaThreshold = 0.05;
 	static #speed = 3;
@@ -172,7 +173,7 @@ class cSphericalWorld {
 			light.castShadow = true;
 		}
 		this.#cameraCtrl.add(light);
-		this.add(new THREE.AmbientLight(lightColor));
+		this.add(new THREE.AmbientLight(lightColor), true);
 		// other
 		this.resize(this.canvas.width, this.canvas.height);
 		this.canvas.addEventListener('mousedown', this.#moveStart.bind(this));
@@ -180,8 +181,6 @@ class cSphericalWorld {
 		this.canvas.addEventListener('mouseleave', this.#moveStop.bind(this));
 		this.canvas.addEventListener('mouseup', this.#moveStop.bind(this));
 		this.canvas.addEventListener('wheel', this.#zoom.bind(this));
-		this.#zoomMin = this.#camera.far * 0.8;
-		this.#zoomMax = in_radius / 2;
 	}
 	get canvas() {
 		return this.#renderer.domElement;
@@ -273,25 +272,33 @@ class cSphericalWorld {
 		this.#camera.aspect = in_w / in_h;
 		this.#camera.updateProjectionMatrix();
 	}
-	add(in_obj) {
+	add(in_obj, in_isSystemObject = false) {
 		this.#scene.add(in_obj);
+		if (in_isSystemObject) {
+			// system object will not be removed
+			return;
+		} else {
+			this.#removables.add(in_obj);
+		}
+		// update zoom in/out scope for user object
+		const box = (new THREE.Box3()).setFromObject(in_obj);
+		const sphere = new THREE.Sphere();
+		box.getBoundingSphere(sphere);
+		this.#zoomMin = Math.max(this.#zoomMin, this.#camera.far - sphere.radius);
+		this.#zoomMax = Math.min(this.#zoomMax, sphere.radius);
 	}
 	replaceTo(in_obj) {
-		while (this.#scene.children.length > 0) {
-			/*
-				*** note #1 ***
-				As remove is idempotent,
-				children will be removed safety.
-			*/
-			this.#scene.remove(this.#scene.children[0]);
-		}
+		this.#removables.forEach(in_removable => {
+			this.#scene.remove(in_removable);
+		});
+		this.#removables.clear();
 		this.add(in_obj);
 	}
 	render() {
 		this.#renderer.render(this.#scene, this.#camera);
 	}
 	start() {
-		this.add(this.#cameraCtrl);
+		this.add(this.#cameraCtrl, true);
 		this.#renderer.setAnimationLoop(() => {
 			this.render();
 			this.#animationHooks.forEach(in_hook => {
@@ -421,7 +428,7 @@ class cPart extends THREE.Mesh {
 		const thin = 0.01;
 		const wide = in_length * cPart.#receiverWidenRatio;
 		/*
-			*** note #2 ***
+			*** NOTE #2 ***
 			As PlaneGeometry can't catch raycast from opposite side,
 			use thin BoxGeometry instead of PlaneGeometry.
 		*/
@@ -456,7 +463,7 @@ class cPart extends THREE.Mesh {
 		// target direction
 		const dstVec3 = in_vec3.clone().normalize();
 		/*
-			*** note #3 ***
+			*** NOTE #3 ***
 			Cached current frontvec should be cloned before applyQuaternion.
 			Without it cached will be broken.
 		*/
@@ -610,8 +617,10 @@ class cBody extends THREE.Object3D {
 		super();
 		const chest = new cPart(
 			in_height / 2,
-			// z : moved side : in_tLen
-			// 0 : fixed side : (in_tLen + in_bLen) / 2 
+			/*
+				z : moved side : in_tLen
+				0 : fixed side : (in_tLen + in_bLen) / 2
+			*/
 			trapezoidGeometry(in_tLen, (in_tLen + in_bLen) / 2, in_height / 2, in_thickness),
 			in_material
 		);
@@ -622,8 +631,10 @@ class cBody extends THREE.Object3D {
 		this.#setCache('armPRoot', new THREE.Vector3(in_tLen / 2 * +1, 0, in_height / 2));
 		const waist = new cPart(
 			in_height / 2,
-			// z : moved side : in_bLen 
-			// 0 : fixed side : (in_tLen + in_bLen) / 2 
+			/*
+				z : moved side : in_bLen 
+				0 : fixed side : (in_tLen + in_bLen) / 2 
+			*/
 			trapezoidGeometry(in_bLen, (in_tLen + in_bLen) / 2, in_height / 2, in_thickness),
 			in_material
 		);
@@ -740,7 +751,7 @@ const COLORS = new CyclicValues(
 	0x88DD55,
 	0x55DD88,
 	0x555555,
-	0xDDDDDD
+	0xBBBBBB
 );
 
 const ROUGHNESS = 0.4;
@@ -924,15 +935,19 @@ function uiChangeFigure() {
 // init figure
 uiChangeFigure();
 
-const boundBox = Symbol();
+function uiDefaultView() {
+	gWorld.defaultView();
+}
 
-HTMLCanvasElement.prototype[boundBox] = function(in_margin) {
+const clipClearArea = Symbol();
+
+HTMLCanvasElement.prototype[clipClearArea] = function(in_margin) {
 	const w = this.width;
 	const h = this.height;
 	let ctx = this.getContext('2d');
 	if (!ctx) {
 		/*
-			*** note #4 ***
+			*** NOTE #4 ***
 			Sometimes can't get 2D context ( ex. Three.js ).
 			So, to get it, copy bitmap to alternative canvas.
 		*/
@@ -983,19 +998,19 @@ const CLIPMARGIN = 10;
 
 async function uiGetScreenShot() {
 	/*
-		*** note #5 ***
+		*** NOTE #5 ***
 		Before getting betmap, you need re-render.
 		Without it, for example, you can't use canvas.toDataURL('image/png') etc. 
 	*/
 	gWorld.render();
-	const box = gWorld.canvas[boundBox](CLIPMARGIN);
+	const box = gWorld.canvas[clipClearArea](CLIPMARGIN);
 	const tmpElem = document.createElement('canvas');
 	tmpElem.width = box.w;
 	tmpElem.height = box.h;
 	const ctx = tmpElem.getContext('2d');
 	ctx.drawImage(gWorld.canvas, box.l, box.t, box.w, box.h, 0, 0, box.w, box.h);
 	/*
-		*** note #6 ***
+		*** NOTE #6 ***
 		The browser treats the data URL as a resource when using fetch.
 		The fetch function retrieves the data and allows us to convert it into a Blob.
 	*/
@@ -1011,13 +1026,54 @@ async function uiGetScreenShot() {
 	}
 }
 
-function uiDefaultView() {
-	const figure = (FIGURES.currentValue()).OBJECT;
-	figure.defaultView();
+function uiHelp() {
+	alert('At this moment, I can not help you.');
 }
 
-function uiHelp() {
+function setUpButtons() {
+	const settings = [
+		{
+			text : 'next color',
+			func : uiChangeColor
+		},
+		{
+			text : 'next material',
+			func : uiChangeMaterial
+		},
+		{
+			text : 'next figure',
+			func : uiChangeFigure
+		},
+		{
+			text : 'default position',
+			func : uiDefaultView
+		},
+		{
+			text : 'screenshot',
+			func : uiGetScreenShot
+		},
+		{
+			text : 'help',
+			func : uiHelp
+		}
+	];
+	let container = document.createElement('div');
+	container.style.position = 'absolute';
+	container.style.left = '5%';
+	container.style.top = '5%';
+	document.body.appendChild(container);
+	settings.forEach(in_setting => {
+		let button = document.createElement('button');
+		button.innerText = in_setting.text;
+		button.addEventListener('click', in_setting.func);
+		button.style.marginRight = '3px';
+		button.style.border = '1px solid gray';
+		button.style.borderRadius = '3px';
+		container.appendChild(button);
+	});
 }
+
+setUpButtons();
 
 const gDrag = {
 	vec : null,
