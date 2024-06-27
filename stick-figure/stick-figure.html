@@ -36,15 +36,16 @@ function randomString(in_length = 5)
 	return Math.floor(Math.random() * (10 ** in_length)).toString(16).padStart(in_length, '0');
 }
 
-function convertUnit(in_src_x, in_src_y, in_src_rect, in_dst_rect)
+function convertUnit(in_u1_val, in_u1_min, in_u1_max, in_u2_min, in_u2_max) {
+	return in_u2_min + ((in_u1_val - in_u1_min) / (in_u1_max - in_u1_min)) * (in_u2_max - in_u2_min);
+}
+
+function convertUnitRect(in_src_x, in_src_y, in_src_rect, in_dst_rect)
 {
-	const src_w = in_src_rect.r - in_src_rect.l;
-	const src_h = in_src_rect.b - in_src_rect.t;
-	const dst_w = in_dst_rect.r - in_dst_rect.l;
-	const dst_h = in_dst_rect.b - in_dst_rect.t;
+	const invert = -1;
 	return (new THREE.Vector2(
-		((in_src_x - in_src_rect.l) * dst_w / src_w + in_dst_rect.l) * 1,
-		((in_src_y - in_src_rect.t) * dst_h / src_h + in_dst_rect.t) * -1
+		convertUnit(in_src_x, in_src_rect.l, in_src_rect.r, in_dst_rect.l, in_dst_rect.r),
+		convertUnit(in_src_y, in_src_rect.t, in_src_rect.b, in_dst_rect.t, in_dst_rect.b) * invert
 	));
 }
 
@@ -62,7 +63,7 @@ function convertRaycasterUnit(in_src_x, in_src_y, in_src_w, in_src_h)
 		r : 1,
 		b : 1
 	};
-	return convertUnit(in_src_x, in_src_y, src_rect, dst_rect);
+	return convertUnitRect(in_src_x, in_src_y, src_rect, dst_rect);
 }
 
 function eventPos2RaycasterPos(in_ev)
@@ -126,7 +127,7 @@ class cSphericalWorld {
 	#anchorVec2 = null;
 	#zoomMin = Number.NEGATIVE_INFINITY;
 	#zoomMax = Number.POSITIVE_INFINITY;
-	#removables = new Set();
+	#userObjects = new Set();
 	#animationHooks = new Set();
 	static #deltaThreshold = 0.05;
 	static #speed = 3;
@@ -251,48 +252,88 @@ class cSphericalWorld {
 	removeAnimationHook(in_hook) {
 		this.#animationHooks.delete(in_hook);
 	}
-	defaultView(in_animation = true) {
-		if (in_animation) {
-			const initQuat = new THREE.Quaternion();
-			const interval = 0.1;
-			const error = 0.001;
-			const hook = () => {
-				this.#cameraCtrl.quaternion.slerp(initQuat, interval);
-				if (this.#cameraCtrl.quaternion.angleTo(initQuat) < error) {
-					this.removeAnimationHook(hook);
+	defaultView(in_callback = null) {
+		const initQuat = new THREE.Quaternion();
+		const interval = 0.1;
+		const error = 0.001;
+		const hook = () => {
+			this.#cameraCtrl.quaternion.slerp(initQuat, interval);
+			if (this.#cameraCtrl.quaternion.angleTo(initQuat) < error) {
+				this.removeAnimationHook(hook);
+				if (in_callback) {
+					(in_callback)();
 				}
-			};
-			this.addAnimationHook(hook);
-		} else {
-			this.#cameraCtrl.rotation.set(0, 0, 0);
-		}
+			}
+		};
+		this.addAnimationHook(hook);
 	}
 	resize(in_w, in_h) {
 		this.#renderer.setSize(in_w, in_h);
 		this.#camera.aspect = in_w / in_h;
 		this.#camera.updateProjectionMatrix();
 	}
-	add(in_obj, in_isSystemObject = false) {
-		this.#scene.add(in_obj);
-		if (in_isSystemObject) {
-			// system object will not be removed
-			return;
-		} else {
-			this.#removables.add(in_obj);
-		}
-		// update zoom in/out scope for user object
-		const box = (new THREE.Box3()).setFromObject(in_obj);
-		const sphere = new THREE.Sphere();
-		box.getBoundingSphere(sphere);
-		this.#zoomMin = Math.max(this.#zoomMin, this.#camera.far - sphere.radius);
-		this.#zoomMax = Math.min(this.#zoomMax, sphere.radius);
-	}
-	replaceTo(in_obj) {
-		this.#removables.forEach(in_removable => {
-			this.#scene.remove(in_removable);
+	#getUserObjectRadius() {
+		let max = Number.NEGATIVE_INFINITY;
+		this.#userObjects.forEach(in_obj => {
+			const box = (new THREE.Box3()).setFromObject(in_obj);
+			const sphere = new THREE.Sphere();
+			box.getBoundingSphere(sphere);
+			max = Math.max(max, sphere.radius);
 		});
-		this.#removables.clear();
-		this.add(in_obj);
+		return max;
+	}
+	#updateZoomParams() {
+		const radius = this.#getUserObjectRadius();
+		this.#zoomMin = this.#camera.far - radius;
+		this.#zoomMax = radius
+	}
+	fog(in_color, in_percent1, in_percent2, in_callback = null) {
+		const distance = this.#camera.position.length();
+		const radius = this.#getUserObjectRadius();
+		/*
+			  0% : distance + radius * 1, this means not fogged
+			100% : distance - radius * 3. this means all fogged
+		*/
+		const distance1 = convertUnit(in_percent1, 0, 100, distance + radius * 1, distance - radius * 3);
+		const distance2 = convertUnit(in_percent2, 0, 100, distance + radius * 1, distance - radius * 3);
+		this.#scene.fog = new THREE.Fog(in_color, distance1, distance1 + radius * 2);
+		let count = 20;
+		let delta = (distance2 - distance1) / count;
+		const error = 0.1;
+		const hook = () => {
+			this.#scene.fog.near += delta;
+			this.#scene.fog.far += delta;
+			if (Math.abs(distance2 - this.#scene.fog.near) < error) {
+				this.#scene.fog.near = distance2;
+				this.#scene.fog.far = distance2 + radius * 2;
+				this.removeAnimationHook(hook);
+				if (in_callback) {
+					(in_callback)();
+				}
+			}
+		};
+		this.addAnimationHook(hook);
+	}
+	add(in_added, in_isSystemObject = false) {
+		this.#scene.add(in_added);
+		if (in_isSystemObject) {
+			return;
+		}
+		this.#userObjects.add(in_added);
+		this.#updateZoomParams();
+	}
+	remove(in_removed, in_isSystemObject = false) {
+		/*
+			*** NOTE #1 ***
+			As remove is idempotent,
+			children will be removed safety.
+		*/
+		this.#scene.remove(in_removed);
+		if (in_isSystemObject) {
+			return;
+		}
+		this.#userObjects.delete(in_removed);
+		this.#updateZoomParams();
 	}
 	render() {
 		this.#renderer.render(this.#scene, this.#camera);
@@ -682,15 +723,30 @@ class cBody extends THREE.Object3D {
 		};
 		(recursive)(this);
 	}
-	resetColor(in_hex) {
-		this.#reset(in_mesh => {
-			in_mesh.material.color.setHex(in_hex);
-		});
-	}
 	resetMaterial(in_material) {
 		this.#reset(in_mesh => {
 			in_mesh.material = in_material;
 		});
+	}
+	cloneMergedGeometry() {
+		const recursive = (in_obj) => {
+			const tmpArr = [];
+			if (in_obj instanceof THREE.Mesh) {
+				const geoClone = in_obj.geometry.clone();
+				geoClone.applyMatrix4(in_obj.matrixWorld);
+				tmpArr.push(geoClone);
+			}
+			in_obj.children.forEach(in_child => {
+				tmpArr.push(...(recursive)(in_child));
+			});
+			return tmpArr;
+		};
+		const geometries = (recursive)(this);
+		const mergedGeometry = UTILS.mergeGeometries(geometries);
+		geometries.forEach(in_geometry => {
+			in_geometry.dispose();
+		});
+		return mergedGeometry;
 	}
 }
 
@@ -733,35 +789,42 @@ class CyclicValues extends Array {
 		super(...args);
 		this.currentIndex = 0;
 	}
-	currentValue() {
+	currValue() {
 		return this[this.currentIndex];
 	}
 	nextValue() {
-		const value = this[this.currentIndex];
 		this.currentIndex = (this.currentIndex + 1) % this.length;
-		return value;
+		return this.currValue();
 	}
 }
 
 const COLORS = new CyclicValues(
-	0x5588DD,
-	0x8855DD,
-	0xDD5588,
-	0xDD8855,
-	0x88DD55,
-	0x55DD88,
-	0x555555,
-	0xBBBBBB
+	// gold
+	0xFFD700,
+	// orangered
+	0xFF4500,
+	// green
+	0x008000,
+	// dodgerblue
+	0x1E90FF,
+	// royalblue
+	0x4169E1,
+	// darkgoldenrod
+	0xB8860B,
+	// lightgray
+	0xD3D3D3,
+	// gray
+	0x808080
 );
 
-const ROUGHNESS = 0.4;
+const ROUGHNESS = 0.3;
 
-const initColor = COLORS.nextValue();
+const initColor = COLORS.currValue();
 
 const MATERIALS = new CyclicValues(
 	new THREE.MeshStandardMaterial({color: initColor, roughness: ROUGHNESS}),
-	new THREE.MeshBasicMaterial({color: initColor}),
-	new THREE.MeshNormalMaterial()
+	new THREE.MeshToonMaterial({color: initColor}),
+	new THREE.MeshBasicMaterial({color: initColor})
 );
 
 const INITFUNCS = {
@@ -886,7 +949,7 @@ const FIGURES = new CyclicValues(
 	}
 );
 
-const initMaterial = MATERIALS.nextValue();
+const initMaterial = MATERIALS.currValue();
 
 FIGURES.forEach(in_fig => {
 	// ugh! : this calculation should be hidden by class
@@ -911,29 +974,71 @@ FIGURES.forEach(in_fig => {
 			(in_fig.OBJECT[INITFUNCS[part][subpart]])(obj, dx, dy, dir);
 		}
 	}
+	/*
+		*** NOTE #4 ***
+		Without this process, morphing will be failed.
+		Maybe some initializ process, which includs scene.add(), is required.
+	*/
+	gWorld.add(in_fig.OBJECT);
+	gWorld.remove(in_fig.OBJECT);
 });
 
+gWorld.add((FIGURES.currValue()).OBJECT);
+
 function uiChangeColor() {
-	const color = COLORS.nextValue();
-	FIGURES.forEach(in_fig => {
-		in_fig.OBJECT.resetColor(color);
-	});
+	const currColor = new THREE.Color(COLORS.currValue());
+	const nextColor = new THREE.Color(COLORS.nextValue());
+	let delta = 0.05;
+	let interpolation = 0;
+	const hook = () => {
+		interpolation += delta;
+		if (interpolation < 1) {
+			let tempColor = currColor.clone().lerp(nextColor, interpolation);
+			(MATERIALS.currValue()).color.setHex(tempColor.getHex());
+		} else {
+			gWorld.removeAnimationHook(hook);
+			MATERIALS.forEach(in_material => {
+				in_material.color.setHex(nextColor.getHex());
+			});
+		}
+	};
+	gWorld.addAnimationHook(hook);
 }
 
 function uiChangeMaterial() {
 	const material = MATERIALS.nextValue();
-	FIGURES.forEach(in_fig => {
-		in_fig.OBJECT.resetMaterial(material);
+	const color = 0xEEEEEE;
+	gWorld.fog(color, 0, 100, () => {
+		FIGURES.forEach(in_fig => {
+			in_fig.OBJECT.resetMaterial(material);
+		});
+		gWorld.fog(color, 100, 0);
 	});
 }
 
 function uiChangeFigure() {
-	const figure = (FIGURES.nextValue()).OBJECT;
-	gWorld.replaceTo(figure);
+	const currFigure = (FIGURES.currValue()).OBJECT;
+	const nextFigure = (FIGURES.nextValue()).OBJECT;
+	// use tempFigure only during morphing
+	const begore = currFigure.cloneMergedGeometry();
+	const after = nextFigure.cloneMergedGeometry();
+	begore.morphAttributes.position = [after.attributes.position];
+	const tempFigure = new THREE.Mesh(begore, MATERIALS.currValue());
+	let morph = 0;
+	const hook = () => {
+		if (morph > 1) {
+			gWorld.removeAnimationHook(hook);
+			gWorld.remove(tempFigure);
+			gWorld.add(nextFigure);
+		} else {
+			morph += 0.05;
+			tempFigure.morphTargetInfluences[0] = morph;
+		}
+	};
+	gWorld.remove(currFigure);
+	gWorld.add(tempFigure);
+	gWorld.addAnimationHook(hook);
 }
-
-// init figure
-uiChangeFigure();
 
 function uiDefaultView() {
 	gWorld.defaultView();
@@ -947,7 +1052,7 @@ HTMLCanvasElement.prototype[clipClearArea] = function(in_margin) {
 	let ctx = this.getContext('2d');
 	if (!ctx) {
 		/*
-			*** NOTE #4 ***
+			*** NOTE #5 ***
 			Sometimes can't get 2D context ( ex. Three.js ).
 			So, to get it, copy bitmap to alternative canvas.
 		*/
@@ -998,7 +1103,7 @@ const CLIPMARGIN = 10;
 
 async function uiGetScreenShot() {
 	/*
-		*** NOTE #5 ***
+		*** NOTE #6 ***
 		Before getting betmap, you need re-render.
 		Without it, for example, you can't use canvas.toDataURL('image/png') etc. 
 	*/
@@ -1010,7 +1115,7 @@ async function uiGetScreenShot() {
 	const ctx = tmpElem.getContext('2d');
 	ctx.drawImage(gWorld.canvas, box.l, box.t, box.w, box.h, 0, 0, box.w, box.h);
 	/*
-		*** NOTE #6 ***
+		*** NOTE #7 ***
 		The browser treats the data URL as a resource when using fetch.
 		The fetch function retrieves the data and allows us to convert it into a Blob.
 	*/
