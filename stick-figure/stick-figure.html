@@ -1123,10 +1123,10 @@ const METACHAR1 = '@'
 const METACHAR2 = ',';
 
 function simpleCompress(input) {
-	var output = '';
-	var i = 0;
+	let output = '';
+	let i = 0;
 	while (i < input.length) {
-		var count = 1;
+		let count = 1;
 		while (i + 1 < input.length && input[i] === input[i + 1]) {
 			i++;
 			count++;
@@ -1142,12 +1142,12 @@ function simpleCompress(input) {
 }
 
 function simpleDecompress(input) {
-	var output = '';
-	var i = 0;
+	let output = '';
+	let i = 0;
 	while (i < input.length) {
 		if (input[i] === METACHAR1) {
-			var char = input[i + 1];
-			var count = '';
+			let char = input[i + 1];
+			let count = '';
 			i += 2;
 			while (i < input.length && input[i] !== METACHAR2) {
 				count += input[i];
