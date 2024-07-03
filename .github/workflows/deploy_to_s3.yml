@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'pj-corridor.net/index.html'
+      - 'pj-corridor.net/images/**'
       - 'pj-corridor.net/cube3d/**'
       - 'stick-figure/**'
 
@@ -14,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       INDEXPATH: pj-corridor.net/index.html
+      IMAGEPATH: pj-corridor.net/images/
       APPL1PATH: pj-corridor.net/cube3d/
       APPL2PATH: stick-figure/
     steps:
@@ -30,10 +32,14 @@ jobs:
       run: |
         aws s3 cp ${{ env.INDEXPATH }} s3://pj-corridor.net/index.html
     - name: sync2
+      if: ${{ contains(join(github.event.commits[*].modified, ','), env.IMAGEPATH) }}
+      run: |
+        aws s3 sync ${{ env.IMAGEPATH }} s3://pj-corridor.net/images/ --exclude ".git/*"
+    - name: sync3
       if: ${{ contains(join(github.event.commits[*].modified, ','), env.APPL1PATH) }}
       run: |
         aws s3 sync ${{ env.APPL1PATH }} s3://pj-corridor.net/cube3d/ --exclude ".git/*"
-    - name: sync3
+    - name: sync4
       if: ${{ contains(join(github.event.commits[*].modified, ','), env.APPL2PATH) }}
       run: |
         aws s3 sync ${{ env.APPL2PATH }} s3://pj-corridor.net/stick-figure/ --exclude ".git/*"
