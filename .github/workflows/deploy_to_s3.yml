@@ -21,7 +21,7 @@ jobs:
     steps:
     - name: checkout
       uses: actions/checkout@v3
-    - name: configure aws credentials
+    - name: configure credentials
       uses: aws-actions/configure-aws-credentials@v3
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
