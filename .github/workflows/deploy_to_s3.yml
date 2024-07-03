@@ -1,4 +1,4 @@
-name: deploy to s3
+name: Deploy to S3
 
 on:
   push:
@@ -9,6 +9,9 @@ on:
       - 'pj-corridor.net/images/**'
       - 'pj-corridor.net/cube3d/**'
       - 'stick-figure/**'
+      - 'pj-corridor.net/personalitytest/**'
+      - 'pj-corridor.net/gallery-256/**'
+      - 'pj-corridor.net/gallery-fullcolor/**'
 
 jobs:
   deploy:
@@ -30,31 +33,40 @@ jobs:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ap-northeast-1
+    - name: pre-check modified
+      run: |
+        git fetch --depth=2
+        echo "CURR_SHA=${{ github.sha }}" >> $GITHUB_ENV
+        echo "PREV_SHA=$(git rev-parse ${{ github.sha }}^)" >> $GITHUB_ENV
+    - name: check modified
+      run: |
+        FILES=$(git diff --name-only $PREV_SHA $CURR_SHA)
+        echo "FILES=$FILES" >> $GITHUB_ENV
     - name: copy-1
-      if: ${{ contains(join(github.event.commits[*].modified, ','), env.INDEXPATH) }}
+      if: contains(env.FILES, env.INDEXPATH)
       run: |
         aws s3 cp ${{ env.INDEXPATH }} s3://pj-corridor.net/index.html
     - name: sync-1
-      if: ${{ contains(join(github.event.commits[*].modified, ','), env.IMAGEPATH) }}
+      if: contains(env.FILES, env.IMAGEPATH)
       run: |
         aws s3 sync ${{ env.IMAGEPATH }} s3://pj-corridor.net/images/ --exclude ".git/*"
     - name: sync-2
-      if: ${{ contains(join(github.event.commits[*].modified, ','), env.APPL1PATH) }}
+      if: contains(env.FILES, env.APPL1PATH)
       run: |
         aws s3 sync ${{ env.APPL1PATH }} s3://pj-corridor.net/cube3d/ --exclude ".git/*"
     - name: sync-3
-      if: ${{ contains(join(github.event.commits[*].modified, ','), env.APPL2PATH) }}
+      if: contains(env.FILES, env.APPL2PATH)
       run: |
         aws s3 sync ${{ env.APPL2PATH }} s3://pj-corridor.net/stick-figure/ --exclude ".git/*"
     - name: sync-4
-      if: ${{ contains(join(github.event.commits[*].modified, ','), env.APPL3PATH) }}
+      if: contains(env.FILES, env.APPL3PATH)
       run: |
         aws s3 sync ${{ env.APPL3PATH }} s3://pj-corridor.net/personalitytest/ --exclude ".git/*"
     - name: sync-5
-      if: ${{ contains(join(github.event.commits[*].modified, ','), env.GA256PATH) }}
+      if: contains(env.FILES, env.GA256PATH)
       run: |
         aws s3 sync ${{ env.GA256PATH }} s3://pj-corridor.net/gallery-256/ --exclude ".git/*"
     - name: sync-6
-      if: ${{ contains(join(github.event.commits[*].modified, ','), env.GAFULPATH) }}
+      if: contains(env.FILES, env.GAFULPATH)
       run: |
         aws s3 sync ${{ env.GAFULPATH }} s3://pj-corridor.net/gallery-fullcolor/ --exclude ".git/*"
