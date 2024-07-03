@@ -18,11 +18,14 @@ jobs:
       IMAGEPATH: pj-corridor.net/images/
       APPL1PATH: pj-corridor.net/cube3d/
       APPL2PATH: stick-figure/
+      APPL3PATH: pj-corridor.net/personalitytest/
+      GA256PATH: pj-corridor.net/gallery-256/
+      GAFULPATH: pj-corridor.net/gallery-fullcolor/
     steps:
     - name: checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: configure credentials
-      uses: aws-actions/configure-aws-credentials@v3
+      uses: aws-actions/configure-aws-credentials@v4
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -43,4 +46,15 @@ jobs:
       if: ${{ contains(join(github.event.commits[*].modified, ','), env.APPL2PATH) }}
       run: |
         aws s3 sync ${{ env.APPL2PATH }} s3://pj-corridor.net/stick-figure/ --exclude ".git/*"
-
+    - name: sync-4
+      if: ${{ contains(join(github.event.commits[*].modified, ','), env.APPL3PATH) }}
+      run: |
+        aws s3 sync ${{ env.APPL3PATH }} s3://pj-corridor.net/personalitytest/ --exclude ".git/*"
+    - name: sync-5
+      if: ${{ contains(join(github.event.commits[*].modified, ','), env.GA256PATH) }}
+      run: |
+        aws s3 sync ${{ env.GA256PATH }} s3://pj-corridor.net/gallery-256/ --exclude ".git/*"
+    - name: sync-6
+      if: ${{ contains(join(github.event.commits[*].modified, ','), env.GAFULPATH) }}
+      run: |
+        aws s3 sync ${{ env.GAFULPATH }} s3://pj-corridor.net/gallery-fullcolor/ --exclude ".git/*"
