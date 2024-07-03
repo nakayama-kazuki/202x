@@ -27,19 +27,19 @@ jobs:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ap-northeast-1
-    - name: sync1
+    - name: copy-1
       if: ${{ contains(join(github.event.commits[*].modified, ','), env.INDEXPATH) }}
       run: |
         aws s3 cp ${{ env.INDEXPATH }} s3://pj-corridor.net/index.html
-    - name: sync2
+    - name: sync-1
       if: ${{ contains(join(github.event.commits[*].modified, ','), env.IMAGEPATH) }}
       run: |
         aws s3 sync ${{ env.IMAGEPATH }} s3://pj-corridor.net/images/ --exclude ".git/*"
-    - name: sync3
+    - name: sync-2
       if: ${{ contains(join(github.event.commits[*].modified, ','), env.APPL1PATH) }}
       run: |
         aws s3 sync ${{ env.APPL1PATH }} s3://pj-corridor.net/cube3d/ --exclude ".git/*"
-    - name: sync4
+    - name: sync-3
       if: ${{ contains(join(github.event.commits[*].modified, ','), env.APPL2PATH) }}
       run: |
         aws s3 sync ${{ env.APPL2PATH }} s3://pj-corridor.net/stick-figure/ --exclude ".git/*"
