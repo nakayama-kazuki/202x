@@ -1,0 +1,40 @@
+name: deploy to s3
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'pj-corridor.net/index.html'
+      - 'pj-corridor.net/cube3d/**'
+      - 'stick-figure/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      INDEXPATH: pj-corridor.net/index.html
+      APPL1PATH: pj-corridor.net/cube3d/
+      APPL2PATH: stick-figure/
+    steps:
+    - name: checkout
+      uses: actions/checkout@v2
+    - name: configure aws credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ap-northeast-1
+    - name: sync1
+      if: ${{ contains(join(github.event.commits[*].modified, ','), env.INDEXPATH) }}
+      run: |
+        aws s3 cp ${{ env.INDEXPATH }} s3://pj-corridor.net/index.html
+    - name: sync2
+      if: ${{ contains(join(github.event.commits[*].modified, ','), env.APPL1PATH) }}
+      run: |
+        aws s3 sync ${{ env.APPL1PATH }} s3://pj-corridor.net/cube3d/ --exclude ".git/*"
+    - name: sync3
+      if: ${{ contains(join(github.event.commits[*].modified, ','), env.APPL2PATH) }}
+      run: |
+        aws s3 sync ${{ env.APPL2PATH }} s3://pj-corridor.net/stick-figure/ --exclude ".git/*"
+
