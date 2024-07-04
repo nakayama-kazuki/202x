@@ -70,3 +70,6 @@ jobs:
       if: contains(env.FILES, env.GAFULPATH)
       run: |
         aws s3 sync ${{ env.GAFULPATH }} s3://pj-corridor.net/gallery-fullcolor/ --exclude ".git/*"
+    - name: clear cache
+      run: |
+        aws cloudfront create-invalidation --distribution-id ${{ secrets.AWS_CLOUDFRONT_DISTRIBUTION }} --paths "/*"
