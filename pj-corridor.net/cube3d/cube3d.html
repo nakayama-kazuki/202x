@@ -1,107 +1,81 @@
+<html>
 <head>
+<!-- MIT License Copyright (c) 2024 pj-corridor.net -->
 <meta name='viewport' content='width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1' />
-<style>
-body {
-	margin: 0;
-	overflow: hidden;
-}
-#iControl {
-	position: absolute;
-	left: 10px;
-	top: 10px;
-	font-family: monospace;;
-}
-#iControl button {
-	min-width: 3em;
-}
-#iScore {
-	display: none;
-	font: italic small-caps bold 1.5em cursive;
-	color: white;
-	margin: 0px;
-	position: absolute;
-	top: 50%;
-	left: 50%;
-	margin-right: -50%;
-	transform: translate(-50%, -50%);
-}
-</style>
-</head>
-<script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r127/three.min.js'></script>
-<canvas id='iCanvas'></canvas>
-<span id='iControl'>
-<button id='iDec'>-</button>
-<span id ='iShuffle'>
-</span>
-<script>
-
-let gShuffleButtonList = (in_cntList => {
-	let idList = [];
-	in_cntList.forEach(in_cnt => {
-		let id = 'iShuffle_' + in_cnt;
-		document.querySelector('#iShuffle').innerHTML +=
-			"<button id='" + id + "' cnt='" + in_cnt + "'>shuffle x" + in_cnt + "</button>\n";
-		idList.push(id);
-	});
-	return idList;
-})([3, 30]);
-
-</script>
-<button id='iInc'>+</button>
-</span>
-<div id='iScore'></div>
-<script>
-
-const cCanvas = document.querySelector('#iCanvas');
-
-const cWorldRadius = 1000;
-const cCubeSize = 360;
-const cFogMargin = 200;
-
-const cAudioNormal = new Audio('data:audio/mpeg;base64,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');
-
-const cAudioError = new Audio('data:audio/wav;base64,UklGRvgUAABXQVZFZm10IBAAAAABAAIARKwAABCxAgAEABAAZGF0YdQUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA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');
-
-Array.prototype.randomElement = function() {
-	return this[Math.floor(Math.random() * this.length)];
-};
-
-Array.prototype.maxElement = function() {
-	let candidate = this[0];
-	this.forEach(e => {
-		if (e > candidate) {
-			candidate = e;
-		}
-	});
-	return candidate;
-};
-
-const cAxisUtil = {
-	_xyz : ['x', 'y', 'z'],
-	randomElement : function() {
-		return this._xyz.randomElement();
-	},
-	forEach : function(in_callback) {
-		this._xyz.forEach(axis => {
-			(in_callback)(axis);
-		});
-	},
-	other : function(...in_axisArr) {
-		let arr = [];
-		this.forEach(axis => {
-			if (in_axisArr.indexOf(axis) < 0) {
-				arr.push(axis);
-			}
-		});
-		return arr;
-	},
-	rest : function(in_axis1, in_axis2) {
-		let arr = this.other(in_axis1, in_axis2);
-		return arr[0];
+<meta charset='utf-8' />
+<script type='importmap'>
+{
+	"imports": {
+		"three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+		"utils": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/utils/BufferGeometryUtils.js"
 	}
-};
+}
+</script>
+</head>
+<body>
+<script type='module'>
 
-function adjust(in_value, in_notch)
+import * as THREE from 'three';
+import * as UTILS from 'utils';
+
+/*
+	(1) utilities
+*/
+
+function randomString(in_length = 5)
+{
+	return Math.floor(Math.random() * (10 ** in_length)).toString(16).padStart(in_length, '0');
+}
+
+function convertUnit(in_u1_val, in_u1_min, in_u1_max, in_u2_min, in_u2_max) {
+	return in_u2_min + ((in_u1_val - in_u1_min) / (in_u1_max - in_u1_min)) * (in_u2_max - in_u2_min);
+}
+
+function convertUnitRect(in_src_x, in_src_y, in_src_rect, in_dst_rect)
+{
+	return (new THREE.Vector2(
+		convertUnit(in_src_x, in_src_rect.l, in_src_rect.r, in_dst_rect.l, in_dst_rect.r),
+		convertUnit(in_src_y, in_src_rect.t, in_src_rect.b, in_dst_rect.t, in_dst_rect.b)
+	));
+}
+
+function convertRaycasterUnit(in_src_x, in_src_y, in_src_w, in_src_h)
+{
+	const src_rect = {
+		l : 0,
+		t : 0,
+		r : in_src_w,
+		b : in_src_h
+	};
+	const dst_rect = {
+		l : -1,
+		t : -1,
+		r : 1,
+		b : 1
+	};
+	const vec2 = convertUnitRect(in_src_x, in_src_y, src_rect, dst_rect);
+	// finally, dst_rect.t and dst_rect.b should be inverted
+	vec2.y *= -1;
+	return vec2;
+}
+
+function eventPos2RaycasterPos(in_ev)
+{
+	const elem = in_ev.currentTarget
+	return convertRaycasterUnit(
+		in_ev.clientX - elem.offsetLeft,
+		in_ev.clientY - elem.offsetTop,
+		elem.offsetWidth,
+		elem.offsetHeight);
+}
+
+function scaledVector(io_vector, in_param, in_param_max) {
+	const adhocParam = 2.0;
+	const value = convertUnit(in_param, 0, in_param_max, 0, 1) + 1;
+	return io_vector.clone().multiplyScalar(value * adhocParam);
+}
+
+function snapToNotch(in_value, in_notch)
 {
 	let notch = in_notch / 2;
 	let abs = Math.abs(in_value);
@@ -116,9 +90,555 @@ function adjust(in_value, in_notch)
 	}
 }
 
-function adjust_05PI(in_value)
+function snapTo05PI(in_value)
 {
-	return adjust(in_value, Math.PI / 2);
+	/*
+		{in : Math.PI / 4 - delta, expected : 0},
+		{in : Math.PI / 4 + delta, expected : Math.PI / 2}
+	*/
+	return snapToNotch(in_value, Math.PI / 2);
+}
+
+const arrRand = Symbol();
+
+Array.prototype[arrRand] = function() {
+	return this[Math.floor(Math.random() * this.length)];
+};
+
+class cEase {
+	constructor(in_from, in_to, in_duration) {
+		this.from = in_from;
+		this.to = in_to;
+		this.duration = in_duration;
+		this.start = Date.now();
+	}
+	#currentEasing(in_quad) {
+		const elapsed = Date.now() - this.start;
+		if (elapsed > this.duration) {
+			return this.to;
+		} else {
+			return this.from + (this.to - this.from) * (in_quad)(elapsed / this.duration);
+		}
+	}
+	currentEasingIn() {
+		return this.#currentEasing(t => t * t);
+	}
+	currentEasingOut() {
+		return this.#currentEasing(t => t * (2 - t));
+	}
+}
+
+function pseudoMessageDigest1(in_array) {
+	let hash = 0;
+	in_array.sort().forEach(in_entry => {
+		for (let i = 0; i < in_entry.length; i++) {
+			hash = (hash << 5) - hash + in_entry.charCodeAt(i);
+			hash |= 0;
+		}
+	});
+	return hash >>> 0;
+}
+
+function pseudoMessageDigest2(in_string) {
+	return pseudoMessageDigest1([in_string]);
+}
+
+/*
+	*** NOTE #1 ***
+	as this app uses position of the mesh to find overlapping etc,
+	need to ignore very small error.
+*/
+
+class cApproximateMap extends Map {
+	// to use this class, key should be numeric
+	constructor(in_error) {
+		super();
+		this.error = in_error;
+	}
+	#sortedKeys = null;
+	#approximateKey(in_key) {
+		for (const registeredKey of this.keys()) {
+			if (Math.abs(registeredKey - in_key) < this.error) {
+				return registeredKey;
+			}
+		}
+		return in_key;
+	}
+	sortedKey(in_index) {
+		if (!this.#sortedKeys) {
+			this.#sortedKeys = Array.from(this.keys()).sort((a, b) => a - b);
+		}
+		return this.#sortedKeys[in_index];
+	}
+	get(in_key) {
+		return super.get(this.#approximateKey(in_key));
+	}
+	set(in_key, in_value) {
+		this.#sortedKeys = null;
+		return super.set(this.#approximateKey(in_key), in_value);
+	}
+	delete(in_key) {
+		this.#sortedKeys = null;
+		return super.delete(this.#approximateKey(in_key));
+	}
+}
+
+class cApproximateSet extends Set {
+	constructor(in_error) {
+		super();
+		this.error = in_error;
+	}
+	#approximateValue(in_value) {
+		for (let item of this) {
+			if (Math.abs(item - in_value) < this.error) {
+				return item;
+			}
+		}
+		return in_value;
+	}
+	add(in_value) {
+		return super.add(this.#approximateValue(in_value));
+	}
+	has(in_value) {
+		return super.has(this.#approximateValue(in_value));
+	}
+	delete(in_value) {
+		return super.delete(this.#approximateValue(in_value));
+	}
+}
+
+class cCyclicMap extends Map {
+	get keysArray() {
+		return Array.from(this.keys());
+	}
+	#deltaItemByOrder(in_order, in_delta) {
+		const length = this.keysArray.length;
+		const deltaIndex = (in_order + in_delta + length) % length;
+		const deltaKey = this.keysArray[deltaIndex];
+		return {
+			k : deltaKey,
+			v : this.get(deltaKey)
+		};
+	}
+	nextItemByOrder(in_order) {
+		return this.#deltaItemByOrder(in_order, +1);
+	}
+	currItemByOrder(in_order) {
+		return this.#deltaItemByOrder(in_order, 0);
+	}
+	prevItemByOrder(in_order) {
+		return this.#deltaItemByOrder(in_order, -1);
+	}
+	#deltaItemByKey(in_key, in_delta) {
+		const index = this.keysArray.indexOf(in_key);
+		if (index === -1) {
+			return null;
+		} else {
+			return this.#deltaItemByOrder(index, in_delta);
+		}
+	}
+	nextItemByKey(in_key) {
+		return this.#deltaItemByKey(in_key, +1);
+	}
+	prevItemByKey(in_key) {
+		return this.#deltaItemByKey(in_key, -1);
+	}
+}
+
+const XYZ = ['x', 'y', 'z'];
+
+const AUDIO_ROTATION = new Audio('data:audio/mpeg;base64,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');
+
+const AUDIO_ERROR = new Audio('data:audio/wav;base64,UklGRvgUAABXQVZFZm10IBAAAAABAAIARKwAABCxAgAEABAAZGF0YdQUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA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');
+
+/*
+	(2) cSphericalWorld
+
+	|
+	+-- Scene
+	|
+	+-- WebGLRenderer
+	|
+	+-- Object3D ( to control camera )
+		|
+		+- PerspectiveCamera
+*/
+
+const DEVICE_PIXEL_RATIO = window.devicePixelRatio;
+
+class cSphericalWorld {
+	static #defaultCameraSetting = 2;
+	static #view = [
+		{
+			cameraFrom : new THREE.Vector3(0, 0, -1),
+			cameraTo : new THREE.Vector3(0, 0, 0),
+			cameraUp : new THREE.Vector3(0, 1, 0),
+			dxDir : -1,
+			dyDir : -1
+		},
+		{
+			cameraFrom : new THREE.Vector3(0, 0, -1),
+			cameraTo : new THREE.Vector3(0, 0, 0),
+			cameraUp : new THREE.Vector3(0, -1, 0),
+			dxDir : 1,
+			dyDir : 1
+		},
+		{
+			cameraFrom : new THREE.Vector3(0, 0, 1),
+			cameraTo : new THREE.Vector3(0, 0, 0),
+			cameraUp : new THREE.Vector3(0, 1, 0),
+			dxDir : -1,
+			dyDir : 1
+		},
+		{
+			cameraFrom : new THREE.Vector3(0, 0, 1),
+			cameraTo : new THREE.Vector3(0, 0, 0),
+			cameraUp : new THREE.Vector3(0, -1, 0),
+			dxDir : 1,
+			dyDir : -1
+		}
+	][cSphericalWorld.#defaultCameraSetting];
+	static #rotationCallbackName = Symbol();
+	#scene = null;
+	#renderer = null;
+	#cameraCtrl = null;
+	#cameraName = randomString();
+	#anchorPosV2 = null;
+	zoomMin = Number.NEGATIVE_INFINITY;
+	zoomMax = Number.POSITIVE_INFINITY;
+	#userObjects = new Set();
+	#animationHooks = new Set();
+	static #deltaThreshold = 0.05;
+	constructor(in_radius) {
+		// scene
+		this.#scene = new THREE.Scene();
+		// renderer
+		this.#renderer = new THREE.WebGLRenderer({alpha : true, antialias : true});
+		this.#renderer.setPixelRatio(DEVICE_PIXEL_RATIO);
+		if (false) {
+			this.#renderer.shadowMap.enabled = true;
+		}
+		// camera
+		const camera = new THREE.PerspectiveCamera();
+		camera.name = this.#cameraName;
+		camera.fov = 45;
+		camera.near = 1;
+		camera.far = in_radius;
+		camera.position.set(
+			0,
+			0,
+			in_radius * cSphericalWorld.#view.cameraFrom.z);
+		camera.up.set(
+			cSphericalWorld.#view.cameraUp.x,
+			cSphericalWorld.#view.cameraUp.y,
+			cSphericalWorld.#view.cameraUp.z
+		);
+		camera.lookAt(cSphericalWorld.#view.cameraTo);
+		this.#cameraCtrl = new THREE.Object3D();
+		this.#cameraCtrl.add(camera);
+		// light
+		const lightColor = 0xFFFFFF;
+		const light = new THREE.DirectionalLight(lightColor);
+		light.position.set(
+			0,
+			in_radius * cSphericalWorld.#view.cameraUp.y,
+			in_radius * cSphericalWorld.#view.cameraFrom.z);
+		if (false) {
+			light.castShadow = true;
+		}
+		this.#cameraCtrl.add(light);
+		this.add(new THREE.AmbientLight(lightColor), true);
+		// other
+		this.resize(this.canvas.width, this.canvas.height);
+		this.canvas.addEventListener('mousedown', this.#evMoveStart.bind(this));
+		this.canvas.addEventListener('mousemove', this.#evMoveUpdate.bind(this));
+		this.canvas.addEventListener('mouseleave', this.#evMoveStop.bind(this));
+		this.canvas.addEventListener('mouseout', this.#evMoveStop.bind(this));
+		this.canvas.addEventListener('mouseup', this.#evMoveStop.bind(this));
+		this.canvas.addEventListener('wheel', this.#evZoom.bind(this));
+	}
+	get canvas() {
+		return this.#renderer.domElement;
+	}
+	get #camera() {
+		return this.#cameraCtrl.getObjectByName(this.#cameraName);
+	}
+	#moveCameraCtrl(in_world_dx, in_world_dy) {
+		this.#cameraCtrl.rotateY(in_world_dx * cSphericalWorld.#view.dxDir);
+		this.#cameraCtrl.rotateX(in_world_dy * cSphericalWorld.#view.dyDir);
+	}
+	distanceToObject() {
+		return this.#camera.position.length();
+	}
+	moveView(in_world_dx, in_world_dy) {
+		this.#moveCameraCtrl(in_world_dx * -1, in_world_dy * -1);
+	}
+	#setZoom(in_distance) {
+		this.#camera.position.normalize().multiplyScalar(in_distance);
+	}
+	#evMoveStart(in_ev) {
+		const vec2 = eventPos2RaycasterPos(in_ev);
+		if (this.intersectPositive(vec2).length > 0) {
+			return;
+		}
+		this.#anchorPosV2 = vec2;
+	}
+	#evMoveUpdate(in_ev) {
+		if (!this.#anchorPosV2) {
+			return;
+		}
+		const vec2 = eventPos2RaycasterPos(in_ev);
+		let delta = vec2.clone().sub(this.#anchorPosV2);
+		if (delta.length() < cSphericalWorld.#deltaThreshold) {
+			return;
+		}
+		delta = scaledVector(delta, this.distanceToObject(), this.#camera.far);
+		this.#moveCameraCtrl(delta.x, delta.y);
+		this.#anchorPosV2 = vec2;
+	}
+	#evMoveStop(in_ev) {
+		if (!this.#anchorPosV2) {
+			return;
+		}
+		this.#anchorPosV2 = null;
+	}
+	#evZoom(in_ev) {
+		const distance = this.#camera.position.length() + in_ev.deltaY;
+		if ((this.zoomMax < distance) && (distance < this.zoomMin)) {
+			this.#setZoom(distance);
+		}
+	}
+	zoom(in_stopDistance, in_duration) {
+		const error = 10;
+		const initDistance = this.#camera.position.length();
+		if (Math.abs(in_stopDistance - initDistance) < error) {
+			return;
+		}
+		const ease = new cEase(initDistance, in_stopDistance, in_duration);
+		const hook = () => {
+			const currentDistance = ease.currentEasingOut();
+			this.#setZoom(currentDistance);
+			if (currentDistance === in_stopDistance) {
+				this.removeAnimationHook(hook);
+			}
+		};
+		this.addAnimationHook(hook);
+	}
+	#intersectObjects(in_vec2, in_direction, in_layer) {
+		const raycaster = new THREE.Raycaster();
+		raycaster.layers.set(in_layer);
+		// camera ---[ raycast ]---> object
+		raycaster.setFromCamera(in_vec2, this.#camera);
+		const intersects = raycaster.intersectObjects(this.#scene.children);
+		if (in_direction || (intersects.length === 0)) {
+			return intersects;
+		}
+		// camera ---> object ( intersects[0].point ) ---[ raycaster.ray.direction ]---> opposit
+		const opposit = (intersects[0].point.clone()).add(raycaster.ray.direction.multiplyScalar(this.#camera.far));
+		// camera ---> object <---[ raycast again ]--- opposit
+		raycaster.set(opposit, (raycaster.ray.direction.clone()).negate());
+		return raycaster.intersectObjects(this.#scene.children);
+	}
+	intersectPositive(in_vec2, in_layer = 0) {
+		return this.#intersectObjects(in_vec2, true, in_layer);
+	}
+	intersectNegative(in_vec2, in_layer = 0) {
+		return this.#intersectObjects(in_vec2, false, in_layer);
+	}
+	copyCameraPosition() {
+		return this.#camera.getWorldPosition(new THREE.Vector3());
+	}
+	addAnimationHook(in_hook) {
+		this.#animationHooks.add(in_hook);
+	}
+	removeAnimationHook(in_hook) {
+		this.#animationHooks.delete(in_hook);
+	}
+	viberationEffect(in_duration = 0.2) {
+		const start = {
+			time : Date.now(),
+			position : this.#camera.position.clone()
+		};
+		const hook = () => {
+			if (Date.now() - start.time > in_duration * 1000) {
+				this.#camera.position.copy(start.position);
+				this.removeAnimationHook(hook);
+			} else {
+				// 0.9975 - 1.0025
+				const rand = (Math.random() - 0.5) / 200 + 1;
+				this.#camera.position.multiplyScalar(rand);
+			}
+		};
+		this.addAnimationHook(hook);
+	}
+	defaultView(in_callback = null) {
+		const initQuat = new THREE.Quaternion();
+		const interval = 0.1;
+		const error = 0.001;
+		const hook = () => {
+			this.#cameraCtrl.quaternion.slerp(initQuat, interval);
+			if (this.#cameraCtrl.quaternion.angleTo(initQuat) < error) {
+				this.removeAnimationHook(hook);
+				if (in_callback) {
+					(in_callback)();
+				}
+			}
+		};
+		this.addAnimationHook(hook);
+	}
+	startRotaion(in_vec3) {
+		this[cSphericalWorld.#rotationCallbackName] = () => {
+			this.#cameraCtrl.rotateX(in_vec3.x);
+			this.#cameraCtrl.rotateY(in_vec3.y);
+			this.#cameraCtrl.rotateZ(in_vec3.z);
+		};
+		this.addAnimationHook(this[cSphericalWorld.#rotationCallbackName]);
+	}
+	stopRotaion() {
+		this.removeAnimationHook(this[cSphericalWorld.#rotationCallbackName]);
+		delete this[cSphericalWorld.#rotationCallbackName];
+	}
+	resize(in_w, in_h) {
+		this.#renderer.setSize(in_w, in_h);
+		this.#camera.aspect = in_w / in_h;
+		this.#camera.updateProjectionMatrix();
+	}
+	#getUserObjectRadius() {
+		let max = Number.NEGATIVE_INFINITY;
+		this.#userObjects.forEach(in_obj => {
+			const box = (new THREE.Box3()).setFromObject(in_obj);
+			const sphere = new THREE.Sphere();
+			box.getBoundingSphere(sphere);
+			max = Math.max(max, sphere.radius);
+		});
+		return max;
+	}
+	#updateZoomParams() {
+		let delayed = 1000;
+		const update = () => {
+			const radius = this.#getUserObjectRadius();
+			if (radius < 0) {
+				// don't have visible object
+				delayed *= 2;
+				window.setTimeout(update, delayed);
+			} else {
+				this.zoomMin = this.#camera.far - radius;
+				this.zoomMax = radius
+			}
+		};
+		(update)();
+	}
+	removeFog() {
+		this.#scene.fog = null;
+	}
+	fog(in_color, in_percent1, in_percent2, in_callback = null) {
+		const distance = this.#camera.position.length();
+		const radius = this.#getUserObjectRadius();
+		/*
+			  0% : distance + radius * 1, this means not fogged
+			100% : distance - radius * 3. this means all fogged
+		*/
+		const distance1 = convertUnit(in_percent1, 0, 100, distance + radius * 1, distance - radius * 3);
+		const distance2 = convertUnit(in_percent2, 0, 100, distance + radius * 1, distance - radius * 3);
+		this.#scene.fog = new THREE.Fog(in_color, distance1, distance1 + radius * 2);
+		let count = 20;
+		let delta = (distance2 - distance1) / count;
+		const error = 0.1;
+		const hook = () => {
+			this.#scene.fog.near += delta;
+			this.#scene.fog.far += delta;
+			if (Math.abs(distance2 - this.#scene.fog.near) < error) {
+				this.#scene.fog.near = distance2;
+				this.#scene.fog.far = distance2 + radius * 2;
+				this.removeAnimationHook(hook);
+				if (in_callback) {
+					(in_callback)();
+				}
+			}
+		};
+		this.addAnimationHook(hook);
+	}
+	add(in_added, in_isSystemObject = false) {
+		this.#scene.add(in_added);
+		if (in_isSystemObject) {
+			return;
+		}
+		this.#userObjects.add(in_added);
+		this.#updateZoomParams();
+	}
+	remove(in_removed, in_isSystemObject = false) {
+		// idempotent
+		this.#scene.remove(in_removed);
+		if (in_isSystemObject) {
+			return;
+		}
+		this.#userObjects.delete(in_removed);
+		this.#updateZoomParams();
+	}
+	render() {
+		this.#renderer.render(this.#scene, this.#camera);
+	}
+	start() {
+		this.add(this.#cameraCtrl, true);
+		this.#renderer.setAnimationLoop(() => {
+			this.render();
+			this.#animationHooks.forEach(in_hook => {
+				(in_hook)();
+			});
+		});
+	}
+}
+
+/*
+	(3) Texture, MeshLambertMaterial, and BoxGeometry using cCache, which returns the same object in cache without creating.
+*/
+
+function factoryBuilder(in_constructor) {
+	class cCache {
+		static #cache = {};
+		constructor(...in_args) {
+			this.entity = (in_constructor)(...in_args);
+		}
+		static #genKey(...in_args) {
+			const args = [];
+			// assume in_args is primitive
+			in_args.forEach(in_arg => {
+				if (Number.isFinite(in_arg)) {
+					args.push(Math.ceil(in_arg));
+				} else {
+					args.push(in_arg);
+				}
+			});
+			return '_' + args.join('-');
+		}
+		static getRef(...in_args) {
+			const key = cCache.#genKey(...in_args);
+			if (key in cCache.#cache) {
+				// console.log('cache hit ( cCache key : ' + key + ' )');
+			} else {
+				cCache.#cache[key] = new cCache(...in_args);
+			}
+			return cCache.#cache[key].entity;
+		}
+		static allClear(in_callback = null) {
+			if (in_callback) {
+				Object.keys(cCache.#cache).forEach(in_key => {
+					(in_callback)(cCache.#cache[in_key].entity);
+				});
+			}
+			cCache.#cache = {};
+		}
+	}
+	/*
+		*** NOTE #2 ***
+		when there are a lot of the same objects,
+		and they can be shared using reference,
+		cCache.getRef() returns reference.
+	*/
+	return {
+		create : cCache.getRef,
+		allClear : cCache.allClear
+	};
 }
 
 CanvasRenderingContext2D.prototype.fillRoundRect = function(x, y, w, h, r) {
@@ -136,991 +656,1602 @@ CanvasRenderingContext2D.prototype.fillRoundRect = function(x, y, w, h, r) {
 	this.fill();
 }
 
-const cCubeTexture = {
-	cache : [],
-	search : function(in_w, in_h, in_grad) {
-		for (let i = 0; i < this.cache.length; i++) {
-			let obj = this.cache[i];
-			if ((obj.w === in_w) && (obj.h === in_h) && (obj.g === in_grad)) {
-				return obj.t;
-			}
-		}
-		return null;
-	},
-	create : function(in_w, in_h, in_grad) {
-		let hit = this.search(in_w, in_h, in_grad);
-		if (hit) {
-			return hit;
-		}
-		// gradation (from black to white)
-		let maxDepth = 255;
-		let styles = [];
-		for (let i = 0; i < in_grad; i++) {
-			let depth = Math.ceil(maxDepth / (in_grad - 1) * i);
-			styles[i] = 'rgb(' + depth + ',' + depth + ',' + depth + ')';
-		}
-		// draw and convert using toDataUR
-		let canvas = document.createElement('CANVAS');
-		canvas.width = in_w;
-		canvas.height = in_h;
-		const ctx = canvas.getContext('2d');
-		let radius = 6;
-		for (let i = 0; i < in_grad; i++) {
-			ctx.fillStyle = styles[i];
-			if (i > 0) {
-				ctx.fillRoundRect(i, i, in_w - i * 2, in_h - i * 2, radius - i);
-			} else {
-				ctx.fillRect(i, i, in_w - i * 2, in_h - i * 2);
-			}
-		}
-		// return texture
-		let texture = (new THREE.TextureLoader()).load(canvas.toDataURL());
-		this.cache.push({
-			w : in_w,
-			h : in_h,
-			g : in_grad,
-			t : texture
-		});
-		return texture;
+const textureFactory = factoryBuilder((in_w, in_h) => {
+	const gradation = 4
+	// gradation (from black to white)
+	let maxDepth = 255;
+	let styles = [];
+	for (let i = 0; i < gradation; i++) {
+		let depth = Math.ceil(maxDepth / (gradation - 1) * i);
+		styles[i] = 'rgb(' + depth + ',' + depth + ',' + depth + ')';
 	}
-};
-
-const cCubeMaterial = {
-	cache : [],
-	types : [
-		{
-			w : 100,
-			h : 100,
-			g : 4
-		},
-		{
-			w : 200,
-			h : 100,
-			g : 4
-		},
-		{
-			w : 100,
-			h : 200,
-			g : 4
-		},
-		{
-			w : 200,
-			h : 200,
-			g : 4
-		}
-	],
-	search : function(in_type_id, in_color) {
-		for (let i = 0; i < this.cache.length; i++) {
-			let obj = this.cache[i];
-			if ((obj.t === in_type_id) && (obj.c === in_color)) {
-				return obj.m;
-			}
-		}
-		return null;
-	},
-	create : function(in_type_id, in_color) {
-		let hit = this.search(in_type_id, in_color);
-		if (hit) {
-			return hit;
-		}
-		let type = this.types[in_type_id];
-		let material = new THREE.MeshLambertMaterial({
-			color: in_color,
-			map: cCubeTexture.create(...Object.values(type))
-		});
-		this.cache.push({
-			t : in_type_id,
-			c : in_color,
-			m : material
-		});
-		return material;
-	},
-	rect1x1x1 : function(in_colors) {
-		return [
-			this.create(0, in_colors[0]),
-			this.create(0, in_colors[1]),
-			this.create(0, in_colors[2]),
-			this.create(0, in_colors[3]),
-			this.create(0, in_colors[4]),
-			this.create(0, in_colors[5])
-		];
-	},
-	rect2x1x1 : function(in_colors) {
-		return [
-			this.create(0, in_colors[0]),
-			this.create(0, in_colors[1]),
-			this.create(1, in_colors[2]),
-			this.create(1, in_colors[3]),
-			this.create(1, in_colors[4]),
-			this.create(1, in_colors[5])
-		];
-	},
-	rect1x2x1 : function(in_colors) {
-		return [
-			this.create(2, in_colors[0]),
-			this.create(2, in_colors[1]),
-			this.create(0, in_colors[2]),
-			this.create(0, in_colors[3]),
-			this.create(2, in_colors[4]),
-			this.create(2, in_colors[5])
-		];
-	},
-	rect2x2x1 : function(in_colors) {
-		return [
-			this.create(2, in_colors[0]),
-			this.create(2, in_colors[1]),
-			this.create(1, in_colors[2]),
-			this.create(1, in_colors[3]),
-			this.create(3, in_colors[4]),
-			this.create(3, in_colors[5])
-		];
-	},
-};
-
-function convertUnit(in_src_x, in_src_y, in_src_r, in_dst_r)
-{
-	let src_w = in_src_r.x2 - in_src_r.x1;
-	let src_h = in_src_r.y2 - in_src_r.y1;
-	let dst_w = in_dst_r.x2 - in_dst_r.x1;
-	let dst_h = in_dst_r.y2 - in_dst_r.y1;
-	return (new THREE.Vector2(
-		(in_src_x - in_src_r.x1) * dst_w / src_w + in_dst_r.x1,
-		(in_src_y - in_src_r.y1) * dst_h / src_h + in_dst_r.y1
-	));
-}
-
-function convertRaycasterUnit(in_src_x, in_src_y, in_src_w, in_src_h)
-{
-	let src_r = {
-		x1 : 0,
-		x2 : in_src_w,
-		y1 : 0,
-		y2 : in_src_h
-	};
-	let dst_r = {
-		x1 : -1,
-		x2 : 1,
-		y1 : -1,
-		y2 : 1
-	};
-	return convertUnit(in_src_x, in_src_y, src_r, dst_r);
-}
-
-const cBoxGeometry = {
-	insedeColor : 0x222222,
-	surfaceList : [
-		{
-			// orange
-			axis : 'x',
-			side :  1,
-			color : 0xffaa00,
-			rotateAround : {
-				y : -1,
-				z : 1
-			}
-		},
-		{
-			// red
-			axis : 'x',
-			side : -1,
-			color : 0xff0000,
-			rotateAround : {
-				y : 1,
-				z : -1
-			}
-		},
-		{
-			// white
-			axis : 'y',
-			side :  1,
-			color : 0xffffff,
-			rotateAround : {
-				z : -1,
-				x : 1
-			}
-		},
-		{
-			// yellow
-			axis : 'y',
-			side : -1,
-			color : 0xffff00,
-			rotateAround : {
-				z : 1,
-				x : -1
-			}
-		},
-		{
-			// blue
-			axis : 'z',
-			side :  1,
-			color : 0x3333ff,
-			rotateAround : {
-				x : -1,
-				y : 1
-			}
-		},
-		{
-			// green
-			axis : 'z',
-			side : -1,
-			color : 0x33cc33,
-			rotateAround : {
-				x : 1,
-				y : -1
-			}
-		}
-	],
-	facesInSurface : 2,
-	createColorList : function(in_dimVec, in_posVec) {
-		let list = [];
-		for (let i = 0; i < this.surfaceList.length; i++) {
-			let surface = this.surfaceList[i];
-			if (surface.side > 0) {
-				if (in_posVec[surface.axis] === in_dimVec[surface.axis] - 1) {
-					// edge (side = 1)
-					list.push(surface.color);
-				} else {
-					list.push(this.insedeColor);
-				}
-			} else {
-				if (in_posVec[surface.axis] === 0) {
-					// edge (side = -1)
-					list.push(surface.color);
-				} else {
-					list.push(this.insedeColor);
-				}
-			}
-		}
-		return list;
-	},
-	getSurface : function(in_face_ix) {
-		return this.surfaceList[Math.trunc(in_face_ix / this.facesInSurface)];
-	},
-	sameSurface : function(in_face_ix1, in_face_ix2) {
-		let f1 = this.getSurface(in_face_ix1);
-		let f2 = this.getSurface(in_face_ix2);
-		if (f1.side !== f2.side) {
-			return false;
-		}
-		if (f1.axis !== f2.axis) {
-			return false;
-		}
-		return true;
-	}
-};
-
-function pieceSizeList(in_dimVec, in_unitSize)
-{
-	let pieceSize = {};
-	let maxDim = Object.values(in_dimVec).maxElement();
-	cAxisUtil.forEach(axis => {
-		pieceSize[axis] = [];
-		for (let i = 0; i < in_dimVec[axis]; i++) {
-			pieceSize[axis].push(in_unitSize);
-		}
-		if (in_dimVec[axis] < maxDim) {
-			// replace last element
-			pieceSize[axis].pop();
-			pieceSize[axis].push(in_unitSize * (maxDim - in_dimVec[axis] + 1));
-		}
-	});
+	// draw and convert using toDataUR
+	let canvas = document.createElement('CANVAS');
+	canvas.width = in_w;
+	canvas.height = in_h;
+	const ctx = canvas.getContext('2d');
+	let radius = gradation + 2;
 	/*
-		x : [1n, 1n, 2n]
-		y : [1n, 1n, 2n]
-		z : [1n, 1n, 1n, 1n]
+		Rect           RoundRect      RoundRect
+
+		##########     ##########     ##########
+		##########     ##******##     ##******##
+		##########     #********#     #**++++**#
+		##########     #********#     #*++++++*#
+		########## --> #********# --> #*++++++*# --> ...
+		##########     #********#     #*++++++*#
+		##########     #********#     #**++++**#
+		##########     ##******##     ##******##
+		##########     ##########     ##########
 	*/
-	return pieceSize;
+	for (let i = 0; i < gradation; i++) {
+		ctx.fillStyle = styles[i];
+		if (i > 0) {
+			ctx.fillRoundRect(i, i, in_w - i * 2, in_h - i * 2, radius - i);
+		} else {
+			ctx.fillRect(i, i, in_w - i * 2, in_h - i * 2);
+		}
+	}
+	return (new THREE.TextureLoader()).load(canvas.toDataURL());
+});
+
+const materialFactory = factoryBuilder((in_w, in_h, in_color) => {
+	return new THREE.MeshLambertMaterial({
+		color : in_color,
+		map : textureFactory.create(in_w, in_h)
+	});
+});
+
+function boxMaterials(in_x, in_y, in_z, in_colors) {
+	/*
+		     2    
+		     |   5
+		     |  /
+		    ###/
+		    ###
+		1 --#*#-- 0
+		    /##
+		   /###
+		  /  |
+		 4   |
+		     3
+	*/
+	return [
+		materialFactory.create(in_z, in_y, in_colors[0]),	// Vector3(+1, 0, 0)
+		materialFactory.create(in_z, in_y, in_colors[1]),	// Vector3(-1, 0, 0)
+		materialFactory.create(in_x, in_z, in_colors[2]),	// Vector3(0, +1, 0)
+		materialFactory.create(in_x, in_z, in_colors[3]),	// Vector3(0, -1, 0)
+		materialFactory.create(in_x, in_y, in_colors[4]),	// Vector3(0, 0, +1)
+		materialFactory.create(in_x, in_y, in_colors[5])	// Vector3(0, 0, -1)
+	];
 }
 
-const cCube = {
-	cubeSize : cCubeSize,
-	maxDim : -1,
-	unitSize : -1,
-	pieces : [],
-	faceCapture : null,
-	dragged : {
-		position : null,
-		faceIx : null,
-		piece : null,
-		cache : null
-	},
-	raycaster : new THREE.Raycaster(),
-	rotating : {
-		group : new THREE.Object3D(),
-		axis : null,
-		toRight : 0,
-		initVec : null,
-		curRange : 0
-	},
-	initPieces : function(in_dimVec) {
-		this.maxDim = Object.values(in_dimVec).maxElement();
-		this.unitSize = this.cubeSize / this.maxDim;
-		let sizeList = pieceSizeList(in_dimVec, this.unitSize);
-		for (let z = 0; z < in_dimVec.z; z++) {
-			for (let y = 0; y < in_dimVec.y; y++) {
-				for (let x = 0; x < in_dimVec.x; x++) {
-					if ((0 < z) && (z < in_dimVec.z - 1) &&
-						(0 < y) && (y < in_dimVec.y - 1) &&
-						(0 < x) && (x < in_dimVec.x - 1)) {
-						// inside cube
-						continue;
-					}
-					// position of pieces at world space
-					let ixVec = new THREE.Vector3(x, y, z);
-					let posVec = new THREE.Vector3();
-					let needStretch = []
-					cAxisUtil.forEach(axis => {
-						if ((in_dimVec[axis] < this.maxDim) && (ixVec[axis] === in_dimVec[axis] - 1)) {
-							// piece of x2
-							posVec[axis] = this.unitSize * (ixVec[axis] - (this.maxDim - 2) / 2);
-							needStretch.push(axis);
-						} else {
-							// piece of x1
-							posVec[axis] = this.unitSize * (ixVec[axis] - (this.maxDim - 1) / 2);
-						}
-					});
-					// method to make materials for BoxGeometry
-					let method;
-					switch (needStretch.length) {
-					case 1 :
-						if (needStretch[0] === 'x') {
-							method = 'rect2x1x1';
-						} else if (needStretch[0] === 'y') {
-							method = 'rect1x2x1';
-						} else {
-							method = 'rect1x1x1';
-						}
-						break;
-					case 2 :
-						method = 'rect2x2x1';
-						break;
-					case 0 :
-					default :
-						method = 'rect1x1x1';
-						break;
-					}
-					let colorList = cBoxGeometry.createColorList(in_dimVec, ixVec);
-					let piece = new THREE.Mesh(
-						new THREE.BoxGeometry(sizeList.x[x], sizeList.y[y], sizeList.z[z]),
-						(cCubeMaterial[method])(colorList)
-					);
-					piece.position.copy(posVec);
-					this.pieces.push(piece);
-				}
-			}
+function trapezoidGeometry(in_tLen, in_bLen, in_height, in_thickness) {
+	// common
+	const geoArr = [];
+	const rad = in_thickness / 2;
+	const dx = (in_tLen + in_bLen) / 2 / 2;
+	const dy = in_height / 2;
+	const sLen = (in_height ** 2 + ((in_tLen - in_bLen) / 2) ** 2) ** (1/2);
+	const sRad = Math.atan2((in_tLen - in_bLen) / 2, in_height);
+	// top
+	geoArr[0] = new THREE.CapsuleGeometry(rad, in_tLen);
+	geoArr[0].rotateZ((Math.PI / 2) * +1);
+	geoArr[0].translate(0, dy * +1, 0);
+	// bottom
+	geoArr[1] = new THREE.CapsuleGeometry(rad, in_bLen);
+	geoArr[1].rotateZ((Math.PI / 2) * -1);
+	geoArr[1].translate(0, dy * -1, 0);
+	// left
+	geoArr[2] = new THREE.CapsuleGeometry(rad, sLen);
+	geoArr[2].rotateZ(sRad * +1);
+	geoArr[2].translate(dx * -1, 0, 0);
+	// right
+	geoArr[3] = new THREE.CapsuleGeometry(rad, sLen);
+	geoArr[3].rotateZ(sRad * -1);
+	geoArr[3].translate(dx * +1, 0, 0);
+	// center
+	geoArr[4] = new THREE.BoxGeometry(in_tLen, in_height, in_thickness);
+	const attr = geoArr[4].getAttribute('position');
+	for (let i = 0; i < attr.count; i++) {
+		const vertex = new THREE.Vector3();
+		vertex.fromBufferAttribute(attr, i);
+		if (vertex.y < 0) {
+			vertex.x *= (in_bLen / in_tLen);
 		}
-	},
-	init : function(in_dimVec) {
-		// this.faceCapture
-		let delta = 0.1;
-		let size = this.cubeSize - delta * 2;
-		let trans = new THREE.MeshBasicMaterial({transparent: true, opacity: 0});
-		this.faceCapture = new THREE.Mesh(
-			new THREE.BoxGeometry(size, size, size),
-			[trans, trans, trans, trans, trans, trans]
-		);
-		this.faceCapture.position.set(0, 0, 0);
-		// this.pieces
-		this.initPieces(in_dimVec);
-		this.clearAllCandidates();
-	},
-	isCompleted1 : function(in_axis, in_side) {
-		let orgVec = new THREE.Vector3();
-		let dirVec = new THREE.Vector3();
-		orgVec[in_axis] = cWorldRadius * in_side;
-		dirVec[in_axis] = in_side * -1;
-		let others = cAxisUtil.other(in_axis);
-		let faceIx = -1;
-		for (let i = 0; i < this.maxDim; i++) {
-			for (let j = 0; j < this.maxDim; j++) {
-				orgVec[others[0]] = this.unitSize * (i - (this.maxDim - 1) / 2);
-				orgVec[others[1]] = this.unitSize * (j - (this.maxDim - 1) / 2);
-				dirVec[others[0]] = 0;
-				dirVec[others[1]] = 0;
-				this.raycaster.set(orgVec, dirVec);
-				let test = this.raycaster.intersectObjects(this.pieces, false);
-				if (faceIx < 0) {
-					faceIx = test[0].faceIndex;
+		attr.setXYZ(i, vertex.x, vertex.y, vertex.z);
+	}
+	const merged = UTILS.mergeGeometries(geoArr);
+	geoArr.forEach(in_geo => {
+		in_geo.dispose();
+	});
+	return merged;
+}
+
+const boxGeometryFactory = factoryBuilder((in_x, in_y, in_z) => {
+	const R = 6;
+	const X = in_x - R * 2;
+	const Y = in_y - R * 2;
+	const Z = in_z - R * 2;
+	const POSI = (in_value) => {(in_value / 2) * +1};
+	const NEGA = (in_value) => {(in_value / 2) * -1};
+	const DEG90 = Math.PI * 1 / 2;
+	const arr = [];
+
+	// Vector3(+1, 0, 0)
+	arr.push(new THREE.PlaneGeometry(Z, Y));
+	arr[arr.length - 1].translate(0, 0, in_x / 2);
+	arr[arr.length - 1].rotateY(DEG90 * +1);
+	// Vector3(-1, 0, 0)
+	arr.push(new THREE.PlaneGeometry(Z, Y));
+	arr[arr.length - 1].translate(0, 0, in_x / 2);
+	arr[arr.length - 1].rotateY(DEG90 * -1);
+	// Vector3(0, +1, 0)
+	arr.push(new THREE.PlaneGeometry(X, Z));
+	arr[arr.length - 1].translate(0, 0, in_y / 2);
+	arr[arr.length - 1].rotateX(DEG90 * -1);
+	// Vector3(0, -1, 0)
+	arr.push(new THREE.PlaneGeometry(X, Z));
+	arr[arr.length - 1].translate(0, 0, in_y / 2);
+	arr[arr.length - 1].rotateX(DEG90 * +1);
+	// Vector3(0, 0, +1)
+	arr.push(new THREE.PlaneGeometry(X, Y));
+	arr[arr.length - 1].translate(0, 0, in_z / 2);
+	arr[arr.length - 1].rotateY(DEG90 * 0);
+	// Vector3(0, 0, -1)
+	arr.push(new THREE.PlaneGeometry(X, Y));
+	arr[arr.length - 1].translate(0, 0, in_z / 2);
+	arr[arr.length - 1].rotateY(DEG90 * 2);
+
+	// Vector3(0, 0, +1) | Vector3(+1, 0, 0)
+	arr.push(new THREE.CylinderGeometry(R, R, Y, 32, 1, true, DEG90 * 0, DEG90));
+	arr[arr.length - 1].translate(+X / 2, 0, +Z / 2);
+	// Vector3(+1, 0, 0) | Vector3(0, 0, -1)
+	arr.push(new THREE.CylinderGeometry(R, R, Y, 32, 1, true, DEG90 * 1, DEG90));
+	arr[arr.length - 1].translate(+X / 2, 0, -Z / 2);
+	// Vector3(0, 0, -1) | Vector3(-1, 0, 0)
+	arr.push(new THREE.CylinderGeometry(R, R, Y, 32, 1, true, DEG90 * 2, DEG90));
+	arr[arr.length - 1].translate(-X / 2, 0, -Z / 2);
+	// Vector3(-1, 0, 0) | Vector3(0, 0, +1)
+	arr.push(new THREE.CylinderGeometry(R, R, Y, 32, 1, true, DEG90 * 3, DEG90));
+	arr[arr.length - 1].translate(-X / 2, 0, +Z / 2);
+
+	// Vector3(0, 0, +1) | Vector3(0, +1, 0)
+	arr.push(new THREE.CylinderGeometry(R, R, X, 32, 1, true, DEG90 * 0, DEG90));
+	arr[arr.length - 1].rotateZ(DEG90 * +1);
+	arr[arr.length - 1].translate(0, +Y / 2, +Z / 2);
+	// Vector3(0, +1, 0) | Vector3(0, 0, -1)
+	arr.push(new THREE.CylinderGeometry(R, R, X, 32, 1, true, DEG90 * 1, DEG90));
+	arr[arr.length - 1].rotateZ(DEG90 * +1);
+	arr[arr.length - 1].translate(0, +Y / 2, -Z / 2);
+	// Vector3(0, 0, -1) | Vector3(0, -1, 0)
+	arr.push(new THREE.CylinderGeometry(R, R, X, 32, 1, true, DEG90 * 2, DEG90));
+	arr[arr.length - 1].rotateZ(DEG90 * +1);
+	arr[arr.length - 1].translate(0, -Y / 2, -Z / 2);
+	// Vector3(0, -1, 0) | Vector3(0, 0, +1)
+	arr.push(new THREE.CylinderGeometry(R, R, X, 32, 1, true, DEG90 * 3, DEG90));
+	arr[arr.length - 1].rotateZ(DEG90 * +1);
+	arr[arr.length - 1].translate(0, -Y / 2, +Z / 2);
+
+	// Vector3(0, +1, 0) | Vector3(+1, 0, 0)
+	arr.push(new THREE.CylinderGeometry(R, R, Z, 32, 1, true, DEG90 * 0, DEG90));
+	arr[arr.length - 1].rotateX(DEG90 * -1);
+	arr[arr.length - 1].translate(+X / 2, +Y / 2, 0);
+	// Vector3(+1, 0, 0) | Vector3(0, -1, 0)
+	arr.push(new THREE.CylinderGeometry(R, R, Z, 32, 1, true, DEG90 * 1, DEG90));
+	arr[arr.length - 1].rotateX(DEG90 * -1);
+	arr[arr.length - 1].translate(+X / 2, -Y / 2, 0);
+	// Vector3(0, -1, 0) | Vector3(-1, 0, 0)
+	arr.push(new THREE.CylinderGeometry(R, R, Z, 32, 1, true, DEG90 * 2, DEG90));
+	arr[arr.length - 1].rotateX(DEG90 * -1);
+	arr[arr.length - 1].translate(-X / 2, -Y / 2, 0);
+	// Vector3(-1, 0, 0) | Vector3(0, +1, 0)
+	arr.push(new THREE.CylinderGeometry(R, R, Z, 32, 1, true, DEG90 * 3, DEG90));
+	arr[arr.length - 1].rotateX(DEG90 * -1);
+	arr[arr.length - 1].translate(-X / 2, +Y / 2, 0);
+
+	// Vector3(0, +1, 0)
+	arr.push(new THREE.SphereGeometry(R, 32, 16, DEG90 * 0, DEG90, DEG90 * 0, DEG90));
+	arr[arr.length - 1].translate(-X / 2, +Y / 2, +Z / 2);
+	arr.push(new THREE.SphereGeometry(R, 32, 16, DEG90 * 1, DEG90, DEG90 * 0, DEG90));
+	arr[arr.length - 1].translate(+X / 2, +Y / 2, +Z / 2);
+	arr.push(new THREE.SphereGeometry(R, 32, 16, DEG90 * 2, DEG90, DEG90 * 0, DEG90));
+	arr[arr.length - 1].translate(+X / 2, +Y / 2, -Z / 2);
+	arr.push(new THREE.SphereGeometry(R, 32, 16, DEG90 * 3, DEG90, DEG90 * 0, DEG90));
+	arr[arr.length - 1].translate(-X / 2, +Y / 2, -Z / 2);
+
+	// Vector3(0, -1, 0)
+	arr.push(new THREE.SphereGeometry(R, 32, 16, DEG90 * 0, DEG90, DEG90 * 1, DEG90));
+	arr[arr.length - 1].translate(-X / 2, -Y / 2, +Z / 2);
+	arr.push(new THREE.SphereGeometry(R, 32, 16, DEG90 * 1, DEG90, DEG90 * 1, DEG90));
+	arr[arr.length - 1].translate(+X / 2, -Y / 2, +Z / 2);
+	arr.push(new THREE.SphereGeometry(R, 32, 16, DEG90 * 2, DEG90, DEG90 * 1, DEG90));
+	arr[arr.length - 1].translate(+X / 2, -Y / 2, -Z / 2);
+	arr.push(new THREE.SphereGeometry(R, 32, 16, DEG90 * 3, DEG90, DEG90 * 1, DEG90));
+	arr[arr.length - 1].translate(-X / 2, -Y / 2, -Z / 2);
+
+	// assume order of groups ( PlaneGeometry x6, other geometries ... )
+	const groups = [];
+	let edgeGroup = 0;
+	const merged = UTILS.mergeGeometries(arr);
+	arr.forEach(in_geo => {
+		if (in_geo instanceof THREE.PlaneGeometry) {
+			groups.push(in_geo.index.count);
+		} else {
+			edgeGroup += in_geo.index.count;
+		}
+		in_geo.dispose();
+	});
+	groups.push(edgeGroup);
+	let start = 0;
+	for (let i = 0; i < groups.length; i++) {
+		merged.addGroup(start, groups[i], i);
+		start += groups[i];
+	}
+	return merged;
+});
+
+function pieceColorList(in_dimV3, in_ixV3) {
+	/*
+		piece ( hexahedron ) has surface x6
+		|
+		+- edge surface x0-3
+		|	|
+		|	+- orange, red, white, ...
+		|
+		+- inner surface x3-6
+			|
+			+- dark gray
+	*/
+	const colorList = [];
+	const insedeColor = 0x222222;
+	const edgeSurface = [
+		{vec3 : new THREE.Vector3(+1, 0, 0), color : 0xFFAA00},	// orange
+		{vec3 : new THREE.Vector3(-1, 0, 0), color : 0xFF0000},	// red
+		{vec3 : new THREE.Vector3(0, +1, 0), color : 0xFFFFFF},	// white
+		{vec3 : new THREE.Vector3(0, -1, 0), color : 0xFFFF00},	// yellow
+		{vec3 : new THREE.Vector3(0, 0, +1), color : 0x3333FF},	// blue
+		{vec3 : new THREE.Vector3(0, 0, -1), color : 0x33CC33}	// green
+	];
+	// when in_ixV3 is on an edge, the color of edgeSurface is used
+	edgeSurface.forEach(({vec3, color}) => {
+		XYZ.forEach(in_xyz => {
+			switch (vec3[in_xyz]) {
+			// the surface is facing the positive direction
+			case +1 :
+				// the position is at the positive edge
+				if (in_ixV3[in_xyz] === in_dimV3[in_xyz] - 1) {
+					colorList.push(color);
 				} else {
-					if (!cBoxGeometry.sameSurface(faceIx, test[0].faceIndex)) {
-						return false;
+					colorList.push(insedeColor);
+				}
+				break;
+			// the surface is facing the negative direction
+			case -1 :
+				// the position is at the negative edge
+				if (in_ixV3[in_xyz] === 0) {
+					colorList.push(color);
+				} else {
+					colorList.push(insedeColor);
+				}
+				break;
+			case 0 :
+				break;
+			}
+		});
+	});
+	return colorList;
+}
+
+/*
+	(4) dimension of Cube and Meshes of them
+*/
+
+class cCubeDimV3 extends THREE.Vector3 {
+	get maxDim() {
+		return Math.max(...this.toArray());
+	}
+	#sizeList(in_unitSize = 1) {
+		const list = {};
+		/*
+			in case of 3x2x2, ...
+			list.x = [in_unitSize, in_unitSize, in_unitSize]
+			list.y = [in_unitSize, in_unitSize * 2]
+			list.z = [in_unitSize, in_unitSize * 2]
+		*/
+		XYZ.forEach(in_xyz => {
+			if (this[in_xyz] < this.maxDim) {
+				list[in_xyz] = Array(this[in_xyz] - 1).fill(in_unitSize);
+				list[in_xyz].push((this.maxDim - this[in_xyz] + 1) * in_unitSize);
+				/*
+					// failed to separate not 4=3+1 but 4=2+2
+					if (this.maxDim % this[in_xyz] === 0) {
+						const quotient = this.maxDim / this[in_xyz];
+						list[in_xyz] = Array(this[in_xyz]).fill(in_unitSize * quotient);
+					} else {
+						list[in_xyz] = Array(this[in_xyz] - 1).fill(in_unitSize);
+						list[in_xyz].push((this.maxDim - this[in_xyz] + 1) * in_unitSize);
 					}
+				*/
+			} else {
+				list[in_xyz] = Array(this[in_xyz]).fill(in_unitSize);
+			}
+		});
+		return list;
+	}
+	#indexLoop(in_callback) {
+		// first surface is at "new THREE.Vector3(0, 0, -1)"
+		for (let z = 0; z < this.z; z++) {
+			for (let y = 0; y < this.y; y++) {
+				for (let x = 0; x < this.x; x++) {
+					(in_callback)(new THREE.Vector3(x, y, z));
 				}
 			}
 		}
-		return true;
-	},
-	isCompleted6 : function() {
-		let list = cBoxGeometry.surfaceList;
-		for (let i = 0; i < list.length; i++) {
-			if (!this.isCompleted1(list[i].axis, list[i].side)) {
+	}
+	positionLoop(in_callback, in_unitSize, in_moveToV3 = new THREE.Vector3(0, 0, 0)) {
+		const sizeList = this.#sizeList(in_unitSize);
+		/*
+			each piece should be translated using translateV3
+
+			before translated :
+
+			   |
+			   +---+
+			   |   |
+			   |   |
+			   |   |
+			---+---+-
+			   |
+			   |
+			   |
+
+			after translated :
+
+			   |
+			   |
+			   |
+			 +-+-+
+			 | | |
+			-+-+-+---
+			 | | |
+			 +-+-+
+			   |
+		*/
+		const center = this.maxDim * in_unitSize / 2;
+		const translateV3 = in_moveToV3.clone().sub(new THREE.Vector3(center, center, center));
+		this.#indexLoop(in_ixV3 => {
+			const w = sizeList.x[in_ixV3.x];
+			const h = sizeList.y[in_ixV3.y];
+			const d = sizeList.z[in_ixV3.z];
+			const posV3 = new THREE.Vector3(
+				in_ixV3.x * in_unitSize + w / 2,
+				in_ixV3.y * in_unitSize + h / 2,
+				in_ixV3.z * in_unitSize + d / 2
+			);
+			posV3.add(translateV3);
+			const sizeV3 = new THREE.Vector3(w, h, d);
+			(in_callback)(in_ixV3, posV3, sizeV3);
+		});
+	}
+	isInsideCube(in_ixV3) {
+		return XYZ.every(in_xyz => {
+			return (0 < in_ixV3[in_xyz]) && (in_ixV3[in_xyz] < this[in_xyz] - 1);
+		});
+	}
+}
+
+const CUBE_SIZE = 400;
+
+const gMeshLevelMap = ((in_cubeSize) => {
+	const map = new cCyclicMap();
+	const edgeMaterial = new THREE.MeshLambertMaterial({color : 0x222222});
+	const cubeDimList = [
+		new cCubeDimV3(2, 2, 2),	/* =  8 */
+		new cCubeDimV3(3, 2, 2),	/* = 12 */
+		new cCubeDimV3(4, 2, 2),	/* = 16 */
+		new cCubeDimV3(3, 3, 2),	/* = 18 */
+		new cCubeDimV3(4, 3, 2),	/* = 24 */
+		new cCubeDimV3(3, 3, 3),	/* = 27 */
+		new cCubeDimV3(4, 4, 2),	/* = 32 */
+		new cCubeDimV3(4, 3, 3),	/* = 36 */
+		new cCubeDimV3(4, 4, 3),	/* = 48 */
+		new cCubeDimV3(4, 4, 4)		/* = 64 */
+	];
+	cubeDimList.forEach(in_cubeDim => {
+		const unitSize = in_cubeSize / in_cubeDim.maxDim;
+		const pieces = [];
+		// see cCubeDimV3 implementation
+		in_cubeDim.positionLoop((in_ixV3, in_posV3, in_sizeV3) => {
+			if (in_cubeDim.isInsideCube(in_ixV3)) {
+				// console.log('inside', in_ixV3);
+				return;
+			}
+			const geometry = boxGeometryFactory.create(...in_sizeV3.toArray());
+			// geometry has 7 groups (sub meshes)
+			const colors = pieceColorList(in_cubeDim, in_ixV3);
+			const materials = boxMaterials(...in_sizeV3.toArray(), colors);
+			materials.push(edgeMaterial);
+			/*
+				*** NOTE #3 ***
+				when you use materials (= array) for "new THREE.Mesh",
+				the geometry should be devided into groups (= sub meshes).
+			*/
+			const piece = new THREE.Mesh(geometry, materials);
+			piece.position.copy(in_posV3);
+			pieces.push(piece);
+		}, unitSize);
+		const LEVEL1 = 27;
+		let level = in_cubeDim.toArray().reduce((product, current) => {
+			return product * current;
+		}, 1);
+		level = (level / LEVEL1).toFixed(1);
+		const keyString = in_cubeDim.toArray().join('x') + ' = lv ' + level;
+		map.set(keyString, pieces);
+	});
+	return map;
+})(CUBE_SIZE);
+
+let gMeshCurrentLevel = 5;
+
+/*
+	(5) Rubik's Cube related functions
+*/
+
+class cRubiksCube extends THREE.Object3D {
+	static #smallError = 0.01;
+	static get err() {
+		return cRubiksCube.#smallError;
+	}
+	static #orderBy(...in_args) {
+		for (let i = 0; i < in_args.length - 1 ; i++) {
+			if (in_args[i + 1] - in_args[i] < cRubiksCube.err) {
 				return false;
 			}
 		}
 		return true;
-	},
-	get objects() {
-		return this.pieces.concat(this.faceCapture, this.rotating.group);
-	},
-	hitTest : function(in_x, in_y, in_w, in_h, in_camera) {
-		let vec2 = convertRaycasterUnit(in_x, in_y, in_w, in_h);
-		vec2.y *= -1;
-		this.raycaster.setFromCamera(vec2, in_camera);
-		let test1 = this.raycaster.intersectObject(this.faceCapture, false);
-		if (test1.length === 0) {
-			return null;
-		} else {
-			// test2 must exist because this.faceCapture is inside of this.pieces
-			let test2 = this.raycaster.intersectObjects(this.pieces, false);
-			return {
-				piece : test2[0].object,
-				faceIx : test1[0].faceIndex
-			};
-		}
-	},
-	hitTestOnDraggedCache : function(in_x, in_y) {
-		if (!this.dragged.cache) {
-			return null;
-		}
-		return this.hitTest(
-			in_x,
-			in_y,
-			this.dragged.cache.w,
-			this.dragged.cache.h,
-			this.dragged.cache.camera
-		);
-	},
-	get isDragged() {
-		if (this.dragged.position) {
-			return true;
-		} else {
-			return false;
-		}
-	},
-	uiDrag : function(in_vec2, in_w, in_h, in_camera) {
-		let test = this.hitTest(in_vec2.x, in_vec2.y, in_w, in_h, in_camera);
-		if (!test) {
-			return false;
-		}
-		this.dragged.position = in_vec2;
-		this.dragged.faceIx = test.faceIx;
-		this.dragged.piece = test.piece;
-		this.dragged.cache = {
-			w : in_w,
-			h : in_h,
-			camera : in_camera
-		};
-		// dragged
-		return true;
-	},
-	get isRotating() {
-		if (this.rotating.group.children.length > 0) {
-			return true;
-		} else {
-			return false;
-		}
-	},
-	uiRotate : function(in_vec2, in_threshold) {
-		let rc = {
-			CANT_MOVE_ANY_MORE : 1,
-			NEED_FEEDBACK : 2,
-			NOOP : 3
-		};
-		if (!this.isDragged) {
-			return rc.NOOP;
-		}
-		let current = in_vec2.clone();
-		let delta = in_vec2.clone().sub(this.dragged.position);
-		if (this.isRotating) {
-			if (this.rotate(delta, false)) {
-				return rc.NEED_FEEDBACK;
-			} else {
-				return rc.NOOP;
-			}
-		} else {
-			if (delta.length() < in_threshold) {
-				return rc.NOOP;
-			}
-			let maxCnt = 10;
-			while (maxCnt-- > 0) {
-				let _enum = this.preRotateStatus;
-				let status = this.preRotate(current);
-				if (status === _enum.WOULDBLOCK1) {
-					current.add(delta);
-				} else if (status === _enum.WOULDBLOCK2) {
-					// search opposite side
-					current.copy(in_vec2);
-					delta.multiplyScalar(-1);
-				} else if (status === _enum.READY) {
-					this.rotating.initVec = delta;
-					this.rotating.initVec.normalize();
-					break;
-				} else if (status === _enum.FAILED) {
-					return rc.CANT_MOVE_ANY_MORE;
-				} else {
-					break;
-				}
-			}
-		}
-		return rc.NOOP;
-	},
-	uiRelease : function(in_vec2) {
-		// settings of rotating
-		if (this.isRotating) {
-			this.rotate(in_vec2.sub(this.dragged.position), true);
-		}
-		this.clearRotationGroup();
-		this.rotating.axis = null;
-		this.rotating.toRight = 0;
-		this.rotating.initVec = null;
-		this.rotating.curRange = 0;
-		// settings of dragged
-		this.dragged.position = null;
-		this.dragged.faceIx = null;
-		this.dragged.piece = null;
-		this.dragged.cache = null;
-		// check complete
-		return this.isCompleted6();
-	},
-	hasOverlapStatus : {
-		ALL : Symbol(),
-		PARTIAL : Symbol(),
-		NONE : Symbol()
-	},
-	hasOverlap(in_val1, in_val2) {
-		// adhoc !! (this method should be fixed !!)
-		let _enum = this.hasOverlapStatus;
-		let error = 1;
-		let diff = Math.abs(in_val2 - in_val1);
-		if (diff < error) {
-			return _enum.ALL;
-		} else if (diff < this.unitSize / 2 + error) {
-			return _enum.PARTIAL;
-		} else if ((diff < this.unitSize + error) && (Math.abs(in_val1 + in_val2) < error) && (this.maxDim === 3)) {
-			return _enum.PARTIAL;
-		} else {
-			return _enum.NONE;
-		}
-	},
-	neighborAxis : function(in_peace1, in_peace2) {
-		let _enum = this.hasOverlapStatus;
-		let same = 0;
-		let diff;
-		cAxisUtil.forEach(axis => {
-			if (this.hasOverlap(in_peace1.position[axis], in_peace2.position[axis]) === _enum.NONE) {
-				diff = axis;
-			} else {
-				same++;
-			}
-		});
-		if (same === 2) {
-			return diff;
-		} else {
-			return null;
-		}
-	},
-	preRotateStatus : {
-		WOULDBLOCK1 : Symbol(),
-		WOULDBLOCK2 : Symbol(),
-		READY : Symbol(),
-		FAILED : Symbol(),
-		EXIT : Symbol()
-	},
-	preRotate : function(in_vec2) {
-		let test = this.hitTestOnDraggedCache(in_vec2.x, in_vec2.y);
-		if (!test) {
-			// no intersectObject
-			return this.preRotateStatus.EXIT;
-		}
-		let p1 = this.dragged.piece;
-		let p2 = test.piece;
-		let _enum = this.preRotateStatus;
-		if (cBoxGeometry.sameSurface(this.dragged.faceIx, test.faceIx)) {
-			if (p1 === p2) {
-				// 1. same face + same piece ... continue to search
-				return _enum.WOULDBLOCK1;
-			} else {
-				let axis = this.neighborAxis(p1, p2);
-				if (!axis) {
-					// not neighbor
-					return _enum.EXIT;
-				}
-				// 2. same face + other piece (neighbor) ... start to rotate
-				let face = cBoxGeometry.getSurface(this.dragged.faceIx);
-				let rest = cAxisUtil.rest(axis, face.axis);
-				this.setupCandidates(rest, this.dragged.piece);
-				if (this.allCandidates.length < this.pieces.length) {
-					let ro = this.rotating;
-					this.allCandidates.forEach(piece => {
-						ro.group.attach(piece);
+	}
+	static #axes = {
+		x : new THREE.Vector3(1, 0, 0),
+		y : new THREE.Vector3(0, 1, 0),
+		z : new THREE.Vector3(0, 0, 1)
+	};
+	static #axisKey(in_axis) {
+		return Object.keys(cRubiksCube.#axes).filter(in_key => cRubiksCube.#axes[in_key].equals(in_axis));
+	}
+	static #angles = [
+		Math.PI * 0 / 2,
+		Math.PI * 1 / 2,
+		Math.PI * 2 / 2,
+		Math.PI * 3 / 2
+	];
+	static #orientations = (() => {
+		const vec3Set = [];
+		const orientations = [];
+		const angle = new THREE.Vector3();
+		for (angle.x of cRubiksCube.#angles) {
+			for (angle.y of cRubiksCube.#angles) {
+				for (angle.z of cRubiksCube.#angles) {
+					const testV3 = new THREE.Vector3(1, 2, 3);
+					XYZ.forEach(in_xyz => {
+						testV3.applyAxisAngle(cRubiksCube.#axes[in_xyz], angle[in_xyz]);
 					});
-					let direction = (p1.position[axis] < p2.position[axis]) ? -1 : 1;
-					ro.axis = rest;
-					ro.toRight = face.rotateAround[axis] * direction;
-					this.clearAllCandidates();
-					return _enum.READY;
-				} else {
-					this.clearAllCandidates();
-					return _enum.FAILED;
+					if (vec3Set.every(vec3 => vec3.distanceTo(testV3) > cRubiksCube.err)) {
+						vec3Set.push(testV3);
+						orientations.push(angle.clone());
+					}
 				}
 			}
+		}
+		// 24/64 possible orientations
+		// console.log(orientations.length);
+		return orientations;
+	})();
+	static #staticTest = {mode : false, obj : null};
+	static unitTest(in_method, in_testObj = {}, ...in_args) {
+		cRubiksCube.#staticTest.mode = true;
+		cRubiksCube.#staticTest.obj = in_testObj
+		const ret = eval('cRubiksCube.' + in_method + '(...in_args)');
+		console.log(ret);
+		throw new Error('end of unitTest'); 
+	}
+	#instanceTest = {mode : false, obj : null};
+	unitTest(in_method, in_testObj = {}, ...in_args) {
+		this.#instanceTest.mode = true;
+		this.#instanceTest.obj = in_testObj
+		const ret = eval('this.' + in_method + '(...in_args)');
+		console.log(ret);
+		throw new Error('unitTest'); 
+	}
+	get #settingVal() {
+		if (this.userData.currentSettingKey) {
+			return this.userData.settingPerPieces[this.userData.currentSettingKey];
 		} else {
-			if (p1 !== p2) {
-				// not neighbor
-				return _enum.EXIT;
-			} else {
-				// 3. other face + same piece ... continue to search
-				return _enum.WOULDBLOCK2;
+			throw new Error('no currentSettingKey');
+		}
+	}
+	set #settingKey(in_value) {
+		if (!this.userData.settingPerPieces) {
+			this.userData.settingPerPieces = {};
+		}
+		if (!this.userData.settingPerPieces[in_value]) {
+			this.userData.settingPerPieces[in_value] = {};
+		}
+		this.userData.currentSettingKey = in_value;
+	}
+	removePieces() {
+		const pieces = this.children.slice();
+		pieces.forEach(in_piece => {
+			this.remove(in_piece);
+		});
+		this.userData.currentSettingKey = null;
+	}
+	addPieces(in_pieces) {
+		this.removePieces();
+		const uuids = [];
+		in_pieces.forEach(in_piece => {
+			if (!in_piece.userData.initialPosition) {
+				// all pieces should have initial position to check complete
+				in_piece.userData.initialPosition = in_piece.position.clone();
 			}
-		}
-	},
-	asCandidate : function(in_piece) {
-		in_piece.userData.candidate = true;
-	},
-	clearAllCandidates : function() {
-		this.pieces.forEach(piece => {
-			piece.userData.candidate = false;
+			uuids.push(in_piece.uuid);
+			this.add(in_piece);
 		});
-	},
-	get allCandidates() {
-		let candidates = [];
-		this.pieces.forEach(piece => {
-			if (piece.userData.candidate) {
-				candidates.push(piece);
-			}
-		});
-		return candidates;
-	},
-	setupCandidates : function(in_axis, in_target) {
-		let _enum = this.hasOverlapStatus;
-		for (let i = 0; i < this.pieces.length; i++) {
-			let piece = this.pieces[i];
-			switch (this.hasOverlap(piece.position[in_axis], in_target.position[in_axis])) {
-			case _enum.ALL :
-				this.asCandidate(piece);
-				break;
-			case _enum.PARTIAL :
-				if (this.allCandidates.indexOf(piece) < 0) {
-					this.setupCandidates(in_axis, piece);
-				}
-				break;
-			case _enum.NONE :
-			default :
-				break;
-			}
-		}
-	},
-	clearRotationGroup : function() {
-		let ro = this.rotating;
-		(ro.group.children.concat()).forEach(e => {
-			cScene.attach(e);
-		});
-		cAxisUtil.forEach(axis => {
-			ro.group.rotation[axis] = 0;
-		});
-	},
-	rotate : function(in_delta, in_adjust = false) {
-		let ro = this.rotating;
-		let value = ro.initVec.dot(in_delta) * 0.01;
-		if (in_adjust) {
-			value = adjust_05PI(value);
-		}
-		ro.group.rotation[ro.axis] = ro.toRight * value;
-		let range = Math.floor(2 * Math.abs(value) / Math.PI + 0.5);
-		if (ro.curRange !== range) {
-			ro.curRange = range;
-			return true;
-		} else {
-			return false;
-		}
-	},
-	shuffle : function(in_cnt) {
-		let radianList = [Math.PI / 2, Math.PI, Math.PI * 3 / 2];
-		let cnt = in_cnt;
-		while (cnt > 0) {
-			let axis = cAxisUtil.randomElement();
-			let target = this.pieces.randomElement();
-			this.setupCandidates(axis, target);
-			if (this.allCandidates.length < this.pieces.length) {
-				let ro = this.rotating;
-				this.allCandidates.forEach(piece => {
-					ro.group.attach(piece);
+		this.#settingKey = pseudoMessageDigest1(uuids);
+		this.#settingVal.completeCallback = null;
+		this.#settingVal.rotationCount = 0;
+		this.#settingVal.shuffled = false;
+	}
+	getScore() {
+		const max = 100;
+		return Math.max(Math.ceil((max - this.#settingVal.rotationCount) / 10) * 10, 0);
+	}
+	isComplete() {
+		// check if current position is the same as initial position, for all 24 orientations
+		return cRubiksCube.#orientations.some(orientation => {
+			return this.children.every(in_piece => {
+				const testV3 = in_piece.userData.initialPosition.clone();
+				XYZ.forEach(in_xyz => {
+					testV3.applyAxisAngle(cRubiksCube.#axes[in_xyz], orientation[in_xyz]);
 				});
-				ro.group.rotation[axis] = radianList.randomElement();
-				this.clearRotationGroup();
-				cnt--;
+				return in_piece.position.distanceTo(testV3) < cRubiksCube.err;
+			});
+		});
+	}
+	#composeGroup(in_pieces) {
+		const group = new THREE.Object3D();
+		this.add(group);
+		in_pieces.forEach(in_piece => {
+			group.add(in_piece);
+		});
+		return group;
+	}
+	#releaseGroup(in_group) {
+		const copiedPieces = [...in_group.children];
+		copiedPieces.forEach(in_piece => {
+			/*
+				*** NOTE #4 ***
+				"add" follows parent position.
+				"attach" keeps world position.
+				in addition, both of them internally call "remove" from other object.
+			*/
+			this.attach(in_piece);
+		});
+		this.remove(in_group);
+	}
+	#makeGroupOnAxis_1_groupBySameScalar(io_scalarMap, in_axis) {
+		this.children.forEach(in_piece => {
+			const component = in_piece.position.dot(in_axis);
+			const reference = io_scalarMap.get(component);
+			if (reference) {
+				// there already exists almost the same component
+				reference.pieces.push(in_piece);
+				reference.tmpBox.union(new THREE.Box3().setFromObject(in_piece));
+			} else {
+				io_scalarMap.set(component, {
+					pieces : [in_piece],
+					tmpBox : new THREE.Box3().setFromObject(in_piece)
+				});
 			}
-			this.clearAllCandidates();
+		});
+	}
+	static #makeGroupOnAxis_2_calculateEdges(io_scalarMap, in_axis) {
+		for (const [scalar, info] of io_scalarMap.entries()) {
+			const length = (new THREE.Vector3().subVectors(info.tmpBox.max, info.tmpBox.min)).dot(in_axis);
+			info.edgeL = scalar - length / 2;
+			info.edgeR = scalar + length / 2;
+			delete info.tmpBox;
 		}
 	}
-};
-
-const cLight = new THREE.AmbientLight(0xCCCCCC, 1.0);
-
-const cScene = new THREE.Scene();
-cScene.fog = new THREE.Fog(
-	0x000000,
-	cWorldRadius - cCubeSize / 2,
-	cWorldRadius + cCubeSize / 2 + cFogMargin
-);
-
-cScene.add(cLight);
-
-const cStructure = {
-	defaultLevel : 3,
-	levels : [
-		new THREE.Vector3(2, 2, 2),
-		new THREE.Vector3(2, 2, 3),
-		new THREE.Vector3(2, 3, 3),
-		new THREE.Vector3(3, 3, 3),
-		new THREE.Vector3(3, 3, 4),
-		new THREE.Vector3(3, 4, 4),
-		new THREE.Vector3(4, 4, 4),
-	],
-	getLevel : function() {
-		if (location.hash) {
-			let hash = Number(location.hash.substr(1));
-			if ((0 <= hash) && (hash < this.levels.length)) {
-				return hash;
+	static #makeGroupOnAxis_3_makeCandidatesBorder(in_scalarMap) {
+		const candidateBorderSet = new cApproximateSet(cRubiksCube.err);
+		for (const info of in_scalarMap.values()) {
+			candidateBorderSet.add(info.edgeL);
+			candidateBorderSet.add(info.edgeR);
+		}
+		const candidateBorder = Array.from(candidateBorderSet);
+		candidateBorder.sort((a, b) => a - b);
+		candidateBorder.shift();
+		candidateBorder.pop();
+		return candidateBorder;
+	}
+	static #makeGroupOnAxis_4_makeActualBorder(in_scalarMap, in_candidateBorder) {
+		const actualBorder = [];
+		for (let i = 0; i < in_candidateBorder.length; i++) {
+			let isBorder = true;
+			for (const info of in_scalarMap.values()) {
+				if (cRubiksCube.#orderBy(info.edgeL, in_candidateBorder[i], info.edgeR)) {
+					isBorder = false;
+					break;
+				}
+			}
+			if (isBorder) {
+				actualBorder.push(in_candidateBorder[i]);
 			}
 		}
-		return this.defaultLevel;
-	},
-	getDim : function() {
-		return this.levels[this.getLevel()];
-	},
-	changeDim : function(in_inc) {
-		let level = this.getLevel();
-		if (in_inc) {
-			if (level < this.levels.length - 1) {
-				level++;
-			} else {
-				level = 0;
+		return actualBorder;
+	}
+	static #makeGroupOnAxis_5_makeActualBorder(in_scalarMap, in_actualBorder) {
+		const groups = [];
+		let next = 0;
+		in_actualBorder.push(Infinity);
+		in_actualBorder.forEach(border => {
+			const pieces = [];
+			for (let i = next; i < in_scalarMap.size; i++) {
+				const ascendingScalar = in_scalarMap.sortedKey(i);
+				if (ascendingScalar < border) {
+					const info = in_scalarMap.get(ascendingScalar);
+					pieces.push(...info.pieces);
+				} else {
+					next = i;
+					break;
+				}
 			}
+			groups.push(pieces);
+		});
+		return groups;
+	}
+	#makeGroupOnAxis(in_axis) {
+		/*
+			step #1 : scalarMap is the group of position based on in_axis. for example ...
+
+				+---+---+---+---+---+---+
+				| x | x | x | x | x | x |
+				+---+---+---+---+---+---+
+				| x |   x   | x | x | x |
+				+---+---+---+---+---+---+
+				| x |       x       | x |
+				+---+---+---+---+---+---+
+
+				--x---x-x-x-x-x---x---x--> : in_axis
+
+				 3.00, {tmpBox, piece + piece + piece}
+				 7.00, {tmpBox, piece}
+				 9.00, {tmpBox, piece}
+				11.00, {tmpBox, piece}
+				13.00, {tmpBox, piece}
+				15.00, {tmpBox, piece + piece}
+				19.00, {tmpBox, piece + piece}
+				23.00, {tmpBox, piece + piece + piece}
+
+			step #2 : calculate edges for the bounding box. for example ...
+
+				 3.00, {edgeL =  1.00, edgeR =  5.00, piece + piece + piece}
+				 7.00, {edgeL =  5.00, edgeR =  9.00, piece}
+				 9.00, {edgeL =  5.00, edgeR = 13.00, piece}
+				11.00, {edgeL =  9.00, edgeR = 13.00, piece}
+				13.00, {edgeL =  5.00, edgeR = 21.00, piece}
+				15.00, {edgeL = 13.00, edgeR = 17.00, piece + piece}
+				19.00, {edgeL = 17.00, edgeR = 21.00, piece + piece}
+				23.00, {edgeL = 21.00, edgeR = 25.00, piece + piece + piece}
+		*/
+		let scalarMap = new cApproximateMap(cRubiksCube.err);
+		if (this.#instanceTest.mode) {
+			scalarMap = this.#instanceTest.obj;
 		} else {
-			if (0 < level) {
-				level--;
-			} else {
-				level = this.levels.length - 1;
+			this.#makeGroupOnAxis_1_groupBySameScalar(scalarMap, in_axis);
+			cRubiksCube.#makeGroupOnAxis_2_calculateEdges(scalarMap, in_axis);
+		}
+		/*
+			step #3 : make candidates of border which decides group
+		*/
+		const candidateBorder = cRubiksCube.#makeGroupOnAxis_3_makeCandidatesBorder(scalarMap);
+		if (this.#instanceTest.mode) {
+			/*
+				*** NOTE #5 ***
+				To display a reference using "console.log", you should use a copy of the reference.
+				Without it, the entity may appear updated when displayed because the console holds a reference,
+				and any subsequent changes to the object will be reflected in the console.
+			*/
+			console.log('#3', [...candidateBorder]);
+		}
+		/*
+			step #4 : check if candidates is actual border
+
+			    v   v
+			+---+---+---+
+			| x | x | x |
+			+---+---+---+ : border = 2
+			| x | x | x |
+			+---+---+---+
+
+			        v
+			+---+---+---+
+			| x | x | x |
+			+---+---+---+ : border = 1
+			|   x   | x |
+			+---+---+---+
+
+			+---+---+---+
+			| x |   x   |
+			+---+---+---+ : border = 0
+			|   x   | x |
+			+---+---+---+
+		*/
+		const actualBorder = cRubiksCube.#makeGroupOnAxis_4_makeActualBorder(scalarMap, candidateBorder);
+		if (this.#instanceTest.mode) {
+			console.log('#4', [...actualBorder]);
+		}
+		/*
+			step #5 : finally, make group which will move together
+		*/
+		const groups = cRubiksCube.#makeGroupOnAxis_5_makeActualBorder(scalarMap, actualBorder)
+		if (this.#instanceTest.mode) {
+			console.log('#5', [...groups]);
+		}
+		return groups;
+	}
+	makeRotationGroup(in_piece, in_axis) {
+		const groups = this.#makeGroupOnAxis(in_axis);
+		for (let i = 0; i < groups.length; i++) {
+			if (groups[i].includes(in_piece)) {
+				return groups[i];
 			}
 		}
-		location.hash = '#' + level;
-		location.reload();
+		return null;
 	}
-};
-
-cCube.init(cStructure.getDim());
-cCube.objects.forEach(obj3d => {
-	cScene.attach(obj3d);
-});
-
-function handleClick(in_id, in_callback)
-{
-	document.querySelector('#' + in_id).addEventListener('click', in_callback);
+	makeRandomRotationProgress(in_ending_callback) {
+		let axis;
+		let pieces;
+		let maxLoopCount = 100;
+		while (true) {
+			if (--maxLoopCount === 0) {
+				throw new Error('maxLoopCount'); 
+			}
+			const _piece = (this.children)[arrRand]();
+			axis = (Object.values(cRubiksCube.#axes))[arrRand]();
+			pieces = this.makeRotationGroup(_piece, axis);
+			if (pieces.length < this.children.length) {
+				break;
+			}
+		}
+		let percentCurrent = 0;
+		let sounded = false;
+		const percentStep = 1 / 20;
+		const group = this.#composeGroup(pieces);
+		// this progress function assumes to be called by requestAnimationFrame()
+		const progress = () => {
+			percentCurrent += percentStep;
+			group.rotation[cRubiksCube.#axisKey(axis)] = Math.PI / 2 * percentCurrent;
+			if (percentCurrent >= 1) {
+				group.rotation[cRubiksCube.#axisKey(axis)] = Math.PI / 2;
+				this.#releaseGroup(group);
+				(in_ending_callback)();
+				this.#settingVal.shuffled = true;
+			} else {
+				if ((percentCurrent > 0.4) && !sounded) {
+					AUDIO_ROTATION.play();
+					sounded = true;
+				}
+			}
+		};
+		return progress;
+	}
+	registerCompleteCallback(in_callback) {
+		this.#settingVal.completeCallback = in_callback;
+	}
+	removeCompleteCallback() {
+		this.#settingVal.completeCallback = null;
+	}
+	static #getRotationAxis(in_surfaceV3, in_directionV3) {
+		/*
+			{surface : new THREE.Vector3(+1, 0, 0), direction : new THREE.Vector3(0, +1, 0), expected : new THREE.Vector3(0, 0, +1)},
+			{surface : new THREE.Vector3(+1, 0, 0), direction : new THREE.Vector3(0, -1, 0), expected : new THREE.Vector3(0, 0, -1)},
+			{surface : new THREE.Vector3(-1, 0, 0), direction : new THREE.Vector3(0, +1, 0), expected : new THREE.Vector3(0, 0, -1)},
+			{surface : new THREE.Vector3(-1, 0, 0), direction : new THREE.Vector3(0, -1, 0), expected : new THREE.Vector3(0, 0, +1)},
+			...
+		*/
+		const rotationAxis = new THREE.Vector3();
+		rotationAxis.crossVectors(in_surfaceV3, in_directionV3);
+		return rotationAxis;
+	}
+	static #detectMovingDirection(in_dstV3, in_srcV3, in_surfaceV3) {
+		const vec3 = (new THREE.Vector3()).subVectors(in_dstV3, in_srcV3);
+		const axes = [
+			new THREE.Vector3(+1, 0, 0),
+			new THREE.Vector3(-1, 0, 0),
+			new THREE.Vector3(0, +1, 0),
+			new THREE.Vector3(0, -1, 0),
+			new THREE.Vector3(0, 0, +1),
+			new THREE.Vector3(0, 0, -1)
+		];
+		const ret = {
+			minAngle : Infinity,
+			directionAxis : null,
+			rotationAxis : null
+		};
+		axes.forEach(in_axis => {
+			if (in_axis.dot(in_surfaceV3) !== 0) {
+				// except for in_surfaceV3
+				return;
+			}
+			const angle = vec3.angleTo(in_axis);
+			if (angle < ret.minAngle) {
+				ret.minAngle = angle;
+				ret.directionAxis = in_axis;
+				// rotationAxis may have negative value as component
+				ret.rotationAxis = cRubiksCube.#getRotationAxis(in_surfaceV3, in_axis);
+			}
+		});
+		return ret;
+	}
+	static #detectDragSurface(in_posV3) {
+		let max = 0;
+		let axis, surface;
+		XYZ.forEach(in_xyz => {
+			if (Math.abs(in_posV3[in_xyz]) > Math.abs(max)) {
+				max = in_posV3[in_xyz];
+				axis = in_xyz;
+				surface = (max > 0);
+			}
+		});
+		const vec3 = new THREE.Vector3();
+		vec3[axis] = surface ? +1 : -1;
+		return vec3;
+	}
+	static #uiStates  = {
+		DISABLED : Symbol(),
+		ENABLED : Symbol(),
+		DRAGGING : Symbol(),
+		MOVING : Symbol(),
+		MOMENTUM : Symbol()
+	}
+	/*
+		ENABLED <-------------------+
+		|                           |
+		+-[disable]-----+           |
+		|               |           |
+		|   DISABLED <--+           |
+		|   |                       |
+		|   +-[enable]--------------+
+		|                           |
+		+-[drag]--------+           |
+		                |           |
+		    DRAGGING <--+           |
+		    |                       |
+		    +-[release]-------------+
+		    |                       |
+		    +-[movable]-----+       |
+		                    |       |
+		        MOVING <----+       |
+		        |                   |
+		        +-[release]-----+   |
+		                        |   |
+		            MOMENTUM <--+   |
+		            |               |
+		            +-[stop]--------+
+	*/
+	static #uiTransitions = {
+		[cRubiksCube.#uiStates.DISABLED]: {
+			enable : cRubiksCube.#uiStates.ENABLED
+		},
+		[cRubiksCube.#uiStates.ENABLED]: {
+			disable : cRubiksCube.#uiStates.DISABLED,
+			drag : cRubiksCube.#uiStates.DRAGGING
+		},
+		[cRubiksCube.#uiStates.DRAGGING]: {
+			release : cRubiksCube.#uiStates.ENABLED,
+			movable : cRubiksCube.#uiStates.MOVING
+		},
+		[cRubiksCube.#uiStates.MOVING]: {
+			release : cRubiksCube.#uiStates.MOMENTUM
+		},
+		[cRubiksCube.#uiStates.MOMENTUM]: {
+			stop : cRubiksCube.#uiStates.ENABLED
+		}
+	};
+	#uiSession = {
+		state : cRubiksCube.#uiStates.ENABLED,
+		ctx : {}
+	};
+	#transition(in_action) {
+		const newState = cRubiksCube.#uiTransitions[this.#uiSession.state]?.[in_action];
+		if (newState) {
+			this.#uiSession.state = newState;
+		} else {
+			throw new Error('invalid transition : ' + in_action);
+		}
+	}
+	uiEnable() {
+		if (this.#uiSession.state !== cRubiksCube.#uiStates.DISABLED) {
+			console.log('state is not DISABLED');
+			return;
+		}
+		this.#transition('enable');
+	}
+	uiDisable() {
+		if (this.#uiSession.state !== cRubiksCube.#uiStates.ENABLED) {
+			console.log('state is not ENABLED');
+			return;
+		}
+		this.#transition('disable');
+	}
+	#uiInitSession() {
+		if (this.#uiSession.ctx.roGroup) {
+			this.#releaseGroup(this.#uiSession.ctx.roGroup);
+		}
+		this.#uiSession.ctx = {};
+	}
+	uiSetInitPosition(in_piece, in_posV3, in_posV2) {
+		// in_posV3 : intersection with a in_piece
+		// in_posV2 : NDC (Normalized Device Coordinates)
+		if (this.#uiSession.state !== cRubiksCube.#uiStates.ENABLED) {
+			console.log('state is not ENABLED');
+			return;
+		}
+		this.#uiSession.ctx = {
+			piece : in_piece,
+			initPosV3 : in_posV3,
+			initPosV2 : in_posV2,
+			surfaceV3 : cRubiksCube.#detectDragSurface(in_posV3),
+			roGroup : null,
+			roRadian : 0,
+			roAxisDir : 0,
+			roAxisXYZ : null,
+			initDirV2 : null
+		};
+		this.#transition('drag');
+	}
+	uiDeltaFromStartV2(in_posV2) {
+		return in_posV2.distanceTo(this.#uiSession.ctx.initPosV2);
+	}
+	uiDeltaFromStartV3(in_posV3) {
+		return in_posV3.distanceTo(this.#uiSession.ctx.initPosV3);
+	}
+	uiIsDragging() {
+		return (this.#uiSession.state === cRubiksCube.#uiStates.DRAGGING);
+	}
+	uiIsMoving() {
+		return (this.#uiSession.state === cRubiksCube.#uiStates.MOVING);
+	}
+	static uiSetDeltaPositionRC = {
+		NOOP : Symbol(),
+		// as delta is not enough, need to call uiNotifyDeltaPosition again
+		NOTENOUGH : Symbol(),
+		// though delta is enough, can't make group
+		UNMOVABLE : Symbol(),
+		// as delta is enough, can call uiUpdatePosition
+		MOVABLE : Symbol()
+	};
+	uiNotifyDeltaPosition(in_piece, in_posV3, in_posV2) {
+		// in_posV3 : intersection with a in_piece
+		// in_posV2 : NDC (Normalized Device Coordinates)
+		const RC = cRubiksCube.uiSetDeltaPositionRC;
+		if (this.#uiSession.state !== cRubiksCube.#uiStates.DRAGGING) {
+			console.log('state is not DRAGGING');
+			return RC.NOOP;
+		}
+		const ctx = this.#uiSession.ctx;
+		const moving = cRubiksCube.#detectMovingDirection(in_posV3, ctx.initPosV3, ctx.surfaceV3);
+		const angle22_5 = Math.PI / 8;
+		if (moving.minAngle > angle22_5) {
+			return RC.NOTENOUGH;
+		}
+		// component for makeRotationGroup should be +1
+		const axis = moving.rotationAxis.clone().multiply(moving.rotationAxis);
+		const pieces = this.makeRotationGroup(ctx.piece, axis);
+		if (pieces.length < this.children.length) {
+			this.#transition('movable');
+			ctx.roGroup = this.#composeGroup(pieces);
+			// use Vector3(1, 1, 1) to extruct +1 or -1
+			ctx.roAxisDir = moving.rotationAxis.dot(new THREE.Vector3(1, 1, 1));
+			ctx.roAxisXYZ = cRubiksCube.#axisKey(axis);
+			ctx.initDirV2 = in_posV2.clone().sub(ctx.initPosV2);
+			return RC.MOVABLE;
+		} else {
+			return RC.UNMOVABLE;
+		}
+	}
+	uiUpdatePosition(in_posV2) {
+		// in_posV2 : NDC (Normalized Device Coordinates)
+		if (this.#uiSession.state !== cRubiksCube.#uiStates.MOVING) {
+			return;
+		}
+		const ctx = this.#uiSession.ctx;
+		const currentDirV2 = in_posV2.clone().sub(ctx.initPosV2);
+		let rad = in_posV2.distanceTo(ctx.initPosV2) * ctx.roAxisDir;
+		if (ctx.initDirV2.dot(currentDirV2) > 0) {
+			// currentDirV2 & initDirV2 --> SAME direction
+			rad *= +1;
+		} else {
+			// currentDirV2 & initDirV2 --> OPPOSITE direction
+			rad *= -1;
+		}
+		/*
+			*** NOTE #6 ***
+			if using rotateOnAxis() several times, small errors will be expanded.
+			if making group every time too, the same issue will happen.
+		*/
+		ctx.roGroup.rotation[ctx.roAxisXYZ] = rad;
+		if (snapTo05PI(rad) != snapTo05PI(ctx.roRadian)) {
+			AUDIO_ROTATION.play();
+		}
+		ctx.roRadian = rad;
+	}
+	uiRelease(in_ending_callback) {
+		if (this.#uiSession.state === cRubiksCube.#uiStates.DRAGGING) {
+			this.#uiInitSession();
+			this.#transition('release');
+			return null;
+		}
+		if (this.#uiSession.state !== cRubiksCube.#uiStates.MOVING) {
+			return null;
+		}
+		this.#transition('release');
+		const ctx = this.#uiSession.ctx;
+		const startRad = ctx.roRadian;
+		const finalRad = snapTo05PI(ctx.roRadian);
+		const duration = 100;
+		const ease = new cEase(startRad, finalRad, duration);
+		// this progress function assumes to be called by requestAnimationFrame()
+		const progress = () => {
+			ctx.roRadian = ease.currentEasingIn();
+			ctx.roGroup.rotation[ctx.roAxisXYZ] = ctx.roRadian;
+			if (ctx.roRadian !== finalRad) {
+				return;
+			}
+			// execute once at the end
+			this.#uiInitSession();
+			this.#transition('stop');
+			(in_ending_callback)();
+			if (!this.#settingVal.shuffled) {
+				// when without shuffled, do nothing
+				return;
+			}
+			this.#settingVal.rotationCount++;
+			if (this.#settingVal.completeCallback && this.isComplete()) {
+				(this.#settingVal.completeCallback)(this.#settingVal.rotationCount);
+			}
+		};
+		return progress;
+	}
 }
 
-let gShuffled = -1;
-
-gShuffleButtonList.forEach(in_id => {
-	handleClick(in_id, (in_ev) => {
-		gShuffled = Date.now();
-		cAudioNormal.play();
-		cCube.shuffle(Number(in_ev.target.getAttribute('cnt')));
+function test_makeGroupOnAxis(in_arr) {
+	const scalarMap = new cApproximateMap(cRubiksCube.err);
+	in_arr.forEach(in_elem => {
+		in_elem[0] += Math.random() / 10000;
+		in_elem[1].edgeL += Math.random() / 10000;
+		in_elem[1].edgeR += Math.random() / 10000;
+		scalarMap.set(in_elem[0], in_elem[1]);
 	});
-});
+	(new cRubiksCube()).unitTest('#makeGroupOnAxis', scalarMap);
+}
 
-handleClick('iDec', () => {
-	cAudioNormal.play();
-	cStructure.changeDim(false)
-});
+/*
+	--x-x---x-x-->
 
-handleClick('iInc', () => {
-	cAudioNormal.play();
-	cStructure.changeDim(true)
-});
+	+---+---+---+
+	| x |   x   |
+	+---+---+---+
+	|   x   | x |
+	+---+---+---+
 
-const cSphericalViewer = {
-	conf : {
-		speed : 7,
-		threshold : 5,
-		translate : -1
-	},
-	buffer : new THREE.Spherical(),
-	renderer : null,
-	camera : null,
-	setCameraByAngle(in_delta_theta, in_delta_phi) {
-		this.buffer.setFromVector3(this.camera.position);
-		this.buffer.theta += in_delta_theta;
-		this.buffer.phi -= in_delta_phi;
-		this.buffer.makeSafe();
-		this.camera.position.setFromSpherical(this.buffer); 
-		this.camera.lookAt(new THREE.Vector3(0, 0, 0));
-	},
-	resize : function() {
-		let w = window.innerWidth;
-		let h = window.innerHeight;
-		this.renderer.setPixelRatio(window.devicePixelRatio);
-		this.renderer.setSize(w, h);
-		this.camera.aspect = w / h;
-		this.camera.updateProjectionMatrix();
-	},
-	move : function(in_delta) {
-		if (in_delta.length() < this.conf.threshold) {
-			return false;
-		}
-		// move the camera in the opposite direction to the vector
-		let the = in_delta.x * this.conf.translate * -1;
-		let phi = in_delta.y * this.conf.translate;
-		this.setCameraByAngle(the, phi);
-		return true;
-	},
-	viberationEffect : function(in_duration, in_boost) {
-		this.setHook(in_delta => {
-			if (in_delta < 0) {
-				// last
-				this.camera.lookAt(new THREE.Vector3(0, 0, 0));
-			} else {
-				let rand = (new THREE.Vector3()).random().subScalar(0.5);
-				this.camera.lookAt(rand.multiplyScalar(in_boost));
+test_makeGroupOnAxis([
+	[ 3.0000, {edgeL : 1.0000, edgeR :  5.0000, pieces : ['a']}],
+	[ 5.0000, {edgeL : 1.0000, edgeR :  9.0000, pieces : ['b']}],
+	[ 9.0000, {edgeL : 5.0000, edgeR : 13.0000, pieces : ['c']}],
+	[11.0000, {edgeL : 9.0000, edgeR : 13.0000, pieces : ['d']}]
+]);
+
+*/
+
+/*
+	--x-x-x-x-x-->
+
+	+---+---+---+
+	| x | x | x |
+	+---+---+---+
+	| x |   x   |
+	+---+---+---+
+	|   x   | x |
+	+---+---+---+
+
+test_makeGroupOnAxis([
+	[ 3.0000, {edgeL : 1.0000, edgeR :  5.0000, pieces : ['a','b']}],
+	[ 5.0000, {edgeL : 1.0000, edgeR :  9.0000, pieces : ['c']}],
+	[ 7.0000, {edgeL : 5.0000, edgeR :  9.0000, pieces : ['d']}],
+	[ 9.0000, {edgeL : 5.0000, edgeR : 13.0000, pieces : ['e']}],
+	[11.0000, {edgeL : 9.0000, edgeR : 13.0000, pieces : ['f','g']}]
+]);
+
+*/
+
+/*
+	--x---x-x-x-x-x---x---x-->
+
+	+---+---+---+---+---+---+
+	| x | x | x | x | x | x |
+	+---+---+---+---+---+---+
+	| x |   x   | x | x | x |
+	+---+---+---+---+---+---+
+	| x |       x       | x |
+	+---+---+---+---+---+---+
+
+test_makeGroupOnAxis([
+	[ 3.0000, {edgeL :  1.0000, edgeR :  5.0000, pieces : ['a','b','c']}],
+	[ 7.0000, {edgeL :  5.0000, edgeR :  9.0000, pieces : ['d']}],
+	[ 9.0000, {edgeL :  5.0000, edgeR : 13.0000, pieces : ['f']}],
+	[11.0000, {edgeL :  9.0000, edgeR : 13.0000, pieces : ['g']}],
+	[13.0000, {edgeL :  5.0000, edgeR : 21.0000, pieces : ['e']}],
+	[15.0000, {edgeL : 13.0000, edgeR : 17.0000, pieces : ['h','i']}],
+	[19.0000, {edgeL : 17.0000, edgeR : 21.0000, pieces : ['j','k']}],
+	[23.0000, {edgeL : 21.0000, edgeR : 25.0000, pieces : ['l','m','n']}]
+]);
+
+*/
+
+/*
+	(6) ui & dom setting
+
+	gWorld (cSphericalWorld)
+	|
+	+-- gCube (cRubiksCube)
+		|
+		+-- meshes <--- gMeshLevelMap
+*/
+
+const WORLD_RADIUS = CUBE_SIZE * 10;
+const WORLD_INIT_ZOOM = WORLD_RADIUS / 4;
+
+const gWorld = new cSphericalWorld(WORLD_RADIUS);
+
+const gCube = new cRubiksCube();
+
+gWorld.add(gCube);
+
+gWorld.moveView(0.5, 0.5);
+gWorld.zoom(WORLD_INIT_ZOOM, 1000);
+
+/*
+	*** NOTE #7 ***
+	when you use AxesHelper,
+	// gWorld.add(new THREE.AxesHelper(WORLD_RADIUS));
+	gWorld.setZoom() can not work well.
+*/
+
+class cWarpLine {
+	static #speed = 10;
+	static #gradation = 10;
+	constructor(in_canvas) {
+		const w = in_canvas.width;
+		const h = in_canvas.height;
+		this.ctx = in_canvas.getContext('2d');
+		this.box = new THREE.Box2(
+			new THREE.Vector2(0, 0),
+			new THREE.Vector2(w, h)
+		);
+		this.from = new THREE.Vector2(w / 2, h / 2);
+		this.#reset();
+	}
+	#reset() {
+		const angle = Math.random() * Math.PI * 2;
+		this.direction = new THREE.Vector2(Math.cos(angle), Math.sin(angle));
+		this.speed = Math.random() * cWarpLine.#speed + 5;
+		this.length = 0;
+	}
+	#curVec(in_scalar) {
+		return this.from.clone().add(this.direction.clone().multiplyScalar(in_scalar));
+	}
+	#drawGrayLine(in_from, in_to, in_grayScale) {
+		const gray = (in_grayScale << 16) | (in_grayScale << 8) | in_grayScale;
+		this.ctx.strokeStyle = '#' + gray.toString(16).padStart(6, '0');
+		this.ctx.beginPath();
+		this.ctx.moveTo(in_from.x, in_from.y);
+		this.ctx.lineTo(in_to.x, in_to.y);
+		this.ctx.stroke();
+	}
+	update() {
+		this.length += this.speed;
+		const to = this.#curVec(this.length);
+		if (this.box.containsPoint(to)) {
+			const notch = this.length / cWarpLine.#gradation;
+			for (let i = 0; i < cWarpLine.#gradation; i++) {
+				this.#drawGrayLine(
+					this.#curVec(notch * i),
+					this.#curVec(notch * (i + 1)),
+					255 / cWarpLine.#gradation * (i + 1)
+				);
 			}
-		}, in_duration);
-	},
-	rotationEffect : function(in_duration, in_the, in_phi) {
-		this.setHook(in_delta => {
-			this.setCameraByAngle(in_the * in_delta / 15, in_phi);
-		}, in_duration);
-	},
-	panEffect : function(in_duration, in_callback) {
-		this.setHook(in_delta => {
-			if (in_delta < 0) {
-				// last
-				(in_callback)();
+		} else {
+			/*
+				*** NOTE #6 ***
+				even if overwritung using black,
+				this.#drawGrayLine(this.from, to, 0x00);
+				smudge of white line will remain.
+			*/
+			this.#reset();
+		}
+	}
+}
+
+function warpViewProgress(in_canvas, in_lineCount) {
+	const warpLines = [];
+	for (let i = 0; i < in_lineCount; i++) {
+		warpLines.push(new cWarpLine(in_canvas));
+	}
+	return () => {
+		warpLines.forEach(in_line => {
+			in_line.update();
+		});
+	}
+}
+
+function complete() {
+	const progress = warpViewProgress(gBackgroundCanvas, 50);
+	gWorld.addAnimationHook(progress);
+	const duration = 2000;
+	gWorld.zoom(gWorld.zoomMin, duration * 0.9);
+	window.setTimeout(() => {
+		gWorld.removeAnimationHook(progress);
+		gCube.removeCompleteCallback();
+		const dialog = document.createElement('div');
+		Object.assign(dialog.style, {
+			width : 'auto',
+			height : 'auto',
+			background : 'black',
+			borderRadius : '1em',
+			padding : '1.5em'
+		});
+		([
+			'<div>Congratulation !!</div>',
+			'<div>( Your score is : ' + gCube.getScore() + ' )</div>',
+			'<div>Thanks to your wisdom, peace in the universe has been preserved.</div>',
+			'<div>Click to go next stage.</div>',
+		]).forEach(in_fragment => {
+			dialog.innerHTML += in_fragment;
+		});
+		setTransition(dialog, 'color 0.5s ease-out', 'gray', 'white');
+		startDialog(dialog, () => {
+			drawCosmicView(gBackgroundCanvas, 400, 50);
+			gWorld.zoom(WORLD_INIT_ZOOM, 1000);
+		});
+		nextLevel(false);
+	}, duration);
+}
+
+function shuffle(in_count) {
+	const randomRotation = (in_remaining_count) => {
+		const lastCallback = () => {
+			gWorld.removeAnimationHook(progress);
+			if (in_remaining_count > 1) {
+				(randomRotation)(in_remaining_count - 1);
 			} else {
-				this.camera.position.multiplyScalar(1.005);
+				gWorld.stopRotaion();
+				gCube.uiEnable();
 			}
-		}, in_duration);
-	},
-	hook : {
-		func : null,
-		expire : -1
-	},
-	setHook : function(in_func, in_duration_ms) {
-		this.hook.func = in_func;
-		this.hook.expire = Date.now() + in_duration_ms;
-	},
-	polling : function() {
-		if (!this.hook.func) {
-			return;
-		}
-		let delta = this.hook.expire - Date.now();
-		(this.hook.func)(delta);
-		if (delta < 0) {
-			this.hook.func = null;
-			this.hook.expire = -1;
-		}
-	},
-	init : function(in_canvas, in_radius) {
-		this.conf.translate = this.conf.speed / in_radius;
-		this.renderer = new THREE.WebGLRenderer({canvas : in_canvas});
-		this.camera = new THREE.PerspectiveCamera();
-		this.camera.fov = 45;
-		this.camera.near = 1;
-		this.camera.far = in_radius * 2;
-		this.camera.position.set(0, 0, in_radius);
-		this.setCameraByAngle(0, 0);
-		this.resize();
-		(in_self => {
-			window.addEventListener('resize', () => {
-				in_self.resize();
-			});
-		})(this);
-	},
-	render : function(in_scene) {
-		this.renderer.render(in_scene, this.camera);
-	},
-	getSize : function() {
-		let v = this.renderer.getSize(new THREE.Vector2());
-		return {
-			w : v.x,
-			h : v.y
 		};
+		const progress = gCube.makeRandomRotationProgress(lastCallback);
+		gWorld.addAnimationHook(progress);
+	};
+	gCube.registerCompleteCallback(complete);
+	gCube.uiDisable();
+	const rand = (min, max) => {
+		return Math.random() * (max - min) + min;
+	};
+	gWorld.startRotaion(new THREE.Vector3(
+		rand(0.05, 0.02),
+		rand(0.05, 0.02),
+		rand(0.05, 0.02)
+	));
+	(randomRotation)(in_count);
+}
+
+function setTransition(in_elem, in_shorthand, in_val1, in_val2) {
+	const components = in_shorthand.split(/\s+/);
+	in_elem.style.transition = in_shorthand;
+	in_elem.style[components[0]] = in_val1;
+	window.setTimeout(() => {
+		/*
+			*** NOTE #7 ***
+			To fire the transition function,
+			the final style should be set in the next event loop.
+		*/
+		in_elem.style[components[0]] = in_val2;
+	}, 0);
+}
+
+function startDialog(in_element, in_callback = null) {
+	const background = document.createElement('div');
+	Object.assign(background.style, {
+		position : 'fixed',
+		left : '0px',
+		top : '0px',
+		width : '100%',
+		height : '100%',
+		zIndex : 2 ** 31 - 1
+	});
+	background.appendChild(in_element);
+	Object.assign(in_element.style, {
+		position : 'absolute',
+		left : '50%',
+		top : '50%',
+		transform : 'translate(-50%, -50%)'
+	});
+	document.body.appendChild(background);
+	const closeDialog = () => {
+		document.body.removeChild(background);
+		if (in_callback) {
+			(in_callback)();
+		}
+	};
+	background.addEventListener('mousedown', closeDialog);
+	background.addEventListener('touchstart', closeDialog);
+}
+
+function shuffle3() {
+	shuffle(3);
+}
+
+function shuffle10() {
+	shuffle(10);
+}
+
+function uiRights() {
+	const dialog = document.createElement('dl');
+	Object.assign(dialog.style, {
+		width : '30%',
+		height : 'auto',
+		background : 'black',
+		borderRadius : '1em',
+		padding : '1.5em'
+	});
+	([
+		'<dt>Rights</dt>',
+		'<dd>This software is based on MIT License.</dd>',
+		'<dd>The code can be freely modified and reused.</dd>',
+		'<dd>For full license details, please refer to :</dd>',
+		'<dd>https://opensource.org/licenses/MIT</dd>',
+		'<dt>Donations</dt>',
+		'<dd>While the use of images generated by this software is completely free, donations are welcome and greatly appreciated.</dd>',
+		'<dd>If you would like to support the development of this software, please consider making a donation using the QR code below (TBD).</dd>'
+	]).forEach(in_fragment => {
+		dialog.innerHTML += in_fragment;
+	});
+	setTransition(dialog, 'color 0.5s ease-out', 'gray', 'white')
+	startDialog(dialog);
+}
+
+const ID_PREV_LEVEL = randomString();
+const ID_NEXT_LEVEL = randomString();
+
+function updateLevelText() {
+	const prev = gMeshLevelMap.prevItemByOrder(gMeshCurrentLevel);
+	const next = gMeshLevelMap.nextItemByOrder(gMeshCurrentLevel);
+	document.getElementById(ID_PREV_LEVEL).innerText = prev.k;
+	document.getElementById(ID_NEXT_LEVEL).innerText = next.k;
+}
+
+function changeLevel(in_delta) {
+	const color = 0x000000;
+	gWorld.fog(color, 0, 100, () => {
+		gMeshCurrentLevel = (gMeshCurrentLevel + in_delta + gMeshLevelMap.size) % gMeshLevelMap.size;
+		gCube.removePieces();
+		const current = gMeshLevelMap.currItemByOrder(gMeshCurrentLevel);
+		gCube.addPieces(current.v);
+		gWorld.fog(color, 100, 0, () => {
+			updateLevelText();
+			gWorld.removeFog();
+		});
+	});
+}
+
+function prevLevel(in_sound = true) {
+	if (in_sound) {
+		AUDIO_ROTATION.play();
 	}
-};
+	changeLevel(-1);
+}
 
-cSphericalViewer.init(cCanvas, cWorldRadius);
-cSphericalViewer.rotationEffect(600, -0.01, 0.015);
+function nextLevel(in_sound = true) {
+	if (in_sound) {
+		AUDIO_ROTATION.play();
+	}
+	changeLevel(+1);
+}
 
-let gDragBackground = null;
+(() => {
+	const settings = [
+		{
+			id : ID_PREV_LEVEL,
+			text : '(Prev)',
+			func : prevLevel
+		},
+		{
+			id : ID_NEXT_LEVEL,
+			text : '(Next)',
+			func : nextLevel
+		},
+		{
+			text : 'Shuffle x3',
+			func : shuffle3
+		},
+		{
+			text : 'Shuffle x10',
+			func : shuffle10
+		},
+		{
+			text : 'Rights',
+			func : uiRights
+		}
+	];
+	let container = document.createElement('div');
+	Object.assign(container.style, {
+		position : 'absolute',
+		left : '5%',
+		top : '5%'
+	});
+	document.body.appendChild(container);
+	settings.forEach(in_setting => {
+		let button = document.createElement('button');
+		if (in_setting.id) {
+			button.id = in_setting.id;
+		}
+		if (in_setting.text) {
+			button.innerText = in_setting.text;
+		}
+		button.addEventListener('click', in_setting.func);
+		Object.assign(button.style, {
+			marginRight : '3px',
+			borderRadius : '3px',
+			border : '1px solid gray'
+		});
+		container.appendChild(button);
+	});
+})();
 
-cCanvas.addEventListener('mousedown', (in_ev) => {
-	let vec2 = new THREE.Vector2(in_ev.offsetX, in_ev.offsetY);
-	let size = cSphericalViewer.getSize();
-	if (!cCube.uiDrag(vec2, size.w, size.h, cSphericalViewer.camera)) {
-		gDragBackground = vec2;
+changeLevel(0);
+
+function hex2rgb(in_hex) {
+	const mask = 0xFF;
+	const r = (in_hex >> 16) & mask;
+	const g = (in_hex >> 8) & mask;
+	const b = in_hex & mask;
+	return [r, g, b];
+}
+
+function drawCosmicView(in_canvas, in_stars, in_nebulae_patterns, in_color = 0x000064) {
+	const ctx = in_canvas.getContext('2d');
+	const w = in_canvas.width;
+	const h = in_canvas.height;
+	ctx.fillStyle = 'black';
+	ctx.fillRect(0, 0, w, h);
+	for (let i = 0; i < in_nebulae_patterns; i++) {
+		const x = Math.random() * w;
+		const y = Math.random() * h;
+		const radius = Math.random() * 100 + 50;
+		const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+		const rgb = hex2rgb(in_color);
+		gradient.addColorStop(0, 'rgba('+ rgb[0] +', '+ rgb[1] +', '+ rgb[2] +', 0.5)');
+		gradient.addColorStop(1, 'rgba('+ rgb[0] +', '+ rgb[1] +', '+ rgb[2] +', 0)');
+		ctx.beginPath();
+		ctx.arc(x, y, radius, 0, Math.PI * 2, false);
+		ctx.fillStyle = gradient;
+		ctx.fill();
+	}
+	for (let i = 0; i < in_stars; i++) {
+		const x = Math.random() * w;
+		const y = Math.random() * h;
+		const radius = Math.random() * 1;
+		ctx.beginPath();
+		ctx.arc(x, y, radius, 0, Math.PI * 2, false);
+		ctx.fillStyle = 'white';
+		ctx.fill();
+	}
+}
+
+const gBackgroundCanvas = document.createElement('CANVAS');
+
+Object.assign(gBackgroundCanvas.style, {
+	position : 'absolute',
+	left : 0,
+	top : 0,
+	zIndex : -1
+});
+
+document.addEventListener('DOMContentLoaded', (() => {
+	let resizeWorld = (() => {
+		gWorld.resize(
+			window.innerWidth,
+			window.innerHeight);
+		gBackgroundCanvas.width = window.innerWidth;
+		gBackgroundCanvas.height = window.innerHeight;
+		drawCosmicView(gBackgroundCanvas, 400, 50);
+	});
+	let resizeTimeout = null;
+	const debounce_delay = 300;
+	window.addEventListener('resize', () => {
+		if (resizeTimeout) {
+			window.clearTimeout(resizeTimeout);
+		}
+		resizeTimeout = window.setTimeout(resizeWorld, debounce_delay);
+	});
+	(resizeWorld)();
+	if (!document.body) {
+		document.documentElement.appendChild(document.createElement('BODY'));
+	}
+	document.body.style.margin = '0';
+	document.body.style.overflow = 'hidden';
+	document.body.appendChild(gWorld.canvas);
+	document.body.appendChild(gBackgroundCanvas);
+	gWorld.start();
+}));
+
+
+/*
+	(7) event handlers
+*/
+
+gWorld.canvas.addEventListener('mousedown', in_ev => {
+	const vec2 = eventPos2RaycasterPos(in_ev);
+	let intersects = gWorld.intersectPositive(vec2);
+	if (intersects.length > 0) {
+		const vec2Scaled = scaledVector(vec2, gWorld.distanceToObject(), WORLD_RADIUS);
+		gCube.uiSetInitPosition(intersects[0].object, intersects[0].point, vec2Scaled);
 	}
 });
 
-let gMousemoveThreshold = 5;
-
-cCanvas.addEventListener('mousemove', (in_ev) => {
-	let vec2 = new THREE.Vector2(in_ev.offsetX, in_ev.offsetY);
-	if (cCube.isDragged) {
-		switch (cCube.uiRotate(vec2, gMousemoveThreshold)) {
-		case 1 :
-			cSphericalViewer.viberationEffect(50, 10);
-			cAudioError.play();
-			break;
-		case 2 :
-			cAudioNormal.play();
-			break;
-		case 3 :
-		default :
-			break;
-		}
-	} else {
-		if (!gDragBackground) {
-			return;
-		}
-		let delta = vec2.clone().sub(gDragBackground);
-		if (cSphericalViewer.move(delta)) {
-			// updated
-			gDragBackground = vec2;
-		}
-	}
-});
-
-function mousend(in_ev)
-{
-	if (!cCube.isDragged) {
-		gDragBackground = null;
+gWorld.canvas.addEventListener('mousemove', in_ev => {
+	const vec2 = eventPos2RaycasterPos(in_ev);
+	const vec2Scaled = scaledVector(vec2, gWorld.distanceToObject(), WORLD_RADIUS);
+	if (gCube.uiIsMoving()) {
+		gCube.uiUpdatePosition(vec2Scaled);
 		return;
 	}
-	let vec2 = new THREE.Vector2(in_ev.offsetX, in_ev.offsetY);
-	if (cCube.uiRelease(vec2) && (gShuffled > 0)) {
-		let duration = 2000;
-		cSphericalViewer.panEffect(duration, () => {
-			let score = document.querySelector('#iScore');
-			let time = Math.ceil((Date.now() - gShuffled - duration) / 1000);
-			score.style.display = 'block';
-			score.innerText = 'completed, your time is ' + time + ' sec.';
-			gShuffled = -1;
-			let buttons = document.querySelector('#iShuffle').getElementsByTagName('BUTTON');
-			for (let i = 0; i < buttons.length; i++) {
-				buttons.item(i).disabled = true;
-			}
-		});
+	if (!gCube.uiIsDragging()) {
+		return;
+	}
+	// to avoid frequent using of THREE.Raycaster, need to adjust
+	const threshold = 0.1;
+	if (gCube.uiDeltaFromStartV2(vec2) < threshold) {
+		return;
+	}
+	let intersects = gWorld.intersectPositive(vec2);
+	if (intersects.length === 0) {
+		return;
+	}
+	const RC = cRubiksCube.uiSetDeltaPositionRC;
+	const result = gCube.uiNotifyDeltaPosition(intersects[0].object, intersects[0].point, vec2Scaled);
+	if (result === RC.UNMOVABLE) {
+		AUDIO_ERROR.play();
+		gWorld.viberationEffect();
+	}
+});
+
+function dragstop() {
+	const progress = gCube.uiRelease(() => {
+		gWorld.removeAnimationHook(progress);
+	});
+	if (progress) {
+		gWorld.addAnimationHook(progress);
 	}
 }
 
-cCanvas.addEventListener('mouseup', (in_ev) => {
-	mousend(in_ev)
-});
+gWorld.canvas.addEventListener('mouseleave', dragstop);
+gWorld.canvas.addEventListener('mouseout', dragstop);
+gWorld.canvas.addEventListener('mouseup', dragstop);
 
-cCanvas.addEventListener('mouseout', (in_ev) => {
-	mousend(in_ev)
-});
-
-const cConvertTable = [
+const EMULATETBL = [
 	{
 		src : 'touchstart',
 		dst : 'mousedown'
@@ -1130,56 +2261,76 @@ const cConvertTable = [
 		dst : 'mousemove'
 	},
 	{
-		src : 'touchend',
-		dst : 'mouseup'
+		src : 'touchleave',
+		dst : 'mouseleave'
 	},
 	{
-		src : 'touchleave',
-		dst : 'mouseout'
+		src : 'touchend',
+		dst : 'mouseup'
 	}
 ];
 
-cConvertTable.forEach(mapping => {
-	cCanvas.addEventListener(mapping.src, (in_ev) => {
+let gLastDistance = null;
+
+function createAltWheelEv(in_ev) {
+	const t1 = in_ev.touches[0];
+	const t2 = in_ev.touches[1];
+	const currentDistance = Math.sqrt(Math.pow(t2.clientX - t1.clientX, 2) + Math.pow(t2.clientY - t1.clientY, 2));
+	if (gLastDistance === null) {
+		gLastDistance = currentDistance;
+		return null;
+	}
+	const delta = currentDistance - gLastDistance;
+	gLastDistance = currentDistance;
+	return new WheelEvent('wheel', {
+		deltaY : delta,
+		clientX : (t1.clientX + t2.clientX) / 2,
+		clientY : (t1.clientY + t2.clientY) / 2,
+		ctrlKey : in_ev.ctrlKey,
+		altKey : in_ev.altKey,
+		shiftKey : in_ev.shiftKey,
+		metaKey : in_ev.metaKey
+	});
+}
+
+function createAltMouseEv(in_type, in_ev) {
+	return new MouseEvent(in_type, {
+		bubbles : true,
+		cancelable : true,
+		view : window,
+		screenX : in_ev.changedTouches[0].screenX,
+		screenY : in_ev.changedTouches[0].screenY,
+		clientX : in_ev.changedTouches[0].clientX,
+		clientY : in_ev.changedTouches[0].clientY,
+		ctrlKey : in_ev.ctrlKey,
+		altKey : in_ev.altKey,
+		shiftKey : in_ev.shiftKey,
+		metaKey : in_ev.metaKey,
+		button : 0,
+		relatedTarget : null
+	});
+}
+
+EMULATETBL.forEach(in_pair => {
+	gWorld.canvas.addEventListener(in_pair.src, in_ev => {
 		in_ev.preventDefault();
 		in_ev.stopPropagation();
+		let alternative;
 		if (in_ev.touches.length > 1) {
-			return;
+			if ((in_pair.src === 'touchmove') && (in_ev.touches.length === 2)) {
+				alternative = createAltWheelEv(in_ev);
+			} else {
+				gLastDistance = null;
+			}
+		} else {
+			alternative = createAltMouseEv(in_pair.dst, in_ev);
 		}
-		gMousemoveThreshold = 10;
-		let ev = document.createEvent('MouseEvents');
-		ev.initMouseEvent(
-			// type
-			mapping.dst,
-			// canBubble
-			true,
-			// cancelable
-			true,
-			// view
-			window,
-			// clickCount
-			0,
-			in_ev.changedTouches[0].screenX,
-			in_ev.changedTouches[0].screenY,
-			in_ev.changedTouches[0].clientX,
-			in_ev.changedTouches[0].clientY,
-			in_ev.ctrlKey,
-			in_ev.altKey,
-			in_ev.shiftKey,
-			in_ev.metaKey,
-			// button
-			0,
-			// relatedTarget
-			null
-		);
-		in_ev.target.dispatchEvent(ev);
+		if (alternative) {
+			in_ev.target.dispatchEvent(alternative);
+		}
 	});
 });
 
-(function tick() {
-	cSphericalViewer.polling();
-	cSphericalViewer.render(cScene);
-	requestAnimationFrame(tick);
-})();
-
 </script>
+</body>
+</html>
