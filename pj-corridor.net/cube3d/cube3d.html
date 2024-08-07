@@ -2199,7 +2199,7 @@ document.addEventListener('DOMContentLoaded', (() => {
 
 
 /*
-	(7) event handlers
+	(7) event handlers + emulation
 */
 
 gWorld.canvas.addEventListener('mousedown', in_ev => {
@@ -2251,85 +2251,84 @@ gWorld.canvas.addEventListener('mouseleave', dragstop);
 gWorld.canvas.addEventListener('mouseout', dragstop);
 gWorld.canvas.addEventListener('mouseup', dragstop);
 
-const EMULATETBL = [
-	{
-		src : 'touchstart',
-		dst : 'mousedown'
-	},
-	{
-		src : 'touchmove',
-		dst : 'mousemove'
-	},
-	{
-		src : 'touchleave',
-		dst : 'mouseleave'
-	},
-	{
-		src : 'touchend',
-		dst : 'mouseup'
+(() => {
+	const EMULATETBL = [
+		{
+			src : 'touchstart',
+			dst : 'mousedown'
+		},
+		{
+			src : 'touchmove',
+			dst : 'mousemove'
+		},
+		{
+			src : 'touchleave',
+			dst : 'mouseleave'
+		},
+		{
+			src : 'touchend',
+			dst : 'mouseup'
+		}
+	];
+	let lastDistance = null;
+	function createAltWheelEv(in_ev) {
+		const t1 = in_ev.touches[0];
+		const t2 = in_ev.touches[1];
+		const currentDistance = Math.sqrt(Math.pow(t2.clientX - t1.clientX, 2) + Math.pow(t2.clientY - t1.clientY, 2));
+		if (lastDistance === null) {
+			lastDistance = currentDistance;
+			return null;
+		}
+		const speed = 2;
+		const delta = (currentDistance - lastDistance) * speed;
+		lastDistance = currentDistance;
+		return new WheelEvent('wheel', {
+			deltaY : delta,
+			clientX : (t1.clientX + t2.clientX) / 2,
+			clientY : (t1.clientY + t2.clientY) / 2,
+			ctrlKey : in_ev.ctrlKey,
+			altKey : in_ev.altKey,
+			shiftKey : in_ev.shiftKey,
+			metaKey : in_ev.metaKey
+		});
 	}
-];
-
-let gLastDistance = null;
-
-function createAltWheelEv(in_ev) {
-	const t1 = in_ev.touches[0];
-	const t2 = in_ev.touches[1];
-	const currentDistance = Math.sqrt(Math.pow(t2.clientX - t1.clientX, 2) + Math.pow(t2.clientY - t1.clientY, 2));
-	if (gLastDistance === null) {
-		gLastDistance = currentDistance;
-		return null;
+	function createAltMouseEv(in_type, in_ev) {
+		return new MouseEvent(in_type, {
+			bubbles : true,
+			cancelable : true,
+			view : window,
+			screenX : in_ev.changedTouches[0].screenX,
+			screenY : in_ev.changedTouches[0].screenY,
+			clientX : in_ev.changedTouches[0].clientX,
+			clientY : in_ev.changedTouches[0].clientY,
+			ctrlKey : in_ev.ctrlKey,
+			altKey : in_ev.altKey,
+			shiftKey : in_ev.shiftKey,
+			metaKey : in_ev.metaKey,
+			button : 0,
+			relatedTarget : null
+		});
 	}
-	const delta = currentDistance - gLastDistance;
-	gLastDistance = currentDistance;
-	return new WheelEvent('wheel', {
-		deltaY : delta,
-		clientX : (t1.clientX + t2.clientX) / 2,
-		clientY : (t1.clientY + t2.clientY) / 2,
-		ctrlKey : in_ev.ctrlKey,
-		altKey : in_ev.altKey,
-		shiftKey : in_ev.shiftKey,
-		metaKey : in_ev.metaKey
-	});
-}
-
-function createAltMouseEv(in_type, in_ev) {
-	return new MouseEvent(in_type, {
-		bubbles : true,
-		cancelable : true,
-		view : window,
-		screenX : in_ev.changedTouches[0].screenX,
-		screenY : in_ev.changedTouches[0].screenY,
-		clientX : in_ev.changedTouches[0].clientX,
-		clientY : in_ev.changedTouches[0].clientY,
-		ctrlKey : in_ev.ctrlKey,
-		altKey : in_ev.altKey,
-		shiftKey : in_ev.shiftKey,
-		metaKey : in_ev.metaKey,
-		button : 0,
-		relatedTarget : null
-	});
-}
-
-EMULATETBL.forEach(in_pair => {
-	gWorld.canvas.addEventListener(in_pair.src, in_ev => {
-		in_ev.preventDefault();
-		in_ev.stopPropagation();
-		let alternative;
-		if (in_ev.touches.length > 1) {
-			if ((in_pair.src === 'touchmove') && (in_ev.touches.length === 2)) {
-				alternative = createAltWheelEv(in_ev);
+	EMULATETBL.forEach(in_pair => {
+		gWorld.canvas.addEventListener(in_pair.src, in_ev => {
+			in_ev.preventDefault();
+			in_ev.stopPropagation();
+			let alternative;
+			if (in_ev.touches.length > 1) {
+				if ((in_pair.src === 'touchmove') && (in_ev.touches.length === 2)) {
+					alternative = createAltWheelEv(in_ev);
+				} else {
+					lastDistance = null;
+				}
 			} else {
-				gLastDistance = null;
+				alternative = createAltMouseEv(in_pair.dst, in_ev);
 			}
-		} else {
-			alternative = createAltMouseEv(in_pair.dst, in_ev);
-		}
-		if (alternative) {
-			in_ev.target.dispatchEvent(alternative);
-		}
+			if (alternative) {
+				in_ev.target.dispatchEvent(alternative);
+			}
+		});
 	});
-});
+})();
 
 </script>
 </body>
