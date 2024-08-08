@@ -1,10 +1,12 @@
 <html>
 <head>
+<!-- MIT License Copyright (c) 2024 pj-corridor.net -->
+<meta name='viewport' content='width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1' />
 <meta charset='utf-8' />
 <script type='importmap'>
 {
 	"imports": {
-		"three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+		"three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.min.js",
 		"utils": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/utils/BufferGeometryUtils.js"
 	}
 }
@@ -19,8 +21,6 @@ import * as UTILS from 'utils';
 //const DEBUG = true;
 const DEBUG = false;
 
-const DEVICE_PIXEL_RATIO = window.devicePixelRatio;
-
 function randomString(in_length = 5)
 {
 	return Math.floor(Math.random() * (10 ** in_length)).toString(16).padStart(in_length, '0');
@@ -32,10 +32,9 @@ function convertUnit(in_u1_val, in_u1_min, in_u1_max, in_u2_min, in_u2_max) {
 
 function convertUnitRect(in_src_x, in_src_y, in_src_rect, in_dst_rect)
 {
-	const invert = -1;
 	return (new THREE.Vector2(
 		convertUnit(in_src_x, in_src_rect.l, in_src_rect.r, in_dst_rect.l, in_dst_rect.r),
-		convertUnit(in_src_y, in_src_rect.t, in_src_rect.b, in_dst_rect.t, in_dst_rect.b) * invert
+		convertUnit(in_src_y, in_src_rect.t, in_src_rect.b, in_dst_rect.t, in_dst_rect.b)
 	));
 }
 
@@ -53,7 +52,10 @@ function convertRaycasterUnit(in_src_x, in_src_y, in_src_w, in_src_h)
 		r : 1,
 		b : 1
 	};
-	return convertUnitRect(in_src_x, in_src_y, src_rect, dst_rect);
+	const vec2 = convertUnitRect(in_src_x, in_src_y, src_rect, dst_rect);
+	// finally, dst_rect.t and dst_rect.b should be inverted
+	vec2.y *= -1;
+	return vec2;
 }
 
 function eventPos2RaycasterPos(in_ev)
@@ -64,6 +66,12 @@ function eventPos2RaycasterPos(in_ev)
 		in_ev.clientY - elem.offsetTop,
 		elem.offsetWidth,
 		elem.offsetHeight);
+}
+
+function scaledVector(io_vector, in_param, in_param_max) {
+	const adhocParam = 2.0;
+	const value = convertUnit(in_param, 0, in_param_max, 0, 1) + 1;
+	return io_vector.clone().multiplyScalar(value * adhocParam);
 }
 
 /*
@@ -78,6 +86,8 @@ function eventPos2RaycasterPos(in_ev)
 		|
 		+- PerspectiveCamera
 */
+
+const DEVICE_PIXEL_RATIO = window.devicePixelRatio;
 
 class cSphericalWorld {
 	static #defaultCameraSetting = 2;
@@ -111,17 +121,17 @@ class cSphericalWorld {
 			dyDir : -1
 		}
 	][cSphericalWorld.#defaultCameraSetting];
+	static #rotationCallbackName = Symbol();
 	#scene = null;
 	#renderer = null;
 	#cameraCtrl = null;
 	#cameraName = randomString();
-	#anchorVec2 = null;
-	#zoomMin = Number.NEGATIVE_INFINITY;
-	#zoomMax = Number.POSITIVE_INFINITY;
+	#anchorPosV2 = null;
+	zoomMin = Number.NEGATIVE_INFINITY;
+	zoomMax = Number.POSITIVE_INFINITY;
 	#userObjects = new Set();
 	#animationHooks = new Set();
 	static #deltaThreshold = 0.05;
-	static #speed = 3;
 	constructor(in_radius) {
 		// scene
 		this.#scene = new THREE.Scene();
@@ -147,11 +157,6 @@ class cSphericalWorld {
 			cSphericalWorld.#view.cameraUp.z
 		);
 		camera.lookAt(cSphericalWorld.#view.cameraTo);
-		if (DEBUG) {
-			for (let i = 0; i < 32; i++) {
-				camera.layers.enable(i);
-			}
-		}
 		this.#cameraCtrl = new THREE.Object3D();
 		this.#cameraCtrl.add(camera);
 		// light
@@ -168,12 +173,12 @@ class cSphericalWorld {
 		this.add(new THREE.AmbientLight(lightColor), true);
 		// other
 		this.resize(this.canvas.width, this.canvas.height);
-		this.canvas.addEventListener('mousedown', this.#moveStart.bind(this));
-		this.canvas.addEventListener('mousemove', this.#moveUpdate.bind(this));
-		this.canvas.addEventListener('mouseleave', this.#moveStop.bind(this));
-		this.canvas.addEventListener('mouseout', this.#moveStop.bind(this));
-		this.canvas.addEventListener('mouseup', this.#moveStop.bind(this));
-		this.canvas.addEventListener('wheel', this.#zoom.bind(this));
+		this.canvas.addEventListener('mousedown', this.#evMoveStart.bind(this));
+		this.canvas.addEventListener('mousemove', this.#evMoveUpdate.bind(this));
+		this.canvas.addEventListener('mouseleave', this.#evMoveStop.bind(this));
+		this.canvas.addEventListener('mouseout', this.#evMoveStop.bind(this));
+		this.canvas.addEventListener('mouseup', this.#evMoveStop.bind(this));
+		this.canvas.addEventListener('wheel', this.#evZoom.bind(this));
 	}
 	get canvas() {
 		return this.#renderer.domElement;
@@ -181,38 +186,66 @@ class cSphericalWorld {
 	get #camera() {
 		return this.#cameraCtrl.getObjectByName(this.#cameraName);
 	}
-	#moveStart(in_ev) {
+	#moveCameraCtrl(in_world_dx, in_world_dy) {
+		this.#cameraCtrl.rotateY(in_world_dx * cSphericalWorld.#view.dxDir);
+		this.#cameraCtrl.rotateX(in_world_dy * cSphericalWorld.#view.dyDir);
+	}
+	distanceToObject() {
+		return this.#camera.position.length();
+	}
+	moveView(in_world_dx, in_world_dy) {
+		this.#moveCameraCtrl(in_world_dx * -1, in_world_dy * -1);
+	}
+	#setZoom(in_distance) {
+		this.#camera.position.normalize().multiplyScalar(in_distance);
+	}
+	#evMoveStart(in_ev) {
 		const vec2 = eventPos2RaycasterPos(in_ev);
 		if (this.intersectPositive(vec2).length > 0) {
 			return;
 		}
-		this.#anchorVec2 = vec2;
+		this.#anchorPosV2 = vec2;
 	}
-	#moveUpdate(in_ev) {
-		if (!this.#anchorVec2) {
+	#evMoveUpdate(in_ev) {
+		if (!this.#anchorPosV2) {
 			return;
 		}
 		const vec2 = eventPos2RaycasterPos(in_ev);
-		const delta = vec2.clone().sub(this.#anchorVec2);
+		let delta = vec2.clone().sub(this.#anchorPosV2);
 		if (delta.length() < cSphericalWorld.#deltaThreshold) {
 			return;
 		}
-		this.#cameraCtrl.rotateY(delta.x * cSphericalWorld.#speed * cSphericalWorld.#view.dxDir);
-		this.#cameraCtrl.rotateX(delta.y * cSphericalWorld.#speed * cSphericalWorld.#view.dyDir);
-		this.#anchorVec2 = vec2;
+		delta = scaledVector(delta, this.distanceToObject(), this.#camera.far);
+		this.#moveCameraCtrl(delta.x, delta.y);
+		this.#anchorPosV2 = vec2;
 	}
-	#moveStop(in_ev) {
-		if (!this.#anchorVec2) {
+	#evMoveStop(in_ev) {
+		if (!this.#anchorPosV2) {
 			return;
 		}
-		this.#anchorVec2 = null;
+		this.#anchorPosV2 = null;
 	}
-	#zoom(in_ev) {
+	#evZoom(in_ev) {
 		const distance = this.#camera.position.length() + in_ev.deltaY;
-		if ((this.#zoomMax < distance) && (distance < this.#zoomMin)) {
-			const vec3 = this.#camera.position.normalize();
-			this.#camera.position.set(vec3.x * distance, vec3.y * distance, vec3.z * distance);
+		if ((this.zoomMax < distance) && (distance < this.zoomMin)) {
+			this.#setZoom(distance);
 		}
+	}
+	zoom(in_stopDistance, in_duration) {
+		const error = 10;
+		const initDistance = this.#camera.position.length();
+		if (Math.abs(in_stopDistance - initDistance) < error) {
+			return;
+		}
+		const ease = new cEase(initDistance, in_stopDistance, in_duration);
+		const hook = () => {
+			const currentDistance = ease.currentEasingOut();
+			this.#setZoom(currentDistance);
+			if (currentDistance === in_stopDistance) {
+				this.removeAnimationHook(hook);
+			}
+		};
+		this.addAnimationHook(hook);
 	}
 	#intersectObjects(in_vec2, in_direction, in_layer) {
 		const raycaster = new THREE.Raycaster();
@@ -244,6 +277,23 @@ class cSphericalWorld {
 	removeAnimationHook(in_hook) {
 		this.#animationHooks.delete(in_hook);
 	}
+	viberationEffect(in_duration = 0.2) {
+		const start = {
+			time : Date.now(),
+			position : this.#camera.position.clone()
+		};
+		const hook = () => {
+			if (Date.now() - start.time > in_duration * 1000) {
+				this.#camera.position.copy(start.position);
+				this.removeAnimationHook(hook);
+			} else {
+				// 0.9975 - 1.0025
+				const rand = (Math.random() - 0.5) / 200 + 1;
+				this.#camera.position.multiplyScalar(rand);
+			}
+		};
+		this.addAnimationHook(hook);
+	}
 	defaultView(in_callback = null) {
 		const initQuat = new THREE.Quaternion();
 		const interval = 0.1;
@@ -258,6 +308,18 @@ class cSphericalWorld {
 			}
 		};
 		this.addAnimationHook(hook);
+	}
+	startRotaion(in_vec3) {
+		this[cSphericalWorld.#rotationCallbackName] = () => {
+			this.#cameraCtrl.rotateX(in_vec3.x);
+			this.#cameraCtrl.rotateY(in_vec3.y);
+			this.#cameraCtrl.rotateZ(in_vec3.z);
+		};
+		this.addAnimationHook(this[cSphericalWorld.#rotationCallbackName]);
+	}
+	stopRotaion() {
+		this.removeAnimationHook(this[cSphericalWorld.#rotationCallbackName]);
+		delete this[cSphericalWorld.#rotationCallbackName];
 	}
 	resize(in_w, in_h) {
 		this.#renderer.setSize(in_w, in_h);
@@ -275,9 +337,19 @@ class cSphericalWorld {
 		return max;
 	}
 	#updateZoomParams() {
-		const radius = this.#getUserObjectRadius();
-		this.#zoomMin = this.#camera.far - radius;
-		this.#zoomMax = radius
+		let delayed = 1000;
+		const update = () => {
+			const radius = this.#getUserObjectRadius();
+			if (radius < 0) {
+				// don't have visible object
+				delayed *= 2;
+				window.setTimeout(update, delayed);
+			} else {
+				this.zoomMin = this.#camera.far - radius;
+				this.zoomMax = radius
+			}
+		};
+		(update)();
 	}
 	removeFog() {
 		this.#scene.fog = null;
@@ -1228,7 +1300,7 @@ async function uiGetScreenShot() {
 	}
 }
 
-function startDialog(in_element) {
+function startDialog(in_element, in_callback = null) {
 	const background = document.createElement('div');
 	Object.assign(background.style, {
 		position : 'fixed',
@@ -1248,6 +1320,9 @@ function startDialog(in_element) {
 	document.body.appendChild(background);
 	const closeDialog = () => {
 		document.body.removeChild(background);
+		if (in_callback) {
+			(in_callback)();
+		}
 	};
 	background.addEventListener('mousedown', closeDialog);
 	background.addEventListener('touchstart', closeDialog);
@@ -1332,7 +1407,7 @@ function setUpButtons() {
 		button.innerText = in_setting.text;
 		button.addEventListener('click', in_setting.func);
 		Object.assign(button.style, {
-			marginRight : '3px',
+			margin : '1.5px 1.5px 1.5px 1.5px',
 			borderRadius : '3px',
 			border : '1px solid gray'
 		});
@@ -1421,60 +1496,84 @@ gWorld.canvas.addEventListener('mouseleave', dragstop);
 gWorld.canvas.addEventListener('mouseout', dragstop);
 gWorld.canvas.addEventListener('mouseup', dragstop);
 
-const EMULATETBL = [
-	{
-		src : 'touchstart',
-		dst : 'mousedown'
-	},
-	{
-		src : 'touchmove',
-		dst : 'mousemove'
-	},
-	{
-		src : 'touchleave',
-		dst : 'mouseleave'
-	},
-	{
-		src : 'touchend',
-		dst : 'mouseup'
-	}
-];
-
-EMULATETBL.forEach(in_pair => {
-	gWorld.canvas.addEventListener(in_pair.src, in_ev => {
-		in_ev.preventDefault();
-		in_ev.stopPropagation();
-		if (in_ev.touches.length > 1) {
-			return;
+(() => {
+	const EMULATETBL = [
+		{
+			src : 'touchstart',
+			dst : 'mousedown'
+		},
+		{
+			src : 'touchmove',
+			dst : 'mousemove'
+		},
+		{
+			src : 'touchleave',
+			dst : 'mouseleave'
+		},
+		{
+			src : 'touchend',
+			dst : 'mouseup'
 		}
-		let ev = document.createEvent('MouseEvents');
-		ev.initMouseEvent(
-			// type
-			in_pair.dst,
-			// canBubble
-			true,
-			// cancelable
-			true,
-			// view
-			window,
-			// clickCount
-			0,
-			in_ev.changedTouches[0].screenX,
-			in_ev.changedTouches[0].screenY,
-			in_ev.changedTouches[0].clientX,
-			in_ev.changedTouches[0].clientY,
-			in_ev.ctrlKey,
-			in_ev.altKey,
-			in_ev.shiftKey,
-			in_ev.metaKey,
-			// button
-			0,
-			// relatedTarget
-			null
-		);
-		in_ev.target.dispatchEvent(ev);
+	];
+	let lastDistance = null;
+	function createAltWheelEv(in_ev) {
+		const t1 = in_ev.touches[0];
+		const t2 = in_ev.touches[1];
+		const currentDistance = Math.sqrt(Math.pow(t2.clientX - t1.clientX, 2) + Math.pow(t2.clientY - t1.clientY, 2));
+		if (lastDistance === null) {
+			lastDistance = currentDistance;
+			return null;
+		}
+		const speed = 2;
+		const delta = (lastDistance - currentDistance) * speed;
+		lastDistance = currentDistance;
+		return new WheelEvent('wheel', {
+			deltaY : delta,
+			clientX : (t1.clientX + t2.clientX) / 2,
+			clientY : (t1.clientY + t2.clientY) / 2,
+			ctrlKey : in_ev.ctrlKey,
+			altKey : in_ev.altKey,
+			shiftKey : in_ev.shiftKey,
+			metaKey : in_ev.metaKey
+		});
+	}
+	function createAltMouseEv(in_type, in_ev) {
+		return new MouseEvent(in_type, {
+			bubbles : true,
+			cancelable : true,
+			view : window,
+			screenX : in_ev.changedTouches[0].screenX,
+			screenY : in_ev.changedTouches[0].screenY,
+			clientX : in_ev.changedTouches[0].clientX,
+			clientY : in_ev.changedTouches[0].clientY,
+			ctrlKey : in_ev.ctrlKey,
+			altKey : in_ev.altKey,
+			shiftKey : in_ev.shiftKey,
+			metaKey : in_ev.metaKey,
+			button : 0,
+			relatedTarget : null
+		});
+	}
+	EMULATETBL.forEach(in_pair => {
+		gWorld.canvas.addEventListener(in_pair.src, in_ev => {
+			in_ev.preventDefault();
+			in_ev.stopPropagation();
+			let alternative;
+			if (in_ev.touches.length === 1) {
+				alternative = createAltMouseEv(in_pair.dst, in_ev);
+			} else {
+				if ((in_ev.touches.length === 2) && (in_pair.src === 'touchmove')) {
+					alternative = createAltWheelEv(in_ev);
+				} else {
+					lastDistance = null;
+				}
+			}
+			if (alternative) {
+				in_ev.target.dispatchEvent(alternative);
+			}
+		});
 	});
-});
+})();
 
 </script>
 </body>
