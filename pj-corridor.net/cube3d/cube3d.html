@@ -6,7 +6,7 @@
 <script type='importmap'>
 {
 	"imports": {
-		"three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+		"three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.min.js",
 		"utils": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/utils/BufferGeometryUtils.js"
 	}
 }
@@ -1198,9 +1198,12 @@ class cRubiksCube extends THREE.Object3D {
 			this.add(in_piece);
 		});
 		this.#settingKey = pseudoMessageDigest1(uuids);
-		this.#settingVal.completeCallback = null;
-		this.#settingVal.rotationCount = 0;
-		this.#settingVal.shuffled = false;
+		if (!this.#settingVal.initialized) {
+			this.#settingVal.completeCallback = null;
+			this.#settingVal.rotationCount = 0;
+			this.#settingVal.shuffled = false;
+			this.#settingVal.initialized = true;
+		}
 	}
 	getScore() {
 		const max = 100;
@@ -2112,7 +2115,7 @@ function nextLevel(in_sound = true) {
 		}
 		button.addEventListener('click', in_setting.func);
 		Object.assign(button.style, {
-			marginRight : '3px',
+			margin : '1.5px 1.5px 1.5px 1.5px',
 			borderRadius : '3px',
 			border : '1px solid gray'
 		});
@@ -2197,7 +2200,6 @@ document.addEventListener('DOMContentLoaded', (() => {
 	gWorld.start();
 }));
 
-
 /*
 	(7) event handlers + emulation
 */
@@ -2280,7 +2282,7 @@ gWorld.canvas.addEventListener('mouseup', dragstop);
 			return null;
 		}
 		const speed = 2;
-		const delta = (currentDistance - lastDistance) * speed;
+		const delta = (lastDistance - currentDistance) * speed;
 		lastDistance = currentDistance;
 		return new WheelEvent('wheel', {
 			deltaY : delta,
@@ -2314,14 +2316,14 @@ gWorld.canvas.addEventListener('mouseup', dragstop);
 			in_ev.preventDefault();
 			in_ev.stopPropagation();
 			let alternative;
-			if (in_ev.touches.length > 1) {
-				if ((in_pair.src === 'touchmove') && (in_ev.touches.length === 2)) {
+			if (in_ev.touches.length === 1) {
+				alternative = createAltMouseEv(in_pair.dst, in_ev);
+			} else {
+				if ((in_ev.touches.length === 2) && (in_pair.src === 'touchmove')) {
 					alternative = createAltWheelEv(in_ev);
 				} else {
 					lastDistance = null;
 				}
-			} else {
-				alternative = createAltMouseEv(in_pair.dst, in_ev);
 			}
 			if (alternative) {
 				in_ev.target.dispatchEvent(alternative);
