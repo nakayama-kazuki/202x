@@ -1558,15 +1558,15 @@ gWorld.canvas.addEventListener('mouseup', dragstop);
 		gWorld.canvas.addEventListener(in_pair.src, in_ev => {
 			in_ev.preventDefault();
 			in_ev.stopPropagation();
-			let alternative;
-			if (in_ev.touches.length === 1) {
-				alternative = createAltMouseEv(in_pair.dst, in_ev);
-			} else {
+			let alternative = null;
+			if (in_ev.touches.length > 1) {
 				if ((in_ev.touches.length === 2) && (in_pair.src === 'touchmove')) {
 					alternative = createAltWheelEv(in_ev);
 				} else {
 					lastDistance = null;
 				}
+			} else {
+				alternative = createAltMouseEv(in_pair.dst, in_ev);
 			}
 			if (alternative) {
 				in_ev.target.dispatchEvent(alternative);
