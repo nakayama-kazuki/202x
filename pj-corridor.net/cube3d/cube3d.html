@@ -2209,6 +2209,8 @@ gWorld.canvas.addEventListener('mousedown', in_ev => {
 	}
 });
 
+let canKnock = true;
+
 gWorld.canvas.addEventListener('mousemove', in_ev => {
 	const vec2 = eventPos2RaycasterPos(in_ev);
 	const vec2Scaled = vec2.clone().multiplyScalar(EVPOS_MULTIPLY_PARAM);
@@ -2231,10 +2233,15 @@ gWorld.canvas.addEventListener('mousemove', in_ev => {
 	const RC = cRubiksCube.uiSetDeltaPositionRC;
 	const result = gCube.uiNotifyDeltaPosition(intersects[0].object, intersects[0].point, vec2Scaled);
 	if (result === RC.UNMOVABLE) {
+		if (!canKnock) {
+			return;
+		} else {
+			canKnock = false;
+		}
 		AUDIO_ERROR.play();
-		gWorld.motionKnock();
-		// adhoc !!
-		dragstop();
+		gWorld.motionKnock().then(() => {
+			canKnock = true;
+		});
 	}
 });
 
