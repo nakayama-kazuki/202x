@@ -27,9 +27,38 @@ function randomString(in_length = 5)
 	return Math.floor(Math.random() * (10 ** in_length)).toString(16).padStart(in_length, '0');
 }
 
-function convertUnit(in_u1_val, in_u1_min, in_u1_max, in_u2_min, in_u2_max) {
-	return in_u2_min + ((in_u1_val - in_u1_min) / (in_u1_max - in_u1_min)) * (in_u2_max - in_u2_min);
+function convertUnit(in_u1_value, in_u1_from, in_u1_to, in_u2_from, in_u2_to) {
+	return in_u2_from + ((in_u1_value - in_u1_from) / (in_u1_to - in_u1_from)) * (in_u2_to - in_u2_from);
 }
+
+/*
+
+const testSets = [
+	[+0.1,  0, +1,   0, +10, +1],
+	[+0.1, +1,  0,   0, +10, +9],
+	[+0.1,  0, +1, +10,   0, +9],
+	[+0.1, +1,  0, +10,   0, +1],
+	[-0.1,  0, -1,   0, +10, +1],
+	[-0.1, -1,  0,   0, +10, +9],
+	[-0.1,  0, -1, +10,   0, +9],
+	[-0.1, -1,  0, +10,   0, +1],
+	[+0.1,  0, +1,   0, -10, -1],
+	[+0.1, +1,  0,   0, -10, -9],
+	[+0.1,  0, +1, -10,   0, -9],
+	[+0.1, +1,  0, -10,   0, -1],
+	[-0.1,  0, -1,   0, -10, -1],
+	[-0.1, -1,  0,   0, -10, -9],
+	[-0.1,  0, -1, -10,   0, -9],
+	[-0.1, -1,  0, -10,   0, -1]
+];
+
+testSets.forEach(test => {
+	if (convertUnit(test[0], test[1], test[2], test[3], test[4]) !== test[5]) {
+		console.log('failed');
+	}
+});
+
+*/
 
 function convertUnitRect(in_src_x, in_src_y, in_src_rect, in_dst_rect)
 {
@@ -69,11 +98,7 @@ function eventPos2RaycasterPos(in_ev)
 		elem.offsetHeight);
 }
 
-function scaledVector(io_vector, in_param, in_param_max) {
-	const adhocParam = 2.0;
-	const value = convertUnit(in_param, 0, in_param_max, 0, 1) + 1;
-	return io_vector.clone().multiplyScalar(value * adhocParam);
-}
+const EVPOS_MULTIPLY_PARAM = 3;
 
 function snapToNotch(in_value, in_notch)
 {
@@ -99,6 +124,12 @@ function snapTo05PI(in_value)
 	return snapToNotch(in_value, Math.PI / 2);
 }
 
+function nearlyEqual(in_a, in_b, in_error = 0.01) {
+	const diff = Math.abs(in_a - in_b);
+	const comp = Math.max(Math.abs(in_a), Math.abs(in_b));
+	return diff < comp * in_error;
+}
+
 const arrRand = Symbol();
 
 Array.prototype[arrRand] = function() {
@@ -119,6 +150,9 @@ class cEase {
 		} else {
 			return this.from + (this.to - this.from) * (in_quad)(elapsed / this.duration);
 		}
+	}
+	currentEasingLinear() {
+		return this.#currentEasing(t => t);
 	}
 	currentEasingIn() {
 		return this.#currentEasing(t => t * t);
@@ -323,7 +357,7 @@ class cSphericalWorld {
 		camera.name = this.#cameraName;
 		camera.fov = 45;
 		camera.near = 1;
-		camera.far = in_radius;
+		camera.far = in_radius * 2;
 		camera.position.set(
 			0,
 			0,
@@ -367,9 +401,6 @@ class cSphericalWorld {
 		this.#cameraCtrl.rotateY(in_world_dx * cSphericalWorld.#view.dxDir);
 		this.#cameraCtrl.rotateX(in_world_dy * cSphericalWorld.#view.dyDir);
 	}
-	distanceToObject() {
-		return this.#camera.position.length();
-	}
 	moveView(in_world_dx, in_world_dy) {
 		this.#moveCameraCtrl(in_world_dx * -1, in_world_dy * -1);
 	}
@@ -392,7 +423,7 @@ class cSphericalWorld {
 		if (delta.length() < cSphericalWorld.#deltaThreshold) {
 			return;
 		}
-		delta = scaledVector(delta, this.distanceToObject(), this.#camera.far);
+		delta.multiplyScalar(EVPOS_MULTIPLY_PARAM);
 		this.#moveCameraCtrl(delta.x, delta.y);
 		this.#anchorPosV2 = vec2;
 	}
@@ -407,22 +438,6 @@ class cSphericalWorld {
 		if ((this.zoomMax < distance) && (distance < this.zoomMin)) {
 			this.#setZoom(distance);
 		}
-	}
-	zoom(in_stopDistance, in_duration) {
-		const error = 10;
-		const initDistance = this.#camera.position.length();
-		if (Math.abs(in_stopDistance - initDistance) < error) {
-			return;
-		}
-		const ease = new cEase(initDistance, in_stopDistance, in_duration);
-		const hook = () => {
-			const currentDistance = ease.currentEasingOut();
-			this.#setZoom(currentDistance);
-			if (currentDistance === in_stopDistance) {
-				this.removeAnimationHook(hook);
-			}
-		};
-		this.addAnimationHook(hook);
 	}
 	#intersectObjects(in_vec2, in_direction, in_layer) {
 		const raycaster = new THREE.Raycaster();
@@ -448,43 +463,97 @@ class cSphericalWorld {
 	copyCameraPosition() {
 		return this.#camera.getWorldPosition(new THREE.Vector3());
 	}
+	#easing(in_initValue, in_stopValue, in_duration, in_progressCallback, in_method) {
+		return new Promise(resolve => {
+			if (nearlyEqual(in_initValue, in_stopValue)) {
+				(in_progressCallback)(in_stopValue);
+				// to the next then in the chain
+				(resolve)();
+				return;
+			}
+			const ease = new cEase(in_initValue, in_stopValue, in_duration);
+			const hook = () => {
+				let currValue;
+				switch (in_method) {
+				case 10 :
+					currValue = ease.currentEasingIn();
+					break;
+				case 20 :
+					currValue = ease.currentEasingOut();
+					break;
+				case 30 :
+				default :
+					currValue = ease.currentEasingLinear();
+					break;
+				}
+				if (currValue === in_stopValue) {
+					this.removeAnimationHook(hook);
+					(in_progressCallback)(in_stopValue);
+					// to the next then in the chain
+					(resolve)();
+				} else {
+					(in_progressCallback)(currValue);
+				}
+			};
+			this.addAnimationHook(hook);
+		});
+	}
+	#easeIn(in_initValue, in_stopValue, in_duration, in_progressCallback) {
+		return this.#easing(in_initValue, in_stopValue, in_duration, in_progressCallback, 10);
+	}
+	#easeOut(in_initValue, in_stopValue, in_duration, in_progressCallback) {
+		return this.#easing(in_initValue, in_stopValue, in_duration, in_progressCallback, 20);
+	}
+	#easeLinear(in_initValue, in_stopValue, in_duration, in_progressCallback) {
+		return this.#easing(in_initValue, in_stopValue, in_duration, in_progressCallback, 30);
+	}
 	addAnimationHook(in_hook) {
 		this.#animationHooks.add(in_hook);
 	}
 	removeAnimationHook(in_hook) {
 		this.#animationHooks.delete(in_hook);
 	}
-	viberationEffect(in_duration = 0.2) {
-		const start = {
-			time : Date.now(),
-			position : this.#camera.position.clone()
-		};
-		const hook = () => {
-			if (Date.now() - start.time > in_duration * 1000) {
-				this.#camera.position.copy(start.position);
-				this.removeAnimationHook(hook);
-			} else {
-				// 0.9975 - 1.0025
-				const rand = (Math.random() - 0.5) / 200 + 1;
-				this.#camera.position.multiplyScalar(rand);
-			}
-		};
-		this.addAnimationHook(hook);
+	motionZoom1(in_initDistance, in_stopDistance, in_duration) {
+		return this.#easeOut(in_initDistance, in_stopDistance, in_duration, in_currDistance => {
+			this.#setZoom(in_currDistance);
+		});
 	}
-	defaultView(in_callback = null) {
-		const initQuat = new THREE.Quaternion();
-		const interval = 0.1;
-		const error = 0.001;
-		const hook = () => {
-			this.#cameraCtrl.quaternion.slerp(initQuat, interval);
-			if (this.#cameraCtrl.quaternion.angleTo(initQuat) < error) {
-				this.removeAnimationHook(hook);
-				if (in_callback) {
-					(in_callback)();
-				}
+	motionZoom2(in_stopDistance, in_duration) {
+		return this.motionZoom1(this.#camera.position.length(), in_stopDistance, in_duration);
+	}
+	motionKnock(in_duration = 100) {
+		const currentDistance = this.#camera.position.length();
+		return this.motionZoom1(currentDistance * 1.1, currentDistance, in_duration);
+	}
+	motionDefaultView(in_duration = 2000) {
+		const targetQuat = new THREE.Quaternion();
+		const targetRad = this.#cameraCtrl.quaternion.angleTo(targetQuat);
+		return this.#easeIn(0, targetRad, in_duration, in_currRad => {
+			this.#cameraCtrl.quaternion.rotateTowards(targetQuat, in_currRad);
+		});
+	}
+	motionFog(in_color, in_initFogged, in_stopFogged, in_duration = 500) {
+		return new Promise(resolve => {
+			if (this.#scene.fog) {
+				// to the next then in the chain
+				(resolve)();
+				return;
 			}
-		};
-		this.addAnimationHook(hook);
+			const distance = this.#camera.position.length();
+			const margin = 100;
+			const radius = this.#getUserObjectRadius() + margin;
+			const initNear = convertUnit(in_initFogged, 0, 100, distance + radius, distance - radius * 3);
+			const stopNear = convertUnit(in_stopFogged, 0, 100, distance + radius, distance - radius * 3);
+			this.#scene.fog = new THREE.Fog(in_color, initNear, initNear + radius * 2);
+			this.#easeLinear(initNear, stopNear, in_duration, in_currNear => {
+				this.#scene.fog.near = in_currNear;
+				this.#scene.fog.far = in_currNear + radius * 2;
+			}).then(() => {
+				this.#scene.fog = null;
+				// to the next then in the chain
+				(resolve)();
+			});
+		});
 	}
 	startRotaion(in_vec3) {
 		this[cSphericalWorld.#rotationCallbackName] = () => {
@@ -527,36 +596,6 @@ class cSphericalWorld {
 			}
 		};
 		(update)();
-	}
-	removeFog() {
-		this.#scene.fog = null;
-	}
-	fog(in_color, in_percent1, in_percent2, in_callback = null) {
-		const distance = this.#camera.position.length();
-		const radius = this.#getUserObjectRadius();
-		/*
-			  0% : distance + radius * 1, this means not fogged
-			100% : distance - radius * 3. this means all fogged
-		*/
-		const distance1 = convertUnit(in_percent1, 0, 100, distance + radius * 1, distance - radius * 3);
-		const distance2 = convertUnit(in_percent2, 0, 100, distance + radius * 1, distance - radius * 3);
-		this.#scene.fog = new THREE.Fog(in_color, distance1, distance1 + radius * 2);
-		let count = 20;
-		let delta = (distance2 - distance1) / count;
-		const error = 0.1;
-		const hook = () => {
-			this.#scene.fog.near += delta;
-			this.#scene.fog.far += delta;
-			if (Math.abs(distance2 - this.#scene.fog.near) < error) {
-				this.#scene.fog.near = distance2;
-				this.#scene.fog.far = distance2 + radius * 2;
-				this.removeAnimationHook(hook);
-				if (in_callback) {
-					(in_callback)();
-				}
-			}
-		};
-		this.addAnimationHook(hook);
 	}
 	add(in_added, in_isSystemObject = false) {
 		this.#scene.add(in_added);
@@ -724,48 +763,6 @@ function boxMaterials(in_x, in_y, in_z, in_colors) {
 		materialFactory.create(in_x, in_y, in_colors[4]),	// Vector3(0, 0, +1)
 		materialFactory.create(in_x, in_y, in_colors[5])	// Vector3(0, 0, -1)
 	];
-}
-
-function trapezoidGeometry(in_tLen, in_bLen, in_height, in_thickness) {
-	// common
-	const geoArr = [];
-	const rad = in_thickness / 2;
-	const dx = (in_tLen + in_bLen) / 2 / 2;
-	const dy = in_height / 2;
-	const sLen = (in_height ** 2 + ((in_tLen - in_bLen) / 2) ** 2) ** (1/2);
-	const sRad = Math.atan2((in_tLen - in_bLen) / 2, in_height);
-	// top
-	geoArr[0] = new THREE.CapsuleGeometry(rad, in_tLen);
-	geoArr[0].rotateZ((Math.PI / 2) * +1);
-	geoArr[0].translate(0, dy * +1, 0);
-	// bottom
-	geoArr[1] = new THREE.CapsuleGeometry(rad, in_bLen);
-	geoArr[1].rotateZ((Math.PI / 2) * -1);
-	geoArr[1].translate(0, dy * -1, 0);
-	// left
-	geoArr[2] = new THREE.CapsuleGeometry(rad, sLen);
-	geoArr[2].rotateZ(sRad * +1);
-	geoArr[2].translate(dx * -1, 0, 0);
-	// right
-	geoArr[3] = new THREE.CapsuleGeometry(rad, sLen);
-	geoArr[3].rotateZ(sRad * -1);
-	geoArr[3].translate(dx * +1, 0, 0);
-	// center
-	geoArr[4] = new THREE.BoxGeometry(in_tLen, in_height, in_thickness);
-	const attr = geoArr[4].getAttribute('position');
-	for (let i = 0; i < attr.count; i++) {
-		const vertex = new THREE.Vector3();
-		vertex.fromBufferAttribute(attr, i);
-		if (vertex.y < 0) {
-			vertex.x *= (in_bLen / in_tLen);
-		}
-		attr.setXYZ(i, vertex.x, vertex.y, vertex.z);
-	}
-	const merged = UTILS.mergeGeometries(geoArr);
-	geoArr.forEach(in_geo => {
-		in_geo.dispose();
-	});
-	return merged;
 }
 
 const boxGeometryFactory = factoryBuilder((in_x, in_y, in_z) => {
@@ -1824,7 +1821,7 @@ const gCube = new cRubiksCube();
 gWorld.add(gCube);
 
 gWorld.moveView(0.5, 0.5);
-gWorld.zoom(WORLD_INIT_ZOOM, 1000);
+gWorld.motionZoom2(WORLD_INIT_ZOOM, 1000);
 
 /*
 	*** NOTE #7 ***
@@ -1904,7 +1901,7 @@ function complete() {
 	const progress = warpViewProgress(gBackgroundCanvas, 50);
 	gWorld.addAnimationHook(progress);
 	const duration = 2000;
-	gWorld.zoom(gWorld.zoomMin, duration * 0.9);
+	gWorld.motionZoom2(gWorld.zoomMin, duration * 0.9);
 	window.setTimeout(() => {
 		gWorld.removeAnimationHook(progress);
 		gCube.removeCompleteCallback();
@@ -1927,7 +1924,7 @@ function complete() {
 		setTransition(dialog, 'color 0.5s ease-out', 'gray', 'white');
 		startDialog(dialog, () => {
 			drawCosmicView(gBackgroundCanvas, 400, 50);
-			gWorld.zoom(WORLD_INIT_ZOOM, 1000);
+			gWorld.motionZoom2(WORLD_INIT_ZOOM, 1000);
 		});
 		nextLevel(false);
 	}, duration);
@@ -2047,14 +2044,13 @@ function updateLevelText() {
 
 function changeLevel(in_delta) {
 	const color = 0x000000;
-	gWorld.fog(color, 0, 100, () => {
+	gWorld.motionFog(color, 0, 100).then(() => {
 		gMeshCurrentLevel = (gMeshCurrentLevel + in_delta + gMeshLevelMap.size) % gMeshLevelMap.size;
 		gCube.removePieces();
 		const current = gMeshLevelMap.currItemByOrder(gMeshCurrentLevel);
 		gCube.addPieces(current.v);
-		gWorld.fog(color, 100, 0, () => {
+		gWorld.motionFog(color, 100, 0).then(() => {
 			updateLevelText();
-			gWorld.removeFog();
 		});
 	});
 }
@@ -2206,16 +2202,16 @@ document.addEventListener('DOMContentLoaded', (() => {
 
 gWorld.canvas.addEventListener('mousedown', in_ev => {
 	const vec2 = eventPos2RaycasterPos(in_ev);
+	const vec2Scaled = vec2.clone().multiplyScalar(EVPOS_MULTIPLY_PARAM);
 	let intersects = gWorld.intersectPositive(vec2);
 	if (intersects.length > 0) {
-		const vec2Scaled = scaledVector(vec2, gWorld.distanceToObject(), WORLD_RADIUS);
 		gCube.uiSetInitPosition(intersects[0].object, intersects[0].point, vec2Scaled);
 	}
 });
 
 gWorld.canvas.addEventListener('mousemove', in_ev => {
 	const vec2 = eventPos2RaycasterPos(in_ev);
-	const vec2Scaled = scaledVector(vec2, gWorld.distanceToObject(), WORLD_RADIUS);
+	const vec2Scaled = vec2.clone().multiplyScalar(EVPOS_MULTIPLY_PARAM);
 	if (gCube.uiIsMoving()) {
 		gCube.uiUpdatePosition(vec2Scaled);
 		return;
@@ -2236,7 +2232,9 @@ gWorld.canvas.addEventListener('mousemove', in_ev => {
 	const result = gCube.uiNotifyDeltaPosition(intersects[0].object, intersects[0].point, vec2Scaled);
 	if (result === RC.UNMOVABLE) {
 		AUDIO_ERROR.play();
-		gWorld.viberationEffect();
+		gWorld.motionKnock();
+		// adhoc !!
+		dragstop();
 	}
 });
 
