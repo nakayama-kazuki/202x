@@ -2042,17 +2042,15 @@ function updateLevelText() {
 	document.getElementById(ID_NEXT_LEVEL).innerText = next.k;
 }
 
-function changeLevel(in_delta) {
+async function changeLevel(in_delta) {
 	const color = 0x000000;
-	gWorld.motionFog(color, 0, 100).then(() => {
-		gMeshCurrentLevel = (gMeshCurrentLevel + in_delta + gMeshLevelMap.size) % gMeshLevelMap.size;
-		gCube.removePieces();
-		const current = gMeshLevelMap.currItemByOrder(gMeshCurrentLevel);
-		gCube.addPieces(current.v);
-		gWorld.motionFog(color, 100, 0).then(() => {
-			updateLevelText();
-		});
-	});
+	await gWorld.motionFog(color, 0, 100);
+	gMeshCurrentLevel = (gMeshCurrentLevel + in_delta + gMeshLevelMap.size) % gMeshLevelMap.size;
+	gCube.removePieces();
+	const current = gMeshLevelMap.currItemByOrder(gMeshCurrentLevel);
+	gCube.addPieces(current.v);
+	await gWorld.motionFog(color, 100, 0);
+	updateLevelText();
 }
 
 function prevLevel(in_sound = true) {
@@ -2200,7 +2198,7 @@ document.addEventListener('DOMContentLoaded', (() => {
 	(7) event handlers + emulation
 */
 
-gWorld.canvas.addEventListener('mousedown', in_ev => {
+gWorld.canvas.addEventListener('mousedown', async (in_ev) => {
 	const vec2 = eventPos2RaycasterPos(in_ev);
 	const vec2Scaled = vec2.clone().multiplyScalar(EVPOS_MULTIPLY_PARAM);
 	let intersects = gWorld.intersectPositive(vec2);
@@ -2211,7 +2209,7 @@ gWorld.canvas.addEventListener('mousedown', in_ev => {
 
 let canKnock = true;
 
-gWorld.canvas.addEventListener('mousemove', in_ev => {
+gWorld.canvas.addEventListener('mousemove', async (in_ev) => {
 	const vec2 = eventPos2RaycasterPos(in_ev);
 	const vec2Scaled = vec2.clone().multiplyScalar(EVPOS_MULTIPLY_PARAM);
 	if (gCube.uiIsMoving()) {
@@ -2239,13 +2237,12 @@ gWorld.canvas.addEventListener('mousemove', in_ev => {
 			canKnock = false;
 		}
 		AUDIO_ERROR.play();
-		gWorld.motionKnock().then(() => {
-			canKnock = true;
-		});
+		await gWorld.motionKnock();
+		canKnock = true;
 	}
 });
 
-function dragstop() {
+async function dragstop() {
 	const progress = gCube.uiRelease(() => {
 		gWorld.removeAnimationHook(progress);
 	});
