@@ -986,7 +986,7 @@ function trapezoidGeometryUtil(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_YLen, 
 	/*
 		3. Corner (SphereGeometry)
 	*/
-	const makeCornerSphere = (in_start) => {
+	const makeCornerSphere = (in_phi_start, in_theta_start, in_theta) => {
 		const error = 0.01;
 		const widthSegments = 32;
 		const heightSegments = 16;
@@ -994,28 +994,30 @@ function trapezoidGeometryUtil(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_YLen, 
 			in_Rad,
 			widthSegments,
 			heightSegments,
-			in_start - error,
+			in_phi_start - error,
 			DEG90 + error * 2,
-			0,
-			DEG90 * 2
+			in_theta_start - error,
+			in_theta + error * 2
 		);
 	};
+	const uTheta = (in_tXLen > in_bXLen) || (in_tZLen > in_bZLen) ? DEG90 * 2 : DEG90 * 1;
+	const bTheta = (in_tXLen < in_bXLen) || (in_tZLen < in_bZLen) ? DEG90 * 2 : DEG90 * 1;
 	const cornerConfigSet = [
 		/*
 			C : Corner (Vector3 x1)
-			P : Parameter for THREE.CylinderGeometry
+			P : Parameter for THREE.SphereGeometry
 		*/
-		{C : baseVertices.v0, P : DEG90 * 3},
-		{C : baseVertices.v1, P : DEG90 * 2},
-		{C : baseVertices.v2, P : DEG90 * 1},
-		{C : baseVertices.v3, P : DEG90 * 0},
-		{C : baseVertices.v4, P : DEG90 * 3},
-		{C : baseVertices.v5, P : DEG90 * 2},
-		{C : baseVertices.v6, P : DEG90 * 1},
-		{C : baseVertices.v7, P : DEG90 * 0}
+		{C : baseVertices.v0, P : [DEG90 * 3, 0, uTheta]},
+		{C : baseVertices.v1, P : [DEG90 * 2, 0, uTheta]},
+		{C : baseVertices.v2, P : [DEG90 * 1, 0, uTheta]},
+		{C : baseVertices.v3, P : [DEG90 * 0, 0, uTheta]},
+		{C : baseVertices.v4, P : [DEG90 * 3, DEG90 * 2 - bTheta, bTheta]},
+		{C : baseVertices.v5, P : [DEG90 * 2, DEG90 * 2 - bTheta, bTheta]},
+		{C : baseVertices.v6, P : [DEG90 * 1, DEG90 * 2 - bTheta, bTheta]},
+		{C : baseVertices.v7, P : [DEG90 * 0, DEG90 * 2 - bTheta, bTheta]}
 	];
 	cornerConfigSet.forEach(in_conf => {
-		const geometry = makeCornerSphere(in_conf.P);
+		const geometry = makeCornerSphere(...in_conf.P);
 		geometry.translate(in_conf.C);
 		geometry.userData.surface = false;
 		parts.push(geometry);
