@@ -1484,15 +1484,15 @@ function uiChangeMaterial() {
 }
 
 function uiChangeFigure() {
-	if (gCurrentItem) {
-		gCurrentItem.parent.remove(gCurrentItem);
-		gCurrentItem = null;
+	const currFigure = FIGURES.currValue();
+	const nextFigure = FIGURES.nextValue();
+	const currItem = ITEMS.currValue();
+	if (currItem) {
+		currItem.parent.remove(currItem);
 	}
-	const currFigure = (FIGURES.currValue()).OBJECT;
-	const nextFigure = (FIGURES.nextValue()).OBJECT;
 	// use tempFigure only during morphing
-	const begore = currFigure.cloneMergedGeometry();
-	const after = nextFigure.cloneMergedGeometry();
+	const begore = currFigure.OBJECT.cloneMergedGeometry();
+	const after = nextFigure.OBJECT.cloneMergedGeometry();
 	begore.morphAttributes.position = [after.attributes.position];
 	const tempFigure = new THREE.Mesh(begore, MATERIALS.currValue());
 	let morph = 0;
@@ -1500,15 +1500,18 @@ function uiChangeFigure() {
 		if (morph > 1) {
 			gWorld.removeAnimationHook(hook);
 			gWorld.remove(tempFigure);
-			gWorld.add(nextFigure);
+			gWorld.add(nextFigure.OBJECT);
 			begore.dispose();
 			after.dispose();
+			if (currItem) {
+				nextFigure.ITEMHOLDER.addToEdge(currItem);
+			}
 		} else {
 			morph += 0.05;
 			tempFigure.morphTargetInfluences[0] = morph;
 		}
 	};
-	gWorld.remove(currFigure);
+	gWorld.remove(currFigure.OBJECT);
 	gWorld.add(tempFigure);
 	gWorld.addAnimationHook(hook);
 }
