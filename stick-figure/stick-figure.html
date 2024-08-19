@@ -1236,7 +1236,7 @@ document.addEventListener('DOMContentLoaded', (() => {
 	(7) figure setting : color, material, and figure
 */
 
-class CyclicValues extends Array {
+class cCyclicValues extends Array {
 	constructor(...args) {
 		super(...args);
 		this.currentIndex = 0;
@@ -1250,7 +1250,7 @@ class CyclicValues extends Array {
 	}
 }
 
-const COLORS = new CyclicValues(
+const COLORS = new cCyclicValues(
 	// gold
 	0xFFD700,
 	// orangered
@@ -1275,7 +1275,7 @@ const ROUGHNESS = 0.3;
 
 const initColor = COLORS.currValue();
 
-const MATERIALS = new CyclicValues(
+const MATERIALS = new cCyclicValues(
 	new THREE.MeshStandardMaterial({color: initColor, roughness: ROUGHNESS}),
 	new THREE.MeshToonMaterial({color: initColor}),
 	new THREE.MeshBasicMaterial({color: initColor})
@@ -1292,7 +1292,7 @@ const INITFUNCS = {
 	}
 }
 
-const FIGURES = new CyclicValues(
+const FIGURES = new cCyclicValues(
 	{
 		HEAD_HIGHT : 100,
 		THICKNESS : 50,
@@ -1475,11 +1475,11 @@ function uiChangeColor() {
 function uiChangeMaterial() {
 	const material = MATERIALS.nextValue();
 	const color = 0xEEEEEE;
-	gWorld.motionFog(color, 0, 100).then(() => {
+	gWorld.motionFog(color, 0, 100, 200).then(() => {
 		FIGURES.forEach(in_fig => {
 			in_fig.OBJECT.resetMaterial(material);
 		});
-		return gWorld.motionFog(color, 100, 50);
+		return gWorld.motionFog(color, 100, 50, 200);
 	});
 }
 
@@ -1513,22 +1513,19 @@ function uiChangeFigure() {
 	gWorld.addAnimationHook(hook);
 }
 
-let gCurrentItem = null;
+const ITEMS = new cCyclicValues(null, gSmartPhone, gLightSaber);
 
 function uiChangeItem() {
-	if (gCurrentItem) {
-		gCurrentItem.parent.remove(gCurrentItem);
-		if (gCurrentItem === gSmartPhone) {
-			gCurrentItem = gLightSaber;
-		} else {
-			gCurrentItem = null;
+	gWorld.motionKnock().then(() => {
+		const currItem = ITEMS.currValue();
+		const nextItem = ITEMS.nextValue();
+		if (currItem) {
+			currItem.parent.remove(currItem);
 		}
-	} else {
-		gCurrentItem = gSmartPhone;
-	}
-	if (gCurrentItem) {
-		(FIGURES.currValue()).ITEMHOLDER.addToEdge(gCurrentItem);
-	}
+		if (nextItem) {
+			(FIGURES.currValue()).ITEMHOLDER.addToEdge(nextItem);
+		}
+	});
 }
 
 function uiDefaultView() {
