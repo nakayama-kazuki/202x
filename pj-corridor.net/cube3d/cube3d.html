@@ -1654,7 +1654,7 @@ class cRubiksCube extends THREE.Object3D {
 		};
 		axes.forEach(in_axis => {
 			if (in_axis.dot(in_surfaceV3) !== 0) {
-				// except for in_surfaceV3
+				// in_axis which is not the same as in_surfaceV3 will be taken for rotation
 				return;
 			}
 			const angle = vec3.angleTo(in_axis);
@@ -1666,20 +1666,6 @@ class cRubiksCube extends THREE.Object3D {
 			}
 		});
 		return ret;
-	}
-	static #detectDragSurface(in_posV3) {
-		let max = 0;
-		let axis, surface;
-		XYZ.forEach(in_xyz => {
-			if (Math.abs(in_posV3[in_xyz]) > Math.abs(max)) {
-				max = in_posV3[in_xyz];
-				axis = in_xyz;
-				surface = (max > 0);
-			}
-		});
-		const vec3 = new THREE.Vector3();
-		vec3[axis] = surface ? +1 : -1;
-		return vec3;
 	}
 	static #uiStates  = {
 		DISABLED : Symbol(),
@@ -1764,7 +1750,7 @@ class cRubiksCube extends THREE.Object3D {
 		}
 		this.#uiSession.ctx = {};
 	}
-	uiSetInitPosition(in_piece, in_posV3, in_posV2) {
+	uiSetInitPosition(in_piece, in_surfaceV3, in_posV3, in_posV2) {
 		// in_posV3 : intersection with a in_piece
 		// in_posV2 : NDC (Normalized Device Coordinates)
 		if (this.#uiSession.state !== cRubiksCube.#uiStates.ENABLED) {
@@ -1775,7 +1761,7 @@ class cRubiksCube extends THREE.Object3D {
 			piece : in_piece,
 			initPosV3 : in_posV3,
 			initPosV2 : in_posV2,
-			surfaceV3 : cRubiksCube.#detectDragSurface(in_posV3),
+			surfaceV3 : in_surfaceV3,
 			roGroup : null,
 			roRadian : 0,
 			roAxisDir : 0,
@@ -2375,7 +2361,23 @@ gWorld.canvas.addEventListener('mousedown', async (in_ev) => {
 	const vec2Scaled = vec2.clone().multiplyScalar(EVPOS_MULTIPLY_PARAM);
 	let intersects = gWorld.intersectPositive(vec2);
 	if (intersects.length > 0) {
-		gCube.uiSetInitPosition(intersects[0].object, intersects[0].point, vec2Scaled);
+		const matrix = (new THREE.Matrix3()).getNormalMatrix(intersects[0].object.matrixWorld);
+		const normal = intersects[0].face.normal.clone().applyMatrix3(matrix).normalize();
+		const snap = (in_err => {
+			return (in_value, ...in_targets) => {
+				let snapped = in_value;
+				in_targets.forEach(in_target => {
+					if (Math.abs(in_value - in_target) < in_err) {
+						snapped = in_target;
+					}
+				});
+				return snapped;
+			};
+		})(0.0001);
+		XYZ.forEach(in_xyz => {
+			normal[in_xyz] = snap(normal[in_xyz], -1, 0, +1);
+		});
+		gCube.uiSetInitPosition(intersects[0].object, normal, intersects[0].point, vec2Scaled);
 	}
 });
 
