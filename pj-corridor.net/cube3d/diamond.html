@@ -1060,7 +1060,7 @@ const boxGeometryFactory = factoryBuilder((in_x, in_y, in_z) => {
 	return roundBoxGeometry(in_x - radian * 2, in_y - radian * 2, in_z - radian * 2, radian);
 });
 
-function pieceColorList(in_loopIndexes, in_x, in_y, in_z) {
+function pieceColorList(in_isTarget, in_x, in_y, in_z) {
 	const colorList = [];
 	const insedeColor = 0x222222;
 	const edgeSurface = [
@@ -1071,33 +1071,9 @@ function pieceColorList(in_loopIndexes, in_x, in_y, in_z) {
 		{vec3 : new THREE.Vector3(0, 0, +1), color : 0x3333FF},	// blue
 		{vec3 : new THREE.Vector3(0, 0, -1), color : 0x33CC33}	// green
 	];
-	const isExist = (in_loopIndexes => {
-		return (in_x, in_y, in_z) => {
-			let ys, ye, xs, xe;
-			if (in_z in in_loopIndexes) {
-				ys = in_loopIndexes[in_z].min;
-				ye = in_loopIndexes[in_z].max;
-			} else {
-				return false;
-			}
-			if (in_y in in_loopIndexes) {
-				xs = Math.max(in_loopIndexes[in_y].min, in_loopIndexes[in_z].min);
-				xe = Math.min(in_loopIndexes[in_y].max, in_loopIndexes[in_z].max);
-			} else {
-				return false;
-			}
-			if ((ys <= in_y) && (in_y <= ye)) {
-				if ((xs <= in_x) && (in_x <= xe)) {
-					return true;
-				}
-			}
-			return false;
-		};
-	})(in_loopIndexes);
-
 	edgeSurface.forEach(({vec3, color}) => {
 		const test = (new THREE.Vector3(in_x, in_y, in_z)).add(vec3);
-		if (isExist(...test.toArray())) {
+		if (in_isTarget(...test.toArray())) {
 			colorList.push(insedeColor);
 		} else {
 			colorList.push(color);
@@ -1168,22 +1144,63 @@ const gMeshLevelMap = ((in_cubeSize) => {
 	})(in_cubeSize);
 	const map = new cCyclicMap();
 	const edgeMaterial = new THREE.MeshLambertMaterial({color : 0x222222});
-	const cubeDimList = [3, 4, 5, 6];
+	const cubeDimList = [3, 4, 5, 6, 7];
 	cubeDimList.forEach(in_cubeDim => {
 		const unitSize = in_cubeSize / in_cubeDim;
 		const pieces = [];
 		const loopIndexes = decideLoopIndex(in_cubeDim);
-		const zs = 0;
-		const ze = in_cubeDim - 1;
-		for (let z = zs; z <= ze; z++) {
-			const ys = loopIndexes[z].min;
-			const ye = loopIndexes[z].max;
-			for (let y = ys; y <= ye; y++) {
-				const xs = Math.max(loopIndexes[y].min, loopIndexes[z].min);
-				const xe = Math.min(loopIndexes[y].max, loopIndexes[z].max);
-				for (let x = xs; x <= xe; x++) {
+		const isTarget = (in_x, in_y, in_z) => {
+			if (!(in_x in loopIndexes) || !(in_y in loopIndexes) || !(in_z in loopIndexes)) {
+				return false;
+			}
+			let score = 0;
+			const xmin = loopIndexes[in_x].min;
+			const xmax = loopIndexes[in_x].max;
+			const ymin = loopIndexes[in_y].min;
+			const ymax = loopIndexes[in_y].max;
+			const zmin = loopIndexes[in_z].min;
+			const zmax = loopIndexes[in_z].max;
+			if ((in_x < ymin) || (ymax < in_x)) {
+				return false;
+			} else {
+				if (ymax - ymin > 1) {
+					if (in_x === ymin || ymax === in_x) {
+						score++;
+					}
+				}
+			}
+			if ((in_y < zmin) || (zmax < in_y)) {
+				return false;
+			} else {
+				if (zmax - zmin > 1) {
+					if (in_y === zmin || zmax === in_y) {
+						score++;
+					}
+				}
+			}
+			if ((in_z < xmin) || (xmax < in_z)) {
+				return false;
+			} else {
+				if (xmax - xmin > 1) {
+					if (in_z === xmin || xmax === in_z) {
+						score++;
+					}
+				}
+			}
+			if (score > 1) {
+				return false;
+			} else {
+				return true;
+			}
+		};
+		for (let z = 0; z <= in_cubeDim - 1; z++) {
+			for (let y = 0; y <= in_cubeDim - 1; y++) {
+				for (let x = 0; x <= in_cubeDim - 1; x++) {
+					if (!isTarget(x, y, z)) {
+						continue;
+					}
 					const geometry = boxGeometryFactory.create(unitSize, unitSize, unitSize);
-					const colors = pieceColorList(loopIndexes, x, y, z);
+					const colors = pieceColorList(isTarget, x, y, z);
 					const materials = boxMaterials(unitSize, unitSize, unitSize, colors);
 					// geometry has 7 groups (sub meshes)
 					materials.push(edgeMaterial);
