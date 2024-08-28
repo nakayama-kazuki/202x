@@ -182,6 +182,19 @@ class cEase {
 	}
 }
 
+const XYZ = ['x', 'y', 'z'];
+
+const VEC3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
+
+const DIRECTION = {
+	XP : VEC3(+1, 0, 0),
+	XN : VEC3(-1, 0, 0),
+	YP : VEC3(0, +1, 0),
+	YN : VEC3(0, -1, 0),
+	ZP : VEC3(0, 0, +1),
+	ZN : VEC3(0, 0, -1)
+}
+
 /*
 	(1) cSphericalWorld
 
@@ -201,30 +214,26 @@ class cSphericalWorld {
 	static #defaultCameraSetting = 2;
 	static #view = [
 		{
-			cameraFrom : new THREE.Vector3(0, 0, -1),
-			cameraTo : new THREE.Vector3(0, 0, 0),
-			cameraUp : new THREE.Vector3(0, 1, 0),
+			cameraFrom : DIRECTION.ZN,
+			cameraUp : DIRECTION.YP,
 			dxDir : -1,
 			dyDir : -1
 		},
 		{
-			cameraFrom : new THREE.Vector3(0, 0, -1),
-			cameraTo : new THREE.Vector3(0, 0, 0),
-			cameraUp : new THREE.Vector3(0, -1, 0),
+			cameraFrom : DIRECTION.ZN,
+			cameraUp : DIRECTION.YN,
 			dxDir : 1,
 			dyDir : 1
 		},
 		{
-			cameraFrom : new THREE.Vector3(0, 0, 1),
-			cameraTo : new THREE.Vector3(0, 0, 0),
-			cameraUp : new THREE.Vector3(0, 1, 0),
+			cameraFrom : DIRECTION.ZP,
+			cameraUp : DIRECTION.YP,
 			dxDir : -1,
 			dyDir : 1
 		},
 		{
-			cameraFrom : new THREE.Vector3(0, 0, 1),
-			cameraTo : new THREE.Vector3(0, 0, 0),
-			cameraUp : new THREE.Vector3(0, -1, 0),
+			cameraFrom : DIRECTION.ZP,
+			cameraUp : DIRECTION.YN,
 			dxDir : 1,
 			dyDir : -1
 		}
@@ -264,7 +273,7 @@ class cSphericalWorld {
 			cSphericalWorld.#view.cameraUp.y,
 			cSphericalWorld.#view.cameraUp.z
 		);
-		camera.lookAt(cSphericalWorld.#view.cameraTo);
+		camera.lookAt(new THREE.Vector3(0, 0, 0));
 		this.#cameraCtrl = new THREE.Object3D();
 		this.#cameraCtrl.add(camera);
 		// light
@@ -823,7 +832,6 @@ class cLightSaber extends cPart {
 function trapezoidGeometryUtil(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_YLen, in_Rad = 0) {
 	const parts = [];
 	const DEG90 = Math.PI * 1 / 2;
-	const VEC3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 	/*
 			 (+)
 			  |
@@ -852,27 +860,19 @@ function trapezoidGeometryUtil(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_YLen, 
 			even you can also make surface using PlaneGeometry,
 			it is a little complicated to decide position before rotation.
 	*/
-	const SURFACE = {
-		XP : VEC3(+1, 0, 0),
-		XN : VEC3(-1, 0, 0),
-		YP : VEC3(0, +1, 0),
-		YN : VEC3(0, -1, 0),
-		ZP : VEC3(0, 0, +1),
-		ZN : VEC3(0, 0, -1)
-	}
 	const surfaceMap = new Map([
-		[SURFACE.XP, [baseVertices.v1, baseVertices.v2, baseVertices.v6, baseVertices.v5]],
-		[SURFACE.XN, [baseVertices.v0, baseVertices.v4, baseVertices.v7, baseVertices.v3]],
-		[SURFACE.YP, [baseVertices.v3, baseVertices.v2, baseVertices.v1, baseVertices.v0]],
-		[SURFACE.YN, [baseVertices.v6, baseVertices.v7, baseVertices.v4, baseVertices.v5]],
-		[SURFACE.ZP, [baseVertices.v7, baseVertices.v6, baseVertices.v2, baseVertices.v3]],
-		[SURFACE.ZN, [baseVertices.v5, baseVertices.v4, baseVertices.v0, baseVertices.v1]]
+		[DIRECTION.XP, [baseVertices.v1, baseVertices.v2, baseVertices.v6, baseVertices.v5]],
+		[DIRECTION.XN, [baseVertices.v0, baseVertices.v4, baseVertices.v7, baseVertices.v3]],
+		[DIRECTION.YP, [baseVertices.v3, baseVertices.v2, baseVertices.v1, baseVertices.v0]],
+		[DIRECTION.YN, [baseVertices.v6, baseVertices.v7, baseVertices.v4, baseVertices.v5]],
+		[DIRECTION.ZP, [baseVertices.v7, baseVertices.v6, baseVertices.v2, baseVertices.v3]],
+		[DIRECTION.ZN, [baseVertices.v5, baseVertices.v4, baseVertices.v0, baseVertices.v1]]
 	]);
 	const translatedSurfaceMap = new Map();
 	const equal = (in_vec, ...in_vecArr) => in_vecArr.some(vec => in_vec.equals(vec));
 	surfaceMap.forEach((in_val, in_key) => {
 		let translate;
-		if (equal(in_key, SURFACE.YP, SURFACE.YN)) {
+		if (equal(in_key, DIRECTION.YP, DIRECTION.YN)) {
 			// top or bottom
 			translate = in_key.clone().multiplyScalar(in_Rad);
 		} else {
