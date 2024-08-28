@@ -793,24 +793,6 @@ function boxMaterials(in_x, in_y, in_z, in_colors) {
 	];
 }
 
-const GRAY = 0x222222;
-const ORANGE = 0xFFAA00;
-const RED = 0xFF0000;
-const WHITE = 0xFFFFFF;
-const YELLOW = 0xFFFF00;
-const BLUE = 0x3333FF;
-const GREEN = 0x33CC33;
-
-// standard color scheme
-const SURFACEPROP = [
-	{V3 : DIRECTION.XP, COLOR : ORANGE},
-	{V3 : DIRECTION.XN, COLOR : RED},
-	{V3 : DIRECTION.YP, COLOR : WHITE},
-	{V3 : DIRECTION.YN, COLOR : YELLOW},
-	{V3 : DIRECTION.ZP, COLOR : BLUE},
-	{V3 : DIRECTION.ZN, COLOR : GREEN}
-];
-
 function trapezoidGeometryUtil(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_YLen, in_Rad = 0) {
 	const parts = [];
 	const DEG90 = Math.PI * 1 / 2;
@@ -1075,6 +1057,24 @@ const boxGeometryFactory = factoryBuilder((in_x, in_y, in_z) => {
 	const radian = 6;
 	return roundBoxGeometry(in_x - radian * 2, in_y - radian * 2, in_z - radian * 2, radian);
 });
+
+const GRAY = 0x222222;
+const ORANGE = 0xFFAA00;
+const RED = 0xFF0000;
+const WHITE = 0xFFFFFF;
+const YELLOW = 0xFFFF00;
+const BLUE = 0x3333FF;
+const GREEN = 0x33CC33;
+
+// standard color scheme
+const SURFACEPROP = [
+	{V3 : DIRECTION.XP, COLOR : ORANGE},
+	{V3 : DIRECTION.XN, COLOR : RED},
+	{V3 : DIRECTION.YP, COLOR : WHITE},
+	{V3 : DIRECTION.YN, COLOR : YELLOW},
+	{V3 : DIRECTION.ZP, COLOR : BLUE},
+	{V3 : DIRECTION.ZN, COLOR : GREEN}
+];
 
 function pieceColorList(in_dimV3, in_ixV3) {
 	/*
