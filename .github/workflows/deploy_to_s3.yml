@@ -1,6 +1,7 @@
 name: Deploy to S3
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -38,6 +39,8 @@ jobs:
         git fetch --depth=2
         echo "CURR_SHA=${{ github.sha }}" >> $GITHUB_ENV
         echo "PREV_SHA=$(git rev-parse ${{ github.sha }}^)" >> $GITHUB_ENV
+        echo "CURR_SHA=${{ github.sha }}"
+        echo "PREV_SHA=$(git rev-parse ${{ github.sha }}^)"
     - name: check modified
       run: |
         FILES=$(git diff --name-only $PREV_SHA $CURR_SHA)
