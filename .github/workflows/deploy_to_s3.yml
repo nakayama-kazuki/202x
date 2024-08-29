@@ -43,7 +43,7 @@ jobs:
         echo "PREV_SHA=$(git rev-parse ${{ github.sha }}^)"
     - name: check modified
       run: |
-        FILES=$(git diff --name-only $PREV_SHA $CURR_SHA)
+        FILES=$(git diff --name-only $PREV_SHA $CURR_SHA | tr '\n' ' ')
         echo "FILES=$FILES" >> $GITHUB_ENV
     - name: copy-1
       if: contains(env.FILES, env.INDEXPATH)
