@@ -1165,6 +1165,68 @@ const gMeshLevelMap = ((in_cubeSize) => {
 		const unitSize = in_cubeSize / in_cubeDim;
 		const pieces = [];
 		const loopIndexes = decideLoopIndex(in_cubeDim);
+		const isTarget2 = (in_x, in_y, in_z) => {
+			let xmin, xmax, ymin, ymax, zmin, zmax;
+			if (in_x in loopIndexes) {
+				xmin = loopIndexes[in_x].min;
+				xmax = loopIndexes[in_x].max;
+			} else {
+				return false;
+			}
+			if (in_y in loopIndexes) {
+				ymin = loopIndexes[in_y].min;
+				ymax = loopIndexes[in_y].max;
+			} else {
+				return false;
+			}
+			if (in_z in loopIndexes) {
+				zmin = loopIndexes[in_z].min;
+				zmax = loopIndexes[in_z].max;
+			} else {
+				return false;
+			}
+			let isInside = true;
+			if ((in_x < ymin) || (ymax < in_x)) {
+				return false;
+			} else {
+				if (in_x === ymin || ymax === in_x) {
+					isInside = false;
+					if (ymax - ymin > 1) {
+						score++;
+					}
+				}
+			}
+			if ((in_y < zmin) || (zmax < in_y)) {
+				return false;
+			} else {
+				if (in_y === zmin || zmax === in_y) {
+					isInside = false;
+					if (zmax - zmin > 1) {
+						score++;
+					}
+				}
+			}
+			if ((in_z < xmin) || (xmax < in_z)) {
+				return false;
+			} else {
+				if (in_z === xmin || xmax === in_z) {
+					isInside = false;
+					if (xmax - xmin > 1) {
+						score++;
+					}
+				}
+			}
+			if (score > 1) {
+				return false;
+			} else {
+				if (isInside) {
+					console.log('inside : ', in_x, in_y, in_z);
+					return false;
+				} else {
+					return true;
+				}
+			}
+		};
 		const isTarget = (in_x, in_y, in_z) => {
 			if (!(in_x in loopIndexes) || !(in_y in loopIndexes) || !(in_z in loopIndexes)) {
 				return false;
@@ -2002,7 +2064,7 @@ class cWarpLine {
 			}
 		} else {
 			/*
-				*** NOTE #6 ***
+				*** NOTE #8 ***
 				even if overwritung using black,
 				this.#drawGrayLine(this.from, to, 0x00);
 				smudge of white line will remain.
@@ -2090,7 +2152,7 @@ function setTransition(in_elem, in_shorthand, in_val1, in_val2) {
 	in_elem.style[components[0]] = in_val1;
 	window.setTimeout(() => {
 		/*
-			*** NOTE #7 ***
+			*** NOTE #9 ***
 			To fire the transition function,
 			the final style should be set in the next event loop.
 		*/

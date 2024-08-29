@@ -2035,7 +2035,7 @@ class cWarpLine {
 			}
 		} else {
 			/*
-				*** NOTE #6 ***
+				*** NOTE #8 ***
 				even if overwritung using black,
 				this.#drawGrayLine(this.from, to, 0x00);
 				smudge of white line will remain.
@@ -2123,7 +2123,7 @@ function setTransition(in_elem, in_shorthand, in_val1, in_val2) {
 	in_elem.style[components[0]] = in_val1;
 	window.setTimeout(() => {
 		/*
-			*** NOTE #7 ***
+			*** NOTE #9 ***
 			To fire the transition function,
 			the final style should be set in the next event loop.
 		*/
