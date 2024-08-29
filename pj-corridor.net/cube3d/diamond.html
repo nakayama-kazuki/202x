@@ -22,6 +22,38 @@ import * as UTILS from 'utils';
 	(1) utilities
 */
 
+function parseParam(in_url = location.href) {
+	const req = new URL(in_url);
+	const parsed = {
+		q : {},
+		h : []
+	};
+	req.searchParams.forEach((value, key) => {
+		parsed.q[key] = value;
+	});
+	if (req.hash) {
+		const hashValues = req.hash.substring(1).split('#');
+	}
+	return parsed;
+}
+
+function getParam(in_name) {
+	const parsed = parseParam();
+	if (in_name in parsed.q) {
+		const value = parsed.q[in_name];
+		const checkNum = parseInt(value, 10);
+		if (checkNum.toString() === value) {
+			return checkNum;
+		} else {
+			return value;
+		}
+	}
+	if (in_name in parsed.h) {
+		return true;
+	}
+	return false;
+}
+
 function randomString(in_length = 5)
 {
 	return Math.floor(Math.random() * (10 ** in_length)).toString(16).padStart(in_length, '0');
@@ -1059,6 +1091,7 @@ const boxGeometryFactory = factoryBuilder((in_x, in_y, in_z) => {
 });
 
 const GRAY = 0x222222;
+
 const ORANGE = 0xFFAA00;
 const RED = 0xFF0000;
 const WHITE = 0xFFFFFF;
@@ -1066,33 +1099,38 @@ const YELLOW = 0xFFFF00;
 const BLUE = 0x3333FF;
 const GREEN = 0x33CC33;
 
-// standard color scheme
-const SURFACEPROP = [
-	{V3 : DIRECTION.XP, COLOR : ORANGE},
-	{V3 : DIRECTION.XN, COLOR : RED},
-	{V3 : DIRECTION.YP, COLOR : WHITE},
-	{V3 : DIRECTION.YN, COLOR : YELLOW},
-	{V3 : DIRECTION.ZP, COLOR : BLUE},
-	{V3 : DIRECTION.ZN, COLOR : GREEN}
-];
+let SURFACEPROP;
+
+if (getParam('color') === 'easy') {
+	SURFACEPROP = [
+		{V3 : DIRECTION.XP, COLOR : WHITE},
+		{V3 : DIRECTION.XN, COLOR : WHITE},
+		{V3 : DIRECTION.YP, COLOR : BLUE},
+		{V3 : DIRECTION.YN, COLOR : BLUE},
+		{V3 : DIRECTION.ZP, COLOR : BLUE},
+		{V3 : DIRECTION.ZN, COLOR : BLUE}
+	];
+} else {
+	// standard color scheme
+	SURFACEPROP = [
+		{V3 : DIRECTION.XP, COLOR : ORANGE},
+		{V3 : DIRECTION.XN, COLOR : RED},
+		{V3 : DIRECTION.YP, COLOR : WHITE},
+		{V3 : DIRECTION.YN, COLOR : YELLOW},
+		{V3 : DIRECTION.ZP, COLOR : BLUE},
+		{V3 : DIRECTION.ZN, COLOR : GREEN}
+	];
+}
 
 function pieceColorList(in_isTarget, in_x, in_y, in_z) {
 	const colorList = [];
-	const insedeColor = 0x222222;
-	const edgeSurface = [
-		{vec3 : new THREE.Vector3(+1, 0, 0), color : 0xFFAA00},	// orange
-		{vec3 : new THREE.Vector3(-1, 0, 0), color : 0xFF0000},	// red
-		{vec3 : new THREE.Vector3(0, +1, 0), color : 0xFFFFFF},	// white
-		{vec3 : new THREE.Vector3(0, -1, 0), color : 0xFFFF00},	// yellow
-		{vec3 : new THREE.Vector3(0, 0, +1), color : 0x3333FF},	// blue
-		{vec3 : new THREE.Vector3(0, 0, -1), color : 0x33CC33}	// green
-	];
-	edgeSurface.forEach(({vec3, color}) => {
-		const test = (new THREE.Vector3(in_x, in_y, in_z)).add(vec3);
+	const insedeColor = GRAY;
+	SURFACEPROP.forEach(({V3, COLOR}) => {
+		const test = (new THREE.Vector3(in_x, in_y, in_z)).add(V3);
 		if (in_isTarget(...test.toArray())) {
 			colorList.push(insedeColor);
 		} else {
-			colorList.push(color);
+			colorList.push(COLOR);
 		}
 	});
 	return colorList;
@@ -1159,74 +1197,12 @@ const gMeshLevelMap = ((in_cubeSize) => {
 		};
 	})(in_cubeSize);
 	const map = new cCyclicMap();
-	const edgeMaterial = new THREE.MeshLambertMaterial({color : 0x222222});
+	const edgeMaterial = new THREE.MeshLambertMaterial({color : GRAY});
 	const cubeDimList = [3, 4, 5, 6, 7];
 	cubeDimList.forEach(in_cubeDim => {
 		const unitSize = in_cubeSize / in_cubeDim;
 		const pieces = [];
 		const loopIndexes = decideLoopIndex(in_cubeDim);
-		const isTarget2 = (in_x, in_y, in_z) => {
-			let xmin, xmax, ymin, ymax, zmin, zmax;
-			if (in_x in loopIndexes) {
-				xmin = loopIndexes[in_x].min;
-				xmax = loopIndexes[in_x].max;
-			} else {
-				return false;
-			}
-			if (in_y in loopIndexes) {
-				ymin = loopIndexes[in_y].min;
-				ymax = loopIndexes[in_y].max;
-			} else {
-				return false;
-			}
-			if (in_z in loopIndexes) {
-				zmin = loopIndexes[in_z].min;
-				zmax = loopIndexes[in_z].max;
-			} else {
-				return false;
-			}
-			let isInside = true;
-			if ((in_x < ymin) || (ymax < in_x)) {
-				return false;
-			} else {
-				if (in_x === ymin || ymax === in_x) {
-					isInside = false;
-					if (ymax - ymin > 1) {
-						score++;
-					}
-				}
-			}
-			if ((in_y < zmin) || (zmax < in_y)) {
-				return false;
-			} else {
-				if (in_y === zmin || zmax === in_y) {
-					isInside = false;
-					if (zmax - zmin > 1) {
-						score++;
-					}
-				}
-			}
-			if ((in_z < xmin) || (xmax < in_z)) {
-				return false;
-			} else {
-				if (in_z === xmin || xmax === in_z) {
-					isInside = false;
-					if (xmax - xmin > 1) {
-						score++;
-					}
-				}
-			}
-			if (score > 1) {
-				return false;
-			} else {
-				if (isInside) {
-					console.log('inside : ', in_x, in_y, in_z);
-					return false;
-				} else {
-					return true;
-				}
-			}
-		};
 		const isTarget = (in_x, in_y, in_z) => {
 			if (!(in_x in loopIndexes) || !(in_y in loopIndexes) || !(in_z in loopIndexes)) {
 				return false;
@@ -1298,7 +1274,11 @@ const gMeshLevelMap = ((in_cubeSize) => {
 	return map;
 })(CUBE_SIZE);
 
-let gMeshCurrentLevel = 2;
+let gMeshCurrentLevel = getParam('level');
+
+if (gMeshCurrentLevel === false) {
+	gMeshCurrentLevel = 2;
+}
 
 function getColorBySide(in_mesh, in_targetV3) {
 	const matrix = (new THREE.Matrix4()).makeRotationFromQuaternion(in_mesh.quaternion);
