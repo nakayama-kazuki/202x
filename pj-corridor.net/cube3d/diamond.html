@@ -817,7 +817,7 @@ function boxMaterials(in_x, in_y, in_z, in_colors) {
 	*/
 	return [
 		materialFactory.create(in_z, in_y, in_colors[0]),
-		materialFactory.create(in_z, in_y, in_colors[1]),
+		materialFactory.create(in_y, in_z, in_colors[1]),
 		materialFactory.create(in_x, in_z, in_colors[2]),
 		materialFactory.create(in_x, in_z, in_colors[3]),
 		materialFactory.create(in_x, in_y, in_colors[4]),
@@ -1099,27 +1099,23 @@ const YELLOW = 0xFFFF00;
 const BLUE = 0x3333FF;
 const GREEN = 0x33CC33;
 
-let SURFACEPROP;
+const SURFACEPROP = [];
 
 if (getParam('color') === 'easy') {
-	SURFACEPROP = [
-		{V3 : DIRECTION.XP, COLOR : WHITE},
-		{V3 : DIRECTION.XN, COLOR : WHITE},
-		{V3 : DIRECTION.YP, COLOR : BLUE},
-		{V3 : DIRECTION.YN, COLOR : BLUE},
-		{V3 : DIRECTION.ZP, COLOR : BLUE},
-		{V3 : DIRECTION.ZN, COLOR : BLUE}
-	];
+	SURFACEPROP.push({V3 : DIRECTION.XP, COLOR : WHITE});
+	SURFACEPROP.push({V3 : DIRECTION.XN, COLOR : WHITE});
+	SURFACEPROP.push({V3 : DIRECTION.YP, COLOR : BLUE});
+	SURFACEPROP.push({V3 : DIRECTION.YN, COLOR : BLUE});
+	SURFACEPROP.push({V3 : DIRECTION.ZP, COLOR : BLUE});
+	SURFACEPROP.push({V3 : DIRECTION.ZP, COLOR : BLUE});
 } else {
 	// standard color scheme
-	SURFACEPROP = [
-		{V3 : DIRECTION.XP, COLOR : ORANGE},
-		{V3 : DIRECTION.XN, COLOR : RED},
-		{V3 : DIRECTION.YP, COLOR : WHITE},
-		{V3 : DIRECTION.YN, COLOR : YELLOW},
-		{V3 : DIRECTION.ZP, COLOR : BLUE},
-		{V3 : DIRECTION.ZN, COLOR : GREEN}
-	];
+	SURFACEPROP.push({V3 : DIRECTION.XP, COLOR : ORANGE});
+	SURFACEPROP.push({V3 : DIRECTION.XN, COLOR : RED});
+	SURFACEPROP.push({V3 : DIRECTION.YP, COLOR : WHITE});
+	SURFACEPROP.push({V3 : DIRECTION.YN, COLOR : YELLOW});
+	SURFACEPROP.push({V3 : DIRECTION.ZP, COLOR : BLUE});
+	SURFACEPROP.push({V3 : DIRECTION.ZN, COLOR : GREEN});
 }
 
 function pieceColorList(in_isTarget, in_x, in_y, in_z) {

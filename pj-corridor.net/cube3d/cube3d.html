@@ -817,7 +817,7 @@ function boxMaterials(in_x, in_y, in_z, in_colors) {
 	*/
 	return [
 		materialFactory.create(in_z, in_y, in_colors[0]),
-		materialFactory.create(in_z, in_y, in_colors[1]),
+		materialFactory.create(in_y, in_z, in_colors[1]),
 		materialFactory.create(in_x, in_z, in_colors[2]),
 		materialFactory.create(in_x, in_z, in_colors[3]),
 		materialFactory.create(in_x, in_y, in_colors[4]),
@@ -1099,27 +1099,23 @@ const YELLOW = 0xFFFF00;
 const BLUE = 0x3333FF;
 const GREEN = 0x33CC33;
 
-let SURFACEPROP;
+const SURFACEPROP = [];
 
 if (getParam('color') === 'easy') {
-	SURFACEPROP = [
-		{V3 : DIRECTION.XP, COLOR : WHITE},
-		{V3 : DIRECTION.XN, COLOR : WHITE},
-		{V3 : DIRECTION.YP, COLOR : BLUE},
-		{V3 : DIRECTION.YN, COLOR : BLUE},
-		{V3 : DIRECTION.ZP, COLOR : BLUE},
-		{V3 : DIRECTION.ZN, COLOR : BLUE}
-	];
+	SURFACEPROP.push({V3 : DIRECTION.XP, COLOR : WHITE});
+	SURFACEPROP.push({V3 : DIRECTION.XN, COLOR : WHITE});
+	SURFACEPROP.push({V3 : DIRECTION.YP, COLOR : BLUE});
+	SURFACEPROP.push({V3 : DIRECTION.YN, COLOR : BLUE});
+	SURFACEPROP.push({V3 : DIRECTION.ZP, COLOR : BLUE});
+	SURFACEPROP.push({V3 : DIRECTION.ZP, COLOR : BLUE});
 } else {
 	// standard color scheme
-	SURFACEPROP = [
-		{V3 : DIRECTION.XP, COLOR : ORANGE},
-		{V3 : DIRECTION.XN, COLOR : RED},
-		{V3 : DIRECTION.YP, COLOR : WHITE},
-		{V3 : DIRECTION.YN, COLOR : YELLOW},
-		{V3 : DIRECTION.ZP, COLOR : BLUE},
-		{V3 : DIRECTION.ZN, COLOR : GREEN}
-	];
+	SURFACEPROP.push({V3 : DIRECTION.XP, COLOR : ORANGE});
+	SURFACEPROP.push({V3 : DIRECTION.XN, COLOR : RED});
+	SURFACEPROP.push({V3 : DIRECTION.YP, COLOR : WHITE});
+	SURFACEPROP.push({V3 : DIRECTION.YN, COLOR : YELLOW});
+	SURFACEPROP.push({V3 : DIRECTION.ZP, COLOR : BLUE});
+	SURFACEPROP.push({V3 : DIRECTION.ZN, COLOR : GREEN});
 }
 
 function pieceColorList(in_dimV3, in_ixV3) {
@@ -1184,18 +1180,14 @@ class cCubeDimV3 extends THREE.Vector3 {
 		*/
 		XYZ.forEach(in_xyz => {
 			if (this[in_xyz] < this.maxDim) {
-				list[in_xyz] = Array(this[in_xyz] - 1).fill(in_unitSize);
-				list[in_xyz].push((this.maxDim - this[in_xyz] + 1) * in_unitSize);
-				/*
-					// failed to separate not 4=3+1 but 4=2+2
-					if (this.maxDim % this[in_xyz] === 0) {
-						const quotient = this.maxDim / this[in_xyz];
-						list[in_xyz] = Array(this[in_xyz]).fill(in_unitSize * quotient);
-					} else {
-						list[in_xyz] = Array(this[in_xyz] - 1).fill(in_unitSize);
-						list[in_xyz].push((this.maxDim - this[in_xyz] + 1) * in_unitSize);
-					}
-				*/
+				// separate not 4=3+1 but 4=2+2
+				if (this.maxDim % this[in_xyz] === 0) {
+					const quotient = this.maxDim / this[in_xyz];
+					list[in_xyz] = Array(this[in_xyz]).fill(in_unitSize * quotient);
+				} else {
+					list[in_xyz] = Array(this[in_xyz] - 1).fill(in_unitSize);
+					list[in_xyz].push((this.maxDim - this[in_xyz] + 1) * in_unitSize);
+				}
 			} else {
 				list[in_xyz] = Array(this[in_xyz]).fill(in_unitSize);
 			}
@@ -1241,20 +1233,22 @@ class cCubeDimV3 extends THREE.Vector3 {
 			 +-+-+
 			   |
 		*/
-		const center = this.maxDim * in_unitSize / 2;
-		const translateV3 = in_moveToV3.clone().sub(new THREE.Vector3(center, center, center));
+		const cubeCneter = this.maxDim * in_unitSize / 2;
+		const translateV3 = in_moveToV3.clone().sub(new THREE.Vector3(cubeCneter, cubeCneter, cubeCneter));
 		this.#indexLoop(in_ixV3 => {
-			const w = sizeList.x[in_ixV3.x];
-			const h = sizeList.y[in_ixV3.y];
-			const d = sizeList.z[in_ixV3.z];
-			const posV3 = new THREE.Vector3(
-				in_ixV3.x * in_unitSize + w / 2,
-				in_ixV3.y * in_unitSize + h / 2,
-				in_ixV3.z * in_unitSize + d / 2
-			);
-			posV3.add(translateV3);
-			const sizeV3 = new THREE.Vector3(w, h, d);
-			(in_callback)(in_ixV3, posV3, sizeV3);
+			const pieceSizeV3 = VEC3();
+			const piecePosV3 = VEC3();
+			XYZ.forEach(in_xyz => {
+				const curr = in_ixV3[in_xyz];
+				let start = 0;
+				for (let i = 0; i < curr; i++) {
+					start += sizeList[in_xyz][i];
+				}
+				pieceSizeV3[in_xyz] = sizeList[in_xyz][curr];
+				piecePosV3[in_xyz] = start + pieceSizeV3[in_xyz] / 2;
+			});
+			piecePosV3.add(translateV3);
+			(in_callback)(in_ixV3, piecePosV3, pieceSizeV3);
 		});
 	}
 	isInsideCube(in_ixV3) {
