@@ -3,6 +3,7 @@
 <!-- MIT License Copyright (c) 2024 pj-corridor.net -->
 <meta name='viewport' content='width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1' />
 <meta charset='utf-8' />
+<script async src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7863584801355594' crossorigin='anonymous'></script>
 <script type='importmap'>
 {
 	"imports": {
@@ -406,6 +407,7 @@ class cSphericalWorld {
 	constructor(in_radius) {
 		// scene
 		this.#scene = new THREE.Scene();
+		//this.#scene.background = new THREE.Color(0xFFFFFF);
 		// renderer
 		this.#renderer = new THREE.WebGLRenderer({alpha : true, antialias : true});
 		this.#renderer.setPixelRatio(DEVICE_PIXEL_RATIO);
@@ -1107,7 +1109,7 @@ if (getParam('color') === 'easy') {
 	SURFACEPROP.push({V3 : DIRECTION.YP, COLOR : BLUE});
 	SURFACEPROP.push({V3 : DIRECTION.YN, COLOR : BLUE});
 	SURFACEPROP.push({V3 : DIRECTION.ZP, COLOR : BLUE});
-	SURFACEPROP.push({V3 : DIRECTION.ZP, COLOR : BLUE});
+	SURFACEPROP.push({V3 : DIRECTION.ZN, COLOR : BLUE});
 } else {
 	// standard color scheme
 	SURFACEPROP.push({V3 : DIRECTION.XP, COLOR : ORANGE});
