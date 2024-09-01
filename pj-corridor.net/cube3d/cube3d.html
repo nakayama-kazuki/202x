@@ -1266,6 +1266,8 @@ const gMeshLevelMap = ((in_cubeSize) => {
 	const map = new cCyclicMap();
 	const edgeMaterial = new THREE.MeshLambertMaterial({color : GRAY});
 	const cubeDimList = [
+		new cCubeDimV3(2, 2, 1),	/* =  4 */
+		new cCubeDimV3(3, 2, 1),	/* =  6 */
 		new cCubeDimV3(2, 2, 2),	/* =  8 */
 		new cCubeDimV3(3, 2, 2),	/* = 12 */
 		new cCubeDimV3(4, 2, 2),	/* = 16 */
@@ -1314,7 +1316,7 @@ const gMeshLevelMap = ((in_cubeSize) => {
 let gMeshCurrentLevel = getParam('level');
 
 if (gMeshCurrentLevel === false) {
-	gMeshCurrentLevel = 5;
+	gMeshCurrentLevel = 7;
 }
 
 function getColorBySide(in_mesh, in_targetV3) {
