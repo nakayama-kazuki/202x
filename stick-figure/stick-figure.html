@@ -253,6 +253,7 @@ class cSphericalWorld {
 	constructor(in_radius) {
 		// scene
 		this.#scene = new THREE.Scene();
+		//this.#scene.background = new THREE.Color(0xFFFFFF);
 		// renderer
 		this.#renderer = new THREE.WebGLRenderer({alpha : true, antialias : true});
 		this.#renderer.setPixelRatio(DEVICE_PIXEL_RATIO);
