@@ -304,6 +304,9 @@ class cSphericalWorld {
 	get #camera() {
 		return this.#cameraCtrl.getObjectByName(this.#cameraName);
 	}
+	getLookAt() {
+		return this.#camera.position.clone().negate();
+	}
 	#moveCameraCtrl(in_world_dx, in_world_dy) {
 		this.#cameraCtrl.rotateY(in_world_dx * cSphericalWorld.#view.dxDir);
 		this.#cameraCtrl.rotateX(in_world_dy * cSphericalWorld.#view.dyDir);
@@ -405,13 +408,13 @@ class cSphericalWorld {
 			this.addAnimationHook(hook);
 		});
 	}
-	#easeIn(in_initValue, in_stopValue, in_duration, in_progressCallback) {
+	easeIn(in_initValue, in_stopValue, in_duration, in_progressCallback) {
 		return this.#easing(in_initValue, in_stopValue, in_duration, in_progressCallback, 10);
 	}
-	#easeOut(in_initValue, in_stopValue, in_duration, in_progressCallback) {
+	easeOut(in_initValue, in_stopValue, in_duration, in_progressCallback) {
 		return this.#easing(in_initValue, in_stopValue, in_duration, in_progressCallback, 20);
 	}
-	#easeLinear(in_initValue, in_stopValue, in_duration, in_progressCallback) {
+	easeLinear(in_initValue, in_stopValue, in_duration, in_progressCallback) {
 		return this.#easing(in_initValue, in_stopValue, in_duration, in_progressCallback, 30);
 	}
 	addAnimationHook(in_hook) {
@@ -421,7 +424,7 @@ class cSphericalWorld {
 		this.#animationHooks.delete(in_hook);
 	}
 	motionZoom1(in_initDistance, in_stopDistance, in_duration) {
-		return this.#easeOut(in_initDistance, in_stopDistance, in_duration, in_currDistance => {
+		return this.easeOut(in_initDistance, in_stopDistance, in_duration, in_currDistance => {
 			this.#setZoom(in_currDistance);
 		});
 	}
@@ -435,7 +438,7 @@ class cSphericalWorld {
 	motionDefaultView(in_duration = 2000) {
 		const targetQuat = new THREE.Quaternion();
 		const targetRad = this.#cameraCtrl.quaternion.angleTo(targetQuat);
-		return this.#easeIn(0, targetRad, in_duration, in_currRad => {
+		return this.easeIn(0, targetRad, in_duration, in_currRad => {
 			this.#cameraCtrl.quaternion.rotateTowards(targetQuat, in_currRad);
 		});
 	}
@@ -452,7 +455,7 @@ class cSphericalWorld {
 			const initNear = convertUnit(in_initFogged, 0, 100, distance + radius, distance - radius * 3);
 			const stopNear = convertUnit(in_stopFogged, 0, 100, distance + radius, distance - radius * 3);
 			this.#scene.fog = new THREE.Fog(in_color, initNear, initNear + radius * 2);
-			this.#easeLinear(initNear, stopNear, in_duration, in_currNear => {
+			this.easeLinear(initNear, stopNear, in_duration, in_currNear => {
 				this.#scene.fog.near = in_currNear;
 				this.#scene.fog.far = in_currNear + radius * 2;
 			}).then(() => {
@@ -462,7 +465,7 @@ class cSphericalWorld {
 			});
 		});
 	}
-	startRotaion(in_vec3) {
+	startRotation(in_vec3) {
 		this[cSphericalWorld.#rotationCallbackName] = () => {
 			this.#cameraCtrl.rotateX(in_vec3.x);
 			this.#cameraCtrl.rotateY(in_vec3.y);
@@ -470,7 +473,7 @@ class cSphericalWorld {
 		};
 		this.addAnimationHook(this[cSphericalWorld.#rotationCallbackName]);
 	}
-	stopRotaion() {
+	stopRotation() {
 		this.removeAnimationHook(this[cSphericalWorld.#rotationCallbackName]);
 		delete this[cSphericalWorld.#rotationCallbackName];
 	}
@@ -1536,6 +1539,29 @@ function uiDefaultView() {
 	gWorld.motionDefaultView();
 }
 
+async function uiOneMoreFigure() {
+	const currFigure = FIGURES.currValue();
+	const geometry = currFigure.OBJECT.cloneMergedGeometry();
+	const fixedMesh = new THREE.Mesh(geometry, MATERIALS.currValue());
+	fixedMesh.raycast = () => {};
+	gWorld.remove(currFigure.OBJECT);
+	gWorld.add(fixedMesh);
+	const rand = (min, max) => {
+		return Math.random() * (max - min) + min;
+	};
+	gWorld.startRotation(new THREE.Vector3(
+		rand(0.01, 0.005),
+		rand(0.01, 0.005),
+		rand(0.01, 0.005)
+	));
+	const vec3 = gWorld.getLookAt().normalize();
+	await gWorld.easeOut(0, 400, 500, (in_currentValue) => {
+		fixedMesh.position.copy(vec3.clone().multiplyScalar(in_currentValue));
+	});
+	gWorld.stopRotation();
+	gWorld.add(currFigure.OBJECT);
+}
+
 const clipClearArea = Symbol();
 
 HTMLCanvasElement.prototype[clipClearArea] = function(in_margin) {
@@ -1793,6 +1819,10 @@ function setUpButtons() {
 		{
 			text : 'default position',
 			func : uiDefaultView
+		},
+		{
+			text : 'one more figure',
+			func : uiOneMoreFigure
 		},
 		{
 			text : 'screenshot',
