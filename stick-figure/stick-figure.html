@@ -1540,13 +1540,19 @@ function uiDefaultView() {
 	gWorld.motionDefaultView();
 }
 
-async function uiOneMoreFigure() {
+let gDouble = null;
+
+async function uiDouble(in_distance) {
 	const currFigure = FIGURES.currValue();
 	const geometry = currFigure.OBJECT.cloneMergedGeometry();
-	const fixedMesh = new THREE.Mesh(geometry, MATERIALS.currValue());
-	fixedMesh.raycast = () => {};
+	if (gDouble) {
+		gWorld.remove(gDouble);
+		gDouble.geometry.dispose();
+	}
+	gDouble = new THREE.Mesh(geometry, MATERIALS.currValue());
+	gDouble.raycast = () => {};
 	gWorld.remove(currFigure.OBJECT);
-	gWorld.add(fixedMesh);
+	gWorld.add(gDouble);
 	const rand = (min, max) => {
 		return Math.random() * (max - min) + min;
 	};
@@ -1556,11 +1562,19 @@ async function uiOneMoreFigure() {
 		rand(0.01, 0.005)
 	));
 	const vec3 = gWorld.getLookAt().normalize();
-	await gWorld.easeOut(0, 400, 500, (in_currentValue) => {
-		fixedMesh.position.copy(vec3.clone().multiplyScalar(in_currentValue));
+	await gWorld.easeOut(0, in_distance, 500, (in_currentValue) => {
+		gDouble.position.copy(vec3.clone().multiplyScalar(in_currentValue));
 	});
 	gWorld.stopRotation();
 	gWorld.add(currFigure.OBJECT);
+}
+
+function uiDoubleNear() {
+	uiDouble(200);
+}
+
+function uiDoubleFar() {
+	uiDouble(400);
 }
 
 const clipClearArea = Symbol();
@@ -1822,8 +1836,12 @@ function setUpButtons() {
 			func : uiDefaultView
 		},
 		{
-			text : 'one more figure',
-			func : uiOneMoreFigure
+			text : 'double (near)',
+			func : uiDoubleNear
+		},
+		{
+			text : 'double (far)',
+			func : uiDoubleFar
 		},
 		{
 			text : 'screenshot',
