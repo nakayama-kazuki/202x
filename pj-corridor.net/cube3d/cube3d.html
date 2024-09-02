@@ -459,6 +459,9 @@ class cSphericalWorld {
 	get #camera() {
 		return this.#cameraCtrl.getObjectByName(this.#cameraName);
 	}
+	getLookAt() {
+		return this.#camera.position.clone().negate();
+	}
 	#moveCameraCtrl(in_world_dx, in_world_dy) {
 		this.#cameraCtrl.rotateY(in_world_dx * cSphericalWorld.#view.dxDir);
 		this.#cameraCtrl.rotateX(in_world_dy * cSphericalWorld.#view.dyDir);
@@ -560,13 +563,13 @@ class cSphericalWorld {
 			this.addAnimationHook(hook);
 		});
 	}
-	#easeIn(in_initValue, in_stopValue, in_duration, in_progressCallback) {
+	easeIn(in_initValue, in_stopValue, in_duration, in_progressCallback) {
 		return this.#easing(in_initValue, in_stopValue, in_duration, in_progressCallback, 10);
 	}
-	#easeOut(in_initValue, in_stopValue, in_duration, in_progressCallback) {
+	easeOut(in_initValue, in_stopValue, in_duration, in_progressCallback) {
 		return this.#easing(in_initValue, in_stopValue, in_duration, in_progressCallback, 20);
 	}
-	#easeLinear(in_initValue, in_stopValue, in_duration, in_progressCallback) {
+	easeLinear(in_initValue, in_stopValue, in_duration, in_progressCallback) {
 		return this.#easing(in_initValue, in_stopValue, in_duration, in_progressCallback, 30);
 	}
 	addAnimationHook(in_hook) {
@@ -576,7 +579,7 @@ class cSphericalWorld {
 		this.#animationHooks.delete(in_hook);
 	}
 	motionZoom1(in_initDistance, in_stopDistance, in_duration) {
-		return this.#easeOut(in_initDistance, in_stopDistance, in_duration, in_currDistance => {
+		return this.easeOut(in_initDistance, in_stopDistance, in_duration, in_currDistance => {
 			this.#setZoom(in_currDistance);
 		});
 	}
@@ -590,7 +593,7 @@ class cSphericalWorld {
 	motionDefaultView(in_duration = 2000) {
 		const targetQuat = new THREE.Quaternion();
 		const targetRad = this.#cameraCtrl.quaternion.angleTo(targetQuat);
-		return this.#easeIn(0, targetRad, in_duration, in_currRad => {
+		return this.easeIn(0, targetRad, in_duration, in_currRad => {
 			this.#cameraCtrl.quaternion.rotateTowards(targetQuat, in_currRad);
 		});
 	}
@@ -607,7 +610,7 @@ class cSphericalWorld {
 			const initNear = convertUnit(in_initFogged, 0, 100, distance + radius, distance - radius * 3);
 			const stopNear = convertUnit(in_stopFogged, 0, 100, distance + radius, distance - radius * 3);
 			this.#scene.fog = new THREE.Fog(in_color, initNear, initNear + radius * 2);
-			this.#easeLinear(initNear, stopNear, in_duration, in_currNear => {
+			this.easeLinear(initNear, stopNear, in_duration, in_currNear => {
 				this.#scene.fog.near = in_currNear;
 				this.#scene.fog.far = in_currNear + radius * 2;
 			}).then(() => {
@@ -617,7 +620,7 @@ class cSphericalWorld {
 			});
 		});
 	}
-	startRotaion(in_vec3) {
+	startRotation(in_vec3) {
 		this[cSphericalWorld.#rotationCallbackName] = () => {
 			this.#cameraCtrl.rotateX(in_vec3.x);
 			this.#cameraCtrl.rotateY(in_vec3.y);
@@ -625,7 +628,7 @@ class cSphericalWorld {
 		};
 		this.addAnimationHook(this[cSphericalWorld.#rotationCallbackName]);
 	}
-	stopRotaion() {
+	stopRotation() {
 		this.removeAnimationHook(this[cSphericalWorld.#rotationCallbackName]);
 		delete this[cSphericalWorld.#rotationCallbackName];
 	}
@@ -2145,7 +2148,7 @@ function shuffle(in_count) {
 			if (in_remaining_count > 1) {
 				(randomRotation)(in_remaining_count - 1);
 			} else {
-				gWorld.stopRotaion();
+				gWorld.stopRotation();
 				gCube.uiEnable();
 			}
 		};
@@ -2157,7 +2160,7 @@ function shuffle(in_count) {
 	const rand = (min, max) => {
 		return Math.random() * (max - min) + min;
 	};
-	gWorld.startRotaion(new THREE.Vector3(
+	gWorld.startRotation(new THREE.Vector3(
 		rand(0.05, 0.02),
 		rand(0.05, 0.02),
 		rand(0.05, 0.02)
