@@ -19,8 +19,41 @@
 import * as THREE from 'three';
 import * as UTILS from 'utils';
 
-//const DEBUG = true;
-const DEBUG = false;
+/*
+	(1) utilities
+*/
+
+function parseParam(in_url = location.href) {
+	const req = new URL(in_url);
+	const parsed = {
+		q : {},
+		h : []
+	};
+	req.searchParams.forEach((value, key) => {
+		parsed.q[key] = value;
+	});
+	if (req.hash) {
+		const hashValues = req.hash.substring(1).split('#');
+	}
+	return parsed;
+}
+
+function getParam(in_name) {
+	const parsed = parseParam();
+	if (in_name in parsed.q) {
+		const value = parsed.q[in_name];
+		const checkNum = parseInt(value, 10);
+		if (checkNum.toString() === value) {
+			return checkNum;
+		} else {
+			return value;
+		}
+	}
+	if (in_name in parsed.h) {
+		return true;
+	}
+	return false;
+}
 
 function randomString(in_length = 5)
 {
@@ -183,6 +216,202 @@ class cEase {
 	}
 }
 
+function pseudoMessageDigest1(in_array) {
+	let hash = 0;
+	in_array.sort().forEach(in_entry => {
+		for (let i = 0; i < in_entry.length; i++) {
+			hash = (hash << 5) - hash + in_entry.charCodeAt(i);
+			hash |= 0;
+		}
+	});
+	return hash >>> 0;
+}
+
+function pseudoMessageDigest2(in_string) {
+	return pseudoMessageDigest1([in_string]);
+}
+
+/*
+	*** NOTE ***
+	when the app uses position of the mesh to find overlapping etc,
+	need to ignore very small error.
+*/
+
+class cApproximateMap extends Map {
+	// to use this class, key should be numeric
+	constructor(in_error) {
+		super();
+		this.error = in_error;
+	}
+	#sortedKeys = null;
+	#approximateKey(in_key) {
+		for (const registeredKey of this.keys()) {
+			if (Math.abs(registeredKey - in_key) < this.error) {
+				return registeredKey;
+			}
+		}
+		return in_key;
+	}
+	sortedKey(in_index) {
+		if (!this.#sortedKeys) {
+			this.#sortedKeys = Array.from(this.keys()).sort((a, b) => a - b);
+		}
+		return this.#sortedKeys[in_index];
+	}
+	get(in_key) {
+		return super.get(this.#approximateKey(in_key));
+	}
+	set(in_key, in_value) {
+		this.#sortedKeys = null;
+		return super.set(this.#approximateKey(in_key), in_value);
+	}
+	delete(in_key) {
+		this.#sortedKeys = null;
+		return super.delete(this.#approximateKey(in_key));
+	}
+}
+
+class cApproximateSet extends Set {
+	constructor(in_error) {
+		super();
+		this.error = in_error;
+	}
+	#approximateValue(in_value) {
+		for (let item of this) {
+			if (Math.abs(item - in_value) < this.error) {
+				return item;
+			}
+		}
+		return in_value;
+	}
+	add(in_value) {
+		return super.add(this.#approximateValue(in_value));
+	}
+	has(in_value) {
+		return super.has(this.#approximateValue(in_value));
+	}
+	delete(in_value) {
+		return super.delete(this.#approximateValue(in_value));
+	}
+}
+
+class cCyclicMap extends Map {
+	get keysArray() {
+		return Array.from(this.keys());
+	}
+	#deltaItemByOrder(in_order, in_delta) {
+		const length = this.keysArray.length;
+		const deltaIndex = (in_order + in_delta + length) % length;
+		const deltaKey = this.keysArray[deltaIndex];
+		return {
+			k : deltaKey,
+			v : this.get(deltaKey)
+		};
+	}
+	nextItemByOrder(in_order) {
+		return this.#deltaItemByOrder(in_order, +1);
+	}
+	currItemByOrder(in_order) {
+		return this.#deltaItemByOrder(in_order, 0);
+	}
+	prevItemByOrder(in_order) {
+		return this.#deltaItemByOrder(in_order, -1);
+	}
+	#deltaItemByKey(in_key, in_delta) {
+		const index = this.keysArray.indexOf(in_key);
+		if (index === -1) {
+			return null;
+		} else {
+			return this.#deltaItemByOrder(index, in_delta);
+		}
+	}
+	nextItemByKey(in_key) {
+		return this.#deltaItemByKey(in_key, +1);
+	}
+	prevItemByKey(in_key) {
+		return this.#deltaItemByKey(in_key, -1);
+	}
+}
+
+function emulateTouchEvent(in_elem) {
+	const eventMapper = [
+		{
+			src : 'touchstart',
+			dst : 'mousedown'
+		},
+		{
+			src : 'touchmove',
+			dst : 'mousemove'
+		},
+		{
+			src : 'touchleave',
+			dst : 'mouseleave'
+		},
+		{
+			src : 'touchend',
+			dst : 'mouseup'
+		}
+	];
+	let lastDistance = null;
+	function createAltWheelEv(in_ev) {
+		const t1 = in_ev.touches[0];
+		const t2 = in_ev.touches[1];
+		const currentDistance = Math.sqrt(Math.pow(t2.clientX - t1.clientX, 2) + Math.pow(t2.clientY - t1.clientY, 2));
+		if (lastDistance === null) {
+			lastDistance = currentDistance;
+			return null;
+		}
+		const speed = 2;
+		const delta = (lastDistance - currentDistance) * speed;
+		lastDistance = currentDistance;
+		return new WheelEvent('wheel', {
+			deltaY : delta,
+			clientX : (t1.clientX + t2.clientX) / 2,
+			clientY : (t1.clientY + t2.clientY) / 2,
+			ctrlKey : in_ev.ctrlKey,
+			altKey : in_ev.altKey,
+			shiftKey : in_ev.shiftKey,
+			metaKey : in_ev.metaKey
+		});
+	}
+	function createAltMouseEv(in_type, in_ev) {
+		return new MouseEvent(in_type, {
+			bubbles : true,
+			cancelable : true,
+			view : window,
+			screenX : in_ev.changedTouches[0].screenX,
+			screenY : in_ev.changedTouches[0].screenY,
+			clientX : in_ev.changedTouches[0].clientX,
+			clientY : in_ev.changedTouches[0].clientY,
+			ctrlKey : in_ev.ctrlKey,
+			altKey : in_ev.altKey,
+			shiftKey : in_ev.shiftKey,
+			metaKey : in_ev.metaKey,
+			button : 0,
+			relatedTarget : null
+		});
+	}
+	eventMapper.forEach(in_pair => {
+		in_elem.addEventListener(in_pair.src, in_ev => {
+			in_ev.preventDefault();
+			in_ev.stopPropagation();
+			let alternative = null;
+			if (in_ev.touches.length > 1) {
+				if ((in_ev.touches.length === 2) && (in_pair.src === 'touchmove')) {
+					alternative = createAltWheelEv(in_ev);
+				} else {
+					lastDistance = null;
+				}
+			} else {
+				alternative = createAltMouseEv(in_pair.dst, in_ev);
+			}
+			if (alternative) {
+				in_ev.target.dispatchEvent(alternative);
+			}
+		});
+	});
+}
+
 const XYZ = ['x', 'y', 'z'];
 
 const VEC3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
@@ -196,8 +425,268 @@ const DIRECTION = {
 	ZN : VEC3(0, 0, -1)
 }
 
+function trapezoidGeometryUtil(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_YLen, in_Rad = 0) {
+	const parts = [];
+	const DEG90 = Math.PI * 1 / 2;
+	/*
+			 (+)
+			  |
+			  0-----1
+			 /|    /|
+			3-----2 |
+			| |   | |
+		   -|-4---|-5---(+)
+			|/|   |/
+			7-----6
+		   /  |
+		 (+)
+	*/
+	const baseVertices = {
+		v0 : VEC3(in_tXLen / 2 * -1, in_YLen / 2 * +1, in_tZLen / 2 * -1),
+		v1 : VEC3(in_tXLen / 2 * +1, in_YLen / 2 * +1, in_tZLen / 2 * -1),
+		v2 : VEC3(in_tXLen / 2 * +1, in_YLen / 2 * +1, in_tZLen / 2 * +1),
+		v3 : VEC3(in_tXLen / 2 * -1, in_YLen / 2 * +1, in_tZLen / 2 * +1),
+		v4 : VEC3(in_bXLen / 2 * -1, in_YLen / 2 * -1, in_bZLen / 2 * -1),
+		v5 : VEC3(in_bXLen / 2 * +1, in_YLen / 2 * -1, in_bZLen / 2 * -1),
+		v6 : VEC3(in_bXLen / 2 * +1, in_YLen / 2 * -1, in_bZLen / 2 * +1),
+		v7 : VEC3(in_bXLen / 2 * -1, in_YLen / 2 * -1, in_bZLen / 2 * +1)
+	};
+	/*
+		1. Surface (BufferGeometry)
+			even you can also make surface using PlaneGeometry,
+			it is a little complicated to decide position before rotation.
+	*/
+	const surfaceMap = new Map([
+		[DIRECTION.XP, [baseVertices.v1, baseVertices.v2, baseVertices.v6, baseVertices.v5]],
+		[DIRECTION.XN, [baseVertices.v0, baseVertices.v4, baseVertices.v7, baseVertices.v3]],
+		[DIRECTION.YP, [baseVertices.v3, baseVertices.v2, baseVertices.v1, baseVertices.v0]],
+		[DIRECTION.YN, [baseVertices.v6, baseVertices.v7, baseVertices.v4, baseVertices.v5]],
+		[DIRECTION.ZP, [baseVertices.v7, baseVertices.v6, baseVertices.v2, baseVertices.v3]],
+		[DIRECTION.ZN, [baseVertices.v5, baseVertices.v4, baseVertices.v0, baseVertices.v1]]
+	]);
+	const translatedSurfaceMap = new Map();
+	const equal = (in_vec, ...in_vecArr) => in_vecArr.some(vec => in_vec.equals(vec));
+	surfaceMap.forEach((in_val, in_key) => {
+		let translate;
+		if (equal(in_key, DIRECTION.YP, DIRECTION.YN)) {
+			// top or bottom
+			translate = in_key.clone().multiplyScalar(in_Rad);
+		} else {
+			const normal = VEC3();
+			in_val[forEachCombination](3, (a, b, c) => {
+				let v1 = (VEC3()).subVectors(a, b);
+				let v2 = (VEC3()).subVectors(b, c);
+				if ((v1.lengthSq() > 0) && (v2.lengthSq() > 0)) {
+					normal.crossVectors(v1, v2);
+					if (normal.lengthSq() > 0) {
+						normal.normalize();
+						return true;
+					}
+				}
+				return false;
+			});
+			translate = normal.multiplyScalar(in_Rad);
+		}
+		const vertices = [];
+		in_val.forEach(in_vertex => {
+			vertices.push(in_vertex.clone().add(translate));
+		});
+		translatedSurfaceMap.set(in_key, vertices);
+	});
+	for (const vertices of translatedSurfaceMap.values()) {
+		const uniqueFilter = (in_vertices) => {
+			const unique = [];
+			in_vertices.forEach(in_vertex => {
+				if (unique.some(in_v => in_v.equals(in_vertex))) {
+					return;
+				}
+				unique.push(in_vertex);
+			});
+		    return unique;
+		};
+		const unique = uniqueFilter(vertices);
+		if (unique.length < 3) {
+			continue;
+		}
+		const geometry = new THREE.BufferGeometry();
+		const flat = [];
+		unique.forEach(in_vec3 => {
+			flat.push(in_vec3.x, in_vec3.y, in_vec3.z);
+		});
+		geometry.setAttribute('position', new THREE.Float32BufferAttribute(flat, 3));
+		let ix, uv;
+		if (unique.length === 3) {
+			ix = [0, 1, 2];
+			uv = [0, 0, 1, 0, 0.5, 1];
+		} else {
+			ix = [0, 1, 2, 0, 2, 3];
+			uv = [0, 0, 1, 0, 1, 1, 0, 1];
+		}
+		geometry.setIndex(ix);
+		geometry.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(uv), 2));
+		geometry.computeVertexNormals();
+		geometry.userData.surface = true;
+		parts.push(geometry);
+	}
+	/*
+		2. Edge (CylinderGeometry)
+			2.1. Edge for top & bottom surface (applying rotation by prepared setting)
+			2.2. Edge for sloped side surface (applying rotation automatically)
+	*/
+	const makeEdgeCylinder = (in_height, in_start, in_theta) => {
+		const defaultRadialSegments = 32;
+		const defaultHeightSegments = 1;
+		const openEnded = true;
+		return new THREE.CylinderGeometry(
+			in_Rad,
+			in_Rad,
+			in_height,
+			defaultRadialSegments,
+			defaultHeightSegments,
+			openEnded,
+			in_start,
+			in_theta
+		);
+	};
+	const rotate = (in_geo, in_vec) => {
+		const rotateAxes = {x : 'rotateX', y : 'rotateY', z : 'rotateZ'};
+		for (const [axis, method] of Object.entries(rotateAxes)) {
+			in_geo[method](in_vec[axis]);
+		}
+	};
+	const centroid = (in_vecArr) => {
+		const ret = VEC3();
+		in_vecArr.forEach(in_vector => {
+			ret.add(in_vector);
+		});
+		return ret.divideScalar(in_vecArr.length);
+	};
+	const theta = (a, b) => Math.atan(Math.abs(a - b) / 2 / in_YLen) * (a > b ? +1 : -1);
+	const thetaX = theta(in_tXLen, in_bXLen);
+	const thetaZ = theta(in_tZLen, in_bZLen);
+	const edgeConfigSet1 = [
+		/*
+			E : Edge (Vector3 x2)
+			R : Rotation from Vector3(0, 1, 0)
+			P : Parameter for THREE.CylinderGeometry
+		*/
+		{E : [baseVertices.v2, baseVertices.v3], R : VEC3(0, 0, DEG90 * -1), P : [DEG90 * 3, DEG90 + thetaZ]},
+		{E : [baseVertices.v3, baseVertices.v0], R : VEC3(DEG90 * +1, 0, 0), P : [DEG90 * 2, DEG90 + thetaX]},
+		{E : [baseVertices.v0, baseVertices.v1], R : VEC3(0, 0, DEG90 * +1), P : [DEG90 * 1, DEG90 + thetaZ]},
+		{E : [baseVertices.v1, baseVertices.v2], R : VEC3(DEG90 * -1, 0, 0), P : [DEG90 * 0, DEG90 + thetaX]},
+		{E : [baseVertices.v6, baseVertices.v7], R : VEC3(0, 0, DEG90 * +1), P : [DEG90 * 3, DEG90 - thetaZ]},
+		{E : [baseVertices.v7, baseVertices.v4], R : VEC3(DEG90 * -1, 0, 0), P : [DEG90 * 2, DEG90 - thetaX]},
+		{E : [baseVertices.v4, baseVertices.v5], R : VEC3(0, 0, DEG90 * -1), P : [DEG90 * 1, DEG90 - thetaZ]},
+		{E : [baseVertices.v5, baseVertices.v6], R : VEC3(DEG90 * +1, 0, 0), P : [DEG90 * 0, DEG90 - thetaX]}
+	];
+	const edgeConfigSet2 = [
+		{E : [baseVertices.v3, baseVertices.v7], P : [DEG90 * 3, DEG90]},
+		{E : [baseVertices.v0, baseVertices.v4], P : [DEG90 * 2, DEG90]},
+		{E : [baseVertices.v1, baseVertices.v5], P : [DEG90 * 1, DEG90]},
+		{E : [baseVertices.v2, baseVertices.v6], P : [DEG90 * 0, DEG90]}
+	];
+	edgeConfigSet1.forEach(in_conf => {
+		const length = in_conf.E[0].distanceTo(in_conf.E[1]);
+		if (length === 0) {
+			return;
+		}
+		const geometry = makeEdgeCylinder(length, in_conf.P[0], in_conf.P[1]);
+		rotate(geometry, in_conf.R);
+		geometry.translate(centroid(in_conf.E));
+		geometry.userData.surface = false;
+		parts.push(geometry);
+	});
+	const vertical = VEC3(0, 1, 0);
+	edgeConfigSet2.forEach(in_conf => {
+		const length = in_conf.E[0].distanceTo(in_conf.E[1]);
+		const geometry = makeEdgeCylinder(length, in_conf.P[0], in_conf.P[1]);
+		/*
+			at first, I mistook it for the opposite direction.
+			( in_conf.E[0] --> in_conf.E[1] )
+			because of it, parameter of theta couldn't be stable.
+		*/
+		const slope = in_conf.E[0].clone().sub(in_conf.E[1]).normalize();
+		const quaternion = new THREE.Quaternion();
+		quaternion.setFromUnitVectors(vertical, slope);
+		geometry.applyQuaternion(quaternion);
+		geometry.translate(centroid(in_conf.E));
+		geometry.userData.surface = false;
+		parts.push(geometry);
+	});
+	/*
+		3. Corner (SphereGeometry)
+	*/
+	const makeCornerSphere = (in_phi_start, in_theta_start, in_theta) => {
+		const error = 0.01;
+		const widthSegments = 32;
+		const heightSegments = 16;
+		return new THREE.SphereGeometry(
+			in_Rad,
+			widthSegments,
+			heightSegments,
+			in_phi_start - error,
+			DEG90 + error * 2,
+			in_theta_start - error,
+			in_theta + error * 2
+		);
+	};
+	const uTheta = (in_tXLen > in_bXLen) || (in_tZLen > in_bZLen) ? DEG90 * 2 : DEG90 * 1;
+	const bTheta = (in_tXLen < in_bXLen) || (in_tZLen < in_bZLen) ? DEG90 * 2 : DEG90 * 1;
+	const cornerConfigSet = [
+		/*
+			C : Corner (Vector3 x1)
+			P : Parameter for THREE.SphereGeometry
+		*/
+		{C : baseVertices.v0, P : [DEG90 * 3, 0, uTheta]},
+		{C : baseVertices.v1, P : [DEG90 * 2, 0, uTheta]},
+		{C : baseVertices.v2, P : [DEG90 * 1, 0, uTheta]},
+		{C : baseVertices.v3, P : [DEG90 * 0, 0, uTheta]},
+		{C : baseVertices.v4, P : [DEG90 * 3, DEG90 * 2 - bTheta, bTheta]},
+		{C : baseVertices.v5, P : [DEG90 * 2, DEG90 * 2 - bTheta, bTheta]},
+		{C : baseVertices.v6, P : [DEG90 * 1, DEG90 * 2 - bTheta, bTheta]},
+		{C : baseVertices.v7, P : [DEG90 * 0, DEG90 * 2 - bTheta, bTheta]}
+	];
+	cornerConfigSet.forEach(in_conf => {
+		const geometry = makeCornerSphere(...in_conf.P);
+		geometry.translate(in_conf.C);
+		geometry.userData.surface = false;
+		parts.push(geometry);
+	});
+	// assume order of groups ( BufferGeometry x6, other geometries ... )
+	const groups = [];
+	let edgeGroup = 0;
+	const mergedGeometry = UTILS.mergeGeometries(parts);
+	parts.forEach(in_part => {
+		if (in_part.userData.surface) {
+			groups.push(in_part.index.count);
+		} else {
+			edgeGroup += in_part.index.count;
+		}
+		in_part.dispose();
+	});
+	groups.push(edgeGroup);
+	let start = 0;
+	for (let i = 0; i < groups.length; i++) {
+		mergedGeometry.addGroup(start, groups[i], i);
+		start += groups[i];
+	}
+	return mergedGeometry;
+}
+
+function roundBoxGeometry(in_xlen, in_ylen, in_zlen, in_rad) {
+	return trapezoidGeometryUtil(in_xlen, in_zlen, in_xlen, in_zlen, in_ylen, in_rad);
+}
+
+function roundRegularBoxGeometry(in_len, in_rad) {
+	return trapezoidGeometryUtil(in_len, in_len, in_len, in_len, in_len, in_rad);
+}
+
+function trapezoidGeometry(in_tLen, in_bLen, in_height, in_thickness) {
+	return trapezoidGeometryUtil(in_tLen, 0, in_bLen, 0, in_height, in_thickness);
+}
+
 /*
-	(1) cSphericalWorld
+	(2) cSphericalWorld
 
 	|
 	+-- Scene
@@ -275,7 +764,7 @@ class cSphericalWorld {
 			cSphericalWorld.#view.cameraUp.y,
 			cSphericalWorld.#view.cameraUp.z
 		);
-		camera.lookAt(new THREE.Vector3(0, 0, 0));
+		camera.lookAt(VEC3(0, 0, 0));
 		this.#cameraCtrl = new THREE.Object3D();
 		this.#cameraCtrl.add(camera);
 		// light
@@ -298,6 +787,7 @@ class cSphericalWorld {
 		this.canvas.addEventListener('mouseout', this.#evMoveStop.bind(this));
 		this.canvas.addEventListener('mouseup', this.#evMoveStop.bind(this));
 		this.canvas.addEventListener('wheel', this.#evZoom.bind(this));
+		emulateTouchEvent(this.canvas);
 	}
 	get canvas() {
 		return this.#renderer.domElement;
@@ -372,7 +862,7 @@ class cSphericalWorld {
 		return this.#intersectObjects(in_vec2, false, in_layer);
 	}
 	copyCameraPosition() {
-		return this.#camera.getWorldPosition(new THREE.Vector3());
+		return this.#camera.getWorldPosition(VEC3());
 	}
 	#easing(in_initValue, in_stopValue, in_duration, in_progressCallback, in_method) {
 		return new Promise(resolve => {
@@ -518,7 +1008,7 @@ class cSphericalWorld {
 	}
 	remove(in_removed, in_isSystemObject = false) {
 		/*
-			*** NOTE #1 ***
+			*** NOTE ***
 			As remove is idempotent,
 			children will be removed safety.
 		*/
@@ -544,8 +1034,11 @@ class cSphericalWorld {
 }
 
 /*
-	(2) factory function controls segments of geometry (depends on debug setting).
+	(3) factory function controls segments of geometry (depends on debug setting).
 */
+
+//const DEBUG = true;
+const DEBUG = false;
 
 function getSegments(in_className) {
 	const IX_ROUGH = 0;
@@ -593,7 +1086,7 @@ class CustomCapsule extends THREE.CapsuleGeometry {
 }
 
 /*
-	(3) cPart
+	(4) cPart
 
 	Mesh
 	|
@@ -653,7 +1146,7 @@ class cPart extends THREE.Mesh {
 			z : obj.lookAt(0, 0, 1)
 		*/
 		const angle = Math.PI / 2;
-		const front = new THREE.Vector3(0, 0, -1);
+		const front = VEC3(0, 0, -1);
 		super(in_geometry.rotateX(angle).translate(0, 0, in_length / 2), in_material);
 		if (false) {
 			this.castShadow = true;
@@ -665,7 +1158,7 @@ class cPart extends THREE.Mesh {
 		const thin = 0.01;
 		const wide = in_length * cPart.#receiverWidenRatio;
 		/*
-			*** NOTE #2 ***
+			*** NOTE ***
 			As PlaneGeometry can't catch raycast from opposite side,
 			use thin BoxGeometry instead of PlaneGeometry.
 		*/
@@ -700,7 +1193,7 @@ class cPart extends THREE.Mesh {
 		// target direction
 		const dstVec3 = in_vec3.clone().normalize();
 		/*
-			*** NOTE #3 ***
+			*** NOTE ***
 			Cached current frontvec should be cloned before applyQuaternion.
 			Without it cached will be broken.
 		*/
@@ -724,7 +1217,7 @@ class cPart extends THREE.Mesh {
 }
 
 /*
-	(4) cArm
+	(5) cArm
 
 	cArm
 	|
@@ -811,7 +1304,7 @@ class cLightSaber extends cPart {
 }
 
 /*
-	(5) cBody
+	(6) cBody
 
 	Object3D
 	|
@@ -833,266 +1326,6 @@ class cLightSaber extends cPart {
 		|
 		+-- cArm ( l-leg )
 */
-
-function trapezoidGeometryUtil(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_YLen, in_Rad = 0) {
-	const parts = [];
-	const DEG90 = Math.PI * 1 / 2;
-	/*
-			 (+)
-			  |
-			  0-----1
-			 /|    /|
-			3-----2 |
-			| |   | |
-		   -|-4---|-5---(+)
-			|/|   |/
-			7-----6
-		   /  |
-		 (+)
-	*/
-	const baseVertices = {
-		v0 : VEC3(in_tXLen / 2 * -1, in_YLen / 2 * +1, in_tZLen / 2 * -1),
-		v1 : VEC3(in_tXLen / 2 * +1, in_YLen / 2 * +1, in_tZLen / 2 * -1),
-		v2 : VEC3(in_tXLen / 2 * +1, in_YLen / 2 * +1, in_tZLen / 2 * +1),
-		v3 : VEC3(in_tXLen / 2 * -1, in_YLen / 2 * +1, in_tZLen / 2 * +1),
-		v4 : VEC3(in_bXLen / 2 * -1, in_YLen / 2 * -1, in_bZLen / 2 * -1),
-		v5 : VEC3(in_bXLen / 2 * +1, in_YLen / 2 * -1, in_bZLen / 2 * -1),
-		v6 : VEC3(in_bXLen / 2 * +1, in_YLen / 2 * -1, in_bZLen / 2 * +1),
-		v7 : VEC3(in_bXLen / 2 * -1, in_YLen / 2 * -1, in_bZLen / 2 * +1)
-	};
-	/*
-		1. Surface (BufferGeometry)
-			even you can also make surface using PlaneGeometry,
-			it is a little complicated to decide position before rotation.
-	*/
-	const surfaceMap = new Map([
-		[DIRECTION.XP, [baseVertices.v1, baseVertices.v2, baseVertices.v6, baseVertices.v5]],
-		[DIRECTION.XN, [baseVertices.v0, baseVertices.v4, baseVertices.v7, baseVertices.v3]],
-		[DIRECTION.YP, [baseVertices.v3, baseVertices.v2, baseVertices.v1, baseVertices.v0]],
-		[DIRECTION.YN, [baseVertices.v6, baseVertices.v7, baseVertices.v4, baseVertices.v5]],
-		[DIRECTION.ZP, [baseVertices.v7, baseVertices.v6, baseVertices.v2, baseVertices.v3]],
-		[DIRECTION.ZN, [baseVertices.v5, baseVertices.v4, baseVertices.v0, baseVertices.v1]]
-	]);
-	const translatedSurfaceMap = new Map();
-	const equal = (in_vec, ...in_vecArr) => in_vecArr.some(vec => in_vec.equals(vec));
-	surfaceMap.forEach((in_val, in_key) => {
-		let translate;
-		if (equal(in_key, DIRECTION.YP, DIRECTION.YN)) {
-			// top or bottom
-			translate = in_key.clone().multiplyScalar(in_Rad);
-		} else {
-			const normal = VEC3();
-			in_val[forEachCombination](3, (a, b, c) => {
-				let v1 = (VEC3()).subVectors(a, b);
-				let v2 = (VEC3()).subVectors(b, c);
-				if ((v1.lengthSq() > 0) && (v2.lengthSq() > 0)) {
-					normal.crossVectors(v1, v2);
-					if (normal.lengthSq() > 0) {
-						normal.normalize();
-						return true;
-					}
-				}
-				return false;
-			});
-			translate = normal.multiplyScalar(in_Rad);
-		}
-		const vertices = [];
-		in_val.forEach(in_vertex => {
-			vertices.push(in_vertex.clone().add(translate));
-		});
-		translatedSurfaceMap.set(in_key, vertices);
-	});
-	for (const vertices of translatedSurfaceMap.values()) {
-		const uniqueFilter = (in_vertices) => {
-			const unique = [];
-			in_vertices.forEach(in_vertex => {
-				if (unique.some(in_v => in_v.equals(in_vertex))) {
-					return;
-				}
-				unique.push(in_vertex);
-			});
-		    return unique;
-		};
-		const unique = uniqueFilter(vertices);
-		if (unique.length < 3) {
-			continue;
-		}
-		const geometry = new THREE.BufferGeometry();
-		const flat = [];
-		unique.forEach(in_vec3 => {
-			flat.push(in_vec3.x, in_vec3.y, in_vec3.z);
-		});
-		geometry.setAttribute('position', new THREE.Float32BufferAttribute(flat, 3));
-		let ix, uv;
-		if (unique.length === 3) {
-			ix = [0, 1, 2];
-			uv = [0, 0, 1, 0, 0.5, 1];
-		} else {
-			ix = [0, 1, 2, 0, 2, 3];
-			uv = [0, 0, 1, 0, 1, 1, 0, 1];
-		}
-		geometry.setIndex(ix);
-		geometry.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(uv), 2));
-		geometry.computeVertexNormals();
-		geometry.userData.surface = true;
-		parts.push(geometry);
-	}
-	/*
-		2. Edge (CylinderGeometry)
-			2.1. Edge for top & bottom surface (applying rotation by prepared setting)
-			2.2. Edge for sloped side surface (applying rotation automatically)
-	*/
-	const makeEdgeCylinder = (in_height, in_start, in_theta) => {
-		const defaultRadialSegments = 32;
-		const defaultHeightSegments = 1;
-		const openEnded = true;
-		return new THREE.CylinderGeometry(
-			in_Rad,
-			in_Rad,
-			in_height,
-			defaultRadialSegments,
-			defaultHeightSegments,
-			openEnded,
-			in_start,
-			in_theta
-		);
-	};
-	const rotate = (in_geo, in_vec) => {
-		const rotateAxes = {x : 'rotateX', y : 'rotateY', z : 'rotateZ'};
-		for (const [axis, method] of Object.entries(rotateAxes)) {
-			in_geo[method](in_vec[axis]);
-		}
-	};
-	const centroid = (in_vecArr) => {
-		const ret = new THREE.Vector3();
-		in_vecArr.forEach(in_vector => {
-			ret.add(in_vector);
-		});
-		return ret.divideScalar(in_vecArr.length);
-	};
-	const theta = (a, b) => Math.atan(Math.abs(a - b) / 2 / in_YLen) * (a > b ? +1 : -1);
-	const thetaX = theta(in_tXLen, in_bXLen);
-	const thetaZ = theta(in_tZLen, in_bZLen);
-	const edgeConfigSet1 = [
-		/*
-			E : Edge (Vector3 x2)
-			R : Rotation from Vector3(0, 1, 0)
-			P : Parameter for THREE.CylinderGeometry
-		*/
-		{E : [baseVertices.v2, baseVertices.v3], R : VEC3(0, 0, DEG90 * -1), P : [DEG90 * 3, DEG90 + thetaZ]},
-		{E : [baseVertices.v3, baseVertices.v0], R : VEC3(DEG90 * +1, 0, 0), P : [DEG90 * 2, DEG90 + thetaX]},
-		{E : [baseVertices.v0, baseVertices.v1], R : VEC3(0, 0, DEG90 * +1), P : [DEG90 * 1, DEG90 + thetaZ]},
-		{E : [baseVertices.v1, baseVertices.v2], R : VEC3(DEG90 * -1, 0, 0), P : [DEG90 * 0, DEG90 + thetaX]},
-		{E : [baseVertices.v6, baseVertices.v7], R : VEC3(0, 0, DEG90 * +1), P : [DEG90 * 3, DEG90 - thetaZ]},
-		{E : [baseVertices.v7, baseVertices.v4], R : VEC3(DEG90 * -1, 0, 0), P : [DEG90 * 2, DEG90 - thetaX]},
-		{E : [baseVertices.v4, baseVertices.v5], R : VEC3(0, 0, DEG90 * -1), P : [DEG90 * 1, DEG90 - thetaZ]},
-		{E : [baseVertices.v5, baseVertices.v6], R : VEC3(DEG90 * +1, 0, 0), P : [DEG90 * 0, DEG90 - thetaX]}
-	];
-	const edgeConfigSet2 = [
-		{E : [baseVertices.v3, baseVertices.v7], P : [DEG90 * 3, DEG90]},
-		{E : [baseVertices.v0, baseVertices.v4], P : [DEG90 * 2, DEG90]},
-		{E : [baseVertices.v1, baseVertices.v5], P : [DEG90 * 1, DEG90]},
-		{E : [baseVertices.v2, baseVertices.v6], P : [DEG90 * 0, DEG90]}
-	];
-	edgeConfigSet1.forEach(in_conf => {
-		const length = in_conf.E[0].distanceTo(in_conf.E[1]);
-		if (length === 0) {
-			return;
-		}
-		const geometry = makeEdgeCylinder(length, in_conf.P[0], in_conf.P[1]);
-		rotate(geometry, in_conf.R);
-		geometry.translate(centroid(in_conf.E));
-		geometry.userData.surface = false;
-		parts.push(geometry);
-	});
-	const vertical = VEC3(0, 1, 0);
-	edgeConfigSet2.forEach(in_conf => {
-		const length = in_conf.E[0].distanceTo(in_conf.E[1]);
-		const geometry = makeEdgeCylinder(length, in_conf.P[0], in_conf.P[1]);
-		/*
-			at first, I mistook it for the opposite direction.
-			( in_conf.E[0] --> in_conf.E[1] )
-			because of it, parameter of theta couldn't be stable.
-		*/
-		const slope = in_conf.E[0].clone().sub(in_conf.E[1]).normalize();
-		const quaternion = new THREE.Quaternion();
-		quaternion.setFromUnitVectors(vertical, slope);
-		geometry.applyQuaternion(quaternion);
-		geometry.translate(centroid(in_conf.E));
-		geometry.userData.surface = false;
-		parts.push(geometry);
-	});
-	/*
-		3. Corner (SphereGeometry)
-	*/
-	const makeCornerSphere = (in_phi_start, in_theta_start, in_theta) => {
-		const error = 0.01;
-		const widthSegments = 32;
-		const heightSegments = 16;
-		return new THREE.SphereGeometry(
-			in_Rad,
-			widthSegments,
-			heightSegments,
-			in_phi_start - error,
-			DEG90 + error * 2,
-			in_theta_start - error,
-			in_theta + error * 2
-		);
-	};
-	const uTheta = (in_tXLen > in_bXLen) || (in_tZLen > in_bZLen) ? DEG90 * 2 : DEG90 * 1;
-	const bTheta = (in_tXLen < in_bXLen) || (in_tZLen < in_bZLen) ? DEG90 * 2 : DEG90 * 1;
-	const cornerConfigSet = [
-		/*
-			C : Corner (Vector3 x1)
-			P : Parameter for THREE.SphereGeometry
-		*/
-		{C : baseVertices.v0, P : [DEG90 * 3, 0, uTheta]},
-		{C : baseVertices.v1, P : [DEG90 * 2, 0, uTheta]},
-		{C : baseVertices.v2, P : [DEG90 * 1, 0, uTheta]},
-		{C : baseVertices.v3, P : [DEG90 * 0, 0, uTheta]},
-		{C : baseVertices.v4, P : [DEG90 * 3, DEG90 * 2 - bTheta, bTheta]},
-		{C : baseVertices.v5, P : [DEG90 * 2, DEG90 * 2 - bTheta, bTheta]},
-		{C : baseVertices.v6, P : [DEG90 * 1, DEG90 * 2 - bTheta, bTheta]},
-		{C : baseVertices.v7, P : [DEG90 * 0, DEG90 * 2 - bTheta, bTheta]}
-	];
-	cornerConfigSet.forEach(in_conf => {
-		const geometry = makeCornerSphere(...in_conf.P);
-		geometry.translate(in_conf.C);
-		geometry.userData.surface = false;
-		parts.push(geometry);
-	});
-	// assume order of groups ( BufferGeometry x6, other geometries ... )
-	const groups = [];
-	let edgeGroup = 0;
-	const mergedGeometry = UTILS.mergeGeometries(parts);
-	parts.forEach(in_part => {
-		if (in_part.userData.surface) {
-			groups.push(in_part.index.count);
-		} else {
-			edgeGroup += in_part.index.count;
-		}
-		in_part.dispose();
-	});
-	groups.push(edgeGroup);
-	let start = 0;
-	for (let i = 0; i < groups.length; i++) {
-		mergedGeometry.addGroup(start, groups[i], i);
-		start += groups[i];
-	}
-	return mergedGeometry;
-}
-
-function roundBoxGeometry(in_xlen, in_ylen, in_zlen, in_rad) {
-	return trapezoidGeometryUtil(in_xlen, in_zlen, in_xlen, in_zlen, in_ylen, in_rad);
-}
-
-function roundRegularBoxGeometry(in_len, in_rad) {
-	return trapezoidGeometryUtil(in_len, in_len, in_len, in_len, in_len, in_rad);
-}
-
-function trapezoidGeometry(in_tLen, in_bLen, in_height, in_thickness) {
-	return trapezoidGeometryUtil(in_tLen, 0, in_bLen, 0, in_height, in_thickness);
-}
 
 class cBody extends THREE.Object3D {
 	static #cacheKeys = {
@@ -1123,9 +1356,9 @@ class cBody extends THREE.Object3D {
 		);
 		this.add(chest);
 		this.#setCache('chest', chest);
-		this.#setCache('headRoot', new THREE.Vector3(0, 0, in_height / 2 + in_thickness / 4));
-		this.#setCache('armNRoot', new THREE.Vector3(in_tLen / 2 * -1, 0, in_height / 2));
-		this.#setCache('armPRoot', new THREE.Vector3(in_tLen / 2 * +1, 0, in_height / 2));
+		this.#setCache('headRoot', VEC3(0, 0, in_height / 2 + in_thickness / 4));
+		this.#setCache('armNRoot', VEC3(in_tLen / 2 * -1, 0, in_height / 2));
+		this.#setCache('armPRoot', VEC3(in_tLen / 2 * +1, 0, in_height / 2));
 		const waist = new cPart(
 			in_height / 2,
 			/*
@@ -1138,8 +1371,8 @@ class cBody extends THREE.Object3D {
 		waist.rotateX(Math.PI);
 		this.add(waist);
 		this.#setCache('waist', waist);
-		this.#setCache('legNRoot', new THREE.Vector3(in_bLen / 2 * -1, 0, in_height / 2));
-		this.#setCache('legPRoot', new THREE.Vector3(in_bLen / 2 * +1, 0, in_height / 2));
+		this.#setCache('legNRoot', VEC3(in_bLen / 2 * -1, 0, in_height / 2));
+		this.#setCache('legPRoot', VEC3(in_bLen / 2 * +1, 0, in_height / 2));
 		this.rotateX(Math.PI / 2 * -1);
 	}
 	#addObject(in_added, in_target, in_where, in_dx, in_dy, in_dirVec3) {
@@ -1207,7 +1440,7 @@ class cBody extends THREE.Object3D {
 }
 
 /*
-	(6) dom setting : show canvas element as size of all over body element.
+	(7) dom setting : show canvas element as size of all over body element.
 */
 
 const WORLD_RADIUS = 1000;
@@ -1238,7 +1471,7 @@ document.addEventListener('DOMContentLoaded', (() => {
 }));
 
 /*
-	(7) figure setting : color, material, and figure
+	(8) figure setting : color, material, and figure
 */
 
 class cCyclicValues extends Array {
@@ -1348,12 +1581,12 @@ const FIGURES = new cCyclicValues(
 			NEGATIVE : {
 				DX : 0,
 				DY : 0,
-				DIR : new THREE.Vector3(-1, 0, -1)
+				DIR : VEC3(-1, 0, -1)
 			},
 			POSITIVE : {
 				DX : 0,
 				DY : 0,
-				DIR : new THREE.Vector3(+1, 0, -1)
+				DIR : VEC3(+1, 0, -1)
 			}
 		},
 		LEG : {
@@ -1361,12 +1594,12 @@ const FIGURES = new cCyclicValues(
 			NEGATIVE : {
 				DX : +35,
 				DY : 0,
-				DIR : new THREE.Vector3(0, 0, 1)
+				DIR : VEC3(0, 0, 1)
 			},
 			POSITIVE : {
 				DX : -35,
 				DY : 0,
-				DIR : new THREE.Vector3(0, 0, 1)
+				DIR : VEC3(0, 0, 1)
 			}
 		},
 		OBJECT : null,
@@ -1385,12 +1618,12 @@ const FIGURES = new cCyclicValues(
 			NEGATIVE : {
 				DX : 0,
 				DY : 0,
-				DIR : new THREE.Vector3(-1, 0, -1)
+				DIR : VEC3(-1, 0, -1)
 			},
 			POSITIVE : {
 				DX : 0,
 				DY : 0,
-				DIR : new THREE.Vector3(+1, 0, -1)
+				DIR : VEC3(+1, 0, -1)
 			}
 		},
 		LEG : {
@@ -1398,12 +1631,12 @@ const FIGURES = new cCyclicValues(
 			NEGATIVE : {
 				DX : 0,
 				DY : 0,
-				DIR : new THREE.Vector3(0, 0, 1)
+				DIR : VEC3(0, 0, 1)
 			},
 			POSITIVE : {
 				DX : 0,
 				DY : 0,
-				DIR : new THREE.Vector3(0, 0, 1)
+				DIR : VEC3(0, 0, 1)
 			}
 		},
 		OBJECT : null,
@@ -1443,7 +1676,7 @@ FIGURES.forEach(in_fig => {
 		}
 	}
 	/*
-		*** NOTE #4 ***
+		*** NOTE ***
 		Adhoc!! without this process, morphing will be failed.
 		Maybe some initializ process, which includs scene.add(), is required.
 	*/
@@ -1454,7 +1687,7 @@ FIGURES.forEach(in_fig => {
 gWorld.add((FIGURES.currValue()).OBJECT);
 
 /*
-	(8) ui setting
+	(9) ui setting
 */
 
 function uiChangeColor() {
@@ -1585,7 +1818,7 @@ HTMLCanvasElement.prototype[clipClearArea] = function(in_margin) {
 	let ctx = this.getContext('2d');
 	if (!ctx) {
 		/*
-			*** NOTE #5 ***
+			*** NOTE ***
 			Sometimes can't get 2D context ( ex. Three.js ).
 			So, to get it, copy bitmap to alternative canvas.
 		*/
@@ -1685,7 +1918,7 @@ function setTransition(in_elem, in_shorthand, in_val1, in_val2) {
 	in_elem.style[components[0]] = in_val1;
 	window.setTimeout(() => {
 		/*
-			*** NOTE #6 ***
+			*** NOTE ***
 			To fire the transition function,
 			the final style should be set in the next event loop.
 		*/
@@ -1721,7 +1954,7 @@ async function uiGetScreenShot() {
 	takeShotSound();
 	takeShotFlash();
 	/*
-		*** NOTE #7 ***
+		*** NOTE ***
 		Before getting betmap, you need re-render.
 		Without it, for example, you can't use canvas.toDataURL('image/png') etc. 
 	*/
@@ -1733,7 +1966,7 @@ async function uiGetScreenShot() {
 	const ctx = tmpElem.getContext('2d');
 	ctx.drawImage(gWorld.canvas, box.l, box.t, box.w, box.h, 0, 0, box.w, box.h);
 	/*
-		*** NOTE #8 ***
+		*** NOTE ***
 		The browser treats the data URL as a resource when using fetch.
 		The fetch function retrieves the data and allows us to convert it into a Blob.
 	*/
@@ -1879,7 +2112,7 @@ function setUpButtons() {
 setUpButtons();
 
 /*
-	(9) event handlers
+	(10) event handlers
 */
 
 const gDrag = {
@@ -1907,7 +2140,7 @@ gWorld.canvas.addEventListener('mousedown', in_ev => {
 			return;
 		}
 		const cameraPos = gWorld.copyCameraPosition();
-		const objectPos = rayHit.object.getWorldPosition(new THREE.Vector3());
+		const objectPos = rayHit.object.getWorldPosition(VEC3());
 		gDrag.far = (rayHit.distance > cameraPos.distanceTo(objectPos));
 		if (DEBUG) {
 			console.log('drag ' + (gDrag.far ? 'far' : 'near') + '-side');
@@ -1943,7 +2176,7 @@ gWorld.canvas.addEventListener('mousemove', in_ev => {
 		if (isMovable360Item(gDrag.obj)) {
 			gDrag.obj.lookAt(intersects[0].point);
 		} else {
-			gDrag.obj.lookAt(intersects[0].point, new THREE.Vector3(1, 0, 0));
+			gDrag.obj.lookAt(intersects[0].point, VEC3(1, 0, 0));
 		}
 		gDrag.vec = vec2;
 	}
@@ -1961,85 +2194,6 @@ function dragstop() {
 gWorld.canvas.addEventListener('mouseleave', dragstop);
 gWorld.canvas.addEventListener('mouseout', dragstop);
 gWorld.canvas.addEventListener('mouseup', dragstop);
-
-(() => {
-	const EMULATETBL = [
-		{
-			src : 'touchstart',
-			dst : 'mousedown'
-		},
-		{
-			src : 'touchmove',
-			dst : 'mousemove'
-		},
-		{
-			src : 'touchleave',
-			dst : 'mouseleave'
-		},
-		{
-			src : 'touchend',
-			dst : 'mouseup'
-		}
-	];
-	let lastDistance = null;
-	function createAltWheelEv(in_ev) {
-		const t1 = in_ev.touches[0];
-		const t2 = in_ev.touches[1];
-		const currentDistance = Math.sqrt(Math.pow(t2.clientX - t1.clientX, 2) + Math.pow(t2.clientY - t1.clientY, 2));
-		if (lastDistance === null) {
-			lastDistance = currentDistance;
-			return null;
-		}
-		const speed = 2;
-		const delta = (lastDistance - currentDistance) * speed;
-		lastDistance = currentDistance;
-		return new WheelEvent('wheel', {
-			deltaY : delta,
-			clientX : (t1.clientX + t2.clientX) / 2,
-			clientY : (t1.clientY + t2.clientY) / 2,
-			ctrlKey : in_ev.ctrlKey,
-			altKey : in_ev.altKey,
-			shiftKey : in_ev.shiftKey,
-			metaKey : in_ev.metaKey
-		});
-	}
-	function createAltMouseEv(in_type, in_ev) {
-		return new MouseEvent(in_type, {
-			bubbles : true,
-			cancelable : true,
-			view : window,
-			screenX : in_ev.changedTouches[0].screenX,
-			screenY : in_ev.changedTouches[0].screenY,
-			clientX : in_ev.changedTouches[0].clientX,
-			clientY : in_ev.changedTouches[0].clientY,
-			ctrlKey : in_ev.ctrlKey,
-			altKey : in_ev.altKey,
-			shiftKey : in_ev.shiftKey,
-			metaKey : in_ev.metaKey,
-			button : 0,
-			relatedTarget : null
-		});
-	}
-	EMULATETBL.forEach(in_pair => {
-		gWorld.canvas.addEventListener(in_pair.src, in_ev => {
-			in_ev.preventDefault();
-			in_ev.stopPropagation();
-			let alternative = null;
-			if (in_ev.touches.length > 1) {
-				if ((in_ev.touches.length === 2) && (in_pair.src === 'touchmove')) {
-					alternative = createAltWheelEv(in_ev);
-				} else {
-					lastDistance = null;
-				}
-			} else {
-				alternative = createAltMouseEv(in_pair.dst, in_ev);
-			}
-			if (alternative) {
-				in_ev.target.dispatchEvent(alternative);
-			}
-		});
-	});
-})();
 
 </script>
 </body>
