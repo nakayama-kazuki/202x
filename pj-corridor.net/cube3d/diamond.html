@@ -2200,14 +2200,7 @@ function shuffle(in_count) {
 	};
 	gCube.registerCompleteCallback(complete);
 	gCube.uiDisable();
-	const rand = (min, max) => {
-		return Math.random() * (max - min) + min;
-	};
-	gWorld.startRotation(new THREE.Vector3(
-		rand(0.05, 0.02),
-		rand(0.05, 0.02),
-		rand(0.05, 0.02)
-	));
+	gWorld.startRotation(VEC3().random().multiplyScalar(0.05));
 	(randomRotation)(in_count);
 }
 
