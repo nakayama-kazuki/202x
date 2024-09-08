@@ -232,8 +232,8 @@ function pseudoMessageDigest2(in_string) {
 }
 
 /*
-	*** NOTE #1 ***
-	as this app uses position of the mesh to find overlapping etc,
+	*** NOTE ***
+	when the app uses position of the mesh to find overlapping etc,
 	need to ignore very small error.
 */
 
@@ -333,6 +333,85 @@ class cCyclicMap extends Map {
 	}
 }
 
+function emulateTouchEvent(in_elem) {
+	const eventMapper = [
+		{
+			src : 'touchstart',
+			dst : 'mousedown'
+		},
+		{
+			src : 'touchmove',
+			dst : 'mousemove'
+		},
+		{
+			src : 'touchleave',
+			dst : 'mouseleave'
+		},
+		{
+			src : 'touchend',
+			dst : 'mouseup'
+		}
+	];
+	let lastDistance = null;
+	function createAltWheelEv(in_ev) {
+		const t1 = in_ev.touches[0];
+		const t2 = in_ev.touches[1];
+		const currentDistance = Math.sqrt(Math.pow(t2.clientX - t1.clientX, 2) + Math.pow(t2.clientY - t1.clientY, 2));
+		if (lastDistance === null) {
+			lastDistance = currentDistance;
+			return null;
+		}
+		const speed = 2;
+		const delta = (lastDistance - currentDistance) * speed;
+		lastDistance = currentDistance;
+		return new WheelEvent('wheel', {
+			deltaY : delta,
+			clientX : (t1.clientX + t2.clientX) / 2,
+			clientY : (t1.clientY + t2.clientY) / 2,
+			ctrlKey : in_ev.ctrlKey,
+			altKey : in_ev.altKey,
+			shiftKey : in_ev.shiftKey,
+			metaKey : in_ev.metaKey
+		});
+	}
+	function createAltMouseEv(in_type, in_ev) {
+		return new MouseEvent(in_type, {
+			bubbles : true,
+			cancelable : true,
+			view : window,
+			screenX : in_ev.changedTouches[0].screenX,
+			screenY : in_ev.changedTouches[0].screenY,
+			clientX : in_ev.changedTouches[0].clientX,
+			clientY : in_ev.changedTouches[0].clientY,
+			ctrlKey : in_ev.ctrlKey,
+			altKey : in_ev.altKey,
+			shiftKey : in_ev.shiftKey,
+			metaKey : in_ev.metaKey,
+			button : 0,
+			relatedTarget : null
+		});
+	}
+	eventMapper.forEach(in_pair => {
+		in_elem.addEventListener(in_pair.src, in_ev => {
+			in_ev.preventDefault();
+			in_ev.stopPropagation();
+			let alternative = null;
+			if (in_ev.touches.length > 1) {
+				if ((in_ev.touches.length === 2) && (in_pair.src === 'touchmove')) {
+					alternative = createAltWheelEv(in_ev);
+				} else {
+					lastDistance = null;
+				}
+			} else {
+				alternative = createAltMouseEv(in_pair.dst, in_ev);
+			}
+			if (alternative) {
+				in_ev.target.dispatchEvent(alternative);
+			}
+		});
+	});
+}
+
 const XYZ = ['x', 'y', 'z'];
 
 const VEC3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
@@ -346,9 +425,265 @@ const DIRECTION = {
 	ZN : VEC3(0, 0, -1)
 }
 
-const AUDIO_ROTATION = new Audio('data:audio/mpeg;base64,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');
+function trapezoidGeometryUtil(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_YLen, in_Rad = 0) {
+	const parts = [];
+	const DEG90 = Math.PI * 1 / 2;
+	/*
+			 (+)
+			  |
+			  0-----1
+			 /|    /|
+			3-----2 |
+			| |   | |
+		   -|-4---|-5---(+)
+			|/|   |/
+			7-----6
+		   /  |
+		 (+)
+	*/
+	const baseVertices = {
+		v0 : VEC3(in_tXLen / 2 * -1, in_YLen / 2 * +1, in_tZLen / 2 * -1),
+		v1 : VEC3(in_tXLen / 2 * +1, in_YLen / 2 * +1, in_tZLen / 2 * -1),
+		v2 : VEC3(in_tXLen / 2 * +1, in_YLen / 2 * +1, in_tZLen / 2 * +1),
+		v3 : VEC3(in_tXLen / 2 * -1, in_YLen / 2 * +1, in_tZLen / 2 * +1),
+		v4 : VEC3(in_bXLen / 2 * -1, in_YLen / 2 * -1, in_bZLen / 2 * -1),
+		v5 : VEC3(in_bXLen / 2 * +1, in_YLen / 2 * -1, in_bZLen / 2 * -1),
+		v6 : VEC3(in_bXLen / 2 * +1, in_YLen / 2 * -1, in_bZLen / 2 * +1),
+		v7 : VEC3(in_bXLen / 2 * -1, in_YLen / 2 * -1, in_bZLen / 2 * +1)
+	};
+	/*
+		1. Surface (BufferGeometry)
+			even you can also make surface using PlaneGeometry,
+			it is a little complicated to decide position before rotation.
+	*/
+	const surfaceMap = new Map([
+		[DIRECTION.XP, [baseVertices.v1, baseVertices.v2, baseVertices.v6, baseVertices.v5]],
+		[DIRECTION.XN, [baseVertices.v0, baseVertices.v4, baseVertices.v7, baseVertices.v3]],
+		[DIRECTION.YP, [baseVertices.v3, baseVertices.v2, baseVertices.v1, baseVertices.v0]],
+		[DIRECTION.YN, [baseVertices.v6, baseVertices.v7, baseVertices.v4, baseVertices.v5]],
+		[DIRECTION.ZP, [baseVertices.v7, baseVertices.v6, baseVertices.v2, baseVertices.v3]],
+		[DIRECTION.ZN, [baseVertices.v5, baseVertices.v4, baseVertices.v0, baseVertices.v1]]
+	]);
+	const translatedSurfaceMap = new Map();
+	const equal = (in_vec, ...in_vecArr) => in_vecArr.some(vec => in_vec.equals(vec));
+	surfaceMap.forEach((in_val, in_key) => {
+		let translate;
+		if (equal(in_key, DIRECTION.YP, DIRECTION.YN)) {
+			// top or bottom
+			translate = in_key.clone().multiplyScalar(in_Rad);
+		} else {
+			const normal = VEC3();
+			in_val[forEachCombination](3, (a, b, c) => {
+				let v1 = (VEC3()).subVectors(a, b);
+				let v2 = (VEC3()).subVectors(b, c);
+				if ((v1.lengthSq() > 0) && (v2.lengthSq() > 0)) {
+					normal.crossVectors(v1, v2);
+					if (normal.lengthSq() > 0) {
+						normal.normalize();
+						return true;
+					}
+				}
+				return false;
+			});
+			translate = normal.multiplyScalar(in_Rad);
+		}
+		const vertices = [];
+		in_val.forEach(in_vertex => {
+			vertices.push(in_vertex.clone().add(translate));
+		});
+		translatedSurfaceMap.set(in_key, vertices);
+	});
+	for (const vertices of translatedSurfaceMap.values()) {
+		const uniqueFilter = (in_vertices) => {
+			const unique = [];
+			in_vertices.forEach(in_vertex => {
+				if (unique.some(in_v => in_v.equals(in_vertex))) {
+					return;
+				}
+				unique.push(in_vertex);
+			});
+		    return unique;
+		};
+		const unique = uniqueFilter(vertices);
+		if (unique.length < 3) {
+			continue;
+		}
+		const geometry = new THREE.BufferGeometry();
+		const flat = [];
+		unique.forEach(in_vec3 => {
+			flat.push(in_vec3.x, in_vec3.y, in_vec3.z);
+		});
+		geometry.setAttribute('position', new THREE.Float32BufferAttribute(flat, 3));
+		let ix, uv;
+		if (unique.length === 3) {
+			ix = [0, 1, 2];
+			uv = [0, 0, 1, 0, 0.5, 1];
+		} else {
+			ix = [0, 1, 2, 0, 2, 3];
+			uv = [0, 0, 1, 0, 1, 1, 0, 1];
+		}
+		geometry.setIndex(ix);
+		geometry.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(uv), 2));
+		geometry.computeVertexNormals();
+		geometry.userData.surface = true;
+		parts.push(geometry);
+	}
+	/*
+		2. Edge (CylinderGeometry)
+			2.1. Edge for top & bottom surface (applying rotation by prepared setting)
+			2.2. Edge for sloped side surface (applying rotation automatically)
+	*/
+	const makeEdgeCylinder = (in_height, in_start, in_theta) => {
+		const defaultRadialSegments = 32;
+		const defaultHeightSegments = 1;
+		const openEnded = true;
+		return new THREE.CylinderGeometry(
+			in_Rad,
+			in_Rad,
+			in_height,
+			defaultRadialSegments,
+			defaultHeightSegments,
+			openEnded,
+			in_start,
+			in_theta
+		);
+	};
+	const rotate = (in_geo, in_vec) => {
+		const rotateAxes = {x : 'rotateX', y : 'rotateY', z : 'rotateZ'};
+		for (const [axis, method] of Object.entries(rotateAxes)) {
+			in_geo[method](in_vec[axis]);
+		}
+	};
+	const centroid = (in_vecArr) => {
+		const ret = VEC3();
+		in_vecArr.forEach(in_vector => {
+			ret.add(in_vector);
+		});
+		return ret.divideScalar(in_vecArr.length);
+	};
+	const theta = (a, b) => Math.atan(Math.abs(a - b) / 2 / in_YLen) * (a > b ? +1 : -1);
+	const thetaX = theta(in_tXLen, in_bXLen);
+	const thetaZ = theta(in_tZLen, in_bZLen);
+	const edgeConfigSet1 = [
+		/*
+			E : Edge (Vector3 x2)
+			R : Rotation from Vector3(0, 1, 0)
+			P : Parameter for THREE.CylinderGeometry
+		*/
+		{E : [baseVertices.v2, baseVertices.v3], R : VEC3(0, 0, DEG90 * -1), P : [DEG90 * 3, DEG90 + thetaZ]},
+		{E : [baseVertices.v3, baseVertices.v0], R : VEC3(DEG90 * +1, 0, 0), P : [DEG90 * 2, DEG90 + thetaX]},
+		{E : [baseVertices.v0, baseVertices.v1], R : VEC3(0, 0, DEG90 * +1), P : [DEG90 * 1, DEG90 + thetaZ]},
+		{E : [baseVertices.v1, baseVertices.v2], R : VEC3(DEG90 * -1, 0, 0), P : [DEG90 * 0, DEG90 + thetaX]},
+		{E : [baseVertices.v6, baseVertices.v7], R : VEC3(0, 0, DEG90 * +1), P : [DEG90 * 3, DEG90 - thetaZ]},
+		{E : [baseVertices.v7, baseVertices.v4], R : VEC3(DEG90 * -1, 0, 0), P : [DEG90 * 2, DEG90 - thetaX]},
+		{E : [baseVertices.v4, baseVertices.v5], R : VEC3(0, 0, DEG90 * -1), P : [DEG90 * 1, DEG90 - thetaZ]},
+		{E : [baseVertices.v5, baseVertices.v6], R : VEC3(DEG90 * +1, 0, 0), P : [DEG90 * 0, DEG90 - thetaX]}
+	];
+	const edgeConfigSet2 = [
+		{E : [baseVertices.v3, baseVertices.v7], P : [DEG90 * 3, DEG90]},
+		{E : [baseVertices.v0, baseVertices.v4], P : [DEG90 * 2, DEG90]},
+		{E : [baseVertices.v1, baseVertices.v5], P : [DEG90 * 1, DEG90]},
+		{E : [baseVertices.v2, baseVertices.v6], P : [DEG90 * 0, DEG90]}
+	];
+	edgeConfigSet1.forEach(in_conf => {
+		const length = in_conf.E[0].distanceTo(in_conf.E[1]);
+		if (length === 0) {
+			return;
+		}
+		const geometry = makeEdgeCylinder(length, in_conf.P[0], in_conf.P[1]);
+		rotate(geometry, in_conf.R);
+		geometry.translate(centroid(in_conf.E));
+		geometry.userData.surface = false;
+		parts.push(geometry);
+	});
+	const vertical = VEC3(0, 1, 0);
+	edgeConfigSet2.forEach(in_conf => {
+		const length = in_conf.E[0].distanceTo(in_conf.E[1]);
+		const geometry = makeEdgeCylinder(length, in_conf.P[0], in_conf.P[1]);
+		/*
+			at first, I mistook it for the opposite direction.
+			( in_conf.E[0] --> in_conf.E[1] )
+			because of it, parameter of theta couldn't be stable.
+		*/
+		const slope = in_conf.E[0].clone().sub(in_conf.E[1]).normalize();
+		const quaternion = new THREE.Quaternion();
+		quaternion.setFromUnitVectors(vertical, slope);
+		geometry.applyQuaternion(quaternion);
+		geometry.translate(centroid(in_conf.E));
+		geometry.userData.surface = false;
+		parts.push(geometry);
+	});
+	/*
+		3. Corner (SphereGeometry)
+	*/
+	const makeCornerSphere = (in_phi_start, in_theta_start, in_theta) => {
+		const error = 0.01;
+		const widthSegments = 32;
+		const heightSegments = 16;
+		return new THREE.SphereGeometry(
+			in_Rad,
+			widthSegments,
+			heightSegments,
+			in_phi_start - error,
+			DEG90 + error * 2,
+			in_theta_start - error,
+			in_theta + error * 2
+		);
+	};
+	const uTheta = (in_tXLen > in_bXLen) || (in_tZLen > in_bZLen) ? DEG90 * 2 : DEG90 * 1;
+	const bTheta = (in_tXLen < in_bXLen) || (in_tZLen < in_bZLen) ? DEG90 * 2 : DEG90 * 1;
+	const cornerConfigSet = [
+		/*
+			C : Corner (Vector3 x1)
+			P : Parameter for THREE.SphereGeometry
+		*/
+		{C : baseVertices.v0, P : [DEG90 * 3, 0, uTheta]},
+		{C : baseVertices.v1, P : [DEG90 * 2, 0, uTheta]},
+		{C : baseVertices.v2, P : [DEG90 * 1, 0, uTheta]},
+		{C : baseVertices.v3, P : [DEG90 * 0, 0, uTheta]},
+		{C : baseVertices.v4, P : [DEG90 * 3, DEG90 * 2 - bTheta, bTheta]},
+		{C : baseVertices.v5, P : [DEG90 * 2, DEG90 * 2 - bTheta, bTheta]},
+		{C : baseVertices.v6, P : [DEG90 * 1, DEG90 * 2 - bTheta, bTheta]},
+		{C : baseVertices.v7, P : [DEG90 * 0, DEG90 * 2 - bTheta, bTheta]}
+	];
+	cornerConfigSet.forEach(in_conf => {
+		const geometry = makeCornerSphere(...in_conf.P);
+		geometry.translate(in_conf.C);
+		geometry.userData.surface = false;
+		parts.push(geometry);
+	});
+	// assume order of groups ( BufferGeometry x6, other geometries ... )
+	const groups = [];
+	let edgeGroup = 0;
+	const mergedGeometry = UTILS.mergeGeometries(parts);
+	parts.forEach(in_part => {
+		if (in_part.userData.surface) {
+			groups.push(in_part.index.count);
+		} else {
+			edgeGroup += in_part.index.count;
+		}
+		in_part.dispose();
+	});
+	groups.push(edgeGroup);
+	let start = 0;
+	for (let i = 0; i < groups.length; i++) {
+		mergedGeometry.addGroup(start, groups[i], i);
+		start += groups[i];
+	}
+	return mergedGeometry;
+}
 
-const AUDIO_ERROR = new Audio('data:audio/wav;base64,UklGRvgUAABXQVZFZm10IBAAAAABAAIARKwAABCxAgAEABAAZGF0YdQUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA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');
+function roundBoxGeometry(in_xlen, in_ylen, in_zlen, in_rad) {
+	return trapezoidGeometryUtil(in_xlen, in_zlen, in_xlen, in_zlen, in_ylen, in_rad);
+}
+
+function roundRegularBoxGeometry(in_len, in_rad) {
+	return trapezoidGeometryUtil(in_len, in_len, in_len, in_len, in_len, in_rad);
+}
+
+function trapezoidGeometry(in_tLen, in_bLen, in_height, in_thickness) {
+	return trapezoidGeometryUtil(in_tLen, 0, in_bLen, 0, in_height, in_thickness);
+}
 
 /*
 	(2) cSphericalWorld
@@ -429,7 +764,7 @@ class cSphericalWorld {
 			cSphericalWorld.#view.cameraUp.y,
 			cSphericalWorld.#view.cameraUp.z
 		);
-		camera.lookAt(new THREE.Vector3(0, 0, 0));
+		camera.lookAt(VEC3(0, 0, 0));
 		this.#cameraCtrl = new THREE.Object3D();
 		this.#cameraCtrl.add(camera);
 		// light
@@ -452,6 +787,7 @@ class cSphericalWorld {
 		this.canvas.addEventListener('mouseout', this.#evMoveStop.bind(this));
 		this.canvas.addEventListener('mouseup', this.#evMoveStop.bind(this));
 		this.canvas.addEventListener('wheel', this.#evZoom.bind(this));
+		emulateTouchEvent(this.canvas);
 	}
 	get canvas() {
 		return this.#renderer.domElement;
@@ -526,7 +862,7 @@ class cSphericalWorld {
 		return this.#intersectObjects(in_vec2, false, in_layer);
 	}
 	copyCameraPosition() {
-		return this.#camera.getWorldPosition(new THREE.Vector3());
+		return this.#camera.getWorldPosition(VEC3());
 	}
 	#easing(in_initValue, in_stopValue, in_duration, in_progressCallback, in_method) {
 		return new Promise(resolve => {
@@ -671,7 +1007,11 @@ class cSphericalWorld {
 		this.#updateZoomParams();
 	}
 	remove(in_removed, in_isSystemObject = false) {
-		// idempotent
+		/*
+			*** NOTE ***
+			As remove is idempotent,
+			children will be removed safety.
+		*/
 		this.#scene.remove(in_removed);
 		if (in_isSystemObject) {
 			return;
@@ -734,7 +1074,7 @@ function factoryBuilder(in_constructor) {
 		}
 	}
 	/*
-		*** NOTE #2 ***
+		*** NOTE ***
 		when there are a lot of the same objects,
 		and they can be shared using reference,
 		cCache.getRef() returns reference.
@@ -828,266 +1168,6 @@ function boxMaterials(in_x, in_y, in_z, in_colors) {
 		materialFactory.create(in_x, in_y, in_colors[4]),
 		materialFactory.create(in_x, in_y, in_colors[5])
 	];
-}
-
-function trapezoidGeometryUtil(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_YLen, in_Rad = 0) {
-	const parts = [];
-	const DEG90 = Math.PI * 1 / 2;
-	/*
-			 (+)
-			  |
-			  0-----1
-			 /|    /|
-			3-----2 |
-			| |   | |
-		   -|-4---|-5---(+)
-			|/|   |/
-			7-----6
-		   /  |
-		 (+)
-	*/
-	const baseVertices = {
-		v0 : VEC3(in_tXLen / 2 * -1, in_YLen / 2 * +1, in_tZLen / 2 * -1),
-		v1 : VEC3(in_tXLen / 2 * +1, in_YLen / 2 * +1, in_tZLen / 2 * -1),
-		v2 : VEC3(in_tXLen / 2 * +1, in_YLen / 2 * +1, in_tZLen / 2 * +1),
-		v3 : VEC3(in_tXLen / 2 * -1, in_YLen / 2 * +1, in_tZLen / 2 * +1),
-		v4 : VEC3(in_bXLen / 2 * -1, in_YLen / 2 * -1, in_bZLen / 2 * -1),
-		v5 : VEC3(in_bXLen / 2 * +1, in_YLen / 2 * -1, in_bZLen / 2 * -1),
-		v6 : VEC3(in_bXLen / 2 * +1, in_YLen / 2 * -1, in_bZLen / 2 * +1),
-		v7 : VEC3(in_bXLen / 2 * -1, in_YLen / 2 * -1, in_bZLen / 2 * +1)
-	};
-	/*
-		1. Surface (BufferGeometry)
-			even you can also make surface using PlaneGeometry,
-			it is a little complicated to decide position before rotation.
-	*/
-	const surfaceMap = new Map([
-		[DIRECTION.XP, [baseVertices.v1, baseVertices.v2, baseVertices.v6, baseVertices.v5]],
-		[DIRECTION.XN, [baseVertices.v0, baseVertices.v4, baseVertices.v7, baseVertices.v3]],
-		[DIRECTION.YP, [baseVertices.v3, baseVertices.v2, baseVertices.v1, baseVertices.v0]],
-		[DIRECTION.YN, [baseVertices.v6, baseVertices.v7, baseVertices.v4, baseVertices.v5]],
-		[DIRECTION.ZP, [baseVertices.v7, baseVertices.v6, baseVertices.v2, baseVertices.v3]],
-		[DIRECTION.ZN, [baseVertices.v5, baseVertices.v4, baseVertices.v0, baseVertices.v1]]
-	]);
-	const translatedSurfaceMap = new Map();
-	const equal = (in_vec, ...in_vecArr) => in_vecArr.some(vec => in_vec.equals(vec));
-	surfaceMap.forEach((in_val, in_key) => {
-		let translate;
-		if (equal(in_key, DIRECTION.YP, DIRECTION.YN)) {
-			// top or bottom
-			translate = in_key.clone().multiplyScalar(in_Rad);
-		} else {
-			const normal = VEC3();
-			in_val[forEachCombination](3, (a, b, c) => {
-				let v1 = (VEC3()).subVectors(a, b);
-				let v2 = (VEC3()).subVectors(b, c);
-				if ((v1.lengthSq() > 0) && (v2.lengthSq() > 0)) {
-					normal.crossVectors(v1, v2);
-					if (normal.lengthSq() > 0) {
-						normal.normalize();
-						return true;
-					}
-				}
-				return false;
-			});
-			translate = normal.multiplyScalar(in_Rad);
-		}
-		const vertices = [];
-		in_val.forEach(in_vertex => {
-			vertices.push(in_vertex.clone().add(translate));
-		});
-		translatedSurfaceMap.set(in_key, vertices);
-	});
-	for (const vertices of translatedSurfaceMap.values()) {
-		const uniqueFilter = (in_vertices) => {
-			const unique = [];
-			in_vertices.forEach(in_vertex => {
-				if (unique.some(in_v => in_v.equals(in_vertex))) {
-					return;
-				}
-				unique.push(in_vertex);
-			});
-		    return unique;
-		};
-		const unique = uniqueFilter(vertices);
-		if (unique.length < 3) {
-			continue;
-		}
-		const geometry = new THREE.BufferGeometry();
-		const flat = [];
-		unique.forEach(in_vec3 => {
-			flat.push(in_vec3.x, in_vec3.y, in_vec3.z);
-		});
-		geometry.setAttribute('position', new THREE.Float32BufferAttribute(flat, 3));
-		let ix, uv;
-		if (unique.length === 3) {
-			ix = [0, 1, 2];
-			uv = [0, 0, 1, 0, 0.5, 1];
-		} else {
-			ix = [0, 1, 2, 0, 2, 3];
-			uv = [0, 0, 1, 0, 1, 1, 0, 1];
-		}
-		geometry.setIndex(ix);
-		geometry.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(uv), 2));
-		geometry.computeVertexNormals();
-		geometry.userData.surface = true;
-		parts.push(geometry);
-	}
-	/*
-		2. Edge (CylinderGeometry)
-			2.1. Edge for top & bottom surface (applying rotation by prepared setting)
-			2.2. Edge for sloped side surface (applying rotation automatically)
-	*/
-	const makeEdgeCylinder = (in_height, in_start, in_theta) => {
-		const defaultRadialSegments = 32;
-		const defaultHeightSegments = 1;
-		const openEnded = true;
-		return new THREE.CylinderGeometry(
-			in_Rad,
-			in_Rad,
-			in_height,
-			defaultRadialSegments,
-			defaultHeightSegments,
-			openEnded,
-			in_start,
-			in_theta
-		);
-	};
-	const rotate = (in_geo, in_vec) => {
-		const rotateAxes = {x : 'rotateX', y : 'rotateY', z : 'rotateZ'};
-		for (const [axis, method] of Object.entries(rotateAxes)) {
-			in_geo[method](in_vec[axis]);
-		}
-	};
-	const centroid = (in_vecArr) => {
-		const ret = new THREE.Vector3();
-		in_vecArr.forEach(in_vector => {
-			ret.add(in_vector);
-		});
-		return ret.divideScalar(in_vecArr.length);
-	};
-	const theta = (a, b) => Math.atan(Math.abs(a - b) / 2 / in_YLen) * (a > b ? +1 : -1);
-	const thetaX = theta(in_tXLen, in_bXLen);
-	const thetaZ = theta(in_tZLen, in_bZLen);
-	const edgeConfigSet1 = [
-		/*
-			E : Edge (Vector3 x2)
-			R : Rotation from Vector3(0, 1, 0)
-			P : Parameter for THREE.CylinderGeometry
-		*/
-		{E : [baseVertices.v2, baseVertices.v3], R : VEC3(0, 0, DEG90 * -1), P : [DEG90 * 3, DEG90 + thetaZ]},
-		{E : [baseVertices.v3, baseVertices.v0], R : VEC3(DEG90 * +1, 0, 0), P : [DEG90 * 2, DEG90 + thetaX]},
-		{E : [baseVertices.v0, baseVertices.v1], R : VEC3(0, 0, DEG90 * +1), P : [DEG90 * 1, DEG90 + thetaZ]},
-		{E : [baseVertices.v1, baseVertices.v2], R : VEC3(DEG90 * -1, 0, 0), P : [DEG90 * 0, DEG90 + thetaX]},
-		{E : [baseVertices.v6, baseVertices.v7], R : VEC3(0, 0, DEG90 * +1), P : [DEG90 * 3, DEG90 - thetaZ]},
-		{E : [baseVertices.v7, baseVertices.v4], R : VEC3(DEG90 * -1, 0, 0), P : [DEG90 * 2, DEG90 - thetaX]},
-		{E : [baseVertices.v4, baseVertices.v5], R : VEC3(0, 0, DEG90 * -1), P : [DEG90 * 1, DEG90 - thetaZ]},
-		{E : [baseVertices.v5, baseVertices.v6], R : VEC3(DEG90 * +1, 0, 0), P : [DEG90 * 0, DEG90 - thetaX]}
-	];
-	const edgeConfigSet2 = [
-		{E : [baseVertices.v3, baseVertices.v7], P : [DEG90 * 3, DEG90]},
-		{E : [baseVertices.v0, baseVertices.v4], P : [DEG90 * 2, DEG90]},
-		{E : [baseVertices.v1, baseVertices.v5], P : [DEG90 * 1, DEG90]},
-		{E : [baseVertices.v2, baseVertices.v6], P : [DEG90 * 0, DEG90]}
-	];
-	edgeConfigSet1.forEach(in_conf => {
-		const length = in_conf.E[0].distanceTo(in_conf.E[1]);
-		if (length === 0) {
-			return;
-		}
-		const geometry = makeEdgeCylinder(length, in_conf.P[0], in_conf.P[1]);
-		rotate(geometry, in_conf.R);
-		geometry.translate(centroid(in_conf.E));
-		geometry.userData.surface = false;
-		parts.push(geometry);
-	});
-	const vertical = VEC3(0, 1, 0);
-	edgeConfigSet2.forEach(in_conf => {
-		const length = in_conf.E[0].distanceTo(in_conf.E[1]);
-		const geometry = makeEdgeCylinder(length, in_conf.P[0], in_conf.P[1]);
-		/*
-			at first, I mistook it for the opposite direction.
-			( in_conf.E[0] --> in_conf.E[1] )
-			because of it, parameter of theta couldn't be stable.
-		*/
-		const slope = in_conf.E[0].clone().sub(in_conf.E[1]).normalize();
-		const quaternion = new THREE.Quaternion();
-		quaternion.setFromUnitVectors(vertical, slope);
-		geometry.applyQuaternion(quaternion);
-		geometry.translate(centroid(in_conf.E));
-		geometry.userData.surface = false;
-		parts.push(geometry);
-	});
-	/*
-		3. Corner (SphereGeometry)
-	*/
-	const makeCornerSphere = (in_phi_start, in_theta_start, in_theta) => {
-		const error = 0.01;
-		const widthSegments = 32;
-		const heightSegments = 16;
-		return new THREE.SphereGeometry(
-			in_Rad,
-			widthSegments,
-			heightSegments,
-			in_phi_start - error,
-			DEG90 + error * 2,
-			in_theta_start - error,
-			in_theta + error * 2
-		);
-	};
-	const uTheta = (in_tXLen > in_bXLen) || (in_tZLen > in_bZLen) ? DEG90 * 2 : DEG90 * 1;
-	const bTheta = (in_tXLen < in_bXLen) || (in_tZLen < in_bZLen) ? DEG90 * 2 : DEG90 * 1;
-	const cornerConfigSet = [
-		/*
-			C : Corner (Vector3 x1)
-			P : Parameter for THREE.SphereGeometry
-		*/
-		{C : baseVertices.v0, P : [DEG90 * 3, 0, uTheta]},
-		{C : baseVertices.v1, P : [DEG90 * 2, 0, uTheta]},
-		{C : baseVertices.v2, P : [DEG90 * 1, 0, uTheta]},
-		{C : baseVertices.v3, P : [DEG90 * 0, 0, uTheta]},
-		{C : baseVertices.v4, P : [DEG90 * 3, DEG90 * 2 - bTheta, bTheta]},
-		{C : baseVertices.v5, P : [DEG90 * 2, DEG90 * 2 - bTheta, bTheta]},
-		{C : baseVertices.v6, P : [DEG90 * 1, DEG90 * 2 - bTheta, bTheta]},
-		{C : baseVertices.v7, P : [DEG90 * 0, DEG90 * 2 - bTheta, bTheta]}
-	];
-	cornerConfigSet.forEach(in_conf => {
-		const geometry = makeCornerSphere(...in_conf.P);
-		geometry.translate(in_conf.C);
-		geometry.userData.surface = false;
-		parts.push(geometry);
-	});
-	// assume order of groups ( BufferGeometry x6, other geometries ... )
-	const groups = [];
-	let edgeGroup = 0;
-	const mergedGeometry = UTILS.mergeGeometries(parts);
-	parts.forEach(in_part => {
-		if (in_part.userData.surface) {
-			groups.push(in_part.index.count);
-		} else {
-			edgeGroup += in_part.index.count;
-		}
-		in_part.dispose();
-	});
-	groups.push(edgeGroup);
-	let start = 0;
-	for (let i = 0; i < groups.length; i++) {
-		mergedGeometry.addGroup(start, groups[i], i);
-		start += groups[i];
-	}
-	return mergedGeometry;
-}
-
-function roundBoxGeometry(in_xlen, in_ylen, in_zlen, in_rad) {
-	return trapezoidGeometryUtil(in_xlen, in_zlen, in_xlen, in_zlen, in_ylen, in_rad);
-}
-
-function roundRegularBoxGeometry(in_len, in_rad) {
-	return trapezoidGeometryUtil(in_len, in_len, in_len, in_len, in_len, in_rad);
-}
-
-function trapezoidGeometry(in_tLen, in_bLen, in_height, in_thickness) {
-	return trapezoidGeometryUtil(in_tLen, 0, in_bLen, 0, in_height, in_thickness);
 }
 
 const boxGeometryFactory = factoryBuilder((in_x, in_y, in_z) => {
@@ -1287,7 +1367,7 @@ function getColorBySide(in_mesh, in_targetV3) {
 	const err = 0.001;
 	for (let i = 0; i < SURFACEPROP.length; i++) {
 		const surfaceV3 = SURFACEPROP[i].V3;
-		if (XYZ.every(axis => Math.abs(invertV3[axis] - surfaceV3[axis]) < err)) {
+		if (XYZ.every(in_xyz => Math.abs(invertV3[in_xyz] - surfaceV3[in_xyz]) < err)) {
 			return in_mesh.material[i].color.getHex();
 		}
 	}
@@ -1297,6 +1377,10 @@ function getColorBySide(in_mesh, in_targetV3) {
 /*
 	(5) Rubik's Cube related functions
 */
+
+const AUDIO_ROTATION = new Audio('data:audio/mpeg;base64,//uQRAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAAJAAAR7wAgICAgICAgICAgIGBgYGBgYGBgYGBggICAgICAgICAgICgoKCgoKCgoKCgoMDAwMDAwMDAwMDA2dnZ2dnZ2dnZ2dns7Ozs7Ozs7Ozs7Pn5+fn5+fn5+fn5//////////////8AAABQTEFNRTMuOThyBLkAAAAAAAAAADQgJAPYTQAB4AAAEe92dG8KAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//ugZAAAAAAAf4UAAAgAAA/woAABHqHrP/nJkgKnQ2d/MNIBV4aKVgZwaHeU3/93W7ucqmZGcQPSaZQhGMw5oBBsRAoHA4aEvOpmVO8dQoEAIaboIpg2LBt8BzBZwfqOVSNEwGuCeBSwHIxw1OFpMwNCcTEfh+QgCHFh7A6SUIaOWZWoGhmRUAk4FlloaYN2OOAhWKZA0zdCmm5AAs2NoLmB2jTFAJu5pWTLsmbqmi3DiBBgasBvgtIuMDmMQgEeHTdyIu5miZ7+80WUwDShe8ZAY8d5B2EpjXIZJFkCyaLSY2W7te7/xzBxEqcLghOUh3i4yCF0jhwDNkClWt0mTKbopJqV////5cUtzzoEMJB0jMv/1H8LCxdJM5hEBEBkRXPqaqSXENAm/SDQBpzGoC5mcACAQjWO6r22GNMapAroCME0HOeNC4iMGSBQDkDDDHTMB6MSZJCZkodJcYYsLhcYwPJ2L6Y6l8yOkubkos3UgXDUzMCXHubJIpk8paboZuaLmjJl0gIhVDqTob/L6RcLxo7IF9NBRoupaH/2Tf1pmlzR61pMyaX///7P1XSUkk9SkkE2V/////t///9eu87tGWZpJVAGACATAEgAAAQ3XfwqqBrzUPLjiDIzRDECGqFMxUU2TDmcZ3PpJuQBVFh0c27svh9tzqGH3fp38h6ELnfRTKX0svyp//vgZCOABtJk2H5nBAK6LJqtzUwAJTWjOz29gAPsM+dvtZAA5HSSuDXCk6db8Z4Y07+xenpcoxVjmVN38/lEYxicD5Q27cRZB/0rUrEPxufnO4T846b90t+nmbjd3F5jObp7dJSWM+4Usvy+vflesb8uppRFrTXZ+mjb/xfD8ed//gR95dLr1PdtasXcuY/cv/+vyzsavW951LH189f2fjdTGxG7X5TnalbPCYiGUuykWP52dXx3VPwsBwIAgIAwAAQEHZK9tsKjwUGG7nyRrcXamZgEbYcqZdkYh8250yxwN+UM2gCOYcuXzQ1YqkXFIiFQ10uJ0RRDNAPbBtiI6GXQZbqJxk0HJA4OAZQWtboM6BfLdNAmx6EAlmYzo5k0W/Mxyx1jvJxotBuKHFBGxsWVNbrchhIFxZoyCJwfiGlwvZMFwurT9vOu/ZuXD5bUUDQrTCj3/bTUgpFKki9FdJKiRcnzU4bOpSbGQse////9QyAAAAARsKGd4cmNAZhwmFgMwYLVSMXBTBRowwlNMZzDiEZBDLVIHIYiIzIE0yYKCpcYIRmpR5wn2cwamXlxn58Z2AFugYAhYBVKmKEBJghagMRmRxTJEIAnWoaDA0wohM+JTQiIwMsBRSYMBqYxOC5OsAtdTKccJh98QgDnrKBIAr+JA0qNgMQYJr7VO4ye6+AcGLkMGH0SAUFA4SQPbbJsJeVniNpgQeZsfmfB4MA3hxjXbFZlSTbZ0ALUqaXUbWmTRuejQsOl+W1fWHp6L14+94qEAEEZNLsojIex/Ocm3lfWAZXS6t2uwU6Uu538Of+GUarYY6+99atbeGQ87/5Yct6h6mjU9Un+a79eBrP87upzDUqpr9rduz+90smp8JzJhxFOZP6yTAMAAAAAYXCNs5ShLem0AgAyZImaxCaUoNLjMgRhGAN5/MJyjIqMDopkVBAzIQAqDBQAWgAB0xmoF+Wow4zqDS7Y6MmEDCFqJGqoKXJVq2l9DBUMsJQFar6txgV+IwsNGlpJfNskUm+0EQAgAEQBvutcoVjtDKdQI67X4hDyOyZ6RSx4blKwSgyzWBlqQMSzB1pHTbs61jQs5gN14zH51nMCU1AqZcEtjUS19q1dhpry+WGstjEFQrVagmIZvUss1lvespq1GZTVtz2X/lWu45Yd53vP1ST2V/LvN5ay79qzux+/1l3LX5Y7/f2udv853/79bIFdCjQ3s8qNS7lTE0BAGAA/zgXSwMcYERBU4BZAgQsvRIBljJC08ArCNeglkLKIZRhffkz/yEmmlpIack9QBi5KStqmFdIWTEf9/3dswcTb1aaip0K1qHpZIi3wWasV/pTuOtU9WEEQxMqXVQ1ECCcPTUnHisSQHzR7EkHju6aHO1GhW7g5//ugZD8ABMloVvspQ/hr7FrfYMV5Ub2fWe0Y8+mmnyt9oZY8rRyCA/NfqlHVk0kbJ8iGCKrXMemIUmVd/tJEpO07CZigBAAL+s11CEAqQ9ZGSt6rYqkIxJIyuhddxYCeYBHKe67HyjZe3Wolbs8zkc7oQzMsz6ala8yHMZWUOh4fQ5EiLI//HHIdWVmAVv+17GRSC+n+vUv1Zf//qUtNrZzGs6PdYxZVPurCrfp2IzRCGAS9jPyQKcMgVMSUMWyMExCwgQhG9QLUby4yGKM7lUZlssj00zSdlOt2zCZx1Q9Hlvzjw5zUyBaItWq/3W7V9RIW2lJmiDQiWxoipxzN3f/7k5JjY1qeKLHoZOz/TAQLhsbMd0MOVCTOd7S19I40q6n0s0gNDiqVnr01VtWGC5n7qeqs3qOMD9/28GSmzTYadwcKLvAYeZRqchGAhTP01YUqqztEaXS19Yp8EudGMNQqhYSuTMmMCBCthDn+SG2aqCMYPQEUMFVv8tTI9Au6AyrCbcvh9CImhVZCoJicv+ViiJTAudX+1sXV816OtF9QuSVP61p1Enppbe/AbzmhpgWANFUOAWcQERxYVAIsSAF0Q2Oq0FrZAemF9ogtw0WLXHozho7nxYkVk+jhIaUe6//fcKHqg5BwwOiRQQxaJYqDtR+DzD6mvnUTC00zkzzQlBqeqrUPiwCY//ugZDOABIVc1fssQ0h7abq/YMKdEQ2fUeylDaHKHup9gw3ke21HCJteH4qgta1zBSP8pcxrDPFTXicZ9RzWu01a8/yIonzxUNUug+DQ5mwyKLNE445/l7ESogWSFpmgoCRkMBX61ihgptH2urC1sP5UidqUJtUIgpg6etGUZxJsbMl7n9mar5AllhJE3N2ZbSUbNnmolE6OJAA46I3Pn0IFIrGIjsHKrfxDuHZjmRHP//YzsmQw6HxR61mVGgKFRXtLXVkiG4NILvp1ZRNG8y3dzqAbUR2BcU0ywCuiYOjvylUqWCWoYMiAkgEe9ZGf8pX1Yuymqg1qG4qiMNSYImmqE0zEEHHar3BQciqwvI0kYw/XqCY5g6Iv/kdJsrO+8QSbUrzy0Au/pZodyII7bnq5FajeaTaIYVvqOrMNQ6ueK5Vk4b/O1v4ndNav0mej6WF/MuyIjyZqzb89rbXzCV5qdCVDDAFZVhYOZLAjpw7cEqguUQZISWSSy6CoN/JIIEEw6VMUOwmmsPl2C2qVLuhmI2ogPA4ISoUILQBG3TyHFBQBmSkXYKsjfSY6DFBx8apuiXIn1Qz4silaa9qIspTX6jZt7dh0RFaseu/PilshiGqYy0N6jAgmEsGn8xalZG3CZEIWY2GDsFo7WvW75hqufw5D2jaWaOKNGV99xfh2ExZNR1DuQPj2//ugZCMAJB1o1Hs4QFh76bqPZMKfEJGjS+ylCuHRJmm9lAo86JqRYXJjXeumT4iyGrDMrvfVScpd+rT3AjlLr9YwQhXb5J2WbLlZ+VzphdviurWWuv5k1f5+aquo++xVLGr27lSpm6l0m39LfQpMPZTMwDqASWfYvEyVOYvuzIv5YirwQ7j+OpzK6Ep46ew/N1XWPQ1ilq7XkXjcw9Z0lgZImlbf+xaBRO48o65nYklpmP2/7iCM3mnozRZrVaEmdkgyZEojGe31TYwJ0NYzPFPVKxzVoMhLx7tiGdK03d2lZlVvpz7cBnTYC9GgpepgYrDBUKQ5BYzlNIw0qW1Jt6487Jp3NxxtcfRRwjixWcusyfP//6mzrcaWIIhXNXz/ivz/+ULEizDyxqB/WG2HjFNHONsUO/uaOrsRji9Lr6Ejzf9TVkPz1H5YmOS/qbmIHW1pH+I4xuq6U1HttZb6NFyaTt/YZjVrbfPWRrEbDFHU/jiHAIbISUcvErpa76vFWaTA0WnvqEVi4mJMHrXpLoSQOB4OpZzY3uD67SKNHtRSVDrYw0usez0poxTKuCrHXGNenpAxmEMDMS86HsVNi/bd3av7f8Eop7g5jgAnsah8ofPTs4VqvNzGM1dnt5L/jnpEuA4UsWAWgvGyhQNBbJVZiabQWCysrdqP2oZBcOsUujlMjfzILB1P//uQZBmAAzNn0ntIKkp/STovYYZlBdQJO+eMACH3o6d9gyZsU0RI5W16GMb/KZujlw65fNuON5poiJHKXyhIXM5qGmmMcxnaWoiBjPmmEeZ///Tv/jB6zZuW6IqI5I3f9TRwHWIiG4oAYaYAw6i5b5vWBr1oG6kwTR4A84wyrLL7qnbGua3AVIdhSB6Wvs7k95ztOefBB+1TR2moyZgLOuW37UgK2I/f51IPJamTx1Ty97s22AUd2kiMtbJffX9Sc/dm1GSHg0ZIsEKiZ0Nlhb07Iiu0HlszPCIClFnkYv4YJ4ilPGg+ovuYRusDbtVR6sJO9vYd/u///W7/kndB3Y+M//yy2iqlzNEVqRS//bsw8w8zuLjvcHQaKplGEippkdV1XqpYEh2t7Mp63SkCzSQESIrN0khJDmPtoQnWQbOezswpZ2HfVfWL1AGFhpr880hdUXKoR8lZnv+9xlgVjp1iH7MlptM3HpxNIGsj5ZTd78v+/0+86DKdja79pwj+//nn1UeHgAAIcDigDgM1rXQFqglmf+xv8VLf/////r/9//twZA6CAPAOTnjgGjht55nPPSZxBAQ5K+OAoaGhnSb8F6Q0aUiZplZFSSya/iSonpKQNc/QCV0zABRugJsZWi4LaiH+RDOwBEDSA2t1YISMs8uSSyjhxpxRJxrJMXWP4bmuDdzZMOPImFLq67dmUTPBAEcgeCnWIzHLznFGkZmTa9FIyvHahKYKlRoMeSc736vYQAAAAEkCQAO2o7qwYMe/+pohYd///9TkXwG+pltrK+smiIllRm03u/Am2syrZSRrUq4A1xN3A/ivPtFK4ETEVFT6FzGNStUq20cEk6tyaqqH3EzeoY3H5KaGK5d6Y6xspepLrmW54hqH3xOiUwJrdUa2NNYRIRpkMocaRS2kyfGRcFD0TOFdnSoQAAAAaIAAH4AX+lxFKT3////1P6XpVufQL//LN//7UGQOiQDHAM14IAAIVOZ5jQGGDwJ0ASWgAAAhCpBlNAeYdbftrQGI7ERDWuuFpOYjG47jySSuWcaDpF2SBkqKskW4FBsIijLxtNCNPUufHxrOeT3NRcYdt0W4RRUHUrIK00jJIlM1ufltPdFx21YKuUO3JkAw31/LHiXnfkjq3JhIlU95Xb0AN66+7f+2ADVrb8FWvYg+hcnadQ1IoTCjPMkVTn5qqNk5KrAJiU9wVVPn+9qqceTdNdwaLJBRziR18QH/83zRX28KTEFNRTP/+xBEAo/wAAB/gAAACAAAD/AAAAEAAAGkAAAAIAAANIAAAAQuOTguNKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqg==');
+
+const AUDIO_ERROR = new Audio('data:audio/wav;base64,UklGRvgUAABXQVZFZm10IBAAAAABAAIARKwAABCxAgAEABAAZGF0YdQUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA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');
 
 class cRubiksCube extends THREE.Object3D {
 	static #smallError = 0.01;
@@ -1414,7 +1498,7 @@ class cRubiksCube extends THREE.Object3D {
 		const copiedPieces = [...in_group.children];
 		copiedPieces.forEach(in_piece => {
 			/*
-				*** NOTE #4 ***
+				*** NOTE ***
 				"add" follows parent position.
 				"attach" keeps world position.
 				in addition, both of them internally call "remove" from other object.
@@ -1542,7 +1626,7 @@ class cRubiksCube extends THREE.Object3D {
 		const candidateBorder = cRubiksCube.#makeGroupOnAxis_3_makeCandidatesBorder(scalarMap);
 		if (this.#instanceTest.mode) {
 			/*
-				*** NOTE #5 ***
+				*** NOTE ***
 				To display a reference using "console.log", you should use a copy of the reference.
 				Without it, the entity may appear updated when displayed because the console holds a reference,
 				and any subsequent changes to the object will be reflected in the console.
@@ -1848,7 +1932,7 @@ class cRubiksCube extends THREE.Object3D {
 			rad *= -1;
 		}
 		/*
-			*** NOTE #6 ***
+			*** NOTE ***
 			if using rotateOnAxis() several times, small errors will be expanded.
 			if making group every time too, the same issue will happen.
 		*/
@@ -1994,7 +2078,7 @@ gWorld.moveView(0.5, 0.5);
 gWorld.motionZoom2(WORLD_INIT_ZOOM, 1000);
 
 /*
-	*** NOTE #7 ***
+	*** NOTE ***
 	when you use AxesHelper,
 	// gWorld.add(new THREE.AxesHelper(WORLD_RADIUS));
 	gWorld.setZoom() can not work well.
@@ -2045,7 +2129,7 @@ class cWarpLine {
 			}
 		} else {
 			/*
-				*** NOTE #8 ***
+				*** NOTE ***
 				even if overwritung using black,
 				this.#drawGrayLine(this.from, to, 0x00);
 				smudge of white line will remain.
@@ -2133,7 +2217,7 @@ function setTransition(in_elem, in_shorthand, in_val1, in_val2) {
 	in_elem.style[components[0]] = in_val1;
 	window.setTimeout(() => {
 		/*
-			*** NOTE #9 ***
+			*** NOTE ***
 			To fire the transition function,
 			the final style should be set in the next event loop.
 		*/
@@ -2440,85 +2524,6 @@ async function dragstop() {
 gWorld.canvas.addEventListener('mouseleave', dragstop);
 gWorld.canvas.addEventListener('mouseout', dragstop);
 gWorld.canvas.addEventListener('mouseup', dragstop);
-
-(() => {
-	const EMULATETBL = [
-		{
-			src : 'touchstart',
-			dst : 'mousedown'
-		},
-		{
-			src : 'touchmove',
-			dst : 'mousemove'
-		},
-		{
-			src : 'touchleave',
-			dst : 'mouseleave'
-		},
-		{
-			src : 'touchend',
-			dst : 'mouseup'
-		}
-	];
-	let lastDistance = null;
-	function createAltWheelEv(in_ev) {
-		const t1 = in_ev.touches[0];
-		const t2 = in_ev.touches[1];
-		const currentDistance = Math.sqrt(Math.pow(t2.clientX - t1.clientX, 2) + Math.pow(t2.clientY - t1.clientY, 2));
-		if (lastDistance === null) {
-			lastDistance = currentDistance;
-			return null;
-		}
-		const speed = 2;
-		const delta = (lastDistance - currentDistance) * speed;
-		lastDistance = currentDistance;
-		return new WheelEvent('wheel', {
-			deltaY : delta,
-			clientX : (t1.clientX + t2.clientX) / 2,
-			clientY : (t1.clientY + t2.clientY) / 2,
-			ctrlKey : in_ev.ctrlKey,
-			altKey : in_ev.altKey,
-			shiftKey : in_ev.shiftKey,
-			metaKey : in_ev.metaKey
-		});
-	}
-	function createAltMouseEv(in_type, in_ev) {
-		return new MouseEvent(in_type, {
-			bubbles : true,
-			cancelable : true,
-			view : window,
-			screenX : in_ev.changedTouches[0].screenX,
-			screenY : in_ev.changedTouches[0].screenY,
-			clientX : in_ev.changedTouches[0].clientX,
-			clientY : in_ev.changedTouches[0].clientY,
-			ctrlKey : in_ev.ctrlKey,
-			altKey : in_ev.altKey,
-			shiftKey : in_ev.shiftKey,
-			metaKey : in_ev.metaKey,
-			button : 0,
-			relatedTarget : null
-		});
-	}
-	EMULATETBL.forEach(in_pair => {
-		gWorld.canvas.addEventListener(in_pair.src, in_ev => {
-			in_ev.preventDefault();
-			in_ev.stopPropagation();
-			let alternative = null;
-			if (in_ev.touches.length > 1) {
-				if ((in_ev.touches.length === 2) && (in_pair.src === 'touchmove')) {
-					alternative = createAltWheelEv(in_ev);
-				} else {
-					lastDistance = null;
-				}
-			} else {
-				alternative = createAltMouseEv(in_pair.dst, in_ev);
-			}
-			if (alternative) {
-				in_ev.target.dispatchEvent(alternative);
-			}
-		});
-	});
-})();
 
 </script>
 </body>
