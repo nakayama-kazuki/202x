@@ -414,6 +414,14 @@ function emulateTouchEvent(in_elem) {
 
 const XYZ = ['x', 'y', 'z'];
 
+const ROTATE = (in_obj, in_vec3) => {
+	XYZ.forEach(in_xyz => {
+		// for THREE.Object3D, THREE.Geometry
+		const rotateAxis = 'rotate' + in_xyz.toUpperCase();
+		in_obj[rotateAxis](in_vec3[in_xyz]);
+	});
+};
+
 const VEC3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 
 const DIRECTION = {
@@ -548,12 +556,6 @@ function trapezoidGeometryUtil(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_YLen, 
 			in_theta
 		);
 	};
-	const rotate = (in_geo, in_vec) => {
-		const rotateAxes = {x : 'rotateX', y : 'rotateY', z : 'rotateZ'};
-		for (const [axis, method] of Object.entries(rotateAxes)) {
-			in_geo[method](in_vec[axis]);
-		}
-	};
 	const centroid = (in_vecArr) => {
 		const ret = VEC3();
 		in_vecArr.forEach(in_vector => {
@@ -591,7 +593,7 @@ function trapezoidGeometryUtil(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_YLen, 
 			return;
 		}
 		const geometry = makeEdgeCylinder(length, in_conf.P[0], in_conf.P[1]);
-		rotate(geometry, in_conf.R);
+		ROTATE(geometry, in_conf.R);
 		geometry.translate(centroid(in_conf.E));
 		geometry.userData.surface = false;
 		parts.push(geometry);
@@ -685,6 +687,32 @@ function trapezoidGeometry(in_tLen, in_bLen, in_height, in_thickness) {
 	return trapezoidGeometryUtil(in_tLen, 0, in_bLen, 0, in_height, in_thickness);
 }
 
+function customCapsuleGeometry(in_rad_t, in_rad_b, in_h, in_rSeg = 32, in_hSeg = 1) {
+	const sphereParams = [32, 16, 0, Math.PI * 2];
+	const ratio = (in_rad_b - in_rad_t) / in_h;
+	const theta = Math.atan(1 / ratio);
+	const calibrate = (in_rad) => {
+		return {
+			delta : in_rad * ratio,
+			radius : (in_rad ** 2 + (in_rad * ratio) ** 2) ** 0.5
+		};
+	};
+	const parts = [];
+	// top
+	const ts = calibrate(in_rad_t);
+	parts.push(new THREE.SphereGeometry(ts.radius, ...sphereParams, 0, theta));
+	parts[parts.length - 1].translate(0, ts.delta * -1 + in_h / 2, 0);
+	// bottom
+	const bs = calibrate(in_rad_b);
+	parts.push(new THREE.SphereGeometry(bs.radius, ...sphereParams, theta, Math.PI - theta));
+	parts[parts.length - 1].translate(0, bs.delta * -1 - in_h / 2, 0);
+	// middle
+	parts.push(new THREE.CylinderGeometry(in_rad_t, in_rad_b, in_h, in_rSeg, in_hSeg));
+	const mergedGeometry = UTILS.mergeGeometries(parts);
+	parts.forEach(in_geo => in_geo.dispose());
+	return mergedGeometry;
+}
+
 /*
 	(2) cSphericalWorld
 
@@ -759,11 +787,7 @@ class cSphericalWorld {
 			0,
 			0,
 			in_radius * cSphericalWorld.#view.cameraFrom.z);
-		camera.up.set(
-			cSphericalWorld.#view.cameraUp.x,
-			cSphericalWorld.#view.cameraUp.y,
-			cSphericalWorld.#view.cameraUp.z
-		);
+		camera.up.copy(cSphericalWorld.#view.cameraUp);
 		camera.lookAt(VEC3(0, 0, 0));
 		this.#cameraCtrl = new THREE.Object3D();
 		this.#cameraCtrl.add(camera);
@@ -958,9 +982,7 @@ class cSphericalWorld {
 	}
 	startRotation(in_vec3) {
 		this[cSphericalWorld.#rotationCallbackName] = () => {
-			this.#cameraCtrl.rotateX(in_vec3.x);
-			this.#cameraCtrl.rotateY(in_vec3.y);
-			this.#cameraCtrl.rotateZ(in_vec3.z);
+			ROTATE(this.#cameraCtrl, in_vec3);
 		};
 		this.addAnimationHook(this[cSphericalWorld.#rotationCallbackName]);
 	}
