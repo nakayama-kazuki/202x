@@ -7,8 +7,8 @@
 <script type='importmap'>
 {
 	"imports": {
-		"three": "https://cdn.jsdelivr.net/npm/three@0.167.0/build/three.module.min.js",
-		"utils": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js"
+		"three": "https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.module.min.js",
+		"utils": "https://cdn.jsdelivr.net/npm/three@0.168.0/examples/jsm/utils/BufferGeometryUtils.js"
 	}
 }
 </script>
@@ -190,6 +190,66 @@ Array.prototype[forEachCombination] = function(in_n, in_callback) {
 	return (combine)([], 0, in_n);
 };
 
+function pseudoMessageDigest1(in_array) {
+	let hash = 0;
+	in_array.sort().forEach(in_entry => {
+		for (let i = 0; i < in_entry.length; i++) {
+			hash = (hash << 5) - hash + in_entry.charCodeAt(i);
+			hash |= 0;
+		}
+	});
+	return hash >>> 0;
+}
+
+function pseudoMessageDigest2(in_string) {
+	return pseudoMessageDigest1([in_string]);
+}
+
+const METACHAR1 = '@'
+const METACHAR2 = ',';
+
+function simpleCompress(input) {
+	let output = '';
+	let i = 0;
+	while (i < input.length) {
+		let count = 1;
+		while (i + 1 < input.length && input[i] === input[i + 1]) {
+			i++;
+			count++;
+		}
+		if (count >= 4) {
+			output += METACHAR1 + input[i] + count + METACHAR2;
+		} else {
+			output += input[i].repeat(count);
+		}
+		i++;
+	}
+	return output;
+}
+
+function simpleDecompress(input) {
+	let output = '';
+	let i = 0;
+	while (i < input.length) {
+		if (input[i] === METACHAR1) {
+			let char = input[i + 1];
+			let count = '';
+			i += 2;
+			while (i < input.length && input[i] !== METACHAR2) {
+				count += input[i];
+				i++;
+			}
+			output += char.repeat(parseInt(count, 10));
+			// to skip METACHAR2
+			i++;
+		} else {
+			output += input[i];
+			i++;
+		}
+	}
+	return output;
+}
+
 class cEase {
 	constructor(in_from, in_to, in_duration) {
 		this.from = in_from;
@@ -214,21 +274,6 @@ class cEase {
 	currentEasingOut() {
 		return this.#currentEasing(t => t * (2 - t));
 	}
-}
-
-function pseudoMessageDigest1(in_array) {
-	let hash = 0;
-	in_array.sort().forEach(in_entry => {
-		for (let i = 0; i < in_entry.length; i++) {
-			hash = (hash << 5) - hash + in_entry.charCodeAt(i);
-			hash |= 0;
-		}
-	});
-	return hash >>> 0;
-}
-
-function pseudoMessageDigest2(in_string) {
-	return pseudoMessageDigest1([in_string]);
 }
 
 /*
@@ -333,6 +378,20 @@ class cCyclicMap extends Map {
 	}
 }
 
+class cCyclicValues extends Array {
+	constructor(...args) {
+		super(...args);
+		this.currentIndex = 0;
+	}
+	currValue() {
+		return this[this.currentIndex];
+	}
+	nextValue() {
+		this.currentIndex = (this.currentIndex + 1) % this.length;
+		return this.currValue();
+	}
+}
+
 function emulateTouchEvent(in_elem) {
 	const eventMapper = [
 		{
@@ -412,6 +471,70 @@ function emulateTouchEvent(in_elem) {
 	});
 }
 
+const clipArea = Symbol();
+const clipClearArea = Symbol();
+
+HTMLCanvasElement.prototype[clipArea] = function(in_margin, in_callback) {
+	const w = this.width;
+	const h = this.height;
+	let ctx = this.getContext('2d');
+	if (!ctx) {
+		/*
+			*** NOTE ***
+			Sometimes can't get 2D context ( ex. Three.js ).
+			So, to get it, copy bitmap to alternative canvas.
+		*/
+		const alternative = document.createElement('canvas');
+		alternative.width = w;
+		alternative.height = h;
+		ctx = alternative.getContext('2d');
+		ctx.drawImage(this, 0, 0);
+	}
+	const rgba = (ctx.getImageData(0, 0, w, h)).data;
+	let l = Number.POSITIVE_INFINITY;
+	let t = Number.POSITIVE_INFINITY;
+	let r = Number.NEGATIVE_INFINITY;
+	let b = Number.NEGATIVE_INFINITY;
+	for (let y = 0; y < h; y++) {
+		for (let x = 0; x < w; x++) {
+			const pt = (y * w + x) * 4;
+			if (!(in_callback)(rgba[pt + 0], rgba[pt + 1], rgba[pt + 2], rgba[pt + 3])) {
+				continue;
+			}
+			if (x < l) {
+				l = x;
+			}
+			if (y < t) {
+				t = y;
+			}
+			if (x > r) {
+				r = x;
+			}
+			if (y > b) {
+				b = y;
+			}
+		}
+	}
+	l = Math.max(l - in_margin, 0);
+	t = Math.max(t - in_margin, 0);
+	r = Math.min(r + in_margin, w - 1);
+	b = Math.min(b + in_margin, h - 1);
+	return {
+		l : l,
+		t : t,
+		r : r,
+		b : b,
+		w : r - l + 1,
+		h : b - t + 1
+	};
+};
+
+HTMLCanvasElement.prototype[clipClearArea] = function(in_margin) {
+	this[clipArea](in_margin, (in_r, in_g, in_b, in_a) => {
+		return (in_a > 0);
+	});
+}
+
 const XYZ = ['x', 'y', 'z'];
 
 const ROTATE = (in_obj, in_vec3) => {
@@ -433,9 +556,30 @@ const DIRECTION = {
 	ZN : VEC3(0, 0, -1)
 }
 
-function trapezoidGeometryUtil(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_YLen, in_Rad = 0) {
+function makeTrapezoidGeometryParts(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_YLen, in_Rad = 0) {
 	const parts = [];
+	/*
+		|
+		+- geometry
+		|	|
+		|	+- userData.isSurface : true / false
+		|	|
+		|	+- userData.groupName : 'top' / 'bottom' / 'middle'
+		|
+		+- geometry
+		|
+		+- ...
+	*/
 	const DEG90 = Math.PI * 1 / 2;
+	const setGroupName = (in_vertices) => {
+		if (in_vertices.every(vertex => vertex.y > 0)) {
+			return 'top';
+		}
+		if (in_vertices.every(vertex => vertex.y < 0)) {
+			return 'bottom';
+		}
+		return 'middle';
+	};
 	/*
 			 (+)
 			  |
@@ -533,7 +677,8 @@ function trapezoidGeometryUtil(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_YLen, 
 		geometry.setIndex(ix);
 		geometry.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(uv), 2));
 		geometry.computeVertexNormals();
-		geometry.userData.surface = true;
+		geometry.userData.isSurface = true;
+		geometry.userData.groupName = setGroupName(vertices);
 		parts.push(geometry);
 	}
 	/*
@@ -595,7 +740,8 @@ function trapezoidGeometryUtil(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_YLen, 
 		const geometry = makeEdgeCylinder(length, in_conf.P[0], in_conf.P[1]);
 		ROTATE(geometry, in_conf.R);
 		geometry.translate(centroid(in_conf.E));
-		geometry.userData.surface = false;
+		geometry.userData.isSurface = false;
+		geometry.userData.groupName = setGroupName(in_conf.E);
 		parts.push(geometry);
 	});
 	const vertical = VEC3(0, 1, 0);
@@ -612,7 +758,8 @@ function trapezoidGeometryUtil(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_YLen, 
 		quaternion.setFromUnitVectors(vertical, slope);
 		geometry.applyQuaternion(quaternion);
 		geometry.translate(centroid(in_conf.E));
-		geometry.userData.surface = false;
+		geometry.userData.isSurface = false;
+		geometry.userData.groupName = setGroupName(in_conf.E);
 		parts.push(geometry);
 	});
 	/*
@@ -651,15 +798,21 @@ function trapezoidGeometryUtil(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_YLen, 
 	cornerConfigSet.forEach(in_conf => {
 		const geometry = makeCornerSphere(...in_conf.P);
 		geometry.translate(in_conf.C);
-		geometry.userData.surface = false;
+		geometry.userData.isSurface = false;
+		geometry.userData.groupName = setGroupName([in_conf.C]);
 		parts.push(geometry);
 	});
+	return parts;
+}
+
+function trapezoidGeometryUtil(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_YLen, in_Rad = 0) {
+	const parts = makeTrapezoidGeometryParts(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_YLen, in_Rad);
 	// assume order of groups ( BufferGeometry x6, other geometries ... )
 	const groups = [];
 	let edgeGroup = 0;
 	const mergedGeometry = UTILS.mergeGeometries(parts);
 	parts.forEach(in_part => {
-		if (in_part.userData.surface) {
+		if (in_part.userData.isSurface) {
 			groups.push(in_part.index.count);
 		} else {
 			edgeGroup += in_part.index.count;
@@ -687,25 +840,40 @@ function trapezoidGeometry(in_tLen, in_bLen, in_height, in_thickness) {
 	return trapezoidGeometryUtil(in_tLen, 0, in_bLen, 0, in_height, in_thickness);
 }
 
-function customCapsuleGeometry(in_rad_t, in_rad_b, in_h, in_rSeg = 32, in_hSeg = 1) {
-	const sphereParams = [32, 16, 0, Math.PI * 2];
+function capsuleConfigure(in_rad_t, in_rad_b, in_h) {
+	/*
+	          +-(rad_t)-+
+		     /|         |
+		    / |         |
+		   /  |         | in_h
+		  /   |         |
+		 /    |         |
+		+-----+-(rad_b)-+
+	*/
 	const ratio = (in_rad_b - in_rad_t) / in_h;
-	const theta = Math.atan(1 / ratio);
-	const calibrate = (in_rad) => {
-		return {
-			delta : in_rad * ratio,
-			radius : (in_rad ** 2 + (in_rad * ratio) ** 2) ** 0.5
-		};
+	return {
+		theta : Math.atan(1 / ratio),
+		delta : {
+			t : in_rad_t * ratio,
+			b : in_rad_b * ratio
+		},
+		radius : {
+			t : (in_rad_t ** 2 + (in_rad_t * ratio) ** 2) ** 0.5,
+			b : (in_rad_b ** 2 + (in_rad_b * ratio) ** 2) ** 0.5
+		},
 	};
+}
+
+function customCapsuleGeometry(in_rad_t, in_rad_b, in_h, in_rSeg = 32, in_hSeg = 1) {
+	const conf = capsuleConfigure(in_rad_t, in_rad_b, in_h);
+	const sphereParams = [32, 16, 0, Math.PI * 2];
 	const parts = [];
 	// top
-	const ts = calibrate(in_rad_t);
-	parts.push(new THREE.SphereGeometry(ts.radius, ...sphereParams, 0, theta));
-	parts[parts.length - 1].translate(0, ts.delta * -1 + in_h / 2, 0);
+	parts.push(new THREE.SphereGeometry(conf.radius.t, ...sphereParams, 0, conf.theta));
+	parts[parts.length - 1].translate(0, conf.delta.t * -1 + in_h / 2, 0);
 	// bottom
-	const bs = calibrate(in_rad_b);
-	parts.push(new THREE.SphereGeometry(bs.radius, ...sphereParams, theta, Math.PI - theta));
-	parts[parts.length - 1].translate(0, bs.delta * -1 - in_h / 2, 0);
+	parts.push(new THREE.SphereGeometry(conf.radius.b, ...sphereParams, conf.theta, Math.PI - conf.theta));
+	parts[parts.length - 1].translate(0, conf.delta.b * -1 - in_h / 2, 0);
 	// middle
 	parts.push(new THREE.CylinderGeometry(in_rad_t, in_rad_b, in_h, in_rSeg, in_hSeg));
 	const mergedGeometry = UTILS.mergeGeometries(parts);
@@ -757,10 +925,10 @@ class cSphericalWorld {
 		}
 	][cSphericalWorld.#defaultCameraSetting];
 	static #rotationCallbackName = Symbol();
+	static #cameraName = randomString();
 	#scene = null;
 	#renderer = null;
 	#cameraCtrl = null;
-	#cameraName = randomString();
 	#anchorPosV2 = null;
 	zoomMin = Number.NEGATIVE_INFINITY;
 	zoomMax = Number.POSITIVE_INFINITY;
@@ -774,12 +942,9 @@ class cSphericalWorld {
 		// renderer
 		this.#renderer = new THREE.WebGLRenderer({alpha : true, antialias : true});
 		this.#renderer.setPixelRatio(DEVICE_PIXEL_RATIO);
-		if (false) {
-			this.#renderer.shadowMap.enabled = true;
-		}
 		// camera
 		const camera = new THREE.PerspectiveCamera();
-		camera.name = this.#cameraName;
+		camera.name = cSphericalWorld.#cameraName;
 		camera.fov = 45;
 		camera.near = 1;
 		camera.far = in_radius * 2;
@@ -789,6 +954,11 @@ class cSphericalWorld {
 			in_radius * cSphericalWorld.#view.cameraFrom.z);
 		camera.up.copy(cSphericalWorld.#view.cameraUp);
 		camera.lookAt(VEC3(0, 0, 0));
+		if (false) {
+			for (let i = 0; i < THREE.Layers.MAX_LAYERS; i++) {
+				camera.layers.enable(i);
+			}
+		}
 		this.#cameraCtrl = new THREE.Object3D();
 		this.#cameraCtrl.add(camera);
 		// light
@@ -798,9 +968,6 @@ class cSphericalWorld {
 			0,
 			in_radius * cSphericalWorld.#view.cameraUp.y,
 			in_radius * cSphericalWorld.#view.cameraFrom.z);
-		if (false) {
-			light.castShadow = true;
-		}
 		this.#cameraCtrl.add(light);
 		this.add(new THREE.AmbientLight(lightColor), true);
 		// other
@@ -817,7 +984,7 @@ class cSphericalWorld {
 		return this.#renderer.domElement;
 	}
 	get #camera() {
-		return this.#cameraCtrl.getObjectByName(this.#cameraName);
+		return this.#cameraCtrl.getObjectByName(cSphericalWorld.#cameraName);
 	}
 	getLookAt() {
 		return this.#camera.position.clone().negate();
@@ -1496,20 +1663,6 @@ document.addEventListener('DOMContentLoaded', (() => {
 	(8) figure setting : color, material, and figure
 */
 
-class cCyclicValues extends Array {
-	constructor(...args) {
-		super(...args);
-		this.currentIndex = 0;
-	}
-	currValue() {
-		return this[this.currentIndex];
-	}
-	nextValue() {
-		this.currentIndex = (this.currentIndex + 1) % this.length;
-		return this.currValue();
-	}
-}
-
 const COLORS = new cCyclicValues(
 	// gold
 	0xFFD700,
@@ -1531,15 +1684,17 @@ const COLORS = new cCyclicValues(
 	0x808080
 );
 
+const gInitColor = COLORS.currValue();
+
 const ROUGHNESS = 0.3;
 
-const initColor = COLORS.currValue();
-
 const MATERIALS = new cCyclicValues(
-	new THREE.MeshStandardMaterial({color: initColor, roughness: ROUGHNESS}),
-	new THREE.MeshToonMaterial({color: initColor}),
-	new THREE.MeshBasicMaterial({color: initColor})
+	new THREE.MeshStandardMaterial({color: gInitColor, roughness: ROUGHNESS}),
+	new THREE.MeshToonMaterial({color: gInitColor}),
+	new THREE.MeshBasicMaterial({color: gInitColor})
 );
+
+const gInitMaterial = MATERIALS.currValue();
 
 const INITFUNCS = {
 	ARM : {
@@ -1665,8 +1820,6 @@ const FIGURES = new cCyclicValues(
 		ITEMHOLDER : null
 	}
 );
-
-const gInitMaterial = MATERIALS.currValue();
 
 const gLightSaber = new cLightSaber(300, 10, gInitMaterial);
 const gSmartPhone = new cSmartPhone(40, 80, 5, gInitMaterial);
@@ -1823,106 +1976,6 @@ function uiDoubleNear() {
 
 function uiDoubleFar() {
 	uiDouble(400);
-}
-
-const clipClearArea = Symbol();
-
-HTMLCanvasElement.prototype[clipClearArea] = function(in_margin) {
-	const w = this.width;
-	const h = this.height;
-	let ctx = this.getContext('2d');
-	if (!ctx) {
-		/*
-			*** NOTE ***
-			Sometimes can't get 2D context ( ex. Three.js ).
-			So, to get it, copy bitmap to alternative canvas.
-		*/
-		const alternative = document.createElement('canvas');
-		alternative.width = w;
-		alternative.height = h;
-		ctx = alternative.getContext('2d');
-		ctx.drawImage(this, 0, 0);
-	}
-	const rgbaMap = (ctx.getImageData(0, 0, w, h)).data;
-	let l = Number.POSITIVE_INFINITY;
-	let t = Number.POSITIVE_INFINITY;
-	let r = Number.NEGATIVE_INFINITY;
-	let b = Number.NEGATIVE_INFINITY;
-	for (let y = 0; y < h; y++) {
-		for (let x = 0; x < w; x++) {
-			if (rgbaMap[(y * w + x) * 4 + 3] > 0) {
-				if (x < l) {
-					l = x;
-				}
-				if (y < t) {
-					t = y;
-				}
-				if (x > r) {
-					r = x;
-				}
-				if (y > b) {
-					b = y;
-				}
-			}
-		}
-	}
-	l = Math.max(l - in_margin, 0);
-	t = Math.max(t - in_margin, 0);
-	r = Math.min(r + in_margin, w - 1);
-	b = Math.min(b + in_margin, h - 1);
-	return {
-		l : l,
-		t : t,
-		r : r,
-		b : b,
-		w : r - l + 1,
-		h : b - t + 1
-	};
-};
-
-const METACHAR1 = '@'
-const METACHAR2 = ',';
-
-function simpleCompress(input) {
-	let output = '';
-	let i = 0;
-	while (i < input.length) {
-		let count = 1;
-		while (i + 1 < input.length && input[i] === input[i + 1]) {
-			i++;
-			count++;
-		}
-		if (count >= 4) {
-			output += METACHAR1 + input[i] + count + METACHAR2;
-		} else {
-			output += input[i].repeat(count);
-		}
-		i++;
-	}
-	return output;
-}
-
-function simpleDecompress(input) {
-	let output = '';
-	let i = 0;
-	while (i < input.length) {
-		if (input[i] === METACHAR1) {
-			let char = input[i + 1];
-			let count = '';
-			i += 2;
-			while (i < input.length && input[i] !== METACHAR2) {
-				count += input[i];
-				i++;
-			}
-			output += char.repeat(parseInt(count, 10));
-			// to skip METACHAR2
-			i++;
-		} else {
-			output += input[i];
-			i++;
-		}
-	}
-	return output;
 }
 
 const SHUTTER = new Audio('data:audio/mpeg;base64,' + simpleDecompress('SUQzB@A7,alRQRTE@A4,KAAADT3RvTG9naWMAVElUMgAAABIAAANDYW1lcmEtUGhvbmUwMy0xAFRBTEI@A4,NAAADT3RvTG9naWMtU0UAVFNTRQ@A4,8AAANMYXZmNTguMjkuMTAw@A14,D/+1@A44,BJbmZv@A4,DwAAAEYAAB1iAAoOEREVGBgcHyMjJyoqLjExNTg8PD9DQ0dKSk5RVVVYXFxfY2Nnam5ucXV1eHx8gIOHh4qOjpGVlZicn5+jp6eqrq6xtbi4vL+/w8fHys7R0dXY2Nzg4OPn6uru8fH1+Pj8/w@A4,BMYXZjNTguNTQ@A8,gK@A6,kBK8@A8,dYmSaAZ8@A21,//sQZAAP8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,EISAf//l8TvqBBf/j/iYAzxZIGFK/gDJwGEAAIf24DAcDQDgbBANjn38DPiwxmVwAAQAAP//8oGAB8P6CQAACAAP1MNH/+xJkIg/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,QbCgnEoAtTFxDbFyJgRPI5S2qKyt/rVff6XfIS4AEQAADJ8wX3ud9CCZhmZmA8AAD+EaJxKHMAB+C3csAAAkgAD//ctX//+xBkRI/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,RKlAW2lEDJDwUMEDhceRWDJBZHTxdqlhJKO9/z9vvqYs3VA/sAAGwsl3ZhEJEG9K1Hrg2nC1aVqcv+dhgEYABNf/33+f/7EmRmjfAEAIAAIAAIAAANI@A4,QEgANR0AQAgAAA0goAABGSgDbMskTdUDnDBjQ6tCnoTUIAkDIa9NEx/ls3ESgAISACCKAAAUuk5MaLHnSZtpEzyAMUIQ1Ek6lQbI0aIqKitiiCBGf/7EGSEAAEmHVMGHoAACQAWZcAIAIUUYXd4dIAALQcZlwAgAFl0QH+jU+od/IkawPkABbCG2QXVLMoZA28mAhWuW3yRwinjtQAl/+Th4dUAWoEANqyiOhQqgS4FgI0xJkKxsE16f70A//sSZHUBkJoHZfcMIAwLoAY54AgBAqABdICERMApABfUIIjghIAB/7raPf1jxdoyiAgaObhgKBJgZXcPdyDbCiCyXtUzMVk11kHETpCVAJBmAAAMEakelCoHeFVVQj6AANco4HYlHXLw//sQZHgDEMoNWcAGGUIKgBZWAEIBAfwfcIAEYmAvAFfgAIgEZKuw6aidevtE2kAwAAA8h+KAYRsPbaFAbVlAAt7iUGH3bEHQZoh4PFsZT+q9fUY1C88CuS+9IkplFxlooIMVA/vsjIT/+xJkegGxRxhaaAZJ0glgBZEAQjiDHF1vAARkABkAG9AADASoAAEdptJ5sjwsbKKIkrvdrFOmewMsFZeuR6TcFiXLZPpYBdK6IYAQuGtgU5pTwNJKsoolbYzVfGxPbe+7rrCd5zQ3cAH/+xBkc4EwwBBaIAEZAgpAFyYAAwEEGGFroLBC0CiAK3gACAQAhQEOUzi9Uv5B3QTVAE1jgFqxSES2ddRxNvrQRGz/I6KgNawEBWCQDQepLij6r/SB/9bUsAvTDikJOle8/5sXndhGIv/7EmRugXDSCd/wCDAsDSAKaAAjOIMQOWCABMIIOgPhQFfolG2/RIEJfbk1zSUAe1EgQBJIOZxvm1bZQKnKry8do1U9IqABjgAA0kKbBMp7B/r7ngATDOqgCIoO4ftj+AWUgx3sUPyPlv/7EGRpgRC+B2FoATCMDuEocADPBQREQWvgISLINgAo7ACMAH7SKgCYZ0RAIg4AACGQZjTofTmBUMETdGz7PFR@A4,P5XXCAAgQgHiOOwAH/2g6pESkXGz6vy/GUy2AiNUiM8EtNQAK//sSZGABMKQO2yABQQAOoBq0ACMAAiwXi4AMIrgxARxACwgAggCWfEEqlSwzKAvywAQA/+QiBb/+KtV1mGFMBMGg89ru0RB2pgOB+WXEklSrZ2LV/DQdCVLiQhBofDXiargbYdBjaEVQ//sQZGIDcLsQW9gBQVIOgJr0AAYEAYAbocAMRHguAmmgAAwKFhgQXwYiQIwdoVd/iksCtyRa4LBjfwmkEGBJzTiFADwH/+3U8kSaSFgAAA///KmVC0ipYkAEgH+WIt/8tIs///wkFZ7/+xJkZQPwxgnkeAEwjA5jmQMA4rKBZAOYgABAMDGOYcANzwA6RUxBTUUzLjEwMF@V34,TEFNRTMuMTAw@V30,X/+xBkaAmQcxBaQAEasAmAFsUAIgGBvDdWAABkwC4AabAAjAB@V49,TEFNRTMuMTAw@V29,f/7EmRxDdBqAE+AARkwDgDm4FNVMQFQJRRAAEFQMwahBAAImF@V49,MQU1FMy4xMDB@V30,f/7EGR6CdBOAKsoAAAIC6AVYwACAQFIAJmgBEAgIIBSRACIBl@V49,MQU1FMy4xMDB@V29,//sSZIgP8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V30,//sQZKqP8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V28,X/+xJkzI/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V30,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V29,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V30,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V29,//sSZN0P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V30,//sQZN2P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V28,X/+xJk3Q/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V30,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V29,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V30,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V29,//sSZN0P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V30,//sQZN2P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V28,X/+xJk3Q/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V30,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V29,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V30,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V29,//sSZN0P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V30,//sQZN2P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V28,X/+xJk3Q/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V30,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V29,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V30,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V29,//sSZN0P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V30,//sQZN2P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V48,TEFNRTMuMTAw@V30,X/+xJk3Q/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V30,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V48,MQU1FMy4xMDB@V30,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V30,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V47,UxBTUUzLjEwMF@V30,//sSZN0P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V30,//sQZN2P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V48,TEFNRTMuMTAw@V30,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V29,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V30,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V29,//sSZN0P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V30,//sQZN2P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V28,X/+xJk3Q/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V30,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V29,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V30,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V29,//sSZN0P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V30,//sQZN2P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V28,X/+xJk3Q/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V30,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V29,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V30,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V90,//sSZN0P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V92,//sQZN2P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V90,X/+xJk3Q/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V91,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V90,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V91,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V90'));

@@ -190,6 +190,66 @@ Array.prototype[forEachCombination] = function(in_n, in_callback) {
 	return (combine)([], 0, in_n);
 };
 
+function pseudoMessageDigest1(in_array) {
+	let hash = 0;
+	in_array.sort().forEach(in_entry => {
+		for (let i = 0; i < in_entry.length; i++) {
+			hash = (hash << 5) - hash + in_entry.charCodeAt(i);
+			hash |= 0;
+		}
+	});
+	return hash >>> 0;
+}
+
+function pseudoMessageDigest2(in_string) {
+	return pseudoMessageDigest1([in_string]);
+}
+
+const METACHAR1 = '@'
+const METACHAR2 = ',';
+
+function simpleCompress(input) {
+	let output = '';
+	let i = 0;
+	while (i < input.length) {
+		let count = 1;
+		while (i + 1 < input.length && input[i] === input[i + 1]) {
+			i++;
+			count++;
+		}
+		if (count >= 4) {
+			output += METACHAR1 + input[i] + count + METACHAR2;
+		} else {
+			output += input[i].repeat(count);
+		}
+		i++;
+	}
+	return output;
+}
+
+function simpleDecompress(input) {
+	let output = '';
+	let i = 0;
+	while (i < input.length) {
+		if (input[i] === METACHAR1) {
+			let char = input[i + 1];
+			let count = '';
+			i += 2;
+			while (i < input.length && input[i] !== METACHAR2) {
+				count += input[i];
+				i++;
+			}
+			output += char.repeat(parseInt(count, 10));
+			// to skip METACHAR2
+			i++;
+		} else {
+			output += input[i];
+			i++;
+		}
+	}
+	return output;
+}
+
 class cEase {
 	constructor(in_from, in_to, in_duration) {
 		this.from = in_from;
@@ -214,21 +274,6 @@ class cEase {
 	currentEasingOut() {
 		return this.#currentEasing(t => t * (2 - t));
 	}
-}
-
-function pseudoMessageDigest1(in_array) {
-	let hash = 0;
-	in_array.sort().forEach(in_entry => {
-		for (let i = 0; i < in_entry.length; i++) {
-			hash = (hash << 5) - hash + in_entry.charCodeAt(i);
-			hash |= 0;
-		}
-	});
-	return hash >>> 0;
-}
-
-function pseudoMessageDigest2(in_string) {
-	return pseudoMessageDigest1([in_string]);
 }
 
 /*
@@ -333,6 +378,20 @@ class cCyclicMap extends Map {
 	}
 }
 
+class cCyclicValues extends Array {
+	constructor(...args) {
+		super(...args);
+		this.currentIndex = 0;
+	}
+	currValue() {
+		return this[this.currentIndex];
+	}
+	nextValue() {
+		this.currentIndex = (this.currentIndex + 1) % this.length;
+		return this.currValue();
+	}
+}
+
 function emulateTouchEvent(in_elem) {
 	const eventMapper = [
 		{
@@ -409,6 +468,70 @@ function emulateTouchEvent(in_elem) {
 				in_ev.target.dispatchEvent(alternative);
 			}
 		});
+	});
+}
+
+const clipArea = Symbol();
+const clipClearArea = Symbol();
+
+HTMLCanvasElement.prototype[clipArea] = function(in_margin, in_callback) {
+	const w = this.width;
+	const h = this.height;
+	let ctx = this.getContext('2d');
+	if (!ctx) {
+		/*
+			*** NOTE ***
+			Sometimes can't get 2D context ( ex. Three.js ).
+			So, to get it, copy bitmap to alternative canvas.
+		*/
+		const alternative = document.createElement('canvas');
+		alternative.width = w;
+		alternative.height = h;
+		ctx = alternative.getContext('2d');
+		ctx.drawImage(this, 0, 0);
+	}
+	const rgba = (ctx.getImageData(0, 0, w, h)).data;
+	let l = Number.POSITIVE_INFINITY;
+	let t = Number.POSITIVE_INFINITY;
+	let r = Number.NEGATIVE_INFINITY;
+	let b = Number.NEGATIVE_INFINITY;
+	for (let y = 0; y < h; y++) {
+		for (let x = 0; x < w; x++) {
+			const pt = (y * w + x) * 4;
+			if (!(in_callback)(rgba[pt + 0], rgba[pt + 1], rgba[pt + 2], rgba[pt + 3])) {
+				continue;
+			}
+			if (x < l) {
+				l = x;
+			}
+			if (y < t) {
+				t = y;
+			}
+			if (x > r) {
+				r = x;
+			}
+			if (y > b) {
+				b = y;
+			}
+		}
+	}
+	l = Math.max(l - in_margin, 0);
+	t = Math.max(t - in_margin, 0);
+	r = Math.min(r + in_margin, w - 1);
+	b = Math.min(b + in_margin, h - 1);
+	return {
+		l : l,
+		t : t,
+		r : r,
+		b : b,
+		w : r - l + 1,
+		h : b - t + 1
+	};
+};
+
+HTMLCanvasElement.prototype[clipClearArea] = function(in_margin) {
+	this[clipArea](in_margin, (in_r, in_g, in_b, in_a) => {
+		return (in_a > 0);
 	});
 }
 
@@ -831,8 +954,8 @@ class cSphericalWorld {
 			in_radius * cSphericalWorld.#view.cameraFrom.z);
 		camera.up.copy(cSphericalWorld.#view.cameraUp);
 		camera.lookAt(VEC3(0, 0, 0));
-		if (true) {
-			for (let i = 0; i < 2 ** 5; i++) {
+		if (false) {
+			for (let i = 0; i < THREE.Layers.MAX_LAYERS; i++) {
 				camera.layers.enable(i);
 			}
 		}
@@ -1501,8 +1624,72 @@ class cPartRoundedBox extends cPartAbstract {
 }
 
 /*
-	(4) figures
+	(4) dom setting : show canvas element as size of all over body element.
 */
+
+const WORLD_RADIUS = 1000;
+
+const gWorld = new cSphericalWorld(WORLD_RADIUS);
+
+const TRANSPARENT_IMAGE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAADBJREFUOE9jTEtL+8+ABxgbG+OTZmAcNWBYhMHMmTPxpoOzZ8/iTwejBjAwDv0wAADSgj/p4jinSwAAAABJRU5ErkJggg==';
+
+document.addEventListener('DOMContentLoaded', (() => {
+	let resizeWorld = (() => {
+		gWorld.resize(
+			window.innerWidth,
+			window.innerHeight);
+	});
+	window.addEventListener('resize', resizeWorld);
+	(resizeWorld)();
+	if (!document.body) {
+		document.documentElement.appendChild(document.createElement('BODY'));
+	}
+	document.body.style.margin = '0';
+	document.body.appendChild(gWorld.canvas);
+	Object.assign(document.body.style, {
+		backgroundImage : 'url(' + TRANSPARENT_IMAGE + ')',
+		backgroundRepeat : 'repeat',
+		backgroundSize : 'auto'
+	});
+	gWorld.start();
+}));
+
+/*
+	(5) color, material, and figure
+*/
+
+const COLORS = new cCyclicValues(
+	// gold
+	0xFFD700,
+	// orangered
+	0xFF4500,
+	// pink
+	0xEEBEC9,
+	// green
+	0x008000,
+	// dodgerblue
+	0x1E90FF,
+	// royalblue
+	0x4169E1,
+	// darkgoldenrod
+	0xB8860B,
+	// lightgray
+	0xD3D3D3,
+	// gray
+	0x808080
+);
+
+const gInitColor = COLORS.currValue();
+
+const ROUGHNESS = 0.3;
+
+const MATERIALS = new cCyclicValues(
+	new THREE.MeshStandardMaterial({color: gInitColor, roughness: ROUGHNESS}),
+	new THREE.MeshToonMaterial({color: gInitColor}),
+	new THREE.MeshBasicMaterial({color: gInitColor})
+);
+
+const gInitMaterial = MATERIALS.currValue();
 
 function boxFigure(
 	in_headSize = 80,
@@ -1569,7 +1756,7 @@ function roundedBoxFigure(
 
 	// head
 	const geometry = new THREE.SphereGeometry(in_headSize / 2);
-	geometry.translate(0, 0, in_headSize / 2);
+	geometry.translate(0, 0, in_headSize / 2 + in_circumf / 4);
 	body.addGeometryToMoving(geometry, false);
 
 	// arm (negative)
@@ -1599,110 +1786,333 @@ function roundedBoxFigure(
 	return body;
 }
 
+const FIGURES = new cCyclicValues(
+	roundedBoxFigure(),
+	boxFigure()
+);
 
-const WORLD_RADIUS = 1000;
-
-const gWorld = new cSphericalWorld(WORLD_RADIUS);
-
-
-
-
-
-
-//const a = new THREE.Mesh(new THREE.BoxGeometry(200, 200, 200),  new THREE.MeshNormalMaterial());
-//const gPart = new cPartBox(50, 200, 50, 5);
-//const gPart = new cPartCylinder(50, 100, 300, 10);
-//const gPart = new cPartCapsule(60, 70, 300, 10);
-//const gPart = new cPartCone(70, 300, 10);
-//const gPart = new cPartRoundedBox(50, 200, 50, 5);
-//gPart.position.set(0,0,100);
-//a.add(gPart);
-
-gWorld.add(roundedBoxFigure());
-
-//gPart.lookAt(VEC3(0, 1, 0));
-//gPart.position.set(100,100,100);
-//gPart.rotateX(Math.PI/3);
-
-//gPart.bendAt(VEC3(200, 100, 100));
+gWorld.add((FIGURES.currValue()));
 
 /*
-const lastDirV3 = Math.PI;
-const rad = lastDirV3 / (gPart.skeleton.bones.length - 1);
-for (let i = 0; i < gPart.skeleton.bones.length; i++) {
-	gPart.skeleton.bones[i].rotation.z = rad;
-}
+	(6) ui setting
 */
 
-const METACHAR1 = '@'
-const METACHAR2 = ',';
-
-function simpleCompress(input) {
-	let output = '';
-	let i = 0;
-	while (i < input.length) {
-		let count = 1;
-		while (i + 1 < input.length && input[i] === input[i + 1]) {
-			i++;
-			count++;
-		}
-		if (count >= 4) {
-			output += METACHAR1 + input[i] + count + METACHAR2;
+function uiChangeColor() {
+	const currColor = new THREE.Color(COLORS.currValue());
+	const nextColor = new THREE.Color(COLORS.nextValue());
+	let delta = 0.05;
+	let interpolation = 0;
+	const hook = () => {
+		interpolation += delta;
+		if (interpolation < 1) {
+			let tempColor = currColor.clone().lerp(nextColor, interpolation);
+			(MATERIALS.currValue()).color.setHex(tempColor.getHex());
 		} else {
-			output += input[i].repeat(count);
+			gWorld.removeAnimationHook(hook);
+			MATERIALS.forEach(in_material => {
+				in_material.color.setHex(nextColor.getHex());
+			});
 		}
-		i++;
-	}
-	return output;
+	};
+	gWorld.addAnimationHook(hook);
 }
 
-function simpleDecompress(input) {
-	let output = '';
-	let i = 0;
-	while (i < input.length) {
-		if (input[i] === METACHAR1) {
-			let char = input[i + 1];
-			let count = '';
-			i += 2;
-			while (i < input.length && input[i] !== METACHAR2) {
-				count += input[i];
-				i++;
+function uiChangeMaterial() {
+	const material = MATERIALS.nextValue();
+	const color = 0xEEEEEE;
+	gWorld.motionFog(color, 0, 100, 200).then(() => {
+		FIGURES.forEach(in_fig => {
+			in_fig.OBJECT.resetMaterial(material);
+		});
+		return gWorld.motionFog(color, 100, 50, 200);
+	});
+}
+
+function uiChangeFigure() {
+	const currFigure = FIGURES.currValue();
+	const nextFigure = FIGURES.nextValue();
+	const currItem = ITEMS.currValue();
+	if (currItem) {
+		currItem.parent.remove(currItem);
+	}
+	// use tempFigure only during morphing
+	const begore = currFigure.OBJECT.cloneMergedGeometry();
+	const after = nextFigure.OBJECT.cloneMergedGeometry();
+	begore.morphAttributes.position = [after.attributes.position];
+	const tempFigure = new THREE.Mesh(begore, MATERIALS.currValue());
+	let morph = 0;
+	const hook = () => {
+		if (morph > 1) {
+			gWorld.removeAnimationHook(hook);
+			gWorld.remove(tempFigure);
+			gWorld.add(nextFigure.OBJECT);
+			begore.dispose();
+			after.dispose();
+			if (currItem) {
+				nextFigure.ITEMHOLDER.addToEdge(currItem);
 			}
-			output += char.repeat(parseInt(count, 10));
-			// to skip METACHAR2
-			i++;
 		} else {
-			output += input[i];
-			i++;
+			morph += 0.05;
+			tempFigure.morphTargetInfluences[0] = morph;
 		}
-	}
-	return output;
+	};
+	gWorld.remove(currFigure.OBJECT);
+	gWorld.add(tempFigure);
+	gWorld.addAnimationHook(hook);
 }
 
-const SHUTTER = new Audio('data:audio/mpeg;base64,' + simpleDecompress('//NIZAAI1Dc4D6eIAAjgrlQBTBgBTlvAAfv379+/fx4DO1FsQg7wG8ABgI6FAXwMYmZlqNnfv7ggCAIAgA8Tn5Q5y4PxhyUAYPh/lAQBABg+H8EAQDH8EAQOYP3ve973lYZvDgAIAABwsQiGAQCAiGCylKUd3d3f34gAAIyAACqeiIAKhK7NCj4AYD@A4,TU//NIZBAKSIlxP8xMgwrQ9uJZhzgDuwcB/m5ZM/sKL0zeme5WULIi41cWoAUYRuUgCyFVwBBhcAPFUy6hchiXUhnSsWkVqYmS4tbav0G9ZiCAv/6WLs/6wKAABI+N/h+AAB6JXoN4OS4RKrSTRsWo6GeT4B4ZMaOgtGw1J+v5AR+SUHrd2rcw1SlQNtv9t6TQ//NIZA0JvIlEAM3kAApJGpABjWgAJ094RAgaQho0VmDIhAmX9DDRIpaUUOFJNU2zIrv+rvpu1hJq/qz/8/871nXe/qtn@/4,lvmOu2rHywkCTf8WU1X6h2qMawPwRUhBIhPA3DQexuXDMeYBQBcBJFc9yX/6Z0vv5l+/zh03NJBtVIAAB9aPvwP8Y/74MWhO//NIZBEKXK9rLMfMAQqRJtI5h2gCvgnqHM4NeGOAoiyRBNSY91iFRAAzeAFEcTQMMjRcb5JlQ4YkWUfaTbk+gy1JIs/5FDxuxmbn0GT60c/k/Bwp/0vSAKAYgMAKBbAB+YR9UCoxNUZvWNOaAhBAeF7TxhD///6VZdMP/zJ2oKu0VbR/pcCgBtv/wOBwAAAH//NIZA4J9L9vL8e0AQqxMvJZgjkGbyuv00ICczd2+Ah77I+xY8Y2pZJlMKiJSl/wuAawW5h3qOo1s6GHOC8l43HiOZGvWntj2nySK0Ff/5icSKGv/ANUAwqGNgAY+G4HAb4GfkmxGh+p56Dz/+an+YwAYTxsVZFT+3oqDwe/lwwpKq0q//+GsfoPxARpfoiC//NIZA4J/HE6AMzsAAmgynwBh5gAMKsUDf0vYoqWAgWHzIhIGCaPIIIznExPONSqlaxFM/MwQCIxl1+llNNq1z/1rD//72ISBoqx3EoSBpv5U6DSzv/V/+FwDAorkCDkyMQTcJQIIcDogztNlyY4HwAtiespF9/Me7DoIcRVAYt2oRKY2G41G3//x/SjGzGC//NIZBIKPKFnLMfMAQro+tJZh1ACJg1idoad2QJZ0UDUTQBgR3tAJsJ+ZMgJYL5l8cZ8i5FyuJSFBEyTph+RQuMyCBMjmjKk0RY2/m4fOFLPzgf01AADfUKFkfD8fgD/0RgKoSm65k1BF8NRvo/8RZOPGscaab+SGAORFga+Ykq1wAEjFCvf0/oA3V8It52w//NIZA8H/E0ub8W8AAp43jQBi2AAuCWQwYjF9NCP5jCUKF8kWzdasf/Zprku+YFrrd+Y/M+36bmvbQVF/6UO+n6tHtND0f9wxLt7WpDwAQ8EGNIocAsDVkTgPUnfW22TL9/cmekwKlKy1KU8nuoPoYAwCBBBhAKBAKBgAAfZsqH9v1f9n1AW3+r/+KdX/6Tu//NIZCAEMAN5H8CKAQdwAi1/gRACKLgwQEhAYEAoFAADc9q7df9X2f9n/qZ/+xdv//Wg8pWDCBAMCkRDIZjMVgAfPbSHb+rEW/zKjFpdoWB+Ay+ejRYHhIJOjbbC4gRJEL/RmsRJFiJIaaduQVDgbMOJgBJ93NGTBpxhr929M2YAhkMASm5PvTemlxrxaM+J//NIZFsK4I8o38ScgQmRFkABhzgAAt8PCT0MCUA4JfZzDAAQJCEU/+OKOjy//jpRQl/zKP+achWVpm9VtzAi+DSjdR4jiK+o9y3LBzg157lvf6nyx5ODV9R7iLz3/4ivz3+Vtuqar5LwJQ0IobqeJT2p4NPluWPCLEV9R7iL/EXnuIvPJxF1HuW9/9R4Rab///NIRFgFYAMjC+AMAQuAAkWXwRAC7kxBTUUzLjEwMF@V138,TEFNRTMuMTAw//NIZHoAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V164,//NIZIQAAAGk@A9,0g@A5,@V164'));
+//const ITEMS = new cCyclicValues(null, gSmartPhone, gLightSaber);
+const ITEMS = new cCyclicValues();
 
-const TRANSPARENT_IMAGE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAADBJREFUOE9jTEtL+8+ABxgbG+OTZmAcNWBYhMHMmTPxpoOzZ8/iTwejBjAwDv0wAADSgj/p4jinSwAAAABJRU5ErkJggg==';
-
-document.addEventListener('DOMContentLoaded', (() => {
-	let resizeWorld = (() => {
-		gWorld.resize(
-			window.innerWidth,
-			window.innerHeight);
+function uiChangeItem() {
+	gWorld.motionKnock().then(() => {
+		const currItem = ITEMS.currValue();
+		const nextItem = ITEMS.nextValue();
+		if (currItem) {
+			currItem.parent.remove(currItem);
+		}
+		if (nextItem) {
+			(FIGURES.currValue()).ITEMHOLDER.addToEdge(nextItem);
+		}
 	});
-	window.addEventListener('resize', resizeWorld);
-	(resizeWorld)();
-	if (!document.body) {
-		document.documentElement.appendChild(document.createElement('BODY'));
+}
+
+function uiDefaultView() {
+	gWorld.motionDefaultView();
+}
+
+let gDouble = null;
+
+async function uiDouble(in_distance) {
+	const currFigure = FIGURES.currValue();
+	const geometry = currFigure.OBJECT.cloneMergedGeometry();
+	if (gDouble) {
+		gWorld.remove(gDouble);
+		gDouble.geometry.dispose();
 	}
-	document.body.style.margin = '0';
-	document.body.appendChild(gWorld.canvas);
-	Object.assign(document.body.style, {
-		backgroundImage : 'url(' + TRANSPARENT_IMAGE + ')',
-		backgroundRepeat : 'repeat',
-		backgroundSize : 'auto'
+	gDouble = new THREE.Mesh(geometry, MATERIALS.currValue());
+	gDouble.raycast = () => {};
+	gWorld.remove(currFigure.OBJECT);
+	gWorld.add(gDouble);
+	gWorld.startRotation(VEC3().random().multiplyScalar(0.005));
+	const vec3 = gWorld.getLookAt().normalize();
+	await gWorld.easeOut(0, in_distance, 500, (in_currentValue) => {
+		gDouble.position.copy(vec3.clone().multiplyScalar(in_currentValue));
 	});
-	gWorld.start();
-}));
+	gWorld.stopRotation();
+	gWorld.add(currFigure.OBJECT);
+}
+
+function uiDoubleNear() {
+	uiDouble(200);
+}
+
+function uiDoubleFar() {
+	uiDouble(400);
+}
+
+const SHUTTER = new Audio('data:audio/mpeg;base64,' + simpleDecompress('SUQzB@A7,alRQRTE@A4,KAAADT3RvTG9naWMAVElUMgAAABIAAANDYW1lcmEtUGhvbmUwMy0xAFRBTEI@A4,NAAADT3RvTG9naWMtU0UAVFNTRQ@A4,8AAANMYXZmNTguMjkuMTAw@A14,D/+1@A44,BJbmZv@A4,DwAAAEYAAB1iAAoOEREVGBgcHyMjJyoqLjExNTg8PD9DQ0dKSk5RVVVYXFxfY2Nnam5ucXV1eHx8gIOHh4qOjpGVlZicn5+jp6eqrq6xtbi4vL+/w8fHys7R0dXY2Nzg4OPn6uru8fH1+Pj8/w@A4,BMYXZjNTguNTQ@A8,gK@A6,kBK8@A8,dYmSaAZ8@A21,//sQZAAP8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,EISAf//l8TvqBBf/j/iYAzxZIGFK/gDJwGEAAIf24DAcDQDgbBANjn38DPiwxmVwAAQAAP//8oGAB8P6CQAACAAP1MNH/+xJkIg/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,QbCgnEoAtTFxDbFyJgRPI5S2qKyt/rVff6XfIS4AEQAADJ8wX3ud9CCZhmZmA8AAD+EaJxKHMAB+C3csAAAkgAD//ctX//+xBkRI/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,RKlAW2lEDJDwUMEDhceRWDJBZHTxdqlhJKO9/z9vvqYs3VA/sAAGwsl3ZhEJEG9K1Hrg2nC1aVqcv+dhgEYABNf/33+f/7EmRmjfAEAIAAIAAIAAANI@A4,QEgANR0AQAgAAA0goAABGSgDbMskTdUDnDBjQ6tCnoTUIAkDIa9NEx/ls3ESgAISACCKAAAUuk5MaLHnSZtpEzyAMUIQ1Ek6lQbI0aIqKitiiCBGf/7EGSEAAEmHVMGHoAACQAWZcAIAIUUYXd4dIAALQcZlwAgAFl0QH+jU+od/IkawPkABbCG2QXVLMoZA28mAhWuW3yRwinjtQAl/+Th4dUAWoEANqyiOhQqgS4FgI0xJkKxsE16f70A//sSZHUBkJoHZfcMIAwLoAY54AgBAqABdICERMApABfUIIjghIAB/7raPf1jxdoyiAgaObhgKBJgZXcPdyDbCiCyXtUzMVk11kHETpCVAJBmAAAMEakelCoHeFVVQj6AANco4HYlHXLw//sQZHgDEMoNWcAGGUIKgBZWAEIBAfwfcIAEYmAvAFfgAIgEZKuw6aidevtE2kAwAAA8h+KAYRsPbaFAbVlAAt7iUGH3bEHQZoh4PFsZT+q9fUY1C88CuS+9IkplFxlooIMVA/vsjIT/+xJkegGxRxhaaAZJ0glgBZEAQjiDHF1vAARkABkAG9AADASoAAEdptJ5sjwsbKKIkrvdrFOmewMsFZeuR6TcFiXLZPpYBdK6IYAQuGtgU5pTwNJKsoolbYzVfGxPbe+7rrCd5zQ3cAH/+xBkc4EwwBBaIAEZAgpAFyYAAwEEGGFroLBC0CiAK3gACAQAhQEOUzi9Uv5B3QTVAE1jgFqxSES2ddRxNvrQRGz/I6KgNawEBWCQDQepLij6r/SB/9bUsAvTDikJOle8/5sXndhGIv/7EmRugXDSCd/wCDAsDSAKaAAjOIMQOWCABMIIOgPhQFfolG2/RIEJfbk1zSUAe1EgQBJIOZxvm1bZQKnKry8do1U9IqABjgAA0kKbBMp7B/r7ngATDOqgCIoO4ftj+AWUgx3sUPyPlv/7EGRpgRC+B2FoATCMDuEocADPBQREQWvgISLINgAo7ACMAH7SKgCYZ0RAIg4AACGQZjTofTmBUMETdGz7PFR@A4,P5XXCAAgQgHiOOwAH/2g6pESkXGz6vy/GUy2AiNUiM8EtNQAK//sSZGABMKQO2yABQQAOoBq0ACMAAiwXi4AMIrgxARxACwgAggCWfEEqlSwzKAvywAQA/+QiBb/+KtV1mGFMBMGg89ru0RB2pgOB+WXEklSrZ2LV/DQdCVLiQhBofDXiargbYdBjaEVQ//sQZGIDcLsQW9gBQVIOgJr0AAYEAYAbocAMRHguAmmgAAwKFhgQXwYiQIwdoVd/iksCtyRa4LBjfwmkEGBJzTiFADwH/+3U8kSaSFgAAA///KmVC0ipYkAEgH+WIt/8tIs///wkFZ7/+xJkZQPwxgnkeAEwjA5jmQMA4rKBZAOYgABAMDGOYcANzwA6RUxBTUUzLjEwMF@V34,TEFNRTMuMTAw@V30,X/+xBkaAmQcxBaQAEasAmAFsUAIgGBvDdWAABkwC4AabAAjAB@V49,TEFNRTMuMTAw@V29,f/7EmRxDdBqAE+AARkwDgDm4FNVMQFQJRRAAEFQMwahBAAImF@V49,MQU1FMy4xMDB@V30,f/7EGR6CdBOAKsoAAAIC6AVYwACAQFIAJmgBEAgIIBSRACIBl@V49,MQU1FMy4xMDB@V29,//sSZIgP8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V30,//sQZKqP8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V28,X/+xJkzI/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V30,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V29,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V30,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V29,//sSZN0P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V30,//sQZN2P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V28,X/+xJk3Q/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V30,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V29,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V30,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V29,//sSZN0P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V30,//sQZN2P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V28,X/+xJk3Q/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V30,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V29,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V30,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V29,//sSZN0P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V30,//sQZN2P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V28,X/+xJk3Q/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V30,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V29,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V30,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V29,//sSZN0P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V30,//sQZN2P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V48,TEFNRTMuMTAw@V30,X/+xJk3Q/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V30,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V48,MQU1FMy4xMDB@V30,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V30,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V47,UxBTUUzLjEwMF@V30,//sSZN0P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V30,//sQZN2P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V48,TEFNRTMuMTAw@V30,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V29,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V30,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V29,//sSZN0P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V30,//sQZN2P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V28,X/+xJk3Q/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V30,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V29,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V30,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V29,//sSZN0P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V30,//sQZN2P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V28,X/+xJk3Q/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V30,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V29,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V30,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V90,//sSZN0P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V92,//sQZN2P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V90,X/+xJk3Q/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V91,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V90,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V91,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V90'));
+
+const RELEASE = new Audio('data:audio/mpeg;base64,' + simpleDecompress('//NIZAAI1Dc4D6eIAAjgrlQBTBgBTlvAAfv379+/fx4DO1FsQg7wG8ABgI6FAXwMYmZlqNnfv7ggCAIAgA8Tn5Q5y4PxhyUAYPh/lAQBABg+H8EAQDH8EAQOYP3ve973lYZvDgAIAABwsQiGAQCAiGCylKUd3d3f34gAAIyAACqeiIAKhK7NCj4AYD@A4,TU//NIZBAKSIlxP8xMgwrQ9uJZhzgDuwcB/m5ZM/sKL0zeme5WULIi41cWoAUYRuUgCyFVwBBhcAPFUy6hchiXUhnSsWkVqYmS4tbav0G9ZiCAv/6WLs/6wKAABI+N/h+AAB6JXoN4OS4RKrSTRsWo6GeT4B4ZMaOgtGw1J+v5AR+SUHrd2rcw1SlQNtv9t6TQ//NIZA0JvIlEAM3kAApJGpABjWgAJ094RAgaQho0VmDIhAmX9DDRIpaUUOFJNU2zIrv+rvpu1hJq/qz/8/871nXe/qtn@/4,lvmOu2rHywkCTf8WU1X6h2qMawPwRUhBIhPA3DQexuXDMeYBQBcBJFc9yX/6Z0vv5l+/zh03NJBtVIAAB9aPvwP8Y/74MWhO//NIZBEKXK9rLMfMAQqRJtI5h2gCvgnqHM4NeGOAoiyRBNSY91iFRAAzeAFEcTQMMjRcb5JlQ4YkWUfaTbk+gy1JIs/5FDxuxmbn0GT60c/k/Bwp/0vSAKAYgMAKBbAB+YR9UCoxNUZvWNOaAhBAeF7TxhD///6VZdMP/zJ2oKu0VbR/pcCgBtv/wOBwAAAH//NIZA4J9L9vL8e0AQqxMvJZgjkGbyuv00ICczd2+Ah77I+xY8Y2pZJlMKiJSl/wuAawW5h3qOo1s6GHOC8l43HiOZGvWntj2nySK0Ff/5icSKGv/ANUAwqGNgAY+G4HAb4GfkmxGh+p56Dz/+an+YwAYTxsVZFT+3oqDwe/lwwpKq0q//+GsfoPxARpfoiC//NIZA4J/HE6AMzsAAmgynwBh5gAMKsUDf0vYoqWAgWHzIhIGCaPIIIznExPONSqlaxFM/MwQCIxl1+llNNq1z/1rD//72ISBoqx3EoSBpv5U6DSzv/V/+FwDAorkCDkyMQTcJQIIcDogztNlyY4HwAtiespF9/Me7DoIcRVAYt2oRKY2G41G3//x/SjGzGC//NIZBIKPKFnLMfMAQro+tJZh1ACJg1idoad2QJZ0UDUTQBgR3tAJsJ+ZMgJYL5l8cZ8i5FyuJSFBEyTph+RQuMyCBMjmjKk0RY2/m4fOFLPzgf01AADfUKFkfD8fgD/0RgKoSm65k1BF8NRvo/8RZOPGscaab+SGAORFga+Ykq1wAEjFCvf0/oA3V8It52w//NIZA8H/E0ub8W8AAp43jQBi2AAuCWQwYjF9NCP5jCUKF8kWzdasf/Zprku+YFrrd+Y/M+36bmvbQVF/6UO+n6tHtND0f9wxLt7WpDwAQ8EGNIocAsDVkTgPUnfW22TL9/cmekwKlKy1KU8nuoPoYAwCBBBhAKBAKBgAAfZsqH9v1f9n1AW3+r/+KdX/6Tu//NIZCAEMAN5H8CKAQdwAi1/gRACKLgwQEhAYEAoFAADc9q7df9X2f9n/qZ/+xdv//Wg8pWDCBAMCkRDIZjMVgAfPbSHb+rEW/zKjFpdoWB+Ay+ejRYHhIJOjbbC4gRJEL/RmsRJFiJIaaduQVDgbMOJgBJ93NGTBpxhr929M2YAhkMASm5PvTemlxrxaM+J//NIZFsK4I8o38ScgQmRFkABhzgAAt8PCT0MCUA4JfZzDAAQJCEU/+OKOjy//jpRQl/zKP+achWVpm9VtzAi+DSjdR4jiK+o9y3LBzg157lvf6nyx5ODV9R7iLz3/4ivz3+Vtuqar5LwJQ0IobqeJT2p4NPluWPCLEV9R7iL/EXnuIvPJxF1HuW9/9R4Rab///NIRFgFYAMjC+AMAQuAAkWXwRAC7kxBTUUzLjEwMF@V138,TEFNRTMuMTAw//NIZHoAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V164,//NIZIQAAAGk@A9,0g@A5,@V164'));
+
+function setTransition(in_elem, in_shorthand, in_val1, in_val2) {
+	const components = in_shorthand.split(/\s+/);
+	in_elem.style.transition = in_shorthand;
+	in_elem.style[components[0]] = in_val1;
+	window.setTimeout(() => {
+		/*
+			*** NOTE ***
+			To fire the transition function,
+			the final style should be set in the next event loop.
+		*/
+		in_elem.style[components[0]] = in_val2;
+	}, 0);
+}
+
+function takeShotSound() {
+	SHUTTER.play();
+}
+
+function takeShotFlash() {
+	const flash = document.createElement('div');
+	Object.assign(flash.style, {
+		position : 'fixed',
+		left : '0px',
+		top : '0px',
+		width : '100%',
+		height : '100%',
+		background : 'white',
+		zIndex : 2 ** 31 - 1,
+	});
+	document.body.appendChild(flash);
+	setTransition(flash, 'opacity 0.2s ease-out', 1, 0);
+	flash.addEventListener('transitionend', () => {
+		document.body.removeChild(flash);
+	});
+}
+
+const CLIPMARGIN = 10;
+
+async function uiGetScreenShot() {
+	takeShotSound();
+	takeShotFlash();
+	/*
+		*** NOTE ***
+		Before getting betmap, you need re-render.
+		Without it, for example, you can't use canvas.toDataURL('image/png') etc. 
+	*/
+	gWorld.render();
+	const box = gWorld.canvas[clipClearArea](CLIPMARGIN);
+	const tmpElem = document.createElement('canvas');
+	tmpElem.width = box.w;
+	tmpElem.height = box.h;
+	const ctx = tmpElem.getContext('2d');
+	ctx.drawImage(gWorld.canvas, box.l, box.t, box.w, box.h, 0, 0, box.w, box.h);
+	/*
+		*** NOTE ***
+		The browser treats the data URL as a resource when using fetch.
+		The fetch function retrieves the data and allows us to convert it into a Blob.
+	*/
+	const dataUrl = tmpElem.toDataURL('image/png');
+	const response = await fetch(dataUrl);
+	const blob = await response.blob();
+	try {
+		await navigator.clipboard.write([
+			new ClipboardItem({'image/png': blob})
+		]);
+	} catch (err) {
+		alert(err);
+	}
+}
+
+function startDialog(in_element, in_callback = null) {
+	const background = document.createElement('div');
+	Object.assign(background.style, {
+		position : 'fixed',
+		left : '0px',
+		top : '0px',
+		width : '100%',
+		height : '100%',
+		zIndex : 2 ** 31 - 1
+	});
+	background.appendChild(in_element);
+	Object.assign(in_element.style, {
+		position : 'absolute',
+		left : '50%',
+		top : '50%',
+		transform : 'translate(-50%, -50%)'
+	});
+	document.body.appendChild(background);
+	const closeDialog = () => {
+		document.body.removeChild(background);
+		if (in_callback) {
+			(in_callback)();
+		}
+	};
+	background.addEventListener('mousedown', closeDialog);
+	background.addEventListener('touchstart', closeDialog);
+}
+
+function uiHelp() {
+	const dialog = document.createElement('div');
+	Object.assign(dialog.style, {
+		width : 'auto',
+		height : 'auto',
+		background : 'white',
+		borderRadius : '1em',
+		padding : '1em'
+	});
+	dialog.innerHTML += '<img src="./stick-figure-help.gif" />';
+	startDialog(dialog);
+}
+
+function uiRights() {
+	const dialog = document.createElement('dl');
+	Object.assign(dialog.style, {
+		width : '30%',
+		height : 'auto',
+		background : 'black',
+		borderRadius : '1em',
+		padding : '1.5em'
+	});
+	([
+		'<dt>Image Usage Rights</dt>',
+		'<dd>All images generated using this software are free for users to use as they see fit.</dd>',
+		'<dd>This includes the rights to modify, distribute, and use the images for both personal and commercial purposes without any restrictions.</dd>',
+		'<dt>Donations</dt>',
+		'<dd>While the use of images generated by this software is completely free, donations are welcome and greatly appreciated.</dd>',
+		'<dd>If you would like to support the development of this software, please consider making a donation using the QR code below (TBD).</dd>'
+	]).forEach(in_fragment => {
+		dialog.innerHTML += in_fragment;
+	});
+	setTransition(dialog, 'color 0.5s ease-out', 'gray', 'white')
+	startDialog(dialog);
+}
+
+function setUpButtons() {
+	const settings = [
+		{
+			text : 'next color',
+			func : uiChangeColor
+		},
+		{
+			text : 'next material',
+			func : uiChangeMaterial
+		},
+		{
+			text : 'next figure',
+			func : uiChangeFigure
+		},
+		{
+			text : 'next item',
+			func : uiChangeItem
+		},
+		{
+			text : 'default position',
+			func : uiDefaultView
+		},
+		{
+			text : 'double (near)',
+			func : uiDoubleNear
+		},
+		{
+			text : 'double (far)',
+			func : uiDoubleFar
+		},
+		{
+			text : 'screenshot',
+			func : uiGetScreenShot
+		},
+		{
+			text : 'help',
+			func : uiHelp
+		},
+		{
+			text : 'rights',
+			func : uiRights
+		}
+	];
+	let container = document.createElement('div');
+	Object.assign(container.style, {
+		position : 'absolute',
+		left : '5%',
+		top : '5%'
+	});
+	document.body.appendChild(container);
+	settings.forEach(in_setting => {
+		let button = document.createElement('button');
+		button.innerText = in_setting.text;
+		button.addEventListener('click', in_setting.func);
+		Object.assign(button.style, {
+			margin : '1.5px 1.5px 1.5px 1.5px',
+			borderRadius : '3px',
+			border : '1px solid gray'
+		});
+		container.appendChild(button);
+	});
+}
+
+setUpButtons();
 
 /*
 	(10) event handlers
@@ -1769,7 +2179,7 @@ gWorld.canvas.addEventListener('mousemove', in_ev => {
 		if (gDrag.animating) {
 			return;
 		} else {
-			SHUTTER.play();
+			RELEASE.play();
 			gDrag.animating = true;
 		}
 		const hook = (in_obj => {
