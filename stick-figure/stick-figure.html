@@ -7,8 +7,8 @@
 <script type='importmap'>
 {
 	"imports": {
-		"three": "https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.module.min.js",
-		"utils": "https://cdn.jsdelivr.net/npm/three@0.168.0/examples/jsm/utils/BufferGeometryUtils.js"
+		"three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.min.js",
+		"utils": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/utils/BufferGeometryUtils.js"
 	}
 }
 </script>
@@ -341,13 +341,13 @@ class cApproximateSet extends Set {
 }
 
 class cCyclicMap extends Map {
-	get keysArray() {
+	get #keysArray() {
 		return Array.from(this.keys());
 	}
 	#deltaItemByOrder(in_order, in_delta) {
-		const length = this.keysArray.length;
+		const length = this.#keysArray.length;
 		const deltaIndex = (in_order + in_delta + length) % length;
-		const deltaKey = this.keysArray[deltaIndex];
+		const deltaKey = this.#keysArray[deltaIndex];
 		return {
 			k : deltaKey,
 			v : this.get(deltaKey)
@@ -363,7 +363,7 @@ class cCyclicMap extends Map {
 		return this.#deltaItemByOrder(in_order, -1);
 	}
 	#deltaItemByKey(in_key, in_delta) {
-		const index = this.keysArray.indexOf(in_key);
+		const index = this.#keysArray.indexOf(in_key);
 		if (index === -1) {
 			return null;
 		} else {
@@ -379,15 +379,25 @@ class cCyclicMap extends Map {
 }
 
 class cCyclicValues extends Array {
+	#currIndex;
 	constructor(...args) {
 		super(...args);
-		this.currentIndex = 0;
+		this.#currIndex = 0;
+	}
+	get #nextIndex() {
+		return (this.#currIndex + 1) % this.length;
+	}
+	#increment() {
+		this.#currIndex = this.#nextIndex;
 	}
 	currValue() {
-		return this[this.currentIndex];
+		return this[this.#currIndex];
 	}
 	nextValue() {
-		this.currentIndex = (this.currentIndex + 1) % this.length;
+		return this[this.#nextIndex];
+	}
+	incrementedValue() {
+		this.#increment();
 		return this.currValue();
 	}
 }
@@ -530,7 +540,7 @@ HTMLCanvasElement.prototype[clipArea] = function(in_margin, in_callback) {
 };
 
 HTMLCanvasElement.prototype[clipClearArea] = function(in_margin) {
-	this[clipArea](in_margin, (in_r, in_g, in_b, in_a) => {
+	return this[clipArea](in_margin, (in_r, in_g, in_b, in_a) => {
 		return (in_a > 0);
 	});
 }
@@ -556,7 +566,15 @@ const DIRECTION = {
 	ZN : VEC3(0, 0, -1)
 }
 
-function makeTrapezoidGeometryParts(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_YLen, in_Rad = 0) {
+function safeMergeGeometry(in_arr, in_dispose = true) {
+	const merged = UTILS.mergeGeometries(in_arr);
+	if (in_dispose) {
+		in_arr.forEach(in_geo => in_geo.dispose());
+	}
+	return merged;
+}
+
+function makeTrapezoidGeometryParts(in_txLen, in_tzLen, in_bxLen, in_bzLen, in_yLen, in_rad = 0) {
 	const parts = [];
 	/*
 		|
@@ -594,14 +612,14 @@ function makeTrapezoidGeometryParts(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_Y
 		 (+)
 	*/
 	const baseVertices = {
-		v0 : VEC3(in_tXLen / 2 * -1, in_YLen / 2 * +1, in_tZLen / 2 * -1),
-		v1 : VEC3(in_tXLen / 2 * +1, in_YLen / 2 * +1, in_tZLen / 2 * -1),
-		v2 : VEC3(in_tXLen / 2 * +1, in_YLen / 2 * +1, in_tZLen / 2 * +1),
-		v3 : VEC3(in_tXLen / 2 * -1, in_YLen / 2 * +1, in_tZLen / 2 * +1),
-		v4 : VEC3(in_bXLen / 2 * -1, in_YLen / 2 * -1, in_bZLen / 2 * -1),
-		v5 : VEC3(in_bXLen / 2 * +1, in_YLen / 2 * -1, in_bZLen / 2 * -1),
-		v6 : VEC3(in_bXLen / 2 * +1, in_YLen / 2 * -1, in_bZLen / 2 * +1),
-		v7 : VEC3(in_bXLen / 2 * -1, in_YLen / 2 * -1, in_bZLen / 2 * +1)
+		v0 : VEC3(in_txLen / 2 * -1, in_yLen / 2 * +1, in_tzLen / 2 * -1),
+		v1 : VEC3(in_txLen / 2 * +1, in_yLen / 2 * +1, in_tzLen / 2 * -1),
+		v2 : VEC3(in_txLen / 2 * +1, in_yLen / 2 * +1, in_tzLen / 2 * +1),
+		v3 : VEC3(in_txLen / 2 * -1, in_yLen / 2 * +1, in_tzLen / 2 * +1),
+		v4 : VEC3(in_bxLen / 2 * -1, in_yLen / 2 * -1, in_bzLen / 2 * -1),
+		v5 : VEC3(in_bxLen / 2 * +1, in_yLen / 2 * -1, in_bzLen / 2 * -1),
+		v6 : VEC3(in_bxLen / 2 * +1, in_yLen / 2 * -1, in_bzLen / 2 * +1),
+		v7 : VEC3(in_bxLen / 2 * -1, in_yLen / 2 * -1, in_bzLen / 2 * +1)
 	};
 	/*
 		1. Surface (BufferGeometry)
@@ -622,7 +640,7 @@ function makeTrapezoidGeometryParts(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_Y
 		let translate;
 		if (equal(in_key, DIRECTION.YP, DIRECTION.YN)) {
 			// top or bottom
-			translate = in_key.clone().multiplyScalar(in_Rad);
+			translate = in_key.clone().multiplyScalar(in_rad);
 		} else {
 			const normal = VEC3();
 			in_val[forEachCombination](3, (a, b, c) => {
@@ -637,7 +655,7 @@ function makeTrapezoidGeometryParts(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_Y
 				}
 				return false;
 			});
-			translate = normal.multiplyScalar(in_Rad);
+			translate = normal.multiplyScalar(in_rad);
 		}
 		const vertices = [];
 		in_val.forEach(in_vertex => {
@@ -691,8 +709,8 @@ function makeTrapezoidGeometryParts(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_Y
 		const defaultHeightSegments = 1;
 		const openEnded = true;
 		return new THREE.CylinderGeometry(
-			in_Rad,
-			in_Rad,
+			in_rad,
+			in_rad,
 			in_height,
 			defaultRadialSegments,
 			defaultHeightSegments,
@@ -708,9 +726,9 @@ function makeTrapezoidGeometryParts(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_Y
 		});
 		return ret.divideScalar(in_vecArr.length);
 	};
-	const theta = (a, b) => Math.atan(Math.abs(a - b) / 2 / in_YLen) * (a > b ? +1 : -1);
-	const thetaX = theta(in_tXLen, in_bXLen);
-	const thetaZ = theta(in_tZLen, in_bZLen);
+	const theta = (a, b) => Math.atan(Math.abs(a - b) / 2 / in_yLen) * (a > b ? +1 : -1);
+	const thetaX = theta(in_txLen, in_bxLen);
+	const thetaZ = theta(in_tzLen, in_bzLen);
 	const edgeConfigSet1 = [
 		/*
 			E : Edge (Vector3 x2)
@@ -770,7 +788,7 @@ function makeTrapezoidGeometryParts(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_Y
 		const widthSegments = 32;
 		const heightSegments = 16;
 		return new THREE.SphereGeometry(
-			in_Rad,
+			in_rad,
 			widthSegments,
 			heightSegments,
 			in_phi_start - error,
@@ -779,8 +797,8 @@ function makeTrapezoidGeometryParts(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_Y
 			in_theta + error * 2
 		);
 	};
-	const uTheta = (in_tXLen > in_bXLen) || (in_tZLen > in_bZLen) ? DEG90 * 2 : DEG90 * 1;
-	const bTheta = (in_tXLen < in_bXLen) || (in_tZLen < in_bZLen) ? DEG90 * 2 : DEG90 * 1;
+	const uTheta = (in_txLen > in_bxLen) || (in_tzLen > in_bzLen) ? DEG90 * 2 : DEG90 * 1;
+	const bTheta = (in_txLen < in_bxLen) || (in_tzLen < in_bzLen) ? DEG90 * 2 : DEG90 * 1;
 	const cornerConfigSet = [
 		/*
 			C : Corner (Vector3 x1)
@@ -805,64 +823,88 @@ function makeTrapezoidGeometryParts(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_Y
 	return parts;
 }
 
-function trapezoidGeometryUtil(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_YLen, in_Rad = 0) {
-	const parts = makeTrapezoidGeometryParts(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_YLen, in_Rad);
+function trapezoidGeometryUtil(in_txLen, in_tzLen, in_bxLen, in_bzLen, in_yLen, in_rad = 0) {
+	const parts = makeTrapezoidGeometryParts(in_txLen, in_tzLen, in_bxLen, in_bzLen, in_yLen, in_rad);
 	// assume order of groups ( BufferGeometry x6, other geometries ... )
 	const groups = [];
 	let edgeGroup = 0;
-	const mergedGeometry = UTILS.mergeGeometries(parts);
 	parts.forEach(in_part => {
 		if (in_part.userData.isSurface) {
 			groups.push(in_part.index.count);
 		} else {
 			edgeGroup += in_part.index.count;
 		}
-		in_part.dispose();
 	});
 	groups.push(edgeGroup);
+	const merged = safeMergeGeometry(parts);
 	let start = 0;
 	for (let i = 0; i < groups.length; i++) {
-		mergedGeometry.addGroup(start, groups[i], i);
+		merged.addGroup(start, groups[i], i);
 		start += groups[i];
 	}
-	return mergedGeometry;
+	return merged;
 }
 
-function roundBoxGeometry(in_xlen, in_ylen, in_zlen, in_rad) {
-	return trapezoidGeometryUtil(in_xlen, in_zlen, in_xlen, in_zlen, in_ylen, in_rad);
+function roundBoxGeometry(in_xLen, in_yLen, in_zLen, in_rad) {
+	return trapezoidGeometryUtil(in_xLen, in_zLen, in_xLen, in_zLen, in_yLen, in_rad);
 }
 
 function roundRegularBoxGeometry(in_len, in_rad) {
 	return trapezoidGeometryUtil(in_len, in_len, in_len, in_len, in_len, in_rad);
 }
 
-function trapezoidGeometry(in_tLen, in_bLen, in_height, in_thickness) {
-	return trapezoidGeometryUtil(in_tLen, 0, in_bLen, 0, in_height, in_thickness);
+function roundTrapezoidGeometry(in_tLen, in_bLen, in_height, in_rad) {
+	return trapezoidGeometryUtil(in_tLen, 0, in_bLen, 0, in_height, in_rad);
 }
 
 function capsuleConfigure(in_rad_t, in_rad_b, in_h) {
 	/*
-	          +-(rad_t)-+
-		     /|         |
-		    / |         |
-		   /  |         | in_h
-		  /   |         |
-		 /    |         |
-		+-----+-(rad_b)-+
+	                  +-(rad_t)-+
+		             /|         |
+		            / |         |
+		           /  |         | in_h
+		          /   |         |
+		         /    |         |
+		theta : +-----+-(rad_b)-+
 	*/
 	const ratio = (in_rad_b - in_rad_t) / in_h;
+	const atan = Math.atan(1 / ratio);
 	return {
-		theta : Math.atan(1 / ratio),
+		/*
+			when in_rad_t < in_rad_b, atan will be "+"
+			when in_rad_t = in_rad_b, atan will be "Math.PI / 2"
+			when in_rad_t > in_rad_b, atan will be "-"
+		*/
+		theta : atan > 0 ? atan : Math.PI + atan,
+		/*
+			when in_rad_t < in_rad_b, delta will be "+"
+			when in_rad_t = in_rad_b, delta will be "0"
+			when in_rad_t > in_rad_b, delta will be "-"
+		*/
 		delta : {
 			t : in_rad_t * ratio,
 			b : in_rad_b * ratio
 		},
+		/*
+			radius (real radius) will be always "+"
+		*/
 		radius : {
 			t : (in_rad_t ** 2 + (in_rad_t * ratio) ** 2) ** 0.5,
 			b : (in_rad_b ** 2 + (in_rad_b * ratio) ** 2) ** 0.5
 		},
 	};
 }
+
+/*
+
+console.log(capsuleConfigure(10, 11, 50));
+//theta: 1.5507989928...
+console.log(capsuleConfigure(10, 10, 50));
+//theta: 1.5707963267...
+console.log(capsuleConfigure(11, 10, 50));
+//theta: 1.5907936607...
+
+*/
 
 function customCapsuleGeometry(in_rad_t, in_rad_b, in_h, in_rSeg = 32, in_hSeg = 1) {
 	const conf = capsuleConfigure(in_rad_t, in_rad_b, in_h);
@@ -875,10 +917,8 @@ function customCapsuleGeometry(in_rad_t, in_rad_b, in_h, in_rSeg = 32, in_hSeg =
 	parts.push(new THREE.SphereGeometry(conf.radius.b, ...sphereParams, conf.theta, Math.PI - conf.theta));
 	parts[parts.length - 1].translate(0, conf.delta.b * -1 - in_h / 2, 0);
 	// middle
-	parts.push(new THREE.CylinderGeometry(in_rad_t, in_rad_b, in_h, in_rSeg, in_hSeg));
-	const mergedGeometry = UTILS.mergeGeometries(parts);
-	parts.forEach(in_geo => in_geo.dispose());
-	return mergedGeometry;
+	parts.push(new THREE.CylinderGeometry(in_rad_t, in_rad_b, in_h, in_rSeg, in_hSeg, true));
+	return safeMergeGeometry(parts);
 }
 
 /*
@@ -955,9 +995,7 @@ class cSphericalWorld {
 		camera.up.copy(cSphericalWorld.#view.cameraUp);
 		camera.lookAt(VEC3(0, 0, 0));
 		if (false) {
-			for (let i = 0; i < THREE.Layers.MAX_LAYERS; i++) {
-				camera.layers.enable(i);
-			}
+			camera.layers.enableAll();
 		}
 		this.#cameraCtrl = new THREE.Object3D();
 		this.#cameraCtrl.add(camera);
@@ -1223,413 +1261,1025 @@ class cSphericalWorld {
 }
 
 /*
-	(3) factory function controls segments of geometry (depends on debug setting).
-*/
+	(3) cAbstractPart
 
-//const DEBUG = true;
-const DEBUG = false;
-
-function getSegments(in_className) {
-	const IX_ROUGH = 0;
-	const IX_SMOOTH = 1;
-	const settings = {
-		SphereGeometry : {
-			width : [16, 64],
-			height : [16, 64]
-		},
-		CylinderGeometry : {
-			radial : [16, 64],
-			height : [1, 4]
-		},
-		CapsuleGeometry : {
-			cap : [8, 32],
-			radial : [16, 64]
-		}
-	}[in_className];
-	const segments = [];
-	for (let prop in settings) {
-		segments.push(settings[prop][(DEBUG ? IX_ROUGH : IX_SMOOTH)]);
-	}
-	return segments;
-}
-
-class CustomSphere extends THREE.SphereGeometry {
-	constructor(in_radius) {
-		const segments = getSegments('SphereGeometry');
-		super(in_radius, ...segments);
-	}
-}
-
-class CustomCylinder extends THREE.CylinderGeometry {
-	constructor(in_radiusTop, in_radiusBottom, in_height) {
-		const segments = getSegments('CylinderGeometry');
-		super(in_radiusTop, in_radiusBottom, in_height, ...segments);
-	}
-}
-
-class CustomCapsule extends THREE.CapsuleGeometry {
-	constructor(in_radius, in_height) {
-		const segments = getSegments('CapsuleGeometry');
-		super(in_radius, in_height, ...segments);
-	}
-}
-
-/*
-	(4) cPart
-
-	Mesh
+	SkinnedMesh
 	|
 	+-- in_geometry
 	|
-	+-- receiver ( not visible & to control arm.lookAt )
+	+-- receiver to get raycast after bent ( not visible )
+	|	|
+	|	+-- ExtrudeGeometry
+	|
+	+-- receiver to bend ( not visible )
 		|
 		+-- SphereGeometry
 		|
-		+-- PlaneGeometry
+		+-- CircleGeometry for positive side
+		|
+		+-- CircleGeometry doe negative side
 */
 
-class cPart extends THREE.Mesh {
-	// to draw this layer, camera.layers.enable must be called
-	static receiverLayer = 1;
-	static #receiverWidenRatio = (DEBUG ? 4 : 1000);
-	static #receiverMaterial = new THREE.MeshNormalMaterial({transparent: true, opacity: 0.5});
+class cAbstractPart extends THREE.SkinnedMesh {
+	static #debug = false;
+	static #materialVisible = new THREE.MeshNormalMaterial();
+	static #materialOpacity = new THREE.MeshNormalMaterial({transparent : true, opacity : 0.3});
 	static #cacheKeys = {
-		frontvec : Symbol(),
-		receiver : Symbol(),
-		raycastn : Symbol()
+		BOUNDING_BOX : Symbol(),
+		DRAGGING_POS : Symbol(),
+		RCV_DRAGGING : Symbol(),
+		RCV_RELEASED : Symbol(),
+		INTERLOCKING : Symbol()
 	};
+	static operatingLayer = 1;
+	static searchInstance(in_obj) {
+		const recurse = (in_current) => {
+			if (!in_current) {
+				return null;
+			}
+			if (in_current instanceof cAbstractPart) {
+				return in_current;
+			} else {
+				// for object by #makeRoughGeometry(), and addMeshToBone()
+				return recurse(in_current.parent);
+			}
+		};
+		return (recurse)(in_obj);
+	}
+	static #activateReceiver(in_receiver, in_activate) {
+		if (in_activate) {
+			in_receiver.raycast = THREE.Mesh.prototype.raycast;
+			if (cAbstractPart.#debug) {
+				in_receiver.visible = true;
+			}
+		} else {
+			in_receiver.raycast = () => {};
+			if (cAbstractPart.#debug) {
+				in_receiver.visible = false;
+			}
+		}
+	}
+	static #getLength(in_box) {
+		return in_box.max.y - in_box.min.y;
+	}
+	static #getCircumfRect(in_box) {
+		return {
+			w : in_box.max.x - in_box.min.x,
+			h : in_box.max.z - in_box.min.z
+		};
+	}
+	get #length() {
+		return cAbstractPart.#getLength(this.#getCache('BOUNDING_BOX'));
+	}
+	get #circumfRect() {
+		return cAbstractPart.#getCircumfRect(this.#getCache('BOUNDING_BOX'));
+	}
 	#getCache(in_key) {
-		return this.userData[cPart.#cacheKeys[in_key]];
+		return this.userData[cAbstractPart.#cacheKeys[in_key]];
 	}
 	#setCache(in_key, in_value) {
-		this.userData[cPart.#cacheKeys[in_key]] = in_value;
+		this.userData[cAbstractPart.#cacheKeys[in_key]] = in_value;
 	}
-	constructor(in_length, in_geometry, in_material) {
+	static #makeSkeleton(in_boneCnt, in_notch) {
+		const bones = [];
+		for (let i = 0; i < in_boneCnt; i++) {
+			bones[i] = new THREE.Bone();
+			if (i > 0) {
+				bones[i].position.z = in_notch;
+				bones[i - 1].add(bones[i]);
+			}
+		}
+		return new THREE.Skeleton(bones);
+	}
+	static #setSkin(in_geometry, in_notch) {
+		const skin = {
+			indices : [],
+			weights : []
+		};
+		for (let i = 0; i < in_geometry.attributes.position.count; i++) {
+			const posV3 = (new THREE.Vector3()).fromBufferAttribute(in_geometry.attributes.position, i);
+			const boneIndex = Math.round(posV3.z / in_notch);
+			skin.indices.push(boneIndex, -1, -1, -1);
+			skin.weights.push(1, 0, 0, 0);
+		}
+		in_geometry.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(skin.indices, 4));
+		in_geometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skin.weights, 4));
+	}
+	#configureDraggingRcv() {
+		const parts = [];
+		const receivingRatio = 3;
+		parts.push(new THREE.CircleGeometry(this.#length * receivingRatio));
 		/*
-			default object :
+			*** NOTE ***
+			as CircleGeometry can't catch raycast from opposite side,
+			use rotated CircleGeometry in addition.
+		*/
+		parts.push((new THREE.CircleGeometry(this.#length * receivingRatio)).rotateX(Math.PI));
+		parts.push(new THREE.SphereGeometry(this.#length));
+		const mesh = new THREE.Mesh(safeMergeGeometry(parts), cAbstractPart.#materialOpacity);
+		mesh.visible = false;
+		mesh.layers.set(cAbstractPart.operatingLayer);
+		this.#setCache('RCV_DRAGGING', mesh);
+		this.add(mesh);
+	}
+	#configureReleasedRcv() {
+		const geometry = this.#makeRoughGeometry();
+		const mesh = new THREE.Mesh(geometry, cAbstractPart.#materialVisible);
+		mesh.visible = false;
+		this.#setCache('RCV_RELEASED', mesh);
+		this.add(mesh);
+	}
+	#configureReceiver() {
+		this.#configureDraggingRcv();
+		this.#configureReleasedRcv();
+	}
+	resetDraggingRcv() {
+		/*
+			*** NOTE ***
+			cached DRAGGING_POS should be cloned.
+			it should not be changed during dragging.
+		*/
+		const dragging = this.#getCache('RCV_DRAGGING');
+		dragging.lookAt(this.#getCache('DRAGGING_POS'));
+	}
+	activateDraggingRcv(in_vec3) {
+		// RCV_DRAGGING : ON
+		const dragging = this.#getCache('RCV_DRAGGING');
+		cAbstractPart.#activateReceiver(dragging, true);
+		this.#setCache('DRAGGING_POS', in_vec3.clone());
+		this.resetDraggingRcv();
+		// RCV_RELEASED : OFF
+		const released = this.#getCache('RCV_RELEASED');
+		cAbstractPart.#activateReceiver(released, false);
+	}
+	activateReleasedRcv() {
+		// RCV_DRAGGING : OFF
+		const dragging = this.#getCache('RCV_DRAGGING');
+		cAbstractPart.#activateReceiver(dragging, false);
+		// RCV_RELEASED : ON
+		const released = this.#getCache('RCV_RELEASED');
+		cAbstractPart.#activateReceiver(released, true);
+		/*
+			*** NOTE ***
+			vertices of SkinnedMesh.geometry will not be changed after moving bones.
+			because of it, SkinnedMesh.geometry can't catch raycasting properly.
+			so, to catch raycasting, rough formed geometry is attached.
+		*/
+		released.geometry.dispose();
+		released.geometry = this.#makeRoughGeometry();
+	}
+	constructor(in_geometry, in_boneCnt) {
+		/*
+			*** NOTE ***
+			as in_geometry may not have parameters.height, boundingBox is needed.
+			in addition, without clone(), boundingBox will be changed after rotateX().
+			to #makeRoughGeometry(), and to moreShrink(), boundingBox will be used.
+		*/
+		in_geometry.computeBoundingBox();
+		const box = in_geometry.boundingBox.clone();
+		const length = cAbstractPart.#getLength(box);
+		/*
+			when using lookAt() / bendAt(),
+			make the direction of bones be afected.
+			as a default, object is set as lookAt(0, 0, 1) of local coordinate
+
+			object (before) :
 
 			     y    
-			     |   -z : front (0, 0, -1)
+			     |   /
 			     |  /
 			     | /
 			    ###
-			    #*#-------x
+			 ---#*#---x
 			    /##
-			   /
-			  /
+			   / |
+			  /  |
 			 /
-			z : obj.lookAt(0, 0, 1)
+			z : lookAt(0, 0, 1)
 
-			converted object :
+			object (after) :
 
-			     y : front (0, 1, 0)
-			     |
+			     y
 			     |  /
 			     | /
 			     |/
-			    #*#-------x
+			 ---#*#---x
 			   ###
-			  ###
-			  /
+			  ###|
+			  /  |
 			 /
-			z : obj.lookAt(0, 0, 1)
+			z : lookAt(0, 0, 1)
 		*/
-		const angle = Math.PI / 2;
-		const front = VEC3(0, 0, -1);
-		super(in_geometry.rotateX(angle).translate(0, 0, in_length / 2), in_material);
-		if (false) {
-			this.castShadow = true;
-			this.receiveShadow = true;
-		}
-		this.#setCache('frontvec', front.applyMatrix4(new THREE.Matrix4().makeRotationX(angle)));
-		// receive intersection from raycast
-		const receivers = [];
-		const thin = 0.01;
-		const wide = in_length * cPart.#receiverWidenRatio;
+		in_geometry.translate(0, length / 2, 0);
+		in_geometry.rotateX(Math.PI / 2);
 		/*
-			*** NOTE ***
-			As PlaneGeometry can't catch raycast from opposite side,
-			use thin BoxGeometry instead of PlaneGeometry.
+			as bone does not have length, but it is a point, ...
+			+---+---+---+---+ : in_boneCnt = 5 ( segument count = 4 )
 		*/
-		receivers.push(new THREE.BoxGeometry(wide, wide, thin));
-		receivers.push(new THREE.SphereGeometry(in_length));
-		const merged = new THREE.Mesh(UTILS.mergeGeometries(receivers), cPart.#receiverMaterial);
-		receivers.forEach(in_geo => {
-			in_geo.dispose();
-		});
-		this.#setCache('receiver', merged);
-		merged.layers.set(cPart.receiverLayer);
-		if (DEBUG) {
-			merged.visible = true;
+		const notch = length / (in_boneCnt - 1);
+		const skeleton = cAbstractPart.#makeSkeleton(in_boneCnt, notch);
+		cAbstractPart.#setSkin(in_geometry, notch);
+		if (cAbstractPart.#debug) {
+			super(in_geometry, cAbstractPart.#materialOpacity);
 		} else {
-			merged.visible = false;
+			super(in_geometry, cAbstractPart.#materialVisible);
 		}
+		this.#setCache('BOUNDING_BOX', box);
+		this.#setCache('INTERLOCKING', Symbol());
+		this.add(skeleton.bones[0]);
+		this.bind(skeleton);
+		this.#configureReceiver();
+		this.activateReleasedRcv();
 	}
-	receiverStart(in_vec3 = null) {
-		const recv = this.#getCache('receiver');
-		if (in_vec3) {
-			// in_vec3 : assume raycaster.ray.direction.negate()
-			this.#setCache('raycastn', in_vec3);
-			recv.lookAt(in_vec3);
-		}
-		this.add(recv);
-	}
-	receiverStop() {
-		this.#setCache('raycastn', null);
-		this.remove(this.#getCache('receiver'));
-	}
-	#lookAtWithoutRotation(in_vec3) {
-		// target direction
-		const dstVec3 = in_vec3.clone().normalize();
-		/*
-			*** NOTE ***
-			Cached current frontvec should be cloned before applyQuaternion.
-			Without it cached will be broken.
-		*/
-		const srcVec3 = (this.#getCache('frontvec')).clone().applyQuaternion(this.quaternion);
-		// get quaternion to rotate from srcVec3 to dstVec3
-		const quat = (new THREE.Quaternion()).setFromUnitVectors(srcVec3, dstVec3);
-		this.quaternion.multiplyQuaternions(quat, this.quaternion);
-	}
-	lookAt(in_vec3, in_normal = null) {
-		if (in_normal) {
-			in_vec3.projectOnPlane(in_normal);
-			this.#lookAtWithoutRotation(in_vec3);
-		} else {
-			super.lookAt(in_vec3);
-		}
-		const direction = this.#getCache('raycastn');
-		if (direction) {
-			this.#getCache('receiver').lookAt(direction);
-		}
-	}
-}
-
-/*
-	(5) cArm
-
-	cArm
-	|
-	+-- CapsuleGeometry
-	|
-	+-- cArm
-		|
-		+-- CapsuleGeometry
-		|
-		+-- cArm ...
-*/
-
-class cArm extends cPart {
-	static create(in_length, in_circumference, in_material, in_pathCnt, in_recurse = false) {
-		if (in_pathCnt == 0) {
-			return null;
-		}
-		const curr = new cArm(in_length, in_circumference, in_material);
-		const next = cArm.create(in_length, in_circumference, in_material, in_pathCnt - 1, true);
-		if (next) {
-			curr.add(next);
-		}
-		if (in_recurse) {
-			// local position of parent
-			curr.position.z = in_length - in_circumference * 2;
-		}
-		return curr;
-	}
-	constructor(in_length, in_circumference, in_material) {
-		/*
-			++-----++ : arm + joint = in_length
-			  -----   : arm = in_length - in_circumference * 2
-		*/
-		const receiverRadius = in_length - in_circumference * 2;
-		const geometry = new CustomCapsule(in_circumference, receiverRadius);
-		super(receiverRadius, geometry, in_material);
-	}
-	addToEdge(in_obj) {
-		const scale = 1.1;
-		let edge = this;
-		let isEdge = false;
-		while (!isEdge) {
-			isEdge = !edge.children.some(in_child => {
-				if (in_child instanceof cArm) {
-					edge = in_child;
-					return true;
+	get #interlockings() {
+		const objects = [this];
+		this.skeleton.bones.forEach(in_bone => {
+			in_bone.children.forEach(in_child => {
+				if (in_child.userData.group === this.#getCache('INTERLOCKING')) {
+					objects.push(in_child);
 				}
-				return false;
 			});
-		}
-		const box = (new THREE.Box3()).setFromObject(edge);
-		const sphere = new THREE.Sphere();
-		box.getBoundingSphere(sphere);
-		in_obj.position.z = sphere.radius * scale;
-		edge.add(in_obj);
+		});
+		return objects;
 	}
-}
-
-class cHead extends cPart {
-	constructor(in_radius, in_material) {
-		const receiverRadius = in_radius * 2;
-		const geometry = new CustomSphere(in_radius);
-		super(receiverRadius, geometry, in_material);
-	}
-}
-
-class cSmartPhone extends cPart {
-	constructor(in_width, in_height, in_radius, in_material) {
-		const receiverRadius = in_height;
-		const geometry = trapezoidGeometry(in_width, in_width, in_height, in_radius);
-		super(receiverRadius, geometry, in_material);
-	}
-}
-
-class cLightSaber extends cPart {
-	constructor(in_length, in_radius, in_material) {
-		const receiverRadius = in_length;
-		const geometry = new CustomCapsule(in_radius, in_length);
-		super(receiverRadius, geometry, in_material);
-		const grip = new THREE.Mesh(new CustomCapsule(in_radius * 1.5, in_length * 0.2), in_material);
-		grip.rotateX(Math.PI/2)
-		this.add(grip);
-	}
-}
-
-/*
-	(6) cBody
-
-	Object3D
-	|
-	+-- cPart ( chest )
-	|	|
-	|	+-- trapezoidGeometry
-	|	|
-	|	+-- cHead
-	|	|
-	|	+-- cArm ( r-arm )
-	|	|
-	|	+-- cArm ( l-arm )
-	|
-	+-- cPart ( waist )
-		|
-		+-- trapezoidGeometry
-		|
-		+-- cArm ( r-leg )
-		|
-		+-- cArm ( l-leg )
-*/
-
-class cBody extends THREE.Object3D {
-	static #cacheKeys = {
-		chest : Symbol(),
-		waist : Symbol(),
-		headRoot : Symbol(),
-		armNRoot : Symbol(),
-		armPRoot : Symbol(),
-		legNRoot : Symbol(),
-		legPRoot : Symbol()
-	};
-	#getCache(in_key) {
-		return this.userData[cBody.#cacheKeys[in_key]];
-	}
-	#setCache(in_key, in_value) {
-		this.userData[cBody.#cacheKeys[in_key]] = in_value;
-	}
-	constructor(in_tLen, in_bLen, in_height, in_thickness, in_material) {
-		super();
-		const chest = new cPart(
-			in_height / 2,
-			/*
-				z : moved side : in_tLen
-				0 : fixed side : (in_tLen + in_bLen) / 2
-			*/
-			trapezoidGeometry(in_tLen, (in_tLen + in_bLen) / 2, in_height / 2, in_thickness / 2),
-			in_material
-		);
-		this.add(chest);
-		this.#setCache('chest', chest);
-		this.#setCache('headRoot', VEC3(0, 0, in_height / 2 + in_thickness / 4));
-		this.#setCache('armNRoot', VEC3(in_tLen / 2 * -1, 0, in_height / 2));
-		this.#setCache('armPRoot', VEC3(in_tLen / 2 * +1, 0, in_height / 2));
-		const waist = new cPart(
-			in_height / 2,
-			/*
-				z : moved side : in_bLen 
-				0 : fixed side : (in_tLen + in_bLen) / 2 
-			*/
-			trapezoidGeometry(in_bLen, (in_tLen + in_bLen) / 2, in_height / 2, in_thickness / 2),
-			in_material
-		);
-		waist.rotateX(Math.PI);
-		this.add(waist);
-		this.#setCache('waist', waist);
-		this.#setCache('legNRoot', VEC3(in_bLen / 2 * -1, 0, in_height / 2));
-		this.#setCache('legPRoot', VEC3(in_bLen / 2 * +1, 0, in_height / 2));
-		this.rotateX(Math.PI / 2 * -1);
-	}
-	#addObject(in_added, in_target, in_where, in_dx, in_dy, in_dirVec3) {
-		if (in_dirVec3) {
-			in_added.lookAt(in_dirVec3);
-		} else {
-			in_added.lookAt(this.#getCache(in_where));
-		}
-		in_added.position.copy(this.#getCache(in_where));
-		in_added.position.x += in_dx;
-		in_added.position.y += in_dy;
-		this.#getCache(in_target).add(in_added);
-	}
-	addHead(in_added, in_dx = 0, in_dy = 0, in_dirVec3 = null) {
-		this.#addObject(in_added, 'chest', 'headRoot', in_dx, in_dy, in_dirVec3);
-	}
-	addArmNegative(in_added, in_dx = 0, in_dy = 0, in_dirVec3 = null) {
-		this.#addObject(in_added, 'chest', 'armNRoot', in_dx, in_dy, in_dirVec3);
-	}
-	addArmPositive(in_added, in_dx = 0, in_dy = 0, in_dirVec3 = null) {
-		this.#addObject(in_added, 'chest', 'armPRoot', in_dx, in_dy, in_dirVec3);
-	}
-	addLegNegative(in_added, in_dx = 0, in_dy = 0, in_dirVec3 = null) {
-		this.#addObject(in_added, 'waist', 'legNRoot', in_dx, in_dy, in_dirVec3);
-	}
-	addLegPositive(in_added, in_dx = 0, in_dy = 0, in_dirVec3 = null) {
-		this.#addObject(in_added, 'waist', 'legPRoot', in_dx, in_dy, in_dirVec3);
-	}
-	#reset(in_callback) {
-		const recursive = (in_obj) => {
-			if (in_obj instanceof THREE.Mesh) {
-				(in_callback)(in_obj);
-			}
-			in_obj.children.forEach(in_child => {
-				(recursive)(in_child);
-			});
-		};
-		(recursive)(this);
+	cloneGeometry() {
+		const parts = [];
+		this.#interlockings.forEach(in_interlocking => {
+			const part = in_interlocking.geometry.clone();
+			// idempot : some interlocking objects does not have these attributes
+			part.deleteAttribute('skinIndex');
+			part.deleteAttribute('skinWeight');
+			part.applyMatrix4(in_interlocking.matrixWorld);
+			parts.push(part);
+		});
+		const merged = safeMergeGeometry(parts);
+		merged.applyMatrix4(new THREE.Matrix4().copy(this.matrixWorld).invert());
+		return merged;
 	}
 	resetMaterial(in_material) {
-		this.#reset(in_mesh => {
-			in_mesh.material = in_material;
+		this.#interlockings.forEach(in_interlocking => {
+			in_interlocking.material = in_material;
 		});
 	}
-	cloneMergedGeometry() {
-		const recursive = (in_obj) => {
-			const tmpArr = [];
-			if (in_obj instanceof THREE.Mesh) {
-				const geoClone = in_obj.geometry.clone();
-				geoClone.applyMatrix4(in_obj.matrixWorld);
-				tmpArr.push(geoClone);
-			}
-			in_obj.children.forEach(in_child => {
-				tmpArr.push(...(recursive)(in_child));
-			});
-			return tmpArr;
+	get #boneCnt() {
+		return this.skeleton.bones.length;
+	}
+	#boneWorldPosition(in_index) {
+		const bones = this.skeleton.bones;
+		return bones[in_index].getWorldPosition(VEC3());
+	}
+	#boneAnchorWorldPosition() {
+		return this.#boneWorldPosition(0);
+	}
+	#boneMovingWorldPosition() {
+		return this.#boneWorldPosition(this.#boneCnt - 1);
+	}
+	#updatedBentBones(in_dstV3) {
+		const updated = in_dstV3 ? true : false;
+		const anchor = this.#boneAnchorWorldPosition();
+		const moving = this.#boneMovingWorldPosition();
+		let delta = VEC3();
+		if (updated) {
+			delta = delta.subVectors(in_dstV3, moving);
+		}
+		const bent = {
+			posArr : [],
+			dirArr : []
 		};
-		const geometries = (recursive)(this);
-		const mergedGeometry = UTILS.mergeGeometries(geometries);
-		geometries.forEach(in_geometry => {
-			in_geometry.dispose();
+		for (let i = 0; i < this.#boneCnt; i++) {
+			const boneSrcV3 = this.#boneWorldPosition(i);
+			if (updated) {
+				const factor = i / (this.#boneCnt - 1);
+				const boneDelta = (VEC3()).lerp(delta, factor ** 2);
+				bent.posArr[i] = boneSrcV3.add(boneDelta);
+			} else {
+				bent.posArr[i] = boneSrcV3;
+			}
+			if (i === 0) {
+				bent.dirArr[i] = (VEC3()).subVectors(moving, anchor).normalize();
+			} else {
+				bent.dirArr[i] = (VEC3()).subVectors(bent.posArr[i], bent.posArr[i - 1]).normalize();
+			}
+		}
+		return bent;
+	}
+	#currentBentBones() {
+		return this.#updatedBentBones(null);
+	}
+	#makeRoughGeometry() {
+		const thickness = 0.5;
+		// shape
+		const w = this.#circumfRect.w * thickness;
+		const h = this.#circumfRect.w * thickness;
+		const shape = new THREE.Shape();
+		shape.moveTo(w / 2 * -1, h / 2 * -1);
+		shape.lineTo(w / 2 * +1, h / 2 * -1);
+		shape.lineTo(w / 2 * +1, h / 2 * +1);
+		shape.lineTo(w / 2 * -1, h / 2 * +1);
+		shape.lineTo(w / 2 * -1, h / 2 * -1);
+		// path
+		const bent = this.#currentBentBones();
+		const inverse = new THREE.Matrix4();
+		inverse.copy(this.matrixWorld).invert();
+		bent.posArr.map(in_pos => {
+			return in_pos.applyMatrix4(inverse);
 		});
-		return mergedGeometry;
+		const path = new THREE.CatmullRomCurve3(bent.posArr);
+		// extrude
+		const extrudeSettings = {
+			steps : Math.max(5, Math.ceil((this.#boneCnt - 1) / 5)),
+			bevelEnabled : false,
+			extrudePath : path
+		};
+		return new THREE.ExtrudeGeometry(shape, extrudeSettings);
+	}
+	bendAt(in_dstV3) {
+		const bones = this.skeleton.bones;
+		const updated = this.#updatedBentBones(in_dstV3);
+		for (let i = 1; i < bones.length; i++) {
+			bones[i].lookAt(updated.posArr[i].clone().add(updated.dirArr[i].multiplyScalar(this.#length)))
+			bones[i].position.copy(bones[i].parent.worldToLocal(updated.posArr[i]));
+		}
+	}
+	moreShrink() {
+		const anchor = this.#boneAnchorWorldPosition();
+		const moving = this.#boneMovingWorldPosition();
+		const curLen = anchor.distanceTo(moving);
+		const orgLen = this.#length;
+		if (Math.abs(curLen - orgLen) > 10) {
+			const factor = ((curLen - orgLen) / orgLen) * 0.1;
+			const vec3 = moving.lerp(anchor, factor);
+			this.bendAt(vec3);
+			return true;
+		} else {
+			return false;
+		}
+	}
+	#addMeshToBone(in_ix, in_mesh, in_interlocking) {
+		if (in_interlocking) {
+			// in_mesh should be a part of this
+			in_mesh.userData.group = this.#getCache('INTERLOCKING');
+		}
+		this.skeleton.bones[in_ix].add(in_mesh);
+	}
+	addToAnchor(in_mesh, in_interlocking = false) {
+		this.#addMeshToBone(0, in_mesh, in_interlocking);
+	}
+	addToMoving(in_mesh, in_interlocking = false) {
+		this.#addMeshToBone(this.skeleton.bones.length - 1, in_mesh, in_interlocking);
+	}
+	addGeometryToAnchor(in_geometry) {
+		this.addToAnchor(new THREE.Mesh(in_geometry, this.material), true);
+	}
+	addGeometryToMoving(in_geometry) {
+		this.addToMoving(new THREE.Mesh(in_geometry, this.material), true);
+	}
+	helper() {
+		return new THREE.SkeletonHelper(this);
+	}
+}
+
+class cSoftBoxPart extends cAbstractPart {
+	constructor(in_w, in_h, in_d, in_boneCnt) {
+		const wSeg = 1;
+		const hSeg = in_boneCnt - 1;
+		const dSeg = 1;
+		const geometry = new THREE.BoxGeometry(in_w, in_h, in_d, wSeg, hSeg, dSeg);
+		super(geometry, in_boneCnt);
+	}
+}
+
+class cSoftCylinderPart extends cAbstractPart {
+	constructor(in_rad_t, in_rad_b, in_h, in_boneCnt) {
+		const rSeg = 32;
+		const hSeg = in_boneCnt - 1;
+		const geometry = new THREE.CylinderGeometry(in_rad_t, in_rad_b, in_h, rSeg, hSeg);
+		super(geometry, in_boneCnt);
+	}
+}
+
+class cSoftCapsulePart extends cSoftCylinderPart {
+	constructor(in_rad_t, in_rad_b, in_h, in_boneCnt) {
+		super(in_rad_t, in_rad_b, in_h, in_boneCnt);
+		const conf = capsuleConfigure(in_rad_t, in_rad_b, in_h);
+		const sphereParams = [32, 16, 0, Math.PI * 2];
+		const geo = new THREE.SphereGeometry(conf.radius.t, ...sphereParams, 0, conf.theta);
+		const sign = in_rad_t > in_rad_b ? +1 : -1;
+		geo.translate(0, conf.delta.t * sign, 0);
+		geo.rotateX(Math.PI / 2);
+		this.addGeometryToMoving(geo);
+	}
+}
+
+class cSoftConePart extends cAbstractPart {
+	constructor(in_rad, in_h, in_boneCnt) {
+		const rSeg = 32;
+		const hSeg = in_boneCnt - 1;
+		const geometry = new THREE.ConeGeometry(in_rad, in_h, rSeg, hSeg)
+		super(geometry, in_boneCnt);
+	}
+}
+
+class cSoftRoundBoxPart extends cAbstractPart {
+	constructor(in_w, in_h, in_d, in_boneCnt) {
+		const wSeg = 1;
+		const hSeg = in_boneCnt - 1;
+		const rSeg = 32;
+		const zp = new THREE.PlaneGeometry(in_w, in_h, wSeg, hSeg);
+		zp.rotateY(Math.PI * 0);
+		zp.translate(0, 0, in_d / 2 * +1);
+		const zn = new THREE.PlaneGeometry(in_w, in_h, wSeg, hSeg);
+		zn.rotateY(Math.PI * 1);
+		zn.translate(0, 0, in_d / 2 * -1);
+		const xp = new THREE.CylinderGeometry(in_d / 2, in_d / 2, in_h, rSeg, hSeg, true, 0, Math.PI);
+		xp.rotateY(Math.PI * 0);
+		xp.translate(in_w / 2 * +1, 0, 0);
+		const xn = new THREE.CylinderGeometry(in_d / 2, in_d / 2, in_h, rSeg, hSeg, true, 0, Math.PI);
+		xn.rotateY(Math.PI * 1);
+		xn.translate(in_w / 2 * -1, 0, 0);
+		super(safeMergeGeometry([zp, zn, xp, xn]), in_boneCnt);
+		// decoration (top, bottom)
+		const makeDecoGeometry = (in_r, in_len) => {
+			const wSeg = 32;
+			const hSeg = 16;
+			const geo1 = new THREE.SphereGeometry(in_r, wSeg, hSeg, 0, Math.PI * 0.5);
+			geo1.translate(in_len / 2 * -1, 0, 0);
+			const geo2 = new THREE.CylinderGeometry(in_r, in_r, in_len, wSeg, 1, true, 0, Math.PI);
+			geo2.rotateY(Math.PI * 0.5 * -1);
+			geo2.rotateZ(Math.PI * 0.5 * +1);
+			const geo3 = new THREE.SphereGeometry(in_r, wSeg, hSeg, 0, Math.PI * 0.5);
+			geo3.rotateY(Math.PI * 0.5 * +1);
+			geo3.translate(in_len / 2 * +1, 0, 0);
+			return safeMergeGeometry([geo1, geo2, geo3]);
+		};
+		const mDeco = makeDecoGeometry(in_d / 2, in_w);
+		this.addGeometryToMoving(mDeco);
+		const aDeco = makeDecoGeometry(in_d / 2, in_w);
+		aDeco.rotateY(Math.PI);
+		this.addGeometryToAnchor(aDeco);
+	}
+}
+
+class cSolidPart extends cAbstractPart {
+	constructor(in_geometry, in_restricted = false) {
+		const boneCnt = 2;
+		super(in_geometry, boneCnt);
+		/*
+			true  : can lookAt() toward all direction
+			false : can't lookAt() toward direction of local x-coordinate
+		*/
+		this.plane_1_0_0 = in_restricted;
+	}
+	bendAt(in_dstV3) {
+		const updateParents = true;
+		const updateChildren = false;
+		this.updateWorldMatrix(updateParents, updateChildren);
+		const worldPosition = (VEC3()).setFromMatrixPosition(this.matrixWorld);
+		let fromEye, oriented;
+		if (this.plane_1_0_0) {
+			const worldToLocal = (in_vec) => {
+				return in_vec.applyQuaternion(this.getWorldQuaternion(new THREE.Quaternion()));
+			};
+			const worldNormal = worldToLocal(VEC3(1, 0, 0));
+			const direction = in_dstV3.clone().sub(worldPosition);
+			direction.projectOnPlane(worldNormal);
+			fromEye = direction.add(worldPosition);
+			const nonRollUp = worldToLocal(VEC3(0, 1, 0));
+			nonRollUp.projectOnPlane(worldNormal).normalize();
+			oriented = nonRollUp;
+		} else {
+			fromEye = in_dstV3;
+			oriented = this.up;
+		}
+		const localMatrix = (new THREE.Matrix4()).lookAt(fromEye, worldPosition, oriented);
+		this.quaternion.setFromRotationMatrix(localMatrix);
+		if (this.parent) {
+			localMatrix.extractRotation(this.parent.matrixWorld);
+			const parentQuat = (new THREE.Quaternion()).setFromRotationMatrix(localMatrix);
+			this.quaternion.premultiply(parentQuat.invert());
+		}
+		this.resetDraggingRcv();
+	}
+	moreShrink() {
+		return false;
+	}
+}
+
+class cHead extends cSolidPart {
+	constructor(in_radius) {
+		const geometry = new THREE.SphereGeometry(in_radius);
+		super(geometry, false);
+	}
+}
+
+class cSmartPhone extends cSolidPart {
+	constructor(in_width, in_height, in_radius) {
+		const geometry = roundTrapezoidGeometry(in_width, in_width, in_height, in_radius);
+		super(geometry, false);
+	}
+}
+
+class cLightSaber extends cSolidPart {
+	constructor(in_length, in_radius) {
+		const parts = [];
+		parts.push(customCapsuleGeometry(in_radius, in_radius, in_length));
+		const radius = in_radius * 1.5;
+		const length = in_length * 0.2;
+		const pos = (in_length - length) / 2;
+		parts.push(customCapsuleGeometry(radius, radius, length).translate(0, pos * -1, 0));
+		const merged = safeMergeGeometry(parts)
+		merged.translate(0, length * -0.5, 0);
+		super(merged, false);
+		this.position.z += length * 0.3;
+	}
+}
+
+class cJointedSolidPart extends cSolidPart {
+	/*
+		cJointedSolidPart
+		|
+		+-- userData.jointed
+		|
+		+-- cSolidPart
+			|
+			+-- cSolidPart ...
+	*/
+	static createUtil1(in_geoArm, in_geoJoint, in_armCnt, in_restricted) {
+		const geoArr = [];
+		for (let i = 0; i < in_armCnt; i++) {
+			geoArr[i] = {
+				segment : in_geoArm.clone(),
+				joint : in_geoJoint.clone()
+			};
+		}
+		/*
+			*** NOTE ***
+			as a API policy, object itself (not clone) should be user for this.
+			if not, without disposing by caller, memory leak will happen.
+		*/
+		geoArr[0].segment = in_geoArm;
+		geoArr[0].joint = in_geoJoint;
+		return new cJointedSolidPart(geoArr, in_restricted);
+	}
+	static createUtil2(in_geoArm, in_armCnt, in_restricted) {
+		return cJointedSolidPart.createUtil1(in_geoArm, null, in_armCnt, in_restricted);
+	}
+	constructor(in_geoArr, in_restricted) {
+		let prev = null;
+		in_geoArr.forEach(({segment, joint}) => {
+			if (!prev) {
+				// once
+				super(segment, in_restricted);
+				this.userData.jointed = [];
+				prev = this;
+			} else {
+				const next = new cSolidPart(segment, in_restricted);
+				prev.addToMoving(next, true);
+				this.userData.jointed.push(next);
+				prev = next;
+			}
+			if (joint) {
+				prev.addGeometryToMoving(joint);
+			}
+		});
+		// userData.jointed will not be updated.
+		Object.freeze(this.userData.jointed);
+	}
+	get #jointed() {
+		return [this, ...this.userData.jointed];
+	}
+	cloneGeometry() {
+		const parts = [];
+		this.#jointed.forEach(in_obj => {
+			// call cloneGeometry@cAbstractPart
+			const part = super.cloneGeometry.call(in_obj);
+			part.applyMatrix4(in_obj.matrixWorld);
+			parts.push(part);
+		});
+		const merged = safeMergeGeometry(parts);
+		merged.applyMatrix4(new THREE.Matrix4().copy(this.matrixWorld).invert());
+		return merged;
+	}
+	addToMoving(in_obj, in_interlocking = false) {
+		// call addToMoving@cAbstractPart
+		super.addToMoving.call(this.#jointed[this.#jointed.length - 1], in_obj, in_interlocking);
+	}
+	resetMaterial(in_material) {
+		this.#jointed.forEach(in_obj => {
+			// call resetMaterial@cAbstractPart
+			super.resetMaterial.call(in_obj, in_material);
+		});
+	}
+}
+
+function createCapsuleArm1(in_movingRad, in_anchorRad, in_totalLen, in_armCnt) {
+	// in_totalLen includes radius
+	const wSeg = 32;
+	const hSeg = 16;
+	const sphereParams = [wSeg, hSeg, 0, Math.PI * 2];
+	const length = (in_totalLen - (in_movingRad + in_anchorRad)) / in_armCnt;
+	const deltaRad = (in_anchorRad - in_movingRad) / in_armCnt;
+	const geoArr = [];
+	let mDeco, solid, aDeco;
+	let anchorDelta = 0;
+	for (let i = 0; i < in_armCnt; i++) {
+		const anchorRad = in_anchorRad - deltaRad * i;
+		const movingRad = anchorRad - deltaRad;
+		const conf = capsuleConfigure(movingRad, anchorRad, length);
+		const top2theta = [0, conf.theta];
+		mDeco = new THREE.SphereGeometry(conf.radius.t, ...sphereParams, ...top2theta);
+		mDeco.rotateX(Math.PI * 0.5);
+		if (i == 0) {
+			const theta2bottom = [conf.theta, Math.PI - conf.theta];
+			aDeco = new THREE.SphereGeometry(conf.radius.b, ...sphereParams, ...theta2bottom);
+			aDeco.rotateX(Math.PI * 0.5);
+			anchorDelta = conf.delta.b;
+		}
+		solid = new THREE.CylinderGeometry(movingRad, anchorRad, length, wSeg, 1, true);
+		solid.translate(0, conf.delta.b, 0);
+		geoArr[i] = {
+			segment : solid,
+			joint : mDeco
+		};
+	}
+	const capsuleArm = new cJointedSolidPart(geoArr, false);
+	capsuleArm.addGeometryToAnchor(aDeco);
+	return {
+		object : capsuleArm,
+		delta : anchorDelta
+	}
+}
+
+function createCapsuleArm2(in_rad, in_totalLen, in_armCnt) {
+	return createCapsuleArm1(in_rad, in_rad, in_totalLen, in_armCnt);
+}
+
+function roundedBoxBody(in_movingLen, in_anchorLen, in_lenArr, in_rad) {
+	// each length includes radius
+	in_lenArr[0] -= in_rad;
+	in_lenArr[in_lenArr.length - 1] -= in_rad;
+	const totalLen = in_lenArr.reduce((acc, val) => acc + val, 0);
+	const delta = in_movingLen - in_anchorLen;
+	let toCurMoving = 0;
+	let toCurAnchor = 0;
+	const geoArr = [];
+	let mDeco, solid, aDeco;
+	for (let i = 0; i < in_lenArr.length; i++) {
+		toCurAnchor += in_lenArr[i];
+		const movingLen = in_anchorLen - in_rad * 2 + delta * toCurMoving / totalLen;
+		const anchorLen = in_anchorLen - in_rad * 2 + delta * toCurAnchor / totalLen;
+		const parts = makeTrapezoidGeometryParts(anchorLen, 0, movingLen, 0, in_lenArr[i], in_rad);
+		const mDecoArr = [];
+		const solidArr = [];
+		const aDecoArr = [];
+		parts.forEach(in_part => {
+			if (in_part.userData.isSurface) {
+				solidArr.push(in_part);
+			} else {
+				if (in_part.userData.groupName === 'bottom') {
+					if (i === 0) {
+						aDecoArr.push(in_part);
+					} else {
+						in_part.dispose();
+					}
+				} else {
+					mDecoArr.push(in_part);
+				}
+			}
+		});
+		solid = safeMergeGeometry(solidArr)
+		mDeco = safeMergeGeometry(mDecoArr)
+		mDeco.translate(0, in_lenArr[i] * 0.5 * -1, 0);
+		mDeco.rotateX(Math.PI * 0.5);
+		// equals to i === 0
+		if (aDecoArr.length > 0) {
+			aDeco = safeMergeGeometry(aDecoArr)
+			aDeco.translate(0, in_lenArr[i] * 0.5 * +1, 0);
+			aDeco.rotateX(Math.PI * 0.5);
+		}
+		geoArr[i] = {
+			segment : solid,
+			joint : mDeco
+		};
+		toCurMoving += in_lenArr[i];
+	}
+	const body = new cJointedSolidPart(geoArr, true);
+	body.addGeometryToAnchor(aDeco);
+	return body;
+}
+
+class cFigure extends THREE.Object3D {
+	static #cacheKeys = {
+		HEAD : Symbol(),
+		BODY : Symbol(),
+		NARM : Symbol(),
+		PARM : Symbol(),
+		NLEG : Symbol(),
+		PLEG : Symbol(),
+		ITEM : Symbol()
+	};
+	#getCache(in_key) {
+		return this.userData[cFigure.#cacheKeys[in_key]];
+	}
+	#setCache(in_key, in_value) {
+		this.userData[cFigure.#cacheKeys[in_key]] = in_value;
+	}
+	constructor(
+		in_head,
+		in_body,
+		in_narm,
+		in_parm,
+		in_nleg,
+		in_pleg,
+		in_item = null
+	) {
+		super();
+		this.add(in_body);
+		// adjust center
+		const box = new THREE.Box3().setFromObject(in_body);
+		const delta = box.max.z + box.min.z;
+		this.rotateX(Math.PI * -0.5);
+		this.position.y = delta / 2 * -1;
+		// cache parts
+		this.#setCache('HEAD', in_head);
+		this.#setCache('BODY', in_body);
+		this.#setCache('NARM', in_narm);
+		this.#setCache('PARM', in_parm);
+		this.#setCache('NLEG', in_nleg);
+		this.#setCache('PLEG', in_pleg);
+		this.#setCache('ITEM', in_item);
+	}
+	get #cached() {
+		const arr = [];
+		Object.keys(cFigure.#cacheKeys).forEach(in_key => {
+			arr.push(this.#getCache(in_key));
+		});
+		return arr;
+	}
+	resetItem(in_item) {
+		const item = this.#getCache('ITEM');
+		if (item) {
+			item.removeFromParent();
+		}
+		if (in_item) {
+			this.#getCache('NARM').addToMoving(in_item);
+		}
+		this.#setCache('ITEM', in_item);
+	}
+	resetMaterial(in_material) {
+		this.#cached.forEach(in_part => {
+			if (!in_part) {
+				return;
+			}
+			in_part.resetMaterial(in_material);
+		});
+	}
+	cloneWorldGeometry() {
+		const parts = [];
+		this.#cached.forEach(in_cache => {
+			if (!in_cache) {
+				return;
+			}
+			const geometry = in_cache.cloneGeometry();
+			geometry.applyMatrix4(in_cache.matrixWorld);
+			parts.push(geometry);
+		});
+		return safeMergeGeometry(parts);
 	}
 }
 
 /*
-	(7) dom setting : show canvas element as size of all over body element.
+	(4) figure setting : color, material, items, and figure
+*/
+
+const gCyclicColors = new cCyclicValues(
+	// gold
+	0xFFD700,
+	// orangered
+	0xFF4500,
+	// pink
+	0xEEBEC9,
+	// green
+	0x008000,
+	// dodgerblue
+	0x1E90FF,
+	// royalblue
+	0x4169E1,
+	// darkgoldenrod
+	0xB8860B,
+	// lightgray
+	0xD3D3D3,
+	// gray
+	0x808080
+);
+
+const gCyclicMaterials = (in_color => {
+	const cyclic = new cCyclicValues();
+	const rough = 0.3;
+	cyclic.push(new THREE.MeshStandardMaterial({color : in_color, roughness : rough}));
+	cyclic.push(new THREE.MeshToonMaterial({color : in_color}));
+	cyclic.push(new THREE.MeshBasicMaterial({color : in_color}));
+	return cyclic;
+})(gCyclicColors.currValue());
+
+function incrementColor() {
+	// gCyclicColors --> gCyclicMaterials
+	const incremented = gCyclicColors.incrementedValue();
+	gCyclicMaterials.forEach(in_materials => {
+		in_materials.color.set(incremented); 
+	});
+}
+
+const gCyclicItems = (in_material => {
+	const cyclic = new cCyclicValues();
+	cyclic.push(null);
+	const lightSaber = new cLightSaber(300, 10, in_material);
+	lightSaber.resetMaterial(in_material);
+	cyclic.push(lightSaber);
+	const smartPhone = new cSmartPhone(40, 80, 5, in_material);
+	smartPhone.resetMaterial(in_material);
+	cyclic.push(smartPhone);
+	return cyclic;
+})(gCyclicMaterials.currValue());
+
+const gCyclicFigures = (in_material => {
+	const cyclic = new cCyclicValues();
+	const settings = [
+		{
+			HEADSIZE : 110,
+			THICK1 : 50,
+			BODY : {
+				SHOULDER : 160,
+				WAIST : 120,
+				HEIGHT : 200
+			},
+			ARM : {
+				LENGTH : 200,
+				THICK2 : 55,
+				NEGA : {
+					DLT : VEC3(0, 0, 0),
+					DIR : VEC3(-10, 0, -10)
+				},
+				POSI : {
+					DLT : VEC3(0, 0, 0),
+					DIR : VEC3(+10, 0, -10)
+				}
+			},
+			LEG : {
+				LENGTH : 250,
+				THICK2 : 55,
+				NEGA : {
+					DLT : VEC3(0, 0, 0),
+					DIR : VEC3(-1, 0, -10)
+				},
+				POSI : {
+					DLT : VEC3(0, 0, 0),
+					DIR : VEC3(+1, 0, -10)
+				}
+			}
+		},
+		{
+			HEADSIZE : 100,
+			THICK1 : 45,
+			BODY : {
+				SHOULDER : 110,
+				WAIST : 180,
+				HEIGHT : 200
+			},
+			ARM : {
+				LENGTH : 190,
+				THICK2 : 35,
+				NEGA : {
+					DLT : VEC3(0, 0, 0),
+					DIR : VEC3(-10, 0, -10)
+				},
+				POSI : {
+					DLT : VEC3(0, 0, 0),
+					DIR : VEC3(+10, 0, -10)
+				}
+			},
+			LEG : {
+				LENGTH : 220,
+				THICK2 : 35,
+				NEGA : {
+					DLT : VEC3(+35, 0, 0),
+					DIR : VEC3(0, 0, -10)
+				},
+				POSI : {
+					DLT : VEC3(-35, 0, 0),
+					DIR : VEC3(0, 0, -10)
+				}
+			}
+		},
+		{
+			HEADSIZE : 100,
+			THICK1 : 45,
+			BODY : {
+				SHOULDER : 120,
+				WAIST : 120,
+				HEIGHT : 180
+			},
+			ARM : {
+				LENGTH : 180,
+				THICK2 : 45,
+				NEGA : {
+					DLT : VEC3(0, 0, 0),
+					DIR : VEC3(-10, 0, -10)
+				},
+				POSI : {
+					DLT : VEC3(0, 0, 0),
+					DIR : VEC3(+10, 0, -10)
+				}
+			},
+			LEG : {
+				LENGTH : 220,
+				THICK2 : 45,
+				NEGA : {
+					DLT : VEC3(0, 0, 0),
+					DIR : VEC3(0, 0, -10)
+				},
+				POSI : {
+					DLT : VEC3(0, 0, 0),
+					DIR : VEC3(0, 0, -10)
+				}
+			}
+		}
+	];
+	settings.forEach(in_setting => {
+		const upperBodyRatio = 0.6;
+		const radius = in_setting.THICK1 / 2;
+		// body
+		const body = roundedBoxBody(
+			in_setting.BODY.SHOULDER,
+			in_setting.BODY.WAIST,
+			[
+				in_setting.BODY.HEIGHT * (1 - upperBodyRatio),
+				in_setting.BODY.HEIGHT * upperBodyRatio
+			],
+			radius
+		);
+		// head
+		const head = new cHead(in_setting.HEADSIZE / 2);
+		body.addToMoving(head);
+		head.position.z = radius / 2;
+		// arm (negative)
+		const narm = createCapsuleArm1(in_setting.ARM.THICK2 / 2, radius, in_setting.ARM.LENGTH, 2);
+		narm.object.lookAt(in_setting.ARM.NEGA.DIR);
+		body.addToMoving(narm.object);
+		narm.object.position.x = (in_setting.BODY.SHOULDER / 2 - radius) * -1;
+		narm.object.position.add(in_setting.ARM.NEGA.DLT);
+		// arm (positive)
+		const parm = createCapsuleArm1(in_setting.ARM.THICK2 / 2, radius, in_setting.ARM.LENGTH, 2);
+		parm.object.lookAt(in_setting.ARM.POSI.DIR);
+		body.addToMoving(parm.object);
+		parm.object.position.x = (in_setting.BODY.SHOULDER / 2 - radius) * +1;
+		parm.object.position.add(in_setting.ARM.POSI.DLT);
+		// leg (negative)
+		const nleg = createCapsuleArm1(in_setting.LEG.THICK2 / 2, radius, in_setting.LEG.LENGTH, 2);
+		nleg.object.lookAt(in_setting.LEG.NEGA.DIR);
+		body.addToAnchor(nleg.object);
+		nleg.object.position.x = (in_setting.BODY.WAIST / 2 - radius) * -1;
+		nleg.object.position.add(in_setting.LEG.NEGA.DLT);
+		// leg (positive)
+		const pleg = createCapsuleArm1(in_setting.LEG.THICK2 / 2, radius, in_setting.LEG.LENGTH, 2);
+		pleg.object.lookAt(in_setting.LEG.POSI.DIR);
+		body.addToAnchor(pleg.object);
+		pleg.object.position.x = (in_setting.BODY.WAIST / 2 - radius) * +1;
+		pleg.object.position.add(in_setting.LEG.POSI.DLT);
+		// figure
+		const figure = new cFigure(head, body, narm.object, parm.object, nleg.object, pleg.object);
+		figure.resetMaterial(in_material);
+		cyclic.push(figure);
+	});
+	return cyclic;
+})(gCyclicMaterials.currValue());
+
+function incrementMaterial() {
+	const incremented = gCyclicMaterials.incrementedValue();
+	// gCyclicMaterials --> gCyclicItems
+	gCyclicItems.forEach(in_item => {
+		if (in_item) {
+			in_item.resetMaterial(incremented);
+		}
+	});
+	// gCyclicMaterials --> gCyclicFigures
+	gCyclicFigures.forEach(in_figure => {
+		in_figure.resetMaterial(incremented);
+	});
+}
+
+function incrementItem() {
+	/*
+		*** NOTE ***
+		when an Object3D is added to another object,
+		it will be removed from its current parent object.
+		so not all figures but only current figure should be handled.
+	*/
+	gCyclicFigures.currValue().resetItem(gCyclicItems.incrementedValue());
+}
+
+/*
+	(5) dom setting : show canvas element as size of all over body element.
 */
 
 const WORLD_RADIUS = 1000;
@@ -1659,288 +2309,84 @@ document.addEventListener('DOMContentLoaded', (() => {
 	gWorld.start();
 }));
 
-/*
-	(8) figure setting : color, material, and figure
-*/
-
-const COLORS = new cCyclicValues(
-	// gold
-	0xFFD700,
-	// orangered
-	0xFF4500,
-	// pink
-	0xEEBEC9,
-	// green
-	0x008000,
-	// dodgerblue
-	0x1E90FF,
-	// royalblue
-	0x4169E1,
-	// darkgoldenrod
-	0xB8860B,
-	// lightgray
-	0xD3D3D3,
-	// gray
-	0x808080
-);
-
-const gInitColor = COLORS.currValue();
-
-const ROUGHNESS = 0.3;
-
-const MATERIALS = new cCyclicValues(
-	new THREE.MeshStandardMaterial({color: gInitColor, roughness: ROUGHNESS}),
-	new THREE.MeshToonMaterial({color: gInitColor}),
-	new THREE.MeshBasicMaterial({color: gInitColor})
-);
-
-const gInitMaterial = MATERIALS.currValue();
-
-const INITFUNCS = {
-	ARM : {
-		NEGATIVE : 'addArmNegative',
-		POSITIVE : 'addArmPositive'
-	},
-	LEG : {
-		NEGATIVE : 'addLegNegative',
-		POSITIVE : 'addLegPositive'
-	}
-}
-
-const FIGURES = new cCyclicValues(
-	{
-		HEAD_HIGHT : 100,
-		THICKNESS : 50,
-		BODY : {
-			SHOULDER : 160,
-			WAIST : 120,
-			HEIGHT : 200
-		},
-		ARM : {
-			LENGTH : 200,
-			NEGATIVE : {
-				DX : 0,
-				DY : 0,
-				DIR : null
-			},
-			POSITIVE : {
-				DX : 0,
-				DY : 0,
-				DIR : null
-			}
-		},
-		LEG : {
-			LENGTH : 250,
-			NEGATIVE : {
-				DX : 0,
-				DY : 0,
-				DIR : null
-			},
-			POSITIVE : {
-				DX : 0,
-				DY : 0,
-				DIR : null
-			}
-		},
-		OBJECT : null,
-		ITEMHOLDER : null
-	},
-	{
-		HEAD_HIGHT : 100,
-		THICKNESS : 45,
-		BODY : {
-			SHOULDER : 100,
-			WAIST : 180,
-			HEIGHT : 200
-		},
-		ARM : {
-			LENGTH : 190,
-			NEGATIVE : {
-				DX : 0,
-				DY : 0,
-				DIR : VEC3(-1, 0, -1)
-			},
-			POSITIVE : {
-				DX : 0,
-				DY : 0,
-				DIR : VEC3(+1, 0, -1)
-			}
-		},
-		LEG : {
-			LENGTH : 220,
-			NEGATIVE : {
-				DX : +35,
-				DY : 0,
-				DIR : VEC3(0, 0, 1)
-			},
-			POSITIVE : {
-				DX : -35,
-				DY : 0,
-				DIR : VEC3(0, 0, 1)
-			}
-		},
-		OBJECT : null,
-		ITEMHOLDER : null
-	},
-	{
-		HEAD_HIGHT : 100,
-		THICKNESS : 45,
-		BODY : {
-			SHOULDER : 120,
-			WAIST : 120,
-			HEIGHT : 200
-		},
-		ARM : {
-			LENGTH : 200,
-			NEGATIVE : {
-				DX : 0,
-				DY : 0,
-				DIR : VEC3(-1, 0, -1)
-			},
-			POSITIVE : {
-				DX : 0,
-				DY : 0,
-				DIR : VEC3(+1, 0, -1)
-			}
-		},
-		LEG : {
-			LENGTH : 230,
-			NEGATIVE : {
-				DX : 0,
-				DY : 0,
-				DIR : VEC3(0, 0, 1)
-			},
-			POSITIVE : {
-				DX : 0,
-				DY : 0,
-				DIR : VEC3(0, 0, 1)
-			}
-		},
-		OBJECT : null,
-		ITEMHOLDER : null
-	}
-);
-
-const gLightSaber = new cLightSaber(300, 10, gInitMaterial);
-const gSmartPhone = new cSmartPhone(40, 80, 5, gInitMaterial);
-
-FIGURES.forEach(in_fig => {
-	// ugh! : this calculation should be hidden by class
-	let thick = in_fig.THICKNESS;
-	let head = in_fig.HEAD_HIGHT / 2;
-	let shoulder = in_fig.BODY.SHOULDER - thick;
-	let waist = in_fig.BODY.WAIST - thick;
-	let height = in_fig.BODY.HEIGHT - thick;
-	// body
-	in_fig.OBJECT = new cBody(shoulder, waist, height, thick, gInitMaterial);
-	// head
-	in_fig.OBJECT.addHead(new cHead(head, gInitMaterial));
-	// arm x2 + leg x2
-	for (let part in INITFUNCS) {
-		let length = (in_fig[part].LENGTH - thick) / 2 + thick;
-		let circumference = thick / 2
-		for (let subpart in INITFUNCS[part]) {
-			let dx = in_fig[part][subpart].DX;
-			let dy = in_fig[part][subpart].DY;
-			let dir = in_fig[part][subpart].DIR;
-			let obj = cArm.create(length, circumference, gInitMaterial, 2);
-			if (part + '.' + subpart === 'ARM.NEGATIVE') {
-				in_fig.ITEMHOLDER = obj;
-			}
-			(in_fig.OBJECT[INITFUNCS[part][subpart]])(obj, dx, dy, dir);
-		}
-	}
+gCyclicFigures.forEach(in_figure => {
 	/*
 		*** NOTE ***
 		Adhoc!! without this process, morphing will be failed.
 		Maybe some initializ process, which includs scene.add(), is required.
 	*/
-	gWorld.add(in_fig.OBJECT);
-	gWorld.remove(in_fig.OBJECT);
+	gWorld.add(in_figure);
+	gWorld.remove(in_figure);
 });
 
-gWorld.add((FIGURES.currValue()).OBJECT);
+gWorld.add(gCyclicFigures.currValue());
 
 /*
-	(9) ui setting
+	(6) ui setting
 */
 
 function uiChangeColor() {
-	const currColor = new THREE.Color(COLORS.currValue());
-	const nextColor = new THREE.Color(COLORS.nextValue());
+	const currColor = new THREE.Color(gCyclicColors.currValue());
+	const nextColor = new THREE.Color(gCyclicColors.nextValue());
 	let delta = 0.05;
 	let interpolation = 0;
 	const hook = () => {
 		interpolation += delta;
 		if (interpolation < 1) {
 			let tempColor = currColor.clone().lerp(nextColor, interpolation);
-			(MATERIALS.currValue()).color.setHex(tempColor.getHex());
+			(gCyclicMaterials.currValue()).color.setHex(tempColor.getHex());
 		} else {
 			gWorld.removeAnimationHook(hook);
-			MATERIALS.forEach(in_material => {
-				in_material.color.setHex(nextColor.getHex());
-			});
+			incrementColor();
 		}
 	};
 	gWorld.addAnimationHook(hook);
 }
 
 function uiChangeMaterial() {
-	const material = MATERIALS.nextValue();
-	const color = 0xEEEEEE;
-	gWorld.motionFog(color, 0, 100, 200).then(() => {
-		FIGURES.forEach(in_fig => {
-			in_fig.OBJECT.resetMaterial(material);
-		});
-		return gWorld.motionFog(color, 100, 50, 200);
+	const flashEffect = 0xEEEEEE;
+	gWorld.motionFog(flashEffect, 0, 100, 200).then(() => {
+		incrementMaterial();
+		return gWorld.motionFog(flashEffect, 100, 50, 200);
 	});
 }
 
 function uiChangeFigure() {
-	const currFigure = FIGURES.currValue();
-	const nextFigure = FIGURES.nextValue();
-	const currItem = ITEMS.currValue();
+	const currFigure = gCyclicFigures.currValue();
+	const nextFigure = gCyclicFigures.incrementedValue();
+	const currItem = gCyclicItems.currValue();
 	if (currItem) {
-		currItem.parent.remove(currItem);
+		currItem.removeFromParent();
 	}
 	// use tempFigure only during morphing
-	const begore = currFigure.OBJECT.cloneMergedGeometry();
-	const after = nextFigure.OBJECT.cloneMergedGeometry();
-	begore.morphAttributes.position = [after.attributes.position];
-	const tempFigure = new THREE.Mesh(begore, MATERIALS.currValue());
+	const currGeometry = currFigure.cloneWorldGeometry();
+	const nextGeometry = nextFigure.cloneWorldGeometry();
+	currGeometry.morphAttributes.position = [nextGeometry.attributes.position];
+	const morphingFigure = new THREE.Mesh(currGeometry, gCyclicMaterials.currValue());
 	let morph = 0;
 	const hook = () => {
 		if (morph > 1) {
 			gWorld.removeAnimationHook(hook);
-			gWorld.remove(tempFigure);
-			gWorld.add(nextFigure.OBJECT);
-			begore.dispose();
-			after.dispose();
+			gWorld.remove(morphingFigure);
+			gWorld.add(nextFigure);
 			if (currItem) {
-				nextFigure.ITEMHOLDER.addToEdge(currItem);
+				nextFigure.resetItem(currItem);
 			}
+			currGeometry.dispose();
+			nextGeometry.dispose();
 		} else {
 			morph += 0.05;
-			tempFigure.morphTargetInfluences[0] = morph;
+			morphingFigure.morphTargetInfluences[0] = morph;
 		}
 	};
-	gWorld.remove(currFigure.OBJECT);
-	gWorld.add(tempFigure);
+	gWorld.remove(currFigure);
+	gWorld.add(morphingFigure);
 	gWorld.addAnimationHook(hook);
 }
 
-const ITEMS = new cCyclicValues(null, gSmartPhone, gLightSaber);
-
 function uiChangeItem() {
 	gWorld.motionKnock().then(() => {
-		const currItem = ITEMS.currValue();
-		const nextItem = ITEMS.nextValue();
-		if (currItem) {
-			currItem.parent.remove(currItem);
-		}
-		if (nextItem) {
-			(FIGURES.currValue()).ITEMHOLDER.addToEdge(nextItem);
-		}
+		incrementItem();
 	});
 }
 
@@ -1950,16 +2396,24 @@ function uiDefaultView() {
 
 let gDouble = null;
 
+function incrementDouble(in_elem) {
+	const currDouble = gCyclicDouble.currValue();
+	const nextDouble = gCyclicDouble.incrementedValue();
+	in_elem.innerText = nextDouble.text;
+	in_elem.removeEventListener('click', currDouble.func);
+	in_elem.addEventListener('click', nextDouble.func);
+}
+
 async function uiDouble(in_distance) {
-	const currFigure = FIGURES.currValue();
-	const geometry = currFigure.OBJECT.cloneMergedGeometry();
+	const currFigure = gCyclicFigures.currValue();
+	const geometry = currFigure.cloneWorldGeometry();
 	if (gDouble) {
 		gWorld.remove(gDouble);
 		gDouble.geometry.dispose();
 	}
-	gDouble = new THREE.Mesh(geometry, MATERIALS.currValue());
+	gDouble = new THREE.Mesh(geometry, gCyclicMaterials.currValue());
 	gDouble.raycast = () => {};
-	gWorld.remove(currFigure.OBJECT);
+	gWorld.remove(currFigure);
 	gWorld.add(gDouble);
 	gWorld.startRotation(VEC3().random().multiplyScalar(0.005));
 	const vec3 = gWorld.getLookAt().normalize();
@@ -1967,18 +2421,46 @@ async function uiDouble(in_distance) {
 		gDouble.position.copy(vec3.clone().multiplyScalar(in_currentValue));
 	});
 	gWorld.stopRotation();
-	gWorld.add(currFigure.OBJECT);
+	gWorld.add(currFigure);
 }
 
-function uiDoubleNear() {
+function uiDoubleNear(in_ev) {
+	incrementDouble(in_ev.target);
 	uiDouble(200);
 }
 
-function uiDoubleFar() {
+function uiDoubleFar(in_ev) {
+	incrementDouble(in_ev.target);
 	uiDouble(400);
 }
 
+function uiDoubleDelete(in_ev) {
+	incrementDouble(in_ev.target);
+	if (gDouble) {
+		gWorld.remove(gDouble);
+		gDouble.geometry.dispose();
+		gDouble = null;
+	}
+}
+
+const gCyclicDouble = new cCyclicValues(
+	{
+		text : 'double (near)',
+		func : uiDoubleNear
+	},
+	{
+		text : 'double (far)',
+		func : uiDoubleFar
+	},
+	{
+		text : 'delete double',
+		func : uiDoubleDelete
+	}
+);
+
 const SHUTTER = new Audio('data:audio/mpeg;base64,' + simpleDecompress('SUQzB@A7,alRQRTE@A4,KAAADT3RvTG9naWMAVElUMgAAABIAAANDYW1lcmEtUGhvbmUwMy0xAFRBTEI@A4,NAAADT3RvTG9naWMtU0UAVFNTRQ@A4,8AAANMYXZmNTguMjkuMTAw@A14,D/+1@A44,BJbmZv@A4,DwAAAEYAAB1iAAoOEREVGBgcHyMjJyoqLjExNTg8PD9DQ0dKSk5RVVVYXFxfY2Nnam5ucXV1eHx8gIOHh4qOjpGVlZicn5+jp6eqrq6xtbi4vL+/w8fHys7R0dXY2Nzg4OPn6uru8fH1+Pj8/w@A4,BMYXZjNTguNTQ@A8,gK@A6,kBK8@A8,dYmSaAZ8@A21,//sQZAAP8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,EISAf//l8TvqBBf/j/iYAzxZIGFK/gDJwGEAAIf24DAcDQDgbBANjn38DPiwxmVwAAQAAP//8oGAB8P6CQAACAAP1MNH/+xJkIg/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,QbCgnEoAtTFxDbFyJgRPI5S2qKyt/rVff6XfIS4AEQAADJ8wX3ud9CCZhmZmA8AAD+EaJxKHMAB+C3csAAAkgAD//ctX//+xBkRI/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,RKlAW2lEDJDwUMEDhceRWDJBZHTxdqlhJKO9/z9vvqYs3VA/sAAGwsl3ZhEJEG9K1Hrg2nC1aVqcv+dhgEYABNf/33+f/7EmRmjfAEAIAAIAAIAAANI@A4,QEgANR0AQAgAAA0goAABGSgDbMskTdUDnDBjQ6tCnoTUIAkDIa9NEx/ls3ESgAISACCKAAAUuk5MaLHnSZtpEzyAMUIQ1Ek6lQbI0aIqKitiiCBGf/7EGSEAAEmHVMGHoAACQAWZcAIAIUUYXd4dIAALQcZlwAgAFl0QH+jU+od/IkawPkABbCG2QXVLMoZA28mAhWuW3yRwinjtQAl/+Th4dUAWoEANqyiOhQqgS4FgI0xJkKxsE16f70A//sSZHUBkJoHZfcMIAwLoAY54AgBAqABdICERMApABfUIIjghIAB/7raPf1jxdoyiAgaObhgKBJgZXcPdyDbCiCyXtUzMVk11kHETpCVAJBmAAAMEakelCoHeFVVQj6AANco4HYlHXLw//sQZHgDEMoNWcAGGUIKgBZWAEIBAfwfcIAEYmAvAFfgAIgEZKuw6aidevtE2kAwAAA8h+KAYRsPbaFAbVlAAt7iUGH3bEHQZoh4PFsZT+q9fUY1C88CuS+9IkplFxlooIMVA/vsjIT/+xJkegGxRxhaaAZJ0glgBZEAQjiDHF1vAARkABkAG9AADASoAAEdptJ5sjwsbKKIkrvdrFOmewMsFZeuR6TcFiXLZPpYBdK6IYAQuGtgU5pTwNJKsoolbYzVfGxPbe+7rrCd5zQ3cAH/+xBkc4EwwBBaIAEZAgpAFyYAAwEEGGFroLBC0CiAK3gACAQAhQEOUzi9Uv5B3QTVAE1jgFqxSES2ddRxNvrQRGz/I6KgNawEBWCQDQepLij6r/SB/9bUsAvTDikJOle8/5sXndhGIv/7EmRugXDSCd/wCDAsDSAKaAAjOIMQOWCABMIIOgPhQFfolG2/RIEJfbk1zSUAe1EgQBJIOZxvm1bZQKnKry8do1U9IqABjgAA0kKbBMp7B/r7ngATDOqgCIoO4ftj+AWUgx3sUPyPlv/7EGRpgRC+B2FoATCMDuEocADPBQREQWvgISLINgAo7ACMAH7SKgCYZ0RAIg4AACGQZjTofTmBUMETdGz7PFR@A4,P5XXCAAgQgHiOOwAH/2g6pESkXGz6vy/GUy2AiNUiM8EtNQAK//sSZGABMKQO2yABQQAOoBq0ACMAAiwXi4AMIrgxARxACwgAggCWfEEqlSwzKAvywAQA/+QiBb/+KtV1mGFMBMGg89ru0RB2pgOB+WXEklSrZ2LV/DQdCVLiQhBofDXiargbYdBjaEVQ//sQZGIDcLsQW9gBQVIOgJr0AAYEAYAbocAMRHguAmmgAAwKFhgQXwYiQIwdoVd/iksCtyRa4LBjfwmkEGBJzTiFADwH/+3U8kSaSFgAAA///KmVC0ipYkAEgH+WIt/8tIs///wkFZ7/+xJkZQPwxgnkeAEwjA5jmQMA4rKBZAOYgABAMDGOYcANzwA6RUxBTUUzLjEwMF@V34,TEFNRTMuMTAw@V30,X/+xBkaAmQcxBaQAEasAmAFsUAIgGBvDdWAABkwC4AabAAjAB@V49,TEFNRTMuMTAw@V29,f/7EmRxDdBqAE+AARkwDgDm4FNVMQFQJRRAAEFQMwahBAAImF@V49,MQU1FMy4xMDB@V30,f/7EGR6CdBOAKsoAAAIC6AVYwACAQFIAJmgBEAgIIBSRACIBl@V49,MQU1FMy4xMDB@V29,//sSZIgP8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V30,//sQZKqP8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V28,X/+xJkzI/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V30,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V29,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V30,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V29,//sSZN0P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V30,//sQZN2P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V28,X/+xJk3Q/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V30,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V29,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V30,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V29,//sSZN0P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V30,//sQZN2P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V28,X/+xJk3Q/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V30,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V29,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V30,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V29,//sSZN0P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V30,//sQZN2P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V28,X/+xJk3Q/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V30,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V29,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V30,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V29,//sSZN0P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V30,//sQZN2P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V48,TEFNRTMuMTAw@V30,X/+xJk3Q/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V30,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V48,MQU1FMy4xMDB@V30,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V30,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V47,UxBTUUzLjEwMF@V30,//sSZN0P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V30,//sQZN2P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V48,TEFNRTMuMTAw@V30,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V29,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V30,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V29,//sSZN0P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V30,//sQZN2P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V28,X/+xJk3Q/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V30,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V29,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V30,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V29,//sSZN0P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V30,//sQZN2P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V28,X/+xJk3Q/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V30,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V29,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V30,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V90,//sSZN0P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V92,//sQZN2P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V90,X/+xJk3Q/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V91,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V90,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V91,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V90'));
+
+const RELEASE = new Audio('data:audio/mpeg;base64,' + simpleDecompress('//NIZAAI1Dc4D6eIAAjgrlQBTBgBTlvAAfv379+/fx4DO1FsQg7wG8ABgI6FAXwMYmZlqNnfv7ggCAIAgA8Tn5Q5y4PxhyUAYPh/lAQBABg+H8EAQDH8EAQOYP3ve973lYZvDgAIAABwsQiGAQCAiGCylKUd3d3f34gAAIyAACqeiIAKhK7NCj4AYD@A4,TU//NIZBAKSIlxP8xMgwrQ9uJZhzgDuwcB/m5ZM/sKL0zeme5WULIi41cWoAUYRuUgCyFVwBBhcAPFUy6hchiXUhnSsWkVqYmS4tbav0G9ZiCAv/6WLs/6wKAABI+N/h+AAB6JXoN4OS4RKrSTRsWo6GeT4B4ZMaOgtGw1J+v5AR+SUHrd2rcw1SlQNtv9t6TQ//NIZA0JvIlEAM3kAApJGpABjWgAJ094RAgaQho0VmDIhAmX9DDRIpaUUOFJNU2zIrv+rvpu1hJq/qz/8/871nXe/qtn@/4,lvmOu2rHywkCTf8WU1X6h2qMawPwRUhBIhPA3DQexuXDMeYBQBcBJFc9yX/6Z0vv5l+/zh03NJBtVIAAB9aPvwP8Y/74MWhO//NIZBEKXK9rLMfMAQqRJtI5h2gCvgnqHM4NeGOAoiyRBNSY91iFRAAzeAFEcTQMMjRcb5JlQ4YkWUfaTbk+gy1JIs/5FDxuxmbn0GT60c/k/Bwp/0vSAKAYgMAKBbAB+YR9UCoxNUZvWNOaAhBAeF7TxhD///6VZdMP/zJ2oKu0VbR/pcCgBtv/wOBwAAAH//NIZA4J9L9vL8e0AQqxMvJZgjkGbyuv00ICczd2+Ah77I+xY8Y2pZJlMKiJSl/wuAawW5h3qOo1s6GHOC8l43HiOZGvWntj2nySK0Ff/5icSKGv/ANUAwqGNgAY+G4HAb4GfkmxGh+p56Dz/+an+YwAYTxsVZFT+3oqDwe/lwwpKq0q//+GsfoPxARpfoiC//NIZA4J/HE6AMzsAAmgynwBh5gAMKsUDf0vYoqWAgWHzIhIGCaPIIIznExPONSqlaxFM/MwQCIxl1+llNNq1z/1rD//72ISBoqx3EoSBpv5U6DSzv/V/+FwDAorkCDkyMQTcJQIIcDogztNlyY4HwAtiespF9/Me7DoIcRVAYt2oRKY2G41G3//x/SjGzGC//NIZBIKPKFnLMfMAQro+tJZh1ACJg1idoad2QJZ0UDUTQBgR3tAJsJ+ZMgJYL5l8cZ8i5FyuJSFBEyTph+RQuMyCBMjmjKk0RY2/m4fOFLPzgf01AADfUKFkfD8fgD/0RgKoSm65k1BF8NRvo/8RZOPGscaab+SGAORFga+Ykq1wAEjFCvf0/oA3V8It52w//NIZA8H/E0ub8W8AAp43jQBi2AAuCWQwYjF9NCP5jCUKF8kWzdasf/Zprku+YFrrd+Y/M+36bmvbQVF/6UO+n6tHtND0f9wxLt7WpDwAQ8EGNIocAsDVkTgPUnfW22TL9/cmekwKlKy1KU8nuoPoYAwCBBBhAKBAKBgAAfZsqH9v1f9n1AW3+r/+KdX/6Tu//NIZCAEMAN5H8CKAQdwAi1/gRACKLgwQEhAYEAoFAADc9q7df9X2f9n/qZ/+xdv//Wg8pWDCBAMCkRDIZjMVgAfPbSHb+rEW/zKjFpdoWB+Ay+ejRYHhIJOjbbC4gRJEL/RmsRJFiJIaaduQVDgbMOJgBJ93NGTBpxhr929M2YAhkMASm5PvTemlxrxaM+J//NIZFsK4I8o38ScgQmRFkABhzgAAt8PCT0MCUA4JfZzDAAQJCEU/+OKOjy//jpRQl/zKP+achWVpm9VtzAi+DSjdR4jiK+o9y3LBzg157lvf6nyx5ODV9R7iLz3/4ivz3+Vtuqar5LwJQ0IobqeJT2p4NPluWPCLEV9R7iL/EXnuIvPJxF1HuW9/9R4Rab///NIRFgFYAMjC+AMAQuAAkWXwRAC7kxBTUUzLjEwMF@V138,TEFNRTMuMTAw//NIZHoAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V164,//NIZIQAAAGk@A9,0g@A5,@V164'));
 
 function setTransition(in_elem, in_shorthand, in_val1, in_val2) {
 	const components = in_shorthand.split(/\s+/);
@@ -2114,49 +2596,7 @@ function uiRights() {
 	startDialog(dialog);
 }
 
-function setUpButtons() {
-	const settings = [
-		{
-			text : 'next color',
-			func : uiChangeColor
-		},
-		{
-			text : 'next material',
-			func : uiChangeMaterial
-		},
-		{
-			text : 'next figure',
-			func : uiChangeFigure
-		},
-		{
-			text : 'next item',
-			func : uiChangeItem
-		},
-		{
-			text : 'default position',
-			func : uiDefaultView
-		},
-		{
-			text : 'double (near)',
-			func : uiDoubleNear
-		},
-		{
-			text : 'double (far)',
-			func : uiDoubleFar
-		},
-		{
-			text : 'screenshot',
-			func : uiGetScreenShot
-		},
-		{
-			text : 'help',
-			func : uiHelp
-		},
-		{
-			text : 'rights',
-			func : uiRights
-		}
-	];
+(in_settings => {
 	let container = document.createElement('div');
 	Object.assign(container.style, {
 		position : 'absolute',
@@ -2164,7 +2604,7 @@ function setUpButtons() {
 		top : '5%'
 	});
 	document.body.appendChild(container);
-	settings.forEach(in_setting => {
+	in_settings.forEach(in_setting => {
 		let button = document.createElement('button');
 		button.innerText = in_setting.text;
 		button.addEventListener('click', in_setting.func);
@@ -2175,9 +2615,44 @@ function setUpButtons() {
 		});
 		container.appendChild(button);
 	});
-}
-
-setUpButtons();
+})([
+	{
+		text : 'next color',
+		func : uiChangeColor
+	},
+	{
+		text : 'next material',
+		func : uiChangeMaterial
+	},
+	{
+		text : 'next figure',
+		func : uiChangeFigure
+	},
+	{
+		text : 'next item',
+		func : uiChangeItem
+	},
+	{
+		text : 'default position',
+		func : uiDefaultView
+	},
+	{
+		text : gCyclicDouble.currValue().text,
+		func : gCyclicDouble.currValue().func
+	},
+	{
+		text : 'screenshot',
+		func : uiGetScreenShot
+	},
+	{
+		text : 'help',
+		func : uiHelp
+	},
+	{
+		text : 'rights',
+		func : uiRights
+	}
+]);
 
 /*
 	(10) event handlers
@@ -2187,6 +2662,7 @@ const gDrag = {
 	vec : null,
 	obj : null,
 	far : false,
+	animating : false,
 	isActive : function() {
 		if (!this.vec) {
 			return false;
@@ -2199,31 +2675,27 @@ const gDrag = {
 };
 
 gWorld.canvas.addEventListener('mousedown', in_ev => {
+	if (gDrag.isActive()) {
+		return;
+	}
 	let vec2 = eventPos2RaycasterPos(in_ev);
 	let intersects = gWorld.intersectPositive(vec2);
 	if (intersects.length > 0) {
 		const rayHit = intersects[0];
-		if (!(rayHit.object instanceof cPart)) {
+		const target = cAbstractPart.searchInstance(rayHit.object);
+		if (!target) {
 			// uncontrollable object
 			return;
 		}
 		const cameraPos = gWorld.copyCameraPosition();
-		const objectPos = rayHit.object.getWorldPosition(VEC3());
+		const objectPos = target.getWorldPosition(VEC3());
 		gDrag.far = (rayHit.distance > cameraPos.distanceTo(objectPos));
-		if (DEBUG) {
-			console.log('drag ' + (gDrag.far ? 'far' : 'near') + '-side');
-		}
 		gDrag.vec = vec2;
-		gDrag.obj = rayHit.object;
+		gDrag.obj = target;
 		// not lookAt(cameraPos), but lookAt(raycaster.ray.direction.negate())
-		gDrag.obj.receiverStart(objectPos.add(cameraPos));
+		gDrag.obj.activateDraggingRcv(objectPos.add(cameraPos));
 	}
 });
-
-function isMovable360Item(in_obj) {
-	const classNames = [cArm, cHead, cSmartPhone, cLightSaber];
-	return classNames.some(className => in_obj instanceof className);
-}
 
 gWorld.canvas.addEventListener('mousemove', in_ev => {
 	if (!gDrag.isActive()) {
@@ -2236,16 +2708,35 @@ gWorld.canvas.addEventListener('mousemove', in_ev => {
 	}
 	let intersects;
 	if (gDrag.far) {
-		intersects = gWorld.intersectNegative(vec2, cPart.receiverLayer);
+		intersects = gWorld.intersectNegative(vec2, cAbstractPart.operatingLayer);
 	} else {
-		intersects = gWorld.intersectPositive(vec2, cPart.receiverLayer);
+		intersects = gWorld.intersectPositive(vec2, cAbstractPart.operatingLayer);
 	}
 	if (intersects.length > 0) {
-		if (isMovable360Item(gDrag.obj)) {
-			gDrag.obj.lookAt(intersects[0].point);
+		gDrag.obj.bendAt(intersects[0].point);
+		gDrag.vec = vec2;
+	} else {
+		if (gDrag.animating) {
+			return;
 		} else {
-			gDrag.obj.lookAt(intersects[0].point, VEC3(1, 0, 0));
+			RELEASE.play();
+			gDrag.animating = true;
 		}
+		const hook = (in_obj => {
+			return () => {
+				/*
+					when dragstop will be called during animation,
+					gDrag.obj will be set to null.
+					so bind gDrag.obj to callback.
+				*/
+				if (in_obj.moreShrink()) {
+					return;
+				}
+				gWorld.removeAnimationHook(hook);
+				dragstop();
+			}
+		})(gDrag.obj);
+		gWorld.addAnimationHook(hook);
 		gDrag.vec = vec2;
 	}
 });
@@ -2254,9 +2745,10 @@ function dragstop() {
 	if (!gDrag.isActive()) {
 		return;
 	}
-	gDrag.obj.receiverStop();
+	gDrag.obj.activateReleasedRcv();
 	gDrag.vec = null;
 	gDrag.obj = null;
+	gDrag.animating = false;
 }
 
 gWorld.canvas.addEventListener('mouseleave', dragstop);
