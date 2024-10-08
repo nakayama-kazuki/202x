@@ -7,8 +7,8 @@
 <script type='importmap'>
 {
 	"imports": {
-		"three": "https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.module.min.js",
-		"utils": "https://cdn.jsdelivr.net/npm/three@0.168.0/examples/jsm/utils/BufferGeometryUtils.js"
+		"three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.min.js",
+		"utils": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/utils/BufferGeometryUtils.js"
 	}
 }
 </script>
@@ -341,13 +341,13 @@ class cApproximateSet extends Set {
 }
 
 class cCyclicMap extends Map {
-	get keysArray() {
+	get #keysArray() {
 		return Array.from(this.keys());
 	}
 	#deltaItemByOrder(in_order, in_delta) {
-		const length = this.keysArray.length;
+		const length = this.#keysArray.length;
 		const deltaIndex = (in_order + in_delta + length) % length;
-		const deltaKey = this.keysArray[deltaIndex];
+		const deltaKey = this.#keysArray[deltaIndex];
 		return {
 			k : deltaKey,
 			v : this.get(deltaKey)
@@ -363,7 +363,7 @@ class cCyclicMap extends Map {
 		return this.#deltaItemByOrder(in_order, -1);
 	}
 	#deltaItemByKey(in_key, in_delta) {
-		const index = this.keysArray.indexOf(in_key);
+		const index = this.#keysArray.indexOf(in_key);
 		if (index === -1) {
 			return null;
 		} else {
@@ -379,15 +379,25 @@ class cCyclicMap extends Map {
 }
 
 class cCyclicValues extends Array {
+	#currIndex;
 	constructor(...args) {
 		super(...args);
-		this.currentIndex = 0;
+		this.#currIndex = 0;
+	}
+	get #nextIndex() {
+		return (this.#currIndex + 1) % this.length;
+	}
+	#increment() {
+		this.#currIndex = this.#nextIndex;
 	}
 	currValue() {
-		return this[this.currentIndex];
+		return this[this.#currIndex];
 	}
 	nextValue() {
-		this.currentIndex = (this.currentIndex + 1) % this.length;
+		return this[this.#nextIndex];
+	}
+	incrementedValue() {
+		this.#increment();
 		return this.currValue();
 	}
 }
@@ -530,7 +540,7 @@ HTMLCanvasElement.prototype[clipArea] = function(in_margin, in_callback) {
 };
 
 HTMLCanvasElement.prototype[clipClearArea] = function(in_margin) {
-	this[clipArea](in_margin, (in_r, in_g, in_b, in_a) => {
+	return this[clipArea](in_margin, (in_r, in_g, in_b, in_a) => {
 		return (in_a > 0);
 	});
 }
@@ -556,7 +566,15 @@ const DIRECTION = {
 	ZN : VEC3(0, 0, -1)
 }
 
-function makeTrapezoidGeometryParts(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_YLen, in_Rad = 0) {
+function safeMergeGeometry(in_arr, in_dispose = true) {
+	const merged = UTILS.mergeGeometries(in_arr);
+	if (in_dispose) {
+		in_arr.forEach(in_geo => in_geo.dispose());
+	}
+	return merged;
+}
+
+function makeTrapezoidGeometryParts(in_txLen, in_tzLen, in_bxLen, in_bzLen, in_yLen, in_rad = 0) {
 	const parts = [];
 	/*
 		|
@@ -594,14 +612,14 @@ function makeTrapezoidGeometryParts(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_Y
 		 (+)
 	*/
 	const baseVertices = {
-		v0 : VEC3(in_tXLen / 2 * -1, in_YLen / 2 * +1, in_tZLen / 2 * -1),
-		v1 : VEC3(in_tXLen / 2 * +1, in_YLen / 2 * +1, in_tZLen / 2 * -1),
-		v2 : VEC3(in_tXLen / 2 * +1, in_YLen / 2 * +1, in_tZLen / 2 * +1),
-		v3 : VEC3(in_tXLen / 2 * -1, in_YLen / 2 * +1, in_tZLen / 2 * +1),
-		v4 : VEC3(in_bXLen / 2 * -1, in_YLen / 2 * -1, in_bZLen / 2 * -1),
-		v5 : VEC3(in_bXLen / 2 * +1, in_YLen / 2 * -1, in_bZLen / 2 * -1),
-		v6 : VEC3(in_bXLen / 2 * +1, in_YLen / 2 * -1, in_bZLen / 2 * +1),
-		v7 : VEC3(in_bXLen / 2 * -1, in_YLen / 2 * -1, in_bZLen / 2 * +1)
+		v0 : VEC3(in_txLen / 2 * -1, in_yLen / 2 * +1, in_tzLen / 2 * -1),
+		v1 : VEC3(in_txLen / 2 * +1, in_yLen / 2 * +1, in_tzLen / 2 * -1),
+		v2 : VEC3(in_txLen / 2 * +1, in_yLen / 2 * +1, in_tzLen / 2 * +1),
+		v3 : VEC3(in_txLen / 2 * -1, in_yLen / 2 * +1, in_tzLen / 2 * +1),
+		v4 : VEC3(in_bxLen / 2 * -1, in_yLen / 2 * -1, in_bzLen / 2 * -1),
+		v5 : VEC3(in_bxLen / 2 * +1, in_yLen / 2 * -1, in_bzLen / 2 * -1),
+		v6 : VEC3(in_bxLen / 2 * +1, in_yLen / 2 * -1, in_bzLen / 2 * +1),
+		v7 : VEC3(in_bxLen / 2 * -1, in_yLen / 2 * -1, in_bzLen / 2 * +1)
 	};
 	/*
 		1. Surface (BufferGeometry)
@@ -622,7 +640,7 @@ function makeTrapezoidGeometryParts(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_Y
 		let translate;
 		if (equal(in_key, DIRECTION.YP, DIRECTION.YN)) {
 			// top or bottom
-			translate = in_key.clone().multiplyScalar(in_Rad);
+			translate = in_key.clone().multiplyScalar(in_rad);
 		} else {
 			const normal = VEC3();
 			in_val[forEachCombination](3, (a, b, c) => {
@@ -637,7 +655,7 @@ function makeTrapezoidGeometryParts(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_Y
 				}
 				return false;
 			});
-			translate = normal.multiplyScalar(in_Rad);
+			translate = normal.multiplyScalar(in_rad);
 		}
 		const vertices = [];
 		in_val.forEach(in_vertex => {
@@ -691,8 +709,8 @@ function makeTrapezoidGeometryParts(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_Y
 		const defaultHeightSegments = 1;
 		const openEnded = true;
 		return new THREE.CylinderGeometry(
-			in_Rad,
-			in_Rad,
+			in_rad,
+			in_rad,
 			in_height,
 			defaultRadialSegments,
 			defaultHeightSegments,
@@ -708,9 +726,9 @@ function makeTrapezoidGeometryParts(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_Y
 		});
 		return ret.divideScalar(in_vecArr.length);
 	};
-	const theta = (a, b) => Math.atan(Math.abs(a - b) / 2 / in_YLen) * (a > b ? +1 : -1);
-	const thetaX = theta(in_tXLen, in_bXLen);
-	const thetaZ = theta(in_tZLen, in_bZLen);
+	const theta = (a, b) => Math.atan(Math.abs(a - b) / 2 / in_yLen) * (a > b ? +1 : -1);
+	const thetaX = theta(in_txLen, in_bxLen);
+	const thetaZ = theta(in_tzLen, in_bzLen);
 	const edgeConfigSet1 = [
 		/*
 			E : Edge (Vector3 x2)
@@ -770,7 +788,7 @@ function makeTrapezoidGeometryParts(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_Y
 		const widthSegments = 32;
 		const heightSegments = 16;
 		return new THREE.SphereGeometry(
-			in_Rad,
+			in_rad,
 			widthSegments,
 			heightSegments,
 			in_phi_start - error,
@@ -779,8 +797,8 @@ function makeTrapezoidGeometryParts(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_Y
 			in_theta + error * 2
 		);
 	};
-	const uTheta = (in_tXLen > in_bXLen) || (in_tZLen > in_bZLen) ? DEG90 * 2 : DEG90 * 1;
-	const bTheta = (in_tXLen < in_bXLen) || (in_tZLen < in_bZLen) ? DEG90 * 2 : DEG90 * 1;
+	const uTheta = (in_txLen > in_bxLen) || (in_tzLen > in_bzLen) ? DEG90 * 2 : DEG90 * 1;
+	const bTheta = (in_txLen < in_bxLen) || (in_tzLen < in_bzLen) ? DEG90 * 2 : DEG90 * 1;
 	const cornerConfigSet = [
 		/*
 			C : Corner (Vector3 x1)
@@ -805,64 +823,88 @@ function makeTrapezoidGeometryParts(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_Y
 	return parts;
 }
 
-function trapezoidGeometryUtil(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_YLen, in_Rad = 0) {
-	const parts = makeTrapezoidGeometryParts(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_YLen, in_Rad);
+function trapezoidGeometryUtil(in_txLen, in_tzLen, in_bxLen, in_bzLen, in_yLen, in_rad = 0) {
+	const parts = makeTrapezoidGeometryParts(in_txLen, in_tzLen, in_bxLen, in_bzLen, in_yLen, in_rad);
 	// assume order of groups ( BufferGeometry x6, other geometries ... )
 	const groups = [];
 	let edgeGroup = 0;
-	const mergedGeometry = UTILS.mergeGeometries(parts);
 	parts.forEach(in_part => {
 		if (in_part.userData.isSurface) {
 			groups.push(in_part.index.count);
 		} else {
 			edgeGroup += in_part.index.count;
 		}
-		in_part.dispose();
 	});
 	groups.push(edgeGroup);
+	const merged = safeMergeGeometry(parts);
 	let start = 0;
 	for (let i = 0; i < groups.length; i++) {
-		mergedGeometry.addGroup(start, groups[i], i);
+		merged.addGroup(start, groups[i], i);
 		start += groups[i];
 	}
-	return mergedGeometry;
+	return merged;
 }
 
-function roundBoxGeometry(in_xlen, in_ylen, in_zlen, in_rad) {
-	return trapezoidGeometryUtil(in_xlen, in_zlen, in_xlen, in_zlen, in_ylen, in_rad);
+function roundBoxGeometry(in_xLen, in_yLen, in_zLen, in_rad) {
+	return trapezoidGeometryUtil(in_xLen, in_zLen, in_xLen, in_zLen, in_yLen, in_rad);
 }
 
 function roundRegularBoxGeometry(in_len, in_rad) {
 	return trapezoidGeometryUtil(in_len, in_len, in_len, in_len, in_len, in_rad);
 }
 
-function trapezoidGeometry(in_tLen, in_bLen, in_height, in_thickness) {
-	return trapezoidGeometryUtil(in_tLen, 0, in_bLen, 0, in_height, in_thickness);
+function roundTrapezoidGeometry(in_tLen, in_bLen, in_height, in_rad) {
+	return trapezoidGeometryUtil(in_tLen, 0, in_bLen, 0, in_height, in_rad);
 }
 
 function capsuleConfigure(in_rad_t, in_rad_b, in_h) {
 	/*
-	          +-(rad_t)-+
-		     /|         |
-		    / |         |
-		   /  |         | in_h
-		  /   |         |
-		 /    |         |
-		+-----+-(rad_b)-+
+	                  +-(rad_t)-+
+		             /|         |
+		            / |         |
+		           /  |         | in_h
+		          /   |         |
+		         /    |         |
+		theta : +-----+-(rad_b)-+
 	*/
 	const ratio = (in_rad_b - in_rad_t) / in_h;
+	const atan = Math.atan(1 / ratio);
 	return {
-		theta : Math.atan(1 / ratio),
+		/*
+			when in_rad_t < in_rad_b, atan will be "+"
+			when in_rad_t = in_rad_b, atan will be "Math.PI / 2"
+			when in_rad_t > in_rad_b, atan will be "-"
+		*/
+		theta : atan > 0 ? atan : Math.PI + atan,
+		/*
+			when in_rad_t < in_rad_b, delta will be "+"
+			when in_rad_t = in_rad_b, delta will be "0"
+			when in_rad_t > in_rad_b, delta will be "-"
+		*/
 		delta : {
 			t : in_rad_t * ratio,
 			b : in_rad_b * ratio
 		},
+		/*
+			radius (real radius) will be always "+"
+		*/
 		radius : {
 			t : (in_rad_t ** 2 + (in_rad_t * ratio) ** 2) ** 0.5,
 			b : (in_rad_b ** 2 + (in_rad_b * ratio) ** 2) ** 0.5
 		},
 	};
 }
+
+/*
+
+console.log(capsuleConfigure(10, 11, 50));
+//theta: 1.5507989928...
+console.log(capsuleConfigure(10, 10, 50));
+//theta: 1.5707963267...
+console.log(capsuleConfigure(11, 10, 50));
+//theta: 1.5907936607...
+
+*/
 
 function customCapsuleGeometry(in_rad_t, in_rad_b, in_h, in_rSeg = 32, in_hSeg = 1) {
 	const conf = capsuleConfigure(in_rad_t, in_rad_b, in_h);
@@ -875,10 +917,8 @@ function customCapsuleGeometry(in_rad_t, in_rad_b, in_h, in_rSeg = 32, in_hSeg =
 	parts.push(new THREE.SphereGeometry(conf.radius.b, ...sphereParams, conf.theta, Math.PI - conf.theta));
 	parts[parts.length - 1].translate(0, conf.delta.b * -1 - in_h / 2, 0);
 	// middle
-	parts.push(new THREE.CylinderGeometry(in_rad_t, in_rad_b, in_h, in_rSeg, in_hSeg));
-	const mergedGeometry = UTILS.mergeGeometries(parts);
-	parts.forEach(in_geo => in_geo.dispose());
-	return mergedGeometry;
+	parts.push(new THREE.CylinderGeometry(in_rad_t, in_rad_b, in_h, in_rSeg, in_hSeg, true));
+	return safeMergeGeometry(parts);
 }
 
 /*
@@ -955,9 +995,7 @@ class cSphericalWorld {
 		camera.up.copy(cSphericalWorld.#view.cameraUp);
 		camera.lookAt(VEC3(0, 0, 0));
 		if (false) {
-			for (let i = 0; i < THREE.Layers.MAX_LAYERS; i++) {
-				camera.layers.enable(i);
-			}
+			camera.layers.enableAll();
 		}
 		this.#cameraCtrl = new THREE.Object3D();
 		this.#cameraCtrl.add(camera);
