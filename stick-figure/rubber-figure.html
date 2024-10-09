@@ -205,50 +205,52 @@ function pseudoMessageDigest2(in_string) {
 	return pseudoMessageDigest1([in_string]);
 }
 
-const METACHAR1 = '@'
-const METACHAR2 = ',';
-
-function simpleCompress(input) {
-	let output = '';
-	let i = 0;
-	while (i < input.length) {
-		let count = 1;
-		while (i + 1 < input.length && input[i] === input[i + 1]) {
-			i++;
-			count++;
-		}
-		if (count >= 4) {
-			output += METACHAR1 + input[i] + count + METACHAR2;
-		} else {
-			output += input[i].repeat(count);
-		}
-		i++;
-	}
-	return output;
-}
-
-function simpleDecompress(input) {
-	let output = '';
-	let i = 0;
-	while (i < input.length) {
-		if (input[i] === METACHAR1) {
-			let char = input[i + 1];
-			let count = '';
-			i += 2;
-			while (i < input.length && input[i] !== METACHAR2) {
-				count += input[i];
-				i++;
+const createAudio = (() => {
+	function makeStream(in_uint8Array) {
+		return new ReadableStream({
+			start(controller) {
+				controller.enqueue(in_uint8Array);
+				controller.close();
 			}
-			output += char.repeat(parseInt(count, 10));
-			// to skip METACHAR2
-			i++;
-		} else {
-			output += input[i];
-			i++;
-		}
+		});
 	}
-	return output;
-}
+	async function readStream(in_reader) {
+		let chunks = [];
+		let result;
+		while (!(result = await in_reader.read()).done) {
+			chunks.push(result.value);
+		}
+		const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+		const uint8Array = new Uint8Array(totalLength);
+		let offset = 0;
+		for (const chunk of chunks) {
+			uint8Array.set(chunk, offset);
+			offset += chunk.length;
+		}
+		return uint8Array;
+	}
+	async function gzip_to_base64(in_string) {
+		const uint8Array = (new TextEncoder()).encode(in_string);
+		const stream1 = makeStream(uint8Array);
+		const stream2 = stream1.pipeThrough(new CompressionStream('gzip'));
+		const read = await readStream(stream2.getReader());
+		return btoa(String.fromCharCode(...read));
+	}
+	async function base64_to_gunzip(in_base64) {
+		const bin = atob(in_base64);
+		const uint8Array = new Uint8Array(bin.length);
+		for (let i = 0; i < bin.length; i++) {
+			uint8Array[i] = bin.charCodeAt(i);
+		}
+		const stream1 = makeStream(uint8Array);
+		const stream2 = stream1.pipeThrough(new DecompressionStream('gzip'));
+		const read = await readStream(stream2.getReader());
+		return (new TextDecoder()).decode(read);
+	}
+	return async (in_base64) => {
+		return new Audio('data:audio/mpeg;base64,' + await base64_to_gunzip(in_base64));
+	};
+})();
 
 class cEase {
 	constructor(in_from, in_to, in_duration) {
@@ -1502,7 +1504,7 @@ class cAbstractPart extends THREE.SkinnedMesh {
 		});
 		return objects;
 	}
-	cloneGeometry() {
+	cloneGeometry(in_local = true) {
 		const parts = [];
 		this.#interlockings.forEach(in_interlocking => {
 			const part = in_interlocking.geometry.clone();
@@ -1513,7 +1515,9 @@ class cAbstractPart extends THREE.SkinnedMesh {
 			parts.push(part);
 		});
 		const merged = safeMergeGeometry(parts);
-		merged.applyMatrix4(new THREE.Matrix4().copy(this.matrixWorld).invert());
+		if (in_local) {
+			merged.applyMatrix4(new THREE.Matrix4().copy(this.matrixWorld).invert());
+		}
 		return merged;
 	}
 	resetMaterial(in_material) {
@@ -1848,16 +1852,20 @@ class cJointedSolidPart extends cSolidPart {
 	get #jointed() {
 		return [this, ...this.userData.jointed];
 	}
-	cloneGeometry() {
+	cloneGeometry(in_local = true) {
 		const parts = [];
 		this.#jointed.forEach(in_obj => {
 			// call cloneGeometry@cAbstractPart
-			const part = super.cloneGeometry.call(in_obj);
-			part.applyMatrix4(in_obj.matrixWorld);
+			const part = super.cloneGeometry.call(in_obj, in_local);
+			if (in_local) {
+				part.applyMatrix4(in_obj.matrixWorld);
+			}
 			parts.push(part);
 		});
 		const merged = safeMergeGeometry(parts);
-		merged.applyMatrix4(new THREE.Matrix4().copy(this.matrixWorld).invert());
+		if (in_local) {
+			merged.applyMatrix4(new THREE.Matrix4().copy(this.matrixWorld).invert());
+		}
 		return merged;
 	}
 	addToMoving(in_obj, in_interlocking = false) {
@@ -2034,17 +2042,23 @@ class cFigure extends THREE.Object3D {
 			in_part.resetMaterial(in_material);
 		});
 	}
-	cloneWorldGeometry() {
+	cloneGeometry(in_local = true) {
 		const parts = [];
 		this.#cached.forEach(in_cache => {
 			if (!in_cache) {
 				return;
 			}
-			const geometry = in_cache.cloneGeometry();
-			geometry.applyMatrix4(in_cache.matrixWorld);
-			parts.push(geometry);
+			const part = in_cache.cloneGeometry(in_local);
+			if (in_local) {
+				part.applyMatrix4(in_cache.matrixWorld);
+			}
+			parts.push(part);
 		});
-		return safeMergeGeometry(parts);
+		const merged = safeMergeGeometry(parts);
+		if (in_local) {
+			merged.applyMatrix4(new THREE.Matrix4().copy(this.matrixWorld).invert());
+		}
+		return merged;
 	}
 }
 
@@ -2359,8 +2373,8 @@ function uiChangeFigure() {
 		currItem.removeFromParent();
 	}
 	// use tempFigure only during morphing
-	const currGeometry = currFigure.cloneWorldGeometry();
-	const nextGeometry = nextFigure.cloneWorldGeometry();
+	const currGeometry = currFigure.cloneGeometry(false);
+	const nextGeometry = nextFigure.cloneGeometry(false);
 	currGeometry.morphAttributes.position = [nextGeometry.attributes.position];
 	const morphingFigure = new THREE.Mesh(currGeometry, gCyclicMaterials.currValue());
 	let morph = 0;
@@ -2406,7 +2420,7 @@ function incrementDouble(in_elem) {
 
 async function uiDouble(in_distance) {
 	const currFigure = gCyclicFigures.currValue();
-	const geometry = currFigure.cloneWorldGeometry();
+	const geometry = currFigure.cloneGeometry(false);
 	if (gDouble) {
 		gWorld.remove(gDouble);
 		gDouble.geometry.dispose();
@@ -2458,9 +2472,9 @@ const gCyclicDouble = new cCyclicValues(
 	}
 );
 
-const SHUTTER = new Audio('data:audio/mpeg;base64,' + simpleDecompress('SUQzB@A7,alRQRTE@A4,KAAADT3RvTG9naWMAVElUMgAAABIAAANDYW1lcmEtUGhvbmUwMy0xAFRBTEI@A4,NAAADT3RvTG9naWMtU0UAVFNTRQ@A4,8AAANMYXZmNTguMjkuMTAw@A14,D/+1@A44,BJbmZv@A4,DwAAAEYAAB1iAAoOEREVGBgcHyMjJyoqLjExNTg8PD9DQ0dKSk5RVVVYXFxfY2Nnam5ucXV1eHx8gIOHh4qOjpGVlZicn5+jp6eqrq6xtbi4vL+/w8fHys7R0dXY2Nzg4OPn6uru8fH1+Pj8/w@A4,BMYXZjNTguNTQ@A8,gK@A6,kBK8@A8,dYmSaAZ8@A21,//sQZAAP8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,EISAf//l8TvqBBf/j/iYAzxZIGFK/gDJwGEAAIf24DAcDQDgbBANjn38DPiwxmVwAAQAAP//8oGAB8P6CQAACAAP1MNH/+xJkIg/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,QbCgnEoAtTFxDbFyJgRPI5S2qKyt/rVff6XfIS4AEQAADJ8wX3ud9CCZhmZmA8AAD+EaJxKHMAB+C3csAAAkgAD//ctX//+xBkRI/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,RKlAW2lEDJDwUMEDhceRWDJBZHTxdqlhJKO9/z9vvqYs3VA/sAAGwsl3ZhEJEG9K1Hrg2nC1aVqcv+dhgEYABNf/33+f/7EmRmjfAEAIAAIAAIAAANI@A4,QEgANR0AQAgAAA0goAABGSgDbMskTdUDnDBjQ6tCnoTUIAkDIa9NEx/ls3ESgAISACCKAAAUuk5MaLHnSZtpEzyAMUIQ1Ek6lQbI0aIqKitiiCBGf/7EGSEAAEmHVMGHoAACQAWZcAIAIUUYXd4dIAALQcZlwAgAFl0QH+jU+od/IkawPkABbCG2QXVLMoZA28mAhWuW3yRwinjtQAl/+Th4dUAWoEANqyiOhQqgS4FgI0xJkKxsE16f70A//sSZHUBkJoHZfcMIAwLoAY54AgBAqABdICERMApABfUIIjghIAB/7raPf1jxdoyiAgaObhgKBJgZXcPdyDbCiCyXtUzMVk11kHETpCVAJBmAAAMEakelCoHeFVVQj6AANco4HYlHXLw//sQZHgDEMoNWcAGGUIKgBZWAEIBAfwfcIAEYmAvAFfgAIgEZKuw6aidevtE2kAwAAA8h+KAYRsPbaFAbVlAAt7iUGH3bEHQZoh4PFsZT+q9fUY1C88CuS+9IkplFxlooIMVA/vsjIT/+xJkegGxRxhaaAZJ0glgBZEAQjiDHF1vAARkABkAG9AADASoAAEdptJ5sjwsbKKIkrvdrFOmewMsFZeuR6TcFiXLZPpYBdK6IYAQuGtgU5pTwNJKsoolbYzVfGxPbe+7rrCd5zQ3cAH/+xBkc4EwwBBaIAEZAgpAFyYAAwEEGGFroLBC0CiAK3gACAQAhQEOUzi9Uv5B3QTVAE1jgFqxSES2ddRxNvrQRGz/I6KgNawEBWCQDQepLij6r/SB/9bUsAvTDikJOle8/5sXndhGIv/7EmRugXDSCd/wCDAsDSAKaAAjOIMQOWCABMIIOgPhQFfolG2/RIEJfbk1zSUAe1EgQBJIOZxvm1bZQKnKry8do1U9IqABjgAA0kKbBMp7B/r7ngATDOqgCIoO4ftj+AWUgx3sUPyPlv/7EGRpgRC+B2FoATCMDuEocADPBQREQWvgISLINgAo7ACMAH7SKgCYZ0RAIg4AACGQZjTofTmBUMETdGz7PFR@A4,P5XXCAAgQgHiOOwAH/2g6pESkXGz6vy/GUy2AiNUiM8EtNQAK//sSZGABMKQO2yABQQAOoBq0ACMAAiwXi4AMIrgxARxACwgAggCWfEEqlSwzKAvywAQA/+QiBb/+KtV1mGFMBMGg89ru0RB2pgOB+WXEklSrZ2LV/DQdCVLiQhBofDXiargbYdBjaEVQ//sQZGIDcLsQW9gBQVIOgJr0AAYEAYAbocAMRHguAmmgAAwKFhgQXwYiQIwdoVd/iksCtyRa4LBjfwmkEGBJzTiFADwH/+3U8kSaSFgAAA///KmVC0ipYkAEgH+WIt/8tIs///wkFZ7/+xJkZQPwxgnkeAEwjA5jmQMA4rKBZAOYgABAMDGOYcANzwA6RUxBTUUzLjEwMF@V34,TEFNRTMuMTAw@V30,X/+xBkaAmQcxBaQAEasAmAFsUAIgGBvDdWAABkwC4AabAAjAB@V49,TEFNRTMuMTAw@V29,f/7EmRxDdBqAE+AARkwDgDm4FNVMQFQJRRAAEFQMwahBAAImF@V49,MQU1FMy4xMDB@V30,f/7EGR6CdBOAKsoAAAIC6AVYwACAQFIAJmgBEAgIIBSRACIBl@V49,MQU1FMy4xMDB@V29,//sSZIgP8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V30,//sQZKqP8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V28,X/+xJkzI/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V30,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V29,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V30,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V29,//sSZN0P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V30,//sQZN2P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V28,X/+xJk3Q/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V30,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V29,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V30,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V29,//sSZN0P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V30,//sQZN2P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V28,X/+xJk3Q/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V30,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V29,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V30,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V29,//sSZN0P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V30,//sQZN2P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V28,X/+xJk3Q/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V30,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V29,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V30,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V29,//sSZN0P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V30,//sQZN2P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V48,TEFNRTMuMTAw@V30,X/+xJk3Q/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V30,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V48,MQU1FMy4xMDB@V30,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V30,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V47,UxBTUUzLjEwMF@V30,//sSZN0P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V30,//sQZN2P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V48,TEFNRTMuMTAw@V30,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V29,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V30,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V29,//sSZN0P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V30,//sQZN2P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V28,X/+xJk3Q/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V30,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V29,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V30,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V29,//sSZN0P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V30,//sQZN2P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V49,UxBTUUzLjEwMF@V28,X/+xJk3Q/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V30,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V49,TEFNRTMuMTAw@V29,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V49,MQU1FMy4xMDB@V30,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V90,//sSZN0P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V92,//sQZN2P8AAAaQ@A4,gAAA0gAAABAAABp@A4,CAAADS@A4,E@V90,X/+xJk3Q/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V91,X/+xBk3Y/wAABp@A4,CAAADS@A4,EAAAGk@A4,IAAANI@A4,R@V90,f/7EmTdD/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V91,f/7EGTdj/AAAGk@A4,IAAANI@A4,QAAAaQ@A4,gAAA0gAAABF@V90'));
+const SHUTTER = await createAudio('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');
 
-const RELEASE = new Audio('data:audio/mpeg;base64,' + simpleDecompress('//NIZAAI1Dc4D6eIAAjgrlQBTBgBTlvAAfv379+/fx4DO1FsQg7wG8ABgI6FAXwMYmZlqNnfv7ggCAIAgA8Tn5Q5y4PxhyUAYPh/lAQBABg+H8EAQDH8EAQOYP3ve973lYZvDgAIAABwsQiGAQCAiGCylKUd3d3f34gAAIyAACqeiIAKhK7NCj4AYD@A4,TU//NIZBAKSIlxP8xMgwrQ9uJZhzgDuwcB/m5ZM/sKL0zeme5WULIi41cWoAUYRuUgCyFVwBBhcAPFUy6hchiXUhnSsWkVqYmS4tbav0G9ZiCAv/6WLs/6wKAABI+N/h+AAB6JXoN4OS4RKrSTRsWo6GeT4B4ZMaOgtGw1J+v5AR+SUHrd2rcw1SlQNtv9t6TQ//NIZA0JvIlEAM3kAApJGpABjWgAJ094RAgaQho0VmDIhAmX9DDRIpaUUOFJNU2zIrv+rvpu1hJq/qz/8/871nXe/qtn@/4,lvmOu2rHywkCTf8WU1X6h2qMawPwRUhBIhPA3DQexuXDMeYBQBcBJFc9yX/6Z0vv5l+/zh03NJBtVIAAB9aPvwP8Y/74MWhO//NIZBEKXK9rLMfMAQqRJtI5h2gCvgnqHM4NeGOAoiyRBNSY91iFRAAzeAFEcTQMMjRcb5JlQ4YkWUfaTbk+gy1JIs/5FDxuxmbn0GT60c/k/Bwp/0vSAKAYgMAKBbAB+YR9UCoxNUZvWNOaAhBAeF7TxhD///6VZdMP/zJ2oKu0VbR/pcCgBtv/wOBwAAAH//NIZA4J9L9vL8e0AQqxMvJZgjkGbyuv00ICczd2+Ah77I+xY8Y2pZJlMKiJSl/wuAawW5h3qOo1s6GHOC8l43HiOZGvWntj2nySK0Ff/5icSKGv/ANUAwqGNgAY+G4HAb4GfkmxGh+p56Dz/+an+YwAYTxsVZFT+3oqDwe/lwwpKq0q//+GsfoPxARpfoiC//NIZA4J/HE6AMzsAAmgynwBh5gAMKsUDf0vYoqWAgWHzIhIGCaPIIIznExPONSqlaxFM/MwQCIxl1+llNNq1z/1rD//72ISBoqx3EoSBpv5U6DSzv/V/+FwDAorkCDkyMQTcJQIIcDogztNlyY4HwAtiespF9/Me7DoIcRVAYt2oRKY2G41G3//x/SjGzGC//NIZBIKPKFnLMfMAQro+tJZh1ACJg1idoad2QJZ0UDUTQBgR3tAJsJ+ZMgJYL5l8cZ8i5FyuJSFBEyTph+RQuMyCBMjmjKk0RY2/m4fOFLPzgf01AADfUKFkfD8fgD/0RgKoSm65k1BF8NRvo/8RZOPGscaab+SGAORFga+Ykq1wAEjFCvf0/oA3V8It52w//NIZA8H/E0ub8W8AAp43jQBi2AAuCWQwYjF9NCP5jCUKF8kWzdasf/Zprku+YFrrd+Y/M+36bmvbQVF/6UO+n6tHtND0f9wxLt7WpDwAQ8EGNIocAsDVkTgPUnfW22TL9/cmekwKlKy1KU8nuoPoYAwCBBBhAKBAKBgAAfZsqH9v1f9n1AW3+r/+KdX/6Tu//NIZCAEMAN5H8CKAQdwAi1/gRACKLgwQEhAYEAoFAADc9q7df9X2f9n/qZ/+xdv//Wg8pWDCBAMCkRDIZjMVgAfPbSHb+rEW/zKjFpdoWB+Ay+ejRYHhIJOjbbC4gRJEL/RmsRJFiJIaaduQVDgbMOJgBJ93NGTBpxhr929M2YAhkMASm5PvTemlxrxaM+J//NIZFsK4I8o38ScgQmRFkABhzgAAt8PCT0MCUA4JfZzDAAQJCEU/+OKOjy//jpRQl/zKP+achWVpm9VtzAi+DSjdR4jiK+o9y3LBzg157lvf6nyx5ODV9R7iLz3/4ivz3+Vtuqar5LwJQ0IobqeJT2p4NPluWPCLEV9R7iL/EXnuIvPJxF1HuW9/9R4Rab///NIRFgFYAMjC+AMAQuAAkWXwRAC7kxBTUUzLjEwMF@V138,TEFNRTMuMTAw//NIZHoAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V152,TEFNRTMuMTAw//NIZIQAAAGk@A9,0g@A5,@V164,//NIZIQAAAGk@A9,0g@A5,@V164'));
+const RELEASE = await createAudio('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');
 
 function setTransition(in_elem, in_shorthand, in_val1, in_val2) {
 	const components = in_shorthand.split(/\s+/);
@@ -2655,7 +2669,7 @@ function uiRights() {
 ]);
 
 /*
-	(10) event handlers
+	(7) event handlers
 */
 
 const gDrag = {
