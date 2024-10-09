@@ -7,8 +7,8 @@
 <script type='importmap'>
 {
 	"imports": {
-		"three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.min.js",
-		"utils": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/utils/BufferGeometryUtils.js"
+		"three": "https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.module.min.js",
+		"utils": "https://cdn.jsdelivr.net/npm/three@0.168.0/examples/jsm/utils/BufferGeometryUtils.js"
 	}
 }
 </script>
@@ -206,13 +206,6 @@ function pseudoMessageDigest2(in_string) {
 }
 
 const createAudio = (() => {
-	return async (in_base64) => {
-		return new Audio();
-	};
-})();
-
-/*
-const createAudio = (() => {
 	function makeStream(in_uint8Array) {
 		return new ReadableStream({
 			start(controller) {
@@ -263,7 +256,6 @@ const createAudio = (() => {
 		}
 	};
 })();
-*/
 
 class cEase {
 	constructor(in_from, in_to, in_duration) {
