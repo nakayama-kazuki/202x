@@ -7,8 +7,8 @@
 <script type='importmap'>
 {
 	"imports": {
-		"three": "https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.module.min.js",
-		"utils": "https://cdn.jsdelivr.net/npm/three@0.168.0/examples/jsm/utils/BufferGeometryUtils.js"
+		"three": "https://cdn.jsdelivr.net/npm/three@0.167.0/build/three.module.min.js",
+		"utils": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/utils/BufferGeometryUtils.js"
 	}
 }
 </script>
@@ -190,66 +190,6 @@ Array.prototype[forEachCombination] = function(in_n, in_callback) {
 	return (combine)([], 0, in_n);
 };
 
-function pseudoMessageDigest1(in_array) {
-	let hash = 0;
-	in_array.sort().forEach(in_entry => {
-		for (let i = 0; i < in_entry.length; i++) {
-			hash = (hash << 5) - hash + in_entry.charCodeAt(i);
-			hash |= 0;
-		}
-	});
-	return hash >>> 0;
-}
-
-function pseudoMessageDigest2(in_string) {
-	return pseudoMessageDigest1([in_string]);
-}
-
-const METACHAR1 = '@'
-const METACHAR2 = ',';
-
-function simpleCompress(input) {
-	let output = '';
-	let i = 0;
-	while (i < input.length) {
-		let count = 1;
-		while (i + 1 < input.length && input[i] === input[i + 1]) {
-			i++;
-			count++;
-		}
-		if (count >= 4) {
-			output += METACHAR1 + input[i] + count + METACHAR2;
-		} else {
-			output += input[i].repeat(count);
-		}
-		i++;
-	}
-	return output;
-}
-
-function simpleDecompress(input) {
-	let output = '';
-	let i = 0;
-	while (i < input.length) {
-		if (input[i] === METACHAR1) {
-			let char = input[i + 1];
-			let count = '';
-			i += 2;
-			while (i < input.length && input[i] !== METACHAR2) {
-				count += input[i];
-				i++;
-			}
-			output += char.repeat(parseInt(count, 10));
-			// to skip METACHAR2
-			i++;
-		} else {
-			output += input[i];
-			i++;
-		}
-	}
-	return output;
-}
-
 class cEase {
 	constructor(in_from, in_to, in_duration) {
 		this.from = in_from;
@@ -274,6 +214,21 @@ class cEase {
 	currentEasingOut() {
 		return this.#currentEasing(t => t * (2 - t));
 	}
+}
+
+function pseudoMessageDigest1(in_array) {
+	let hash = 0;
+	in_array.sort().forEach(in_entry => {
+		for (let i = 0; i < in_entry.length; i++) {
+			hash = (hash << 5) - hash + in_entry.charCodeAt(i);
+			hash |= 0;
+		}
+	});
+	return hash >>> 0;
+}
+
+function pseudoMessageDigest2(in_string) {
+	return pseudoMessageDigest1([in_string]);
 }
 
 /*
@@ -378,20 +333,6 @@ class cCyclicMap extends Map {
 	}
 }
 
-class cCyclicValues extends Array {
-	constructor(...args) {
-		super(...args);
-		this.currentIndex = 0;
-	}
-	currValue() {
-		return this[this.currentIndex];
-	}
-	nextValue() {
-		this.currentIndex = (this.currentIndex + 1) % this.length;
-		return this.currValue();
-	}
-}
-
 function emulateTouchEvent(in_elem) {
 	const eventMapper = [
 		{
@@ -471,70 +412,6 @@ function emulateTouchEvent(in_elem) {
 	});
 }
 
-const clipArea = Symbol();
-const clipClearArea = Symbol();
-
-HTMLCanvasElement.prototype[clipArea] = function(in_margin, in_callback) {
-	const w = this.width;
-	const h = this.height;
-	let ctx = this.getContext('2d');
-	if (!ctx) {
-		/*
-			*** NOTE ***
-			Sometimes can't get 2D context ( ex. Three.js ).
-			So, to get it, copy bitmap to alternative canvas.
-		*/
-		const alternative = document.createElement('canvas');
-		alternative.width = w;
-		alternative.height = h;
-		ctx = alternative.getContext('2d');
-		ctx.drawImage(this, 0, 0);
-	}
-	const rgba = (ctx.getImageData(0, 0, w, h)).data;
-	let l = Number.POSITIVE_INFINITY;
-	let t = Number.POSITIVE_INFINITY;
-	let r = Number.NEGATIVE_INFINITY;
-	let b = Number.NEGATIVE_INFINITY;
-	for (let y = 0; y < h; y++) {
-		for (let x = 0; x < w; x++) {
-			const pt = (y * w + x) * 4;
-			if (!(in_callback)(rgba[pt + 0], rgba[pt + 1], rgba[pt + 2], rgba[pt + 3])) {
-				continue;
-			}
-			if (x < l) {
-				l = x;
-			}
-			if (y < t) {
-				t = y;
-			}
-			if (x > r) {
-				r = x;
-			}
-			if (y > b) {
-				b = y;
-			}
-		}
-	}
-	l = Math.max(l - in_margin, 0);
-	t = Math.max(t - in_margin, 0);
-	r = Math.min(r + in_margin, w - 1);
-	b = Math.min(b + in_margin, h - 1);
-	return {
-		l : l,
-		t : t,
-		r : r,
-		b : b,
-		w : r - l + 1,
-		h : b - t + 1
-	};
-};
-
-HTMLCanvasElement.prototype[clipClearArea] = function(in_margin) {
-	this[clipArea](in_margin, (in_r, in_g, in_b, in_a) => {
-		return (in_a > 0);
-	});
-}
-
 const XYZ = ['x', 'y', 'z'];
 
 const ROTATE = (in_obj, in_vec3) => {
@@ -556,30 +433,9 @@ const DIRECTION = {
 	ZN : VEC3(0, 0, -1)
 }
 
-function makeTrapezoidGeometryParts(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_YLen, in_Rad = 0) {
+function trapezoidGeometryUtil(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_YLen, in_Rad = 0) {
 	const parts = [];
-	/*
-		|
-		+- geometry
-		|	|
-		|	+- userData.isSurface : true / false
-		|	|
-		|	+- userData.groupName : 'top' / 'bottom' / 'middle'
-		|
-		+- geometry
-		|
-		+- ...
-	*/
 	const DEG90 = Math.PI * 1 / 2;
-	const setGroupName = (in_vertices) => {
-		if (in_vertices.every(vertex => vertex.y > 0)) {
-			return 'top';
-		}
-		if (in_vertices.every(vertex => vertex.y < 0)) {
-			return 'bottom';
-		}
-		return 'middle';
-	};
 	/*
 			 (+)
 			  |
@@ -677,8 +533,7 @@ function makeTrapezoidGeometryParts(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_Y
 		geometry.setIndex(ix);
 		geometry.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(uv), 2));
 		geometry.computeVertexNormals();
-		geometry.userData.isSurface = true;
-		geometry.userData.groupName = setGroupName(vertices);
+		geometry.userData.surface = true;
 		parts.push(geometry);
 	}
 	/*
@@ -740,8 +595,7 @@ function makeTrapezoidGeometryParts(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_Y
 		const geometry = makeEdgeCylinder(length, in_conf.P[0], in_conf.P[1]);
 		ROTATE(geometry, in_conf.R);
 		geometry.translate(centroid(in_conf.E));
-		geometry.userData.isSurface = false;
-		geometry.userData.groupName = setGroupName(in_conf.E);
+		geometry.userData.surface = false;
 		parts.push(geometry);
 	});
 	const vertical = VEC3(0, 1, 0);
@@ -758,8 +612,7 @@ function makeTrapezoidGeometryParts(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_Y
 		quaternion.setFromUnitVectors(vertical, slope);
 		geometry.applyQuaternion(quaternion);
 		geometry.translate(centroid(in_conf.E));
-		geometry.userData.isSurface = false;
-		geometry.userData.groupName = setGroupName(in_conf.E);
+		geometry.userData.surface = false;
 		parts.push(geometry);
 	});
 	/*
@@ -798,21 +651,15 @@ function makeTrapezoidGeometryParts(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_Y
 	cornerConfigSet.forEach(in_conf => {
 		const geometry = makeCornerSphere(...in_conf.P);
 		geometry.translate(in_conf.C);
-		geometry.userData.isSurface = false;
-		geometry.userData.groupName = setGroupName([in_conf.C]);
+		geometry.userData.surface = false;
 		parts.push(geometry);
 	});
-	return parts;
-}
-
-function trapezoidGeometryUtil(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_YLen, in_Rad = 0) {
-	const parts = makeTrapezoidGeometryParts(in_tXLen, in_tZLen, in_bXLen, in_bZLen, in_YLen, in_Rad);
 	// assume order of groups ( BufferGeometry x6, other geometries ... )
 	const groups = [];
 	let edgeGroup = 0;
 	const mergedGeometry = UTILS.mergeGeometries(parts);
 	parts.forEach(in_part => {
-		if (in_part.userData.isSurface) {
+		if (in_part.userData.surface) {
 			groups.push(in_part.index.count);
 		} else {
 			edgeGroup += in_part.index.count;
@@ -840,40 +687,25 @@ function trapezoidGeometry(in_tLen, in_bLen, in_height, in_thickness) {
 	return trapezoidGeometryUtil(in_tLen, 0, in_bLen, 0, in_height, in_thickness);
 }
 
-function capsuleConfigure(in_rad_t, in_rad_b, in_h) {
-	/*
-	          +-(rad_t)-+
-		     /|         |
-		    / |         |
-		   /  |         | in_h
-		  /   |         |
-		 /    |         |
-		+-----+-(rad_b)-+
-	*/
-	const ratio = (in_rad_b - in_rad_t) / in_h;
-	return {
-		theta : Math.atan(1 / ratio),
-		delta : {
-			t : in_rad_t * ratio,
-			b : in_rad_b * ratio
-		},
-		radius : {
-			t : (in_rad_t ** 2 + (in_rad_t * ratio) ** 2) ** 0.5,
-			b : (in_rad_b ** 2 + (in_rad_b * ratio) ** 2) ** 0.5
-		},
-	};
-}
-
 function customCapsuleGeometry(in_rad_t, in_rad_b, in_h, in_rSeg = 32, in_hSeg = 1) {
-	const conf = capsuleConfigure(in_rad_t, in_rad_b, in_h);
 	const sphereParams = [32, 16, 0, Math.PI * 2];
+	const ratio = (in_rad_b - in_rad_t) / in_h;
+	const theta = Math.atan(1 / ratio);
+	const calibrate = (in_rad) => {
+		return {
+			delta : in_rad * ratio,
+			radius : (in_rad ** 2 + (in_rad * ratio) ** 2) ** 0.5
+		};
+	};
 	const parts = [];
 	// top
-	parts.push(new THREE.SphereGeometry(conf.radius.t, ...sphereParams, 0, conf.theta));
-	parts[parts.length - 1].translate(0, conf.delta.t * -1 + in_h / 2, 0);
+	const ts = calibrate(in_rad_t);
+	parts.push(new THREE.SphereGeometry(ts.radius, ...sphereParams, 0, theta));
+	parts[parts.length - 1].translate(0, ts.delta * -1 + in_h / 2, 0);
 	// bottom
-	parts.push(new THREE.SphereGeometry(conf.radius.b, ...sphereParams, conf.theta, Math.PI - conf.theta));
-	parts[parts.length - 1].translate(0, conf.delta.b * -1 - in_h / 2, 0);
+	const bs = calibrate(in_rad_b);
+	parts.push(new THREE.SphereGeometry(bs.radius, ...sphereParams, theta, Math.PI - theta));
+	parts[parts.length - 1].translate(0, bs.delta * -1 - in_h / 2, 0);
 	// middle
 	parts.push(new THREE.CylinderGeometry(in_rad_t, in_rad_b, in_h, in_rSeg, in_hSeg));
 	const mergedGeometry = UTILS.mergeGeometries(parts);
@@ -925,10 +757,10 @@ class cSphericalWorld {
 		}
 	][cSphericalWorld.#defaultCameraSetting];
 	static #rotationCallbackName = Symbol();
-	static #cameraName = randomString();
 	#scene = null;
 	#renderer = null;
 	#cameraCtrl = null;
+	#cameraName = randomString();
 	#anchorPosV2 = null;
 	zoomMin = Number.NEGATIVE_INFINITY;
 	zoomMax = Number.POSITIVE_INFINITY;
@@ -942,9 +774,12 @@ class cSphericalWorld {
 		// renderer
 		this.#renderer = new THREE.WebGLRenderer({alpha : true, antialias : true});
 		this.#renderer.setPixelRatio(DEVICE_PIXEL_RATIO);
+		if (false) {
+			this.#renderer.shadowMap.enabled = true;
+		}
 		// camera
 		const camera = new THREE.PerspectiveCamera();
-		camera.name = cSphericalWorld.#cameraName;
+		camera.name = this.#cameraName;
 		camera.fov = 45;
 		camera.near = 1;
 		camera.far = in_radius * 2;
@@ -954,11 +789,6 @@ class cSphericalWorld {
 			in_radius * cSphericalWorld.#view.cameraFrom.z);
 		camera.up.copy(cSphericalWorld.#view.cameraUp);
 		camera.lookAt(VEC3(0, 0, 0));
-		if (false) {
-			for (let i = 0; i < THREE.Layers.MAX_LAYERS; i++) {
-				camera.layers.enable(i);
-			}
-		}
 		this.#cameraCtrl = new THREE.Object3D();
 		this.#cameraCtrl.add(camera);
 		// light
@@ -968,6 +798,9 @@ class cSphericalWorld {
 			0,
 			in_radius * cSphericalWorld.#view.cameraUp.y,
 			in_radius * cSphericalWorld.#view.cameraFrom.z);
+		if (false) {
+			light.castShadow = true;
+		}
 		this.#cameraCtrl.add(light);
 		this.add(new THREE.AmbientLight(lightColor), true);
 		// other
@@ -984,7 +817,7 @@ class cSphericalWorld {
 		return this.#renderer.domElement;
 	}
 	get #camera() {
-		return this.#cameraCtrl.getObjectByName(cSphericalWorld.#cameraName);
+		return this.#cameraCtrl.getObjectByName(this.#cameraName);
 	}
 	getLookAt() {
 		return this.#camera.position.clone().negate();
