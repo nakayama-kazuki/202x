@@ -206,6 +206,13 @@ function pseudoMessageDigest2(in_string) {
 }
 
 const createAudio = (() => {
+	return async (in_base64) => {
+		return new Audio();
+	};
+})();
+
+/*
+const createAudio = (() => {
 	function makeStream(in_uint8Array) {
 		return new ReadableStream({
 			start(controller) {
@@ -256,6 +263,7 @@ const createAudio = (() => {
 		}
 	};
 })();
+*/
 
 class cEase {
 	constructor(in_from, in_to, in_duration) {
