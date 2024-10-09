@@ -248,7 +248,12 @@ const createAudio = (() => {
 		return (new TextDecoder()).decode(read);
 	}
 	return async (in_base64) => {
-		return new Audio('data:audio/mpeg;base64,' + await base64_to_gunzip(in_base64));
+		try {
+			const audioData = await base64_to_gunzip(in_base64);
+			return new Audio('data:audio/mpeg;base64,' + audioData);
+		} catch (error) {
+			return new Audio();
+		}
 	};
 })();
 
