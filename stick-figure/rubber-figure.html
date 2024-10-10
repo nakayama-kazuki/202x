@@ -2099,157 +2099,116 @@ const gCyclicItems = (in_material => {
 	return cyclic;
 })(gCyclicMaterials.currValue());
 
+function sharpBoxFigure(
+	in_headSize = 80,
+	in_bodyWidth = 150,
+	in_bodyHeight = 200,
+	in_armLen = 150,
+	in_legLen = 200,
+	in_circumf = 50,
+	in_bentCnt = 10) {
+
+	// body
+	const body = new cSoftBoxPart(in_bodyWidth, in_bodyHeight - in_circumf, in_circumf, in_bentCnt);
+	const bodyTopDeco = new THREE.BoxGeometry(in_bodyWidth, in_circumf, in_circumf);
+	bodyTopDeco.translate(0, 0, in_circumf / 2);
+	body.addGeometryToMoving(bodyTopDeco);
+
+	// head
+	const head = new cSoftBoxPart(in_headSize, in_headSize, in_circumf, in_bentCnt);
+	head.position.z = in_circumf;
+	body.addToMoving(head);
+
+	// arm (negative)
+	const arm_xn = new cSoftBoxPart(in_circumf, in_armLen, in_circumf, in_bentCnt);
+	arm_xn.rotateY(Math.PI / 2 * -1);
+	arm_xn.position.x = in_bodyWidth / 2 * -1;
+	arm_xn.position.z = in_circumf / 2;
+	body.addToMoving(arm_xn);
+
+	// arm (positive)
+	const arm_xp = new cSoftBoxPart(in_circumf, in_armLen, in_circumf, in_bentCnt);
+	arm_xp.rotateY(Math.PI / 2 * +1);
+	arm_xp.position.x = in_bodyWidth / 2 * +1;
+	arm_xp.position.z = in_circumf / 2;
+	body.addToMoving(arm_xp);
+
+	// leg (negative)
+	const leg_xn = new cSoftBoxPart(in_circumf, in_legLen, in_circumf, in_bentCnt);
+	leg_xn.rotateY(Math.PI);
+	leg_xn.position.x = (in_bodyWidth / 2 - in_circumf / 2) * -1;
+	body.addToAnchor(leg_xn);
+
+	// leg (positive)
+	const leg_xp = new cSoftBoxPart(in_circumf, in_legLen, in_circumf, in_bentCnt);
+	leg_xp.rotateY(Math.PI);
+	leg_xp.position.x = (in_bodyWidth / 2 - in_circumf / 2) * +1;
+	body.addToAnchor(leg_xp);
+
+	return new cFigure(head, body, arm_xn, arm_xp, leg_xn, leg_xp);
+}
+
+function roundedBoxFigure(
+	in_headSize = 120,
+	in_bodyWidth = 150,
+	in_bodyHeight = 200,
+	in_armLen = 150,
+	in_legLen = 200,
+	in_circumf = 50,
+	in_bentCnt = 10) {
+
+	// body
+	const bodyWidth = in_bodyWidth - in_circumf;
+	const bodyHeight = in_bodyHeight - in_circumf;
+	const body = new cSoftRoundBoxPart(bodyWidth, bodyHeight, in_circumf, in_bentCnt);
+
+	// head
+	const head = new cHead(in_headSize / 2);
+	body.addToMoving(head);
+	head.position.z = in_circumf / 2;
+
+	// arm (negative)
+	const arm_xn = new cSoftCapsulePart(in_circumf / 2, in_circumf / 2, in_armLen, in_bentCnt);
+	arm_xn.rotateY(Math.PI / 2 * -1);
+	arm_xn.position.x = bodyWidth / 2 * -1;
+	body.addToMoving(arm_xn);
+
+	// arm (positive)
+	const arm_xp = new cSoftCapsulePart(in_circumf / 2, in_circumf / 2, in_armLen, in_bentCnt);
+	arm_xp.rotateY(Math.PI / 2 * +1);
+	arm_xp.position.x = bodyWidth / 2 * +1;
+	body.addToMoving(arm_xp);
+
+	// leg (negative)
+	const leg_xn = new cSoftCapsulePart(in_circumf / 2, in_circumf / 2, in_legLen, in_bentCnt);
+	leg_xn.rotateY(Math.PI);
+	leg_xn.position.x = (bodyWidth / 2) * -1;
+	body.addToAnchor(leg_xn);
+
+	// leg (positive)
+	const leg_xp = new cSoftCapsulePart(in_circumf / 2, in_circumf / 2, in_legLen, in_bentCnt);
+	leg_xp.rotateY(Math.PI);
+	leg_xp.position.x = (bodyWidth / 2) * +1;
+	body.addToAnchor(leg_xp);
+
+	return new cFigure(head, body, arm_xn, arm_xp, leg_xn, leg_xp);
+}
+
 const gCyclicFigures = (in_material => {
 	const cyclic = new cCyclicValues();
-	const settings = [
-		{
-			HEADSIZE : 110,
-			THICK1 : 50,
-			BODY : {
-				SHOULDER : 160,
-				WAIST : 120,
-				HEIGHT : 200
-			},
-			ARM : {
-				LENGTH : 200,
-				THICK2 : 55,
-				NEGA : {
-					DLT : VEC3(0, 0, 0),
-					DIR : VEC3(-10, 0, -10)
-				},
-				POSI : {
-					DLT : VEC3(0, 0, 0),
-					DIR : VEC3(+10, 0, -10)
-				}
-			},
-			LEG : {
-				LENGTH : 250,
-				THICK2 : 55,
-				NEGA : {
-					DLT : VEC3(0, 0, 0),
-					DIR : VEC3(-1, 0, -10)
-				},
-				POSI : {
-					DLT : VEC3(0, 0, 0),
-					DIR : VEC3(+1, 0, -10)
-				}
-			}
-		},
-		{
-			HEADSIZE : 100,
-			THICK1 : 45,
-			BODY : {
-				SHOULDER : 110,
-				WAIST : 180,
-				HEIGHT : 200
-			},
-			ARM : {
-				LENGTH : 190,
-				THICK2 : 35,
-				NEGA : {
-					DLT : VEC3(0, 0, 0),
-					DIR : VEC3(-10, 0, -10)
-				},
-				POSI : {
-					DLT : VEC3(0, 0, 0),
-					DIR : VEC3(+10, 0, -10)
-				}
-			},
-			LEG : {
-				LENGTH : 220,
-				THICK2 : 35,
-				NEGA : {
-					DLT : VEC3(+35, 0, 0),
-					DIR : VEC3(0, 0, -10)
-				},
-				POSI : {
-					DLT : VEC3(-35, 0, 0),
-					DIR : VEC3(0, 0, -10)
-				}
-			}
-		},
-		{
-			HEADSIZE : 100,
-			THICK1 : 45,
-			BODY : {
-				SHOULDER : 120,
-				WAIST : 120,
-				HEIGHT : 180
-			},
-			ARM : {
-				LENGTH : 180,
-				THICK2 : 45,
-				NEGA : {
-					DLT : VEC3(0, 0, 0),
-					DIR : VEC3(-10, 0, -10)
-				},
-				POSI : {
-					DLT : VEC3(0, 0, 0),
-					DIR : VEC3(+10, 0, -10)
-				}
-			},
-			LEG : {
-				LENGTH : 220,
-				THICK2 : 45,
-				NEGA : {
-					DLT : VEC3(0, 0, 0),
-					DIR : VEC3(0, 0, -10)
-				},
-				POSI : {
-					DLT : VEC3(0, 0, 0),
-					DIR : VEC3(0, 0, -10)
-				}
-			}
-		}
+	const figureMakers = [
+		sharpBoxFigure,
+		roundedBoxFigure
 	];
-	settings.forEach(in_setting => {
-		const upperBodyRatio = 0.6;
-		const radius = in_setting.THICK1 / 2;
-		// body
-		const body = roundedBoxBody(
-			in_setting.BODY.SHOULDER,
-			in_setting.BODY.WAIST,
-			[
-				in_setting.BODY.HEIGHT * (1 - upperBodyRatio),
-				in_setting.BODY.HEIGHT * upperBodyRatio
-			],
-			radius
-		);
-		// head
-		const head = new cHead(in_setting.HEADSIZE / 2);
-		body.addToMoving(head);
-		head.position.z = radius / 2;
-		// arm (negative)
-		const narm = createCapsuleArm1(in_setting.ARM.THICK2 / 2, radius, in_setting.ARM.LENGTH, 2);
-		narm.object.lookAt(in_setting.ARM.NEGA.DIR);
-		body.addToMoving(narm.object);
-		narm.object.position.x = (in_setting.BODY.SHOULDER / 2 - radius) * -1;
-		narm.object.position.add(in_setting.ARM.NEGA.DLT);
-		// arm (positive)
-		const parm = createCapsuleArm1(in_setting.ARM.THICK2 / 2, radius, in_setting.ARM.LENGTH, 2);
-		parm.object.lookAt(in_setting.ARM.POSI.DIR);
-		body.addToMoving(parm.object);
-		parm.object.position.x = (in_setting.BODY.SHOULDER / 2 - radius) * +1;
-		parm.object.position.add(in_setting.ARM.POSI.DLT);
-		// leg (negative)
-		const nleg = createCapsuleArm1(in_setting.LEG.THICK2 / 2, radius, in_setting.LEG.LENGTH, 2);
-		nleg.object.lookAt(in_setting.LEG.NEGA.DIR);
-		body.addToAnchor(nleg.object);
-		nleg.object.position.x = (in_setting.BODY.WAIST / 2 - radius) * -1;
-		nleg.object.position.add(in_setting.LEG.NEGA.DLT);
-		// leg (positive)
-		const pleg = createCapsuleArm1(in_setting.LEG.THICK2 / 2, radius, in_setting.LEG.LENGTH, 2);
-		pleg.object.lookAt(in_setting.LEG.POSI.DIR);
-		body.addToAnchor(pleg.object);
-		pleg.object.position.x = (in_setting.BODY.WAIST / 2 - radius) * +1;
-		pleg.object.position.add(in_setting.LEG.POSI.DLT);
-		// figure
-		const figure = new cFigure(head, body, narm.object, parm.object, nleg.object, pleg.object);
+	figureMakers.forEach(in_maker => {
+		const figure = (in_maker)();
 		figure.resetMaterial(in_material);
 		cyclic.push(figure);
 	});
 	return cyclic;
 })(gCyclicMaterials.currValue());
+
+let gDoubleFigure = null;
 
 function incrementMaterial() {
 	const incremented = gCyclicMaterials.incrementedValue();
@@ -2263,6 +2222,9 @@ function incrementMaterial() {
 	gCyclicFigures.forEach(in_figure => {
 		in_figure.resetMaterial(incremented);
 	});
+	if (gDoubleFigure) {
+		gDoubleFigure.material = incremented;
+	}
 }
 
 function incrementItem() {
@@ -2391,8 +2353,6 @@ function uiDefaultView() {
 	gWorld.motionDefaultView();
 }
 
-let gDouble = null;
-
 function incrementDouble(in_elem) {
 	const currDouble = gCyclicDouble.currValue();
 	const nextDouble = gCyclicDouble.incrementedValue();
@@ -2404,18 +2364,18 @@ function incrementDouble(in_elem) {
 async function uiDouble(in_distance) {
 	const currFigure = gCyclicFigures.currValue();
 	const geometry = currFigure.cloneGeometry(false);
-	if (gDouble) {
-		gWorld.remove(gDouble);
-		gDouble.geometry.dispose();
+	if (gDoubleFigure) {
+		gWorld.remove(gDoubleFigure);
+		gDoubleFigure.geometry.dispose();
 	}
-	gDouble = new THREE.Mesh(geometry, gCyclicMaterials.currValue());
-	gDouble.raycast = () => {};
+	gDoubleFigure = new THREE.Mesh(geometry, gCyclicMaterials.currValue());
+	gDoubleFigure.raycast = () => {};
 	gWorld.remove(currFigure);
-	gWorld.add(gDouble);
+	gWorld.add(gDoubleFigure);
 	gWorld.startRotation(VEC3().random().multiplyScalar(0.005));
 	const vec3 = gWorld.getLookAt().normalize();
 	await gWorld.easeOut(0, in_distance, 500, (in_currentValue) => {
-		gDouble.position.copy(vec3.clone().multiplyScalar(in_currentValue));
+		gDoubleFigure.position.copy(vec3.clone().multiplyScalar(in_currentValue));
 	});
 	gWorld.stopRotation();
 	gWorld.add(currFigure);
@@ -2433,10 +2393,10 @@ function uiDoubleFar(in_ev) {
 
 function uiDoubleDelete(in_ev) {
 	incrementDouble(in_ev.target);
-	if (gDouble) {
-		gWorld.remove(gDouble);
-		gDouble.geometry.dispose();
-		gDouble = null;
+	if (gDoubleFigure) {
+		gWorld.remove(gDoubleFigure);
+		gDoubleFigure.geometry.dispose();
+		gDoubleFigure = null;
 	}
 }
 
@@ -2679,6 +2639,19 @@ const gDrag = {
 		return true;
 	}
 };
+
+(() => {
+	/*
+		*** NOTE ***
+		Safari may restrict sound without user interaction.
+		because of this, the sound does not work without this code.
+	*/
+	const once = (in_ev) => {
+		RELEASE.play();
+		gWorld.canvas.removeEventListener('mousedown', once);
+	};
+	gWorld.canvas.addEventListener('mousedown', once);
+})();
 
 gWorld.canvas.addEventListener('mousedown', in_ev => {
 	if (gDrag.isActive()) {

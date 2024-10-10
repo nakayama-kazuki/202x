@@ -2251,6 +2251,8 @@ const gCyclicFigures = (in_material => {
 	return cyclic;
 })(gCyclicMaterials.currValue());
 
+let gDoubleFigure = null;
+
 function incrementMaterial() {
 	const incremented = gCyclicMaterials.incrementedValue();
 	// gCyclicMaterials --> gCyclicItems
@@ -2263,6 +2265,9 @@ function incrementMaterial() {
 	gCyclicFigures.forEach(in_figure => {
 		in_figure.resetMaterial(incremented);
 	});
+	if (gDoubleFigure) {
+		gDoubleFigure.material = incremented;
+	}
 }
 
 function incrementItem() {
@@ -2391,8 +2396,6 @@ function uiDefaultView() {
 	gWorld.motionDefaultView();
 }
 
-let gDouble = null;
-
 function incrementDouble(in_elem) {
 	const currDouble = gCyclicDouble.currValue();
 	const nextDouble = gCyclicDouble.incrementedValue();
@@ -2404,18 +2407,18 @@ function incrementDouble(in_elem) {
 async function uiDouble(in_distance) {
 	const currFigure = gCyclicFigures.currValue();
 	const geometry = currFigure.cloneGeometry(false);
-	if (gDouble) {
-		gWorld.remove(gDouble);
-		gDouble.geometry.dispose();
+	if (gDoubleFigure) {
+		gWorld.remove(gDoubleFigure);
+		gDoubleFigure.geometry.dispose();
 	}
-	gDouble = new THREE.Mesh(geometry, gCyclicMaterials.currValue());
-	gDouble.raycast = () => {};
+	gDoubleFigure = new THREE.Mesh(geometry, gCyclicMaterials.currValue());
+	gDoubleFigure.raycast = () => {};
 	gWorld.remove(currFigure);
-	gWorld.add(gDouble);
+	gWorld.add(gDoubleFigure);
 	gWorld.startRotation(VEC3().random().multiplyScalar(0.005));
 	const vec3 = gWorld.getLookAt().normalize();
 	await gWorld.easeOut(0, in_distance, 500, (in_currentValue) => {
-		gDouble.position.copy(vec3.clone().multiplyScalar(in_currentValue));
+		gDoubleFigure.position.copy(vec3.clone().multiplyScalar(in_currentValue));
 	});
 	gWorld.stopRotation();
 	gWorld.add(currFigure);
@@ -2433,10 +2436,10 @@ function uiDoubleFar(in_ev) {
 
 function uiDoubleDelete(in_ev) {
 	incrementDouble(in_ev.target);
-	if (gDouble) {
-		gWorld.remove(gDouble);
-		gDouble.geometry.dispose();
-		gDouble = null;
+	if (gDoubleFigure) {
+		gWorld.remove(gDoubleFigure);
+		gDoubleFigure.geometry.dispose();
+		gDoubleFigure = null;
 	}
 }
 
@@ -2679,6 +2682,19 @@ const gDrag = {
 		return true;
 	}
 };
+
+(() => {
+	/*
+		*** NOTE ***
+		Safari may restrict sound without user interaction.
+		because of this, the sound does not work without this code.
+	*/
+	const once = (in_ev) => {
+		RELEASE.play();
+		gWorld.canvas.removeEventListener('mousedown', once);
+	};
+	gWorld.canvas.addEventListener('mousedown', once);
+})();
 
 gWorld.canvas.addEventListener('mousedown', in_ev => {
 	if (gDrag.isActive()) {
