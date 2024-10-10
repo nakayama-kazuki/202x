@@ -1639,7 +1639,6 @@ createAudio('eJzt0smyslgWhuELYrAAAWG4kU2PSA/OUARppD2AcPUZ/6mqUUWOzYzwnazpEys+gLN
 
 createAudio('eJztzsuOoloUgOEHYrDUXSAM1wbkfm0RYdaCbLwBoojw9J2qdCeVnJzp4XTCP/mnH4BrpIiGHy0dz5INNE41bU95QBFX7Y4VAPxZH7wCvBzG16AC14wACy8DHozVueAawo+Vl3GBgmM1qEbGi6Ws+hcjOP9QKy8TmUZPpEfqI2KGn6URmK/ABz4klaP6jzfKuugUdsmZfTF8FGs+JMBp/lgNLNknhzXLFHY4rol0HjDzNqrgmF68Loy+AHCNkCaGay2JnakMA64snqHEFCYDZ5sqABfxdY5ADmMrPD6E1unaLrl1RapfFk3YPNYKP7Rp8vCg2a3pCyR7t5BZEK+updcZaJWEf5fvPVjqUk1C4OqVcXKUhR6wLI8+cu3+3F1qQd/eADqPRT8db7lY7zofV+HLEwquP23oOAx1zyl4jJWI6XW3YczWnAusPv0pRf0cZb3WRQaiJFyqa/EOEYF73g7pioAYNVFOIY3FkJ5+PB246S6VbzAAcCKRdBA093rgiJDslyVJ27t25vb7eI9W/NPAwLNKc4TPuCcJHm+RxrvRsFzCyu0CorC8LQAWr1tjRy9xy7Wjz7+EGEpqJyffesRHj3d7rm7uNvCmbR41E3vKXDnpZOO3fyNRB/T3pcGg6806PcpJL6e08RTnoQS5jcu3lTe8fi0s4FMgRbnc2/orBakC8bm4PmO3i2MSk1PAEmrKgay+7rSWaK1Vdz9Y0miT3fNxdQQDarieiVCIZ5AqgRx30uZg2oz2PsNHnjq1Rz/kU+sLZV4BbMr8eUeMlAhtPW5pkGUJKcTdAThbeEfxl1/u5Z4eShv7M2KM3iFNNDXBrbpxw63TOVvsd/+jvru+/PoDEbUL/mnBvja189/6h98IZv9/2Oyfttk/bbN/2mb/tM3+aZv90zb7p232T9vsn7bZP22zf9r+dv/3/nb/L/4gyhY=').then(in_audio => AUDIO_DUMMY = in_audio);
 
-
 class cRubiksCube extends THREE.Object3D {
 	static #smallError = 0.01;
 	static get err() {
@@ -2704,6 +2703,11 @@ document.addEventListener('DOMContentLoaded', (() => {
 */
 
 (() => {
+	/*
+		*** NOTE ***
+		Safari may restrict sound without user interaction.
+		because of this, the sound does not work without this code.
+	*/
 	const once = (in_ev) => {
 		AUDIO_DUMMY.play();
 		gWorld.canvas.removeEventListener('mousedown', once);

@@ -2662,6 +2662,11 @@ document.addEventListener('DOMContentLoaded', (() => {
 */
 
 (() => {
+	/*
+		*** NOTE ***
+		Safari may restrict sound without user interaction.
+		because of this, the sound does not work without this code.
+	*/
 	const once = (in_ev) => {
 		AUDIO_DUMMY.play();
 		gWorld.canvas.removeEventListener('mousedown', once);
