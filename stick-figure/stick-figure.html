@@ -206,50 +206,33 @@ function pseudoMessageDigest2(in_string) {
 }
 
 const createAudio = (() => {
-	function makeStream(in_uint8Array) {
-		return new ReadableStream({
-			start(controller) {
-				controller.enqueue(in_uint8Array);
-				controller.close();
-			}
-		});
+	async function deflate(in_arrBuff) {
+		const stream1 = new Blob([in_arrBuff]).stream();
+		const stream2 = stream1.pipeThrough(new CompressionStream('deflate'));
+		return await new Response(stream2).arrayBuffer();
 	}
-	async function readStream(in_reader) {
-		let chunks = [];
-		let result;
-		while (!(result = await in_reader.read()).done) {
-			chunks.push(result.value);
-		}
-		const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
-		const uint8Array = new Uint8Array(totalLength);
-		let offset = 0;
-		for (const chunk of chunks) {
-			uint8Array.set(chunk, offset);
-			offset += chunk.length;
-		}
-		return uint8Array;
+	async function inflate(in_arrBuff) {
+		const stream1 = new Blob([in_arrBuff]).stream();
+		const stream2 = stream1.pipeThrough(new DecompressionStream('deflate'));
+		return await new Response(stream2).arrayBuffer();
 	}
-	async function gzip_to_base64(in_string) {
-		const uint8Array = (new TextEncoder()).encode(in_string);
-		const stream1 = makeStream(uint8Array);
-		const stream2 = stream1.pipeThrough(new CompressionStream('gzip'));
-		const read = await readStream(stream2.getReader());
-		return btoa(String.fromCharCode(...read));
+	async function deflate_and_base64encode(in_src) {
+		const originalArrBuff = new TextEncoder().encode(in_src);
+		const deflatedArrBuff = await deflate(originalArrBuff);
+		return btoa(String.fromCharCode(...new Uint8Array(deflatedArrBuff)));
 	}
-	async function base64_to_gunzip(in_base64) {
+	async function base64decode_and_inflate(in_base64) {
 		const bin = atob(in_base64);
-		const uint8Array = new Uint8Array(bin.length);
+		const arr = new Uint8Array(bin.length);
 		for (let i = 0; i < bin.length; i++) {
-			uint8Array[i] = bin.charCodeAt(i);
+			arr[i] = bin.charCodeAt(i);
 		}
-		const stream1 = makeStream(uint8Array);
-		const stream2 = stream1.pipeThrough(new DecompressionStream('gzip'));
-		const read = await readStream(stream2.getReader());
-		return (new TextDecoder()).decode(read);
+		const inflatedArrBuff = await inflate(arr.buffer);
+		return new TextDecoder().decode(inflatedArrBuff);
 	}
 	return async (in_base64) => {
-		return new Audio('data:audio/mpeg;base64,' + await base64_to_gunzip(in_base64));
-	};
+		return new Audio('data:audio/mpeg;base64,' + await base64decode_and_inflate(in_base64));
+	}
 })();
 
 class cEase {
@@ -2472,9 +2455,9 @@ const gCyclicDouble = new cCyclicValues(
 	}
 );
 
-const SHUTTER = await createAudio('H4sIAAAAAAAACu2WW6+yOBeAfxAXeN56uQoFCgKWk8AdiFROoqKC/voJvDMXM+N8s/eX7GQn40qMDYX2abuetrZLnwh+RVRa1HJwX9QAQHSm1t2RV8doq4OHS1dnAIAIABhisB2XuwpfXflwjyu31R+jDiQLObivB+Mv31/dkQueZDgW7auX/St64IeV4bCbnhc33YEW/hQiz43hC4HUuArvw5d9SzgAQOMMoDaxhT0ZsZ3y0HP1UZ/XOe4Mhy034kqko0Szi7nleV7gS10aTIxjVM1vO98b75VuyYipHGZnMz/JXhlmu+Ocy0+L/flyXnTXOJvd1xzfLlPl0XxYo8QPJsaTzczNcXG73JapMuY2+ZIfRob68eb9eA2H/gHNtF//BdKWfzxLgsqOIFy+GiTwfENDgE1fGw3N9IsyGlam/536R0I/CXZfwsSGlOfLpXM/I5TyOZ8F8OxCIksaz0S1lTEASSczEXYiFVmMwMiP06W4ydqu8loACrDh+WUtA1puFgIdWt+MdUPhuU4tCOtH97duAUAu+tKQLUNK0FhgR1zD1ZE6MZYeKrM2ZG5Pztrjyl+8NF34KbFngCmAqC5bf3pLVoIQHqqw6hNG5HCkdpqiA+KE6a7pZ42ByPO7q8/zXIcKi3yWxdJK2E5KLKpi6+pYPOz21lZUUag4XXIuD6pmrvjn6n4/B83UA74BkNumnIYHrGJ5pY2VC5schXHknXd3LjkwHAAyUn465VL+A1dWlaeA+w7Jn6YAMzCsEdDfF60GQLLNxFhvCidxxaOIcrq4CsfacQkUIolWBu74splimwGxQRD6fHFvxVyP1srRDq8n/HyA7hI6xsWipDEZReSsZdcsE5Dcs8g2BsCV4umyUgMIFLbhDggQ1w38ZJYQgDXdhWULDKRyRBUud7k64UkRtZsCUCzIE+p7a70OYbKs4LC9bacPq82O+ZVCyXPOYZa4sK0xGOdHZh7omdkziZFRpxZa1+DxIv0Y9Xlrh4qLCrVWwnSnE2jXNQTzGTAEZ0AJEbClwwlQ6hKSswMBxH9cok06zrukfmTAIjM+MA2pLPR3m+QhxkImPPyr+9S9YjwuFOycBA9UVAGAjqNiXwq1spc8j+YLAGNXz5SgVPx1OzikMBHrtbHdgSy7RGMo3AImCNI23RHAQQV3kFIGhOFQu7WLKEv29yueFMM+tTxwGgRWs4kjCWKvBLh+ZK6sTGOs0LA+zDZSEzrceZW6wVhYLoWbza1IcSqlrqxronvA35ucOINDeyZ3VneIIgjVESsZCjHQPBMVaXwHsApABcgrABHsGgAnp6s6b/K2iTWNFJd7cpHMat/qjRTub9bC2UmZvw43pwAl2oIEQG/ylbnzk9MaqtbUdRkHTy+Vu0285z4uFyGZP+l0B8rg0G6G2xahiAAOgZ1AegQALcayLF3qNRJGQgbalIEAFA4Um+4zW7n3OZpSxwM8zpl07mxsT5LE6oz7hVrykycLjRlRi9FWoCLdn9ZZvrjwNuJXsdvA3RGzQjXL/ZKfN/4xOcjkPjh0Y75oCwnfCiI0og1aBJCbRKfmVgCkE2KyzYFKaV3KE94iWE3jYvy0XdiPMaNIJWbY3atxHFLtqF0ey6QeuytyBpQzgFGhxUg/fSD+8nFk4IjmmQmkNmfpNedg67Ju2ribx6bsWWTrxCyBQxOpBkfQxRuudyBuELUw3d4ZsdfEYFB/gKCD8mFrTAjCkQWEzQAEmYa5U6dOhVwdO4n8/NhIVr8bbOa+LwAwypTMNFtQ+AlbnLBd+PJzcX/wsvuYQGa4mb7EV4OCNjgkA9I1ak4egCgFs0bnUd8tZK2fzUAnF9aB1YHQMmBM2KYYn0u7fWpwf7RAgedohmKe067euJIlHekyW64ut5GFJidmIm7r46K0L+Fk7fEiTQRvndEDqlPRz6ILi4ME5RH26OCQTMTduqHbFUPUIyZTLyOAAEMAcb0D3VLYDaqKAbSadGDUb4OMkjapvYTPika4PqxotkZ52lYFlpH6dDIJxFbhuam7LOzIlthw4vFa5Qmj7BQUgJnCbcmVX15Jw/N8W0jhx+BQSDdtx47FHnCbwzyvqA6zi4ZCMAMGCHRRNoMdGM8WFpbbIcd1n+sct7rk/Ws4WDIsRx/uKP/7TX9wKIKK7joUUcBRAxVIjQuEyeguJlsAVLTCDKIYIAf0753/vyy/zqFOTNAZMNdvI63IxGomGZ5OJapaFgCWqN5GBwRAqk/Mw19Cp+5Y0h+zThf/ZRzDOWQthASZoDV1fxQLC/CCtt9GJAJqxRAGRgiyLRAIKr+PZXCIsE/fn75M8oXcGhzSzj+AxR8cen7+/vRllK86NA1+AMvgkJOI/Kvr7ItF+3aHnCT/ASyDQ8boB+Tt7w4Zkx/A8suhKf0Beft26J9Z3g69Ynk79JLl7dBLlrdDr1jeDr1keTv0kuXt0CuWb3Xoa3n7n3Hoa3n7X3Hoa3n7duhv8d77/5Hlvfe/Ynnfn16yvB16yfJ26BXL26GXLG+HXrJ8r0Ofjm936Gss3+vQp+P7Hfoay/c69On4foe+xvJDHPoN9sD8nMgnAAA=');
+const SHUTTER = await createAudio('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');
 
-const RELEASE = await createAudio('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');
+const RELEASE = await createAudio('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');
 
 function setTransition(in_elem, in_shorthand, in_val1, in_val2) {
 	const components = in_shorthand.split(/\s+/);
