@@ -233,7 +233,7 @@ async function base64decode_and_inflate(in_base64) {
 	return new TextDecoder().decode(inflatedArrBuff);
 }
 
-async createAudio(in_base64) {
+async function createAudio(in_base64) {
 	return new Audio('data:audio/mpeg;base64,' + await base64decode_and_inflate(in_base64));
 }
 
