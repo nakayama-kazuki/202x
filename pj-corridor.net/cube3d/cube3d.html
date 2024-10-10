@@ -206,55 +206,33 @@ function pseudoMessageDigest2(in_string) {
 }
 
 const createAudio = (() => {
-	function makeStream(in_uint8Array) {
-		return new ReadableStream({
-			start(controller) {
-				controller.enqueue(in_uint8Array);
-				controller.close();
-			}
-		});
+	async function deflate(in_arrBuff) {
+		const stream1 = new Blob([in_arrBuff]).stream();
+		const stream2 = stream1.pipeThrough(new CompressionStream('deflate'));
+		return await new Response(stream2).arrayBuffer();
 	}
-	async function readStream(in_reader) {
-		let chunks = [];
-		let result;
-		while (!(result = await in_reader.read()).done) {
-			chunks.push(result.value);
-		}
-		const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
-		const uint8Array = new Uint8Array(totalLength);
-		let offset = 0;
-		for (const chunk of chunks) {
-			uint8Array.set(chunk, offset);
-			offset += chunk.length;
-		}
-		return uint8Array;
+	async function inflate(in_arrBuff) {
+		const stream1 = new Blob([in_arrBuff]).stream();
+		const stream2 = stream1.pipeThrough(new DecompressionStream('deflate'));
+		return await new Response(stream2).arrayBuffer();
 	}
-	async function gzip_to_base64(in_string) {
-		const uint8Array = (new TextEncoder()).encode(in_string);
-		const stream1 = makeStream(uint8Array);
-		const stream2 = stream1.pipeThrough(new CompressionStream('gzip'));
-		const read = await readStream(stream2.getReader());
-		return btoa(String.fromCharCode(...read));
+	async function deflate_and_base64encode(in_src) {
+		const originalArrBuff = new TextEncoder().encode(in_src);
+		const deflatedArrBuff = await deflate(originalArrBuff);
+		return btoa(String.fromCharCode(...new Uint8Array(deflatedArrBuff)));
 	}
-	async function base64_to_gunzip(in_base64) {
+	async function base64decode_and_inflate(in_base64) {
 		const bin = atob(in_base64);
-		const uint8Array = new Uint8Array(bin.length);
+		const arr = new Uint8Array(bin.length);
 		for (let i = 0; i < bin.length; i++) {
-			uint8Array[i] = bin.charCodeAt(i);
+			arr[i] = bin.charCodeAt(i);
 		}
-		const stream1 = makeStream(uint8Array);
-		const stream2 = stream1.pipeThrough(new DecompressionStream('gzip'));
-		const read = await readStream(stream2.getReader());
-		return (new TextDecoder()).decode(read);
+		const inflatedArrBuff = await inflate(arr.buffer);
+		return new TextDecoder().decode(inflatedArrBuff);
 	}
 	return async (in_base64) => {
-		try {
-			const audioData = await base64_to_gunzip(in_base64);
-			return new Audio('data:audio/mpeg;base64,' + audioData);
-		} catch (error) {
-			return new Audio();
-		}
-	};
+		return new Audio('data:audio/mpeg;base64,' + await base64decode_and_inflate(in_base64));
+	}
 })();
 
 class cEase {
@@ -498,8 +476,8 @@ HTMLCanvasElement.prototype[clipArea] = function(in_margin, in_callback) {
 	if (!ctx) {
 		/*
 			*** NOTE ***
-			Sometimes can't get 2D context ( ex. Three.js ).
-			So, to get it, copy bitmap to alternative canvas.
+			sometimes can't get 2D context ( ex. Three.js ).
+			so, to get it, copy bitmap to alternative canvas.
 		*/
 		const alternative = document.createElement('canvas');
 		alternative.width = w;
@@ -580,7 +558,6 @@ function safeMergeGeometry(in_arr, in_dispose = true) {
 	}
 	return merged;
 }
-
 
 function makeTrapezoidGeometryParts(in_txLen, in_tzLen, in_bxLen, in_bzLen, in_yLen, in_rad = 0) {
 	const parts = [];
@@ -1244,7 +1221,7 @@ class cSphericalWorld {
 	remove(in_removed, in_isSystemObject = false) {
 		/*
 			*** NOTE ***
-			As remove is idempotent,
+			as remove is idempotent,
 			children will be removed safety.
 		*/
 		this.#scene.remove(in_removed);
@@ -1905,8 +1882,8 @@ class cRubiksCube extends THREE.Object3D {
 		if (this.#instanceTest.mode) {
 			/*
 				*** NOTE ***
-				To display a reference using "console.log", you should use a copy of the reference.
-				Without it, the entity may appear updated when displayed because the console holds a reference,
+				to display a reference using "console.log", you should use a copy of the reference.
+				without it, the entity may appear updated when displayed because the console holds a reference,
 				and any subsequent changes to the object will be reflected in the console.
 			*/
 			console.log('#3', [...candidateBorder]);
@@ -2489,7 +2466,7 @@ function setTransition(in_elem, in_shorthand, in_val1, in_val2) {
 	window.setTimeout(() => {
 		/*
 			*** NOTE ***
-			To fire the transition function,
+			to fire the transition function,
 			the final style should be set in the next event loop.
 		*/
 		in_elem.style[components[0]] = in_val2;
