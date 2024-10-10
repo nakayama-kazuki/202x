@@ -2321,7 +2321,7 @@ test_makeGroupOnAxis([
 */
 
 const WORLD_RADIUS = CUBE_SIZE * 10;
-const WORLD_INIT_ZOOM = WORLD_RADIUS / 4;
+const WORLD_INIT_ZOOM = WORLD_RADIUS / 3;
 
 const gWorld = new cSphericalWorld(WORLD_RADIUS);
 
@@ -2699,6 +2699,15 @@ document.addEventListener('DOMContentLoaded', (() => {
 /*
 	(7) event handlers + emulation
 */
+
+(() => {
+	const once = (in_ev) => {
+		(new Audio()).play();
+		gWorld.canvas.removeEventListener('mousedown', once);
+		console.log('sound effect for Safari');
+	};
+	gWorld.canvas.addEventListener('mousedown', once);
+})();
 
 gWorld.canvas.addEventListener('mousedown', async (in_ev) => {
 	const vec2 = eventPos2RaycasterPos(in_ev);
