@@ -476,8 +476,8 @@ HTMLCanvasElement.prototype[clipArea] = function(in_margin, in_callback) {
 	if (!ctx) {
 		/*
 			*** NOTE ***
-			Sometimes can't get 2D context ( ex. Three.js ).
-			So, to get it, copy bitmap to alternative canvas.
+			sometimes can't get 2D context ( ex. Three.js ).
+			so, to get it, copy bitmap to alternative canvas.
 		*/
 		const alternative = document.createElement('canvas');
 		alternative.width = w;
@@ -1221,7 +1221,7 @@ class cSphericalWorld {
 	remove(in_removed, in_isSystemObject = false) {
 		/*
 			*** NOTE ***
-			As remove is idempotent,
+			as remove is idempotent,
 			children will be removed safety.
 		*/
 		this.#scene.remove(in_removed);
@@ -2309,8 +2309,8 @@ document.addEventListener('DOMContentLoaded', (() => {
 gCyclicFigures.forEach(in_figure => {
 	/*
 		*** NOTE ***
-		Adhoc!! without this process, morphing will be failed.
-		Maybe some initializ process, which includs scene.add(), is required.
+		adhoc!! without this process, morphing will be failed.
+		maybe some initializ process, which includs scene.add(), is required.
 	*/
 	gWorld.add(in_figure);
 	gWorld.remove(in_figure);
@@ -2455,6 +2455,13 @@ const gCyclicDouble = new cCyclicValues(
 	}
 );
 
+/*
+	*** NOTE ***
+	in Safari, using await to get audio will cause the process to fail.
+	I'm not sure of the reason, but top-level await might be the cause.
+	this time use then() to avoid the issue.
+*/
+
 let SHUTTER, RELEASE;
 
 createAudio('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').then(in_audio => SHUTTER = in_audio);
@@ -2468,7 +2475,7 @@ function setTransition(in_elem, in_shorthand, in_val1, in_val2) {
 	window.setTimeout(() => {
 		/*
 			*** NOTE ***
-			To fire the transition function,
+			to fire the transition function,
 			the final style should be set in the next event loop.
 		*/
 		in_elem.style[components[0]] = in_val2;
@@ -2504,8 +2511,8 @@ async function uiGetScreenShot() {
 	takeShotFlash();
 	/*
 		*** NOTE ***
-		Before getting betmap, you need re-render.
-		Without it, for example, you can't use canvas.toDataURL('image/png') etc. 
+		before getting betmap, you need re-render.
+		without it, for example, you can't use canvas.toDataURL('image/png') etc. 
 	*/
 	gWorld.render();
 	const box = gWorld.canvas[clipClearArea](CLIPMARGIN);
@@ -2516,8 +2523,8 @@ async function uiGetScreenShot() {
 	ctx.drawImage(gWorld.canvas, box.l, box.t, box.w, box.h, 0, 0, box.w, box.h);
 	/*
 		*** NOTE ***
-		The browser treats the data URL as a resource when using fetch.
-		The fetch function retrieves the data and allows us to convert it into a Blob.
+		the browser treats the data URL as a resource when using fetch.
+		the fetch function retrieves the data and allows us to convert it into a Blob.
 	*/
 	const dataUrl = tmpElem.toDataURL('image/png');
 	const response = await fetch(dataUrl);
