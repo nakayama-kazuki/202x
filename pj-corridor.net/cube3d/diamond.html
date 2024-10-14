@@ -1210,7 +1210,15 @@ class cSphericalWorld {
 	#getUserObjectRadius() {
 		let max = Number.NEGATIVE_INFINITY;
 		this.#userObjects.forEach(in_obj => {
-			const box = (new THREE.Box3()).setFromObject(in_obj);
+			const box = new THREE.Box3();
+			in_obj.traverse(in_descendant => {
+				if (in_descendant.visible && in_descendant.geometry) {
+					in_descendant.geometry.computeBoundingBox();
+					const descendantBox = in_descendant.geometry.boundingBox.clone();
+					descendantBox.applyMatrix4(in_descendant.matrixWorld);
+					box.union(descendantBox);
+				}
+			});
 			const sphere = new THREE.Sphere();
 			box.getBoundingSphere(sphere);
 			max = Math.max(max, sphere.radius);
