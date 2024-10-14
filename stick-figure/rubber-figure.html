@@ -551,6 +551,28 @@ const DIRECTION = {
 	ZN : VEC3(0, 0, -1)
 }
 
+const lookAtWithoutRotation = Symbol();
+
+THREE.Object3D.prototype[lookAtWithoutRotation] = function(in_dstV3, in_prjV3 = null) {
+	const updateParents = true;
+	const updateChildren = false;
+	this.updateWorldMatrix(updateParents, updateChildren);
+	const worldPosition = (VEC3()).setFromMatrixPosition(this.matrixWorld);
+	const up = VEC3(0, 1, 0).applyQuaternion(this.getWorldQuaternion(new THREE.Quaternion()));
+	const eye = in_dstV3.clone();
+	if (in_prjV3) {
+		up.projectOnPlane(in_prjV3).normalize();
+		eye.sub(worldPosition).projectOnPlane(in_prjV3).add(worldPosition);
+	}
+	const localMatrix = (new THREE.Matrix4()).lookAt(eye, worldPosition, up);
+	this.quaternion.setFromRotationMatrix(localMatrix);
+	if (this.parent) {
+		localMatrix.extractRotation(this.parent.matrixWorld);
+		const parentQuat = (new THREE.Quaternion()).setFromRotationMatrix(localMatrix);
+		this.quaternion.premultiply(parentQuat.invert());
+	}
+}
+
 function safeMergeGeometry(in_arr, in_dispose = true) {
 	const merged = UTILS.mergeGeometries(in_arr);
 	if (in_dispose) {
@@ -1489,12 +1511,20 @@ class cAbstractPart extends THREE.SkinnedMesh {
 	}
 	cloneGeometry(in_local = true) {
 		const parts = [];
-		this.#interlockings.forEach(in_interlocking => {
-			const part = in_interlocking.geometry.clone();
-			// idempot : some interlocking objects does not have these attributes
-			part.deleteAttribute('skinIndex');
-			part.deleteAttribute('skinWeight');
-			part.applyMatrix4(in_interlocking.matrixWorld);
+		this.#interlockings.forEach(in_obj => {
+			let part;
+			if ((in_obj instanceof cAbstractPart) && in_obj.isBent()) {
+				part = in_obj.makeBentGeometry();
+			} else {
+				part = in_obj.geometry.clone();
+			}
+			const keep = ['position', 'normal'];
+			for (const attribute in part.attributes) {
+				if (!keep.includes(attribute)) {
+					part.deleteAttribute(attribute);
+				}
+			}
+			part.applyMatrix4(in_obj.matrixWorld);
 			parts.push(part);
 		});
 		const merged = safeMergeGeometry(parts);
@@ -1504,8 +1534,8 @@ class cAbstractPart extends THREE.SkinnedMesh {
 		return merged;
 	}
 	resetMaterial(in_material) {
-		this.#interlockings.forEach(in_interlocking => {
-			in_interlocking.material = in_material;
+		this.#interlockings.forEach(in_obj => {
+			in_obj.material = in_material;
 		});
 	}
 	get #boneCnt() {
@@ -1580,11 +1610,56 @@ class cAbstractPart extends THREE.SkinnedMesh {
 		};
 		return new THREE.ExtrudeGeometry(shape, extrudeSettings);
 	}
+	makeBentGeometry() {
+		const attr = this.geometry.attributes;
+		const toLocalPos = new THREE.Matrix4().copy(this.matrixWorld).invert();
+		const toLocalNrm = new THREE.Matrix3().getNormalMatrix(this.matrixWorld).invert();
+		const dstPosArr = new Float32Array(attr.position.count * 3);
+		const dstNrmArr = new Float32Array(attr.normal.count * 3);
+		for (let i = 0; i < attr.position.count; i++) {
+			const dstPos = VEC3();
+			const dstNrm = VEC3();
+			const tmpPos = VEC3().fromBufferAttribute(attr.position, i);
+			const tmpNrm = VEC3().fromBufferAttribute(attr.normal, i);
+			const indices = new THREE.Vector4().fromBufferAttribute(attr.skinIndex, i);
+			const weights = new THREE.Vector4().fromBufferAttribute(attr.skinWeight, i);
+			for (let j = 0; j < 4; j++) {
+				const weight = weights.getComponent(j);
+				if (weight === 0) {
+					continue;
+				}
+				const boneMatrix = new THREE.Matrix4().fromArray(this.skeleton.boneMatrices, indices.getComponent(j) * 16);
+				dstPos.addScaledVector(tmpPos.applyMatrix4(boneMatrix), weight);
+				const transformed = tmpNrm.applyMatrix3(new THREE.Matrix3().getNormalMatrix(boneMatrix)).normalize();
+				dstNrm.addScaledVector(transformed, weight);
+			}
+			dstPos.applyMatrix4(toLocalPos);
+			dstPosArr[i * 3 + 0] = dstPos.x;
+			dstPosArr[i * 3 + 1] = dstPos.y;
+			dstPosArr[i * 3 + 2] = dstPos.z;
+			dstNrm.applyMatrix3(toLocalNrm);
+			dstNrmArr[i * 3 + 0] = dstNrm.x;
+			dstNrmArr[i * 3 + 1] = dstNrm.y;
+			dstNrmArr[i * 3 + 2] = dstNrm.z;
+		}
+		const bentGeometry = new THREE.BufferGeometry();
+		bentGeometry.setAttribute('position', new THREE.BufferAttribute(dstPosArr, 3));
+		bentGeometry.setAttribute('normal', new THREE.BufferAttribute(dstNrmArr, 3));
+		bentGeometry.setIndex(this.geometry.index);
+		return bentGeometry;
+	}
+	isBent() {
+		const bones = this.skeleton.bones;
+		const anchor = bones[0];
+		const moving = bones[bones.length - 1];
+		return (anchor.position.x != moving.position.x) || (anchor.position.y != moving.position.y);
+	}
 	bendAt(in_dstV3) {
 		const bones = this.skeleton.bones;
 		const updated = this.#updatedBentBones(in_dstV3);
 		for (let i = 1; i < bones.length; i++) {
-			bones[i].lookAt(updated.posArr[i].clone().add(updated.dirArr[i].multiplyScalar(this.#length)))
+			const destV3 = updated.posArr[i].clone().add(updated.dirArr[i].multiplyScalar(this.#length));
+			bones[i][lookAtWithoutRotation](destV3);
 			bones[i].position.copy(bones[i].parent.worldToLocal(updated.posArr[i]));
 		}
 	}
@@ -1718,33 +1793,14 @@ class cSolidPart extends cAbstractPart {
 		this.plane_1_0_0 = in_restricted;
 	}
 	bendAt(in_dstV3) {
-		const updateParents = true;
-		const updateChildren = false;
-		this.updateWorldMatrix(updateParents, updateChildren);
-		const worldPosition = (VEC3()).setFromMatrixPosition(this.matrixWorld);
-		let fromEye, oriented;
+		let projection;
 		if (this.plane_1_0_0) {
-			const worldToLocal = (in_vec) => {
-				return in_vec.applyQuaternion(this.getWorldQuaternion(new THREE.Quaternion()));
-			};
-			const worldNormal = worldToLocal(VEC3(1, 0, 0));
-			const direction = in_dstV3.clone().sub(worldPosition);
-			direction.projectOnPlane(worldNormal);
-			fromEye = direction.add(worldPosition);
-			const nonRollUp = worldToLocal(VEC3(0, 1, 0));
-			nonRollUp.projectOnPlane(worldNormal).normalize();
-			oriented = nonRollUp;
+			projection = VEC3(1, 0, 0);
+			projection.applyQuaternion(this.getWorldQuaternion(new THREE.Quaternion()));
 		} else {
-			fromEye = in_dstV3;
-			oriented = this.up;
+			projection = null;
 		}
-		const localMatrix = (new THREE.Matrix4()).lookAt(fromEye, worldPosition, oriented);
-		this.quaternion.setFromRotationMatrix(localMatrix);
-		if (this.parent) {
-			localMatrix.extractRotation(this.parent.matrixWorld);
-			const parentQuat = (new THREE.Quaternion()).setFromRotationMatrix(localMatrix);
-			this.quaternion.premultiply(parentQuat.invert());
-		}
+		this[lookAtWithoutRotation](in_dstV3, projection);
 		this.resetDraggingRcv();
 	}
 	moreShrink() {
@@ -1986,11 +2042,7 @@ class cFigure extends THREE.Object3D {
 	) {
 		super();
 		this.add(in_body);
-		// adjust center
-		const box = new THREE.Box3().setFromObject(in_body);
-		const delta = box.max.z + box.min.z;
 		this.rotateX(Math.PI * -0.5);
-		this.position.y = delta / 2 * -1;
 		// cache parts
 		this.#setCache('HEAD', in_head);
 		this.#setCache('BODY', in_body);
@@ -1999,6 +2051,9 @@ class cFigure extends THREE.Object3D {
 		this.#setCache('NLEG', in_nleg);
 		this.#setCache('PLEG', in_pleg);
 		this.#setCache('ITEM', in_item);
+		// adjust center
+		const adhocDelta = -80;
+		this.position.y = adhocDelta;
 	}
 	get #cached() {
 		const arr = [];
@@ -2107,90 +2162,78 @@ function sharpBoxFigure(
 	in_legLen = 200,
 	in_circumf = 50,
 	in_bentCnt = 10) {
-
 	// body
 	const body = new cSoftBoxPart(in_bodyWidth, in_bodyHeight - in_circumf, in_circumf, in_bentCnt);
 	const bodyTopDeco = new THREE.BoxGeometry(in_bodyWidth, in_circumf, in_circumf);
 	bodyTopDeco.translate(0, 0, in_circumf / 2);
 	body.addGeometryToMoving(bodyTopDeco);
-
 	// head
 	const head = new cSoftBoxPart(in_headSize, in_headSize, in_circumf, in_bentCnt);
 	head.position.z = in_circumf;
 	body.addToMoving(head);
-
 	// arm (negative)
 	const arm_xn = new cSoftBoxPart(in_circumf, in_armLen, in_circumf, in_bentCnt);
 	arm_xn.rotateY(Math.PI / 2 * -1);
 	arm_xn.position.x = in_bodyWidth / 2 * -1;
 	arm_xn.position.z = in_circumf / 2;
 	body.addToMoving(arm_xn);
-
 	// arm (positive)
 	const arm_xp = new cSoftBoxPart(in_circumf, in_armLen, in_circumf, in_bentCnt);
 	arm_xp.rotateY(Math.PI / 2 * +1);
 	arm_xp.position.x = in_bodyWidth / 2 * +1;
 	arm_xp.position.z = in_circumf / 2;
 	body.addToMoving(arm_xp);
-
 	// leg (negative)
 	const leg_xn = new cSoftBoxPart(in_circumf, in_legLen, in_circumf, in_bentCnt);
 	leg_xn.rotateY(Math.PI);
 	leg_xn.position.x = (in_bodyWidth / 2 - in_circumf / 2) * -1;
 	body.addToAnchor(leg_xn);
-
 	// leg (positive)
 	const leg_xp = new cSoftBoxPart(in_circumf, in_legLen, in_circumf, in_bentCnt);
 	leg_xp.rotateY(Math.PI);
 	leg_xp.position.x = (in_bodyWidth / 2 - in_circumf / 2) * +1;
 	body.addToAnchor(leg_xp);
-
+	// figure
 	return new cFigure(head, body, arm_xn, arm_xp, leg_xn, leg_xp);
 }
 
 function roundedBoxFigure(
 	in_headSize = 120,
-	in_bodyWidth = 150,
+	in_bodyWidth = 140,
 	in_bodyHeight = 200,
 	in_armLen = 150,
 	in_legLen = 200,
 	in_circumf = 50,
 	in_bentCnt = 10) {
-
 	// body
 	const bodyWidth = in_bodyWidth - in_circumf;
 	const bodyHeight = in_bodyHeight - in_circumf;
 	const body = new cSoftRoundBoxPart(bodyWidth, bodyHeight, in_circumf, in_bentCnt);
-
 	// head
 	const head = new cHead(in_headSize / 2);
 	body.addToMoving(head);
-	head.position.z = in_circumf / 2;
-
+	head.position.z = in_circumf / 4;
 	// arm (negative)
 	const arm_xn = new cSoftCapsulePart(in_circumf / 2, in_circumf / 2, in_armLen, in_bentCnt);
 	arm_xn.rotateY(Math.PI / 2 * -1);
 	arm_xn.position.x = bodyWidth / 2 * -1;
 	body.addToMoving(arm_xn);
-
 	// arm (positive)
 	const arm_xp = new cSoftCapsulePart(in_circumf / 2, in_circumf / 2, in_armLen, in_bentCnt);
 	arm_xp.rotateY(Math.PI / 2 * +1);
 	arm_xp.position.x = bodyWidth / 2 * +1;
 	body.addToMoving(arm_xp);
-
 	// leg (negative)
 	const leg_xn = new cSoftCapsulePart(in_circumf / 2, in_circumf / 2, in_legLen, in_bentCnt);
 	leg_xn.rotateY(Math.PI);
 	leg_xn.position.x = (bodyWidth / 2) * -1;
 	body.addToAnchor(leg_xn);
-
 	// leg (positive)
 	const leg_xp = new cSoftCapsulePart(in_circumf / 2, in_circumf / 2, in_legLen, in_bentCnt);
 	leg_xp.rotateY(Math.PI);
 	leg_xp.position.x = (bodyWidth / 2) * +1;
 	body.addToAnchor(leg_xp);
-
+	// figure
 	return new cFigure(head, body, arm_xn, arm_xp, leg_xn, leg_xp);
 }
 
@@ -2353,53 +2396,6 @@ function uiDefaultView() {
 	gWorld.motionDefaultView();
 }
 
-function incrementDouble(in_elem) {
-	const currDouble = gCyclicDouble.currValue();
-	const nextDouble = gCyclicDouble.incrementedValue();
-	in_elem.innerText = nextDouble.text;
-	in_elem.removeEventListener('click', currDouble.func);
-	in_elem.addEventListener('click', nextDouble.func);
-}
-
-async function uiDouble(in_distance) {
-	const currFigure = gCyclicFigures.currValue();
-	const geometry = currFigure.cloneGeometry(false);
-	if (gDoubleFigure) {
-		gWorld.remove(gDoubleFigure);
-		gDoubleFigure.geometry.dispose();
-	}
-	gDoubleFigure = new THREE.Mesh(geometry, gCyclicMaterials.currValue());
-	gDoubleFigure.raycast = () => {};
-	gWorld.remove(currFigure);
-	gWorld.add(gDoubleFigure);
-	gWorld.startRotation(VEC3().random().multiplyScalar(0.005));
-	const vec3 = gWorld.getLookAt().normalize();
-	await gWorld.easeOut(0, in_distance, 500, (in_currentValue) => {
-		gDoubleFigure.position.copy(vec3.clone().multiplyScalar(in_currentValue));
-	});
-	gWorld.stopRotation();
-	gWorld.add(currFigure);
-}
-
-function uiDoubleNear(in_ev) {
-	incrementDouble(in_ev.target);
-	uiDouble(200);
-}
-
-function uiDoubleFar(in_ev) {
-	incrementDouble(in_ev.target);
-	uiDouble(400);
-}
-
-function uiDoubleDelete(in_ev) {
-	incrementDouble(in_ev.target);
-	if (gDoubleFigure) {
-		gWorld.remove(gDoubleFigure);
-		gDoubleFigure.geometry.dispose();
-		gDoubleFigure = null;
-	}
-}
-
 const gCyclicDouble = new cCyclicValues(
 	{
 		text : 'double (near)',
@@ -2410,10 +2406,70 @@ const gCyclicDouble = new cCyclicValues(
 		func : uiDoubleFar
 	},
 	{
-		text : 'delete double',
-		func : uiDoubleDelete
+		text : 'without double',
+		func : uiWithoutDouble
 	}
 );
+
+function uiIncrementDouble(in_elem) {
+	const currDouble = gCyclicDouble.currValue();
+	const nextDouble = gCyclicDouble.incrementedValue();
+	in_elem.innerText = nextDouble.text;
+	in_elem.removeEventListener('click', currDouble.func);
+	in_elem.addEventListener('click', nextDouble.func);
+}
+
+async function uiDeletDouble() {
+	// should be called using await, and gDoubleFigure will be disposed
+	/*
+		*** NOTE ***
+	*/
+	if (!gDoubleFigure) {
+		return;
+	}
+	const tempMaterial = gDoubleFigure.material.clone();
+	tempMaterial.transparent = true;
+	gDoubleFigure.material = tempMaterial;
+	const InitOpacity = 1.0;
+	const lastOpacity = 0.0;
+	await gWorld.easeOut(InitOpacity, lastOpacity, 300, (in_currOpacity) => {
+		tempMaterial.opacity = in_currOpacity;
+	});
+	gWorld.remove(gDoubleFigure);
+	tempMaterial.dispose();
+	gDoubleFigure.geometry.dispose();
+	gDoubleFigure = null;
+}
+
+async function uiShowDouble(in_distance) {
+	await uiDeletDouble();
+	gDoubleFigure = new THREE.Mesh(
+		gCyclicFigures.currValue().cloneGeometry(false),
+		gCyclicMaterials.currValue());
+	gDoubleFigure.raycast = () => {};
+	gWorld.add(gDoubleFigure);
+	gWorld.startRotation(VEC3().random().multiplyScalar(0.005));
+	const vec3 = gWorld.getLookAt().normalize();
+	await gWorld.easeOut(0, in_distance, 500, (in_currDistance) => {
+		gDoubleFigure.position.copy(vec3.clone().multiplyScalar(in_currDistance));
+	});
+	gWorld.stopRotation();
+}
+
+function uiDoubleNear(in_ev) {
+	uiIncrementDouble(in_ev.target);
+	uiShowDouble(200);
+}
+
+function uiDoubleFar(in_ev) {
+	uiIncrementDouble(in_ev.target);
+	uiShowDouble(400);
+}
+
+async function uiWithoutDouble(in_ev) {
+	uiIncrementDouble(in_ev.target);
+	await uiDeletDouble();
+}
 
 /*
 	*** NOTE ***
