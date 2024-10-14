@@ -551,6 +551,28 @@ const DIRECTION = {
 	ZN : VEC3(0, 0, -1)
 }
 
+const lookAtWithoutRotation = Symbol();
+
+THREE.Object3D.prototype[lookAtWithoutRotation] = function(in_dstV3, in_prjV3 = null) {
+	const updateParents = true;
+	const updateChildren = false;
+	this.updateWorldMatrix(updateParents, updateChildren);
+	const worldPosition = (VEC3()).setFromMatrixPosition(this.matrixWorld);
+	const up = VEC3(0, 1, 0).applyQuaternion(this.getWorldQuaternion(new THREE.Quaternion()));
+	const eye = in_dstV3.clone();
+	if (in_prjV3) {
+		up.projectOnPlane(in_prjV3).normalize();
+		eye.sub(worldPosition).projectOnPlane(in_prjV3).add(worldPosition);
+	}
+	const localMatrix = (new THREE.Matrix4()).lookAt(eye, worldPosition, up);
+	this.quaternion.setFromRotationMatrix(localMatrix);
+	if (this.parent) {
+		localMatrix.extractRotation(this.parent.matrixWorld);
+		const parentQuat = (new THREE.Quaternion()).setFromRotationMatrix(localMatrix);
+		this.quaternion.premultiply(parentQuat.invert());
+	}
+}
+
 function safeMergeGeometry(in_arr, in_dispose = true) {
 	const merged = UTILS.mergeGeometries(in_arr);
 	if (in_dispose) {
