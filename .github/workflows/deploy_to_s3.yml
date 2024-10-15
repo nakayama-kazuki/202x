@@ -76,3 +76,7 @@ jobs:
     - name: clear cache
       run: |
         aws cloudfront create-invalidation --distribution-id ${{ secrets.AWS_CLOUDFRONT_DISTRIBUTION }} --paths "/*"
+    - name: send version.txt
+      run: |
+        echo "${{ github.sha }}" > version.txt
+        aws s3 cp version.txt s3://pj-corridor.net/version.txt
