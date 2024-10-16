@@ -56,10 +56,14 @@ jobs:
     - name: sync-2
       if: contains(env.FILES, env.APPL1PATH)
       run: |
+        echo "${{ github.sha }}" > version.txt
+        aws s3 cp version.txt s3://pj-corridor.net/cube3d/version.txt
         aws s3 sync ${{ env.APPL1PATH }} s3://pj-corridor.net/cube3d/ --exclude ".git/*"
     - name: sync-3
       if: contains(env.FILES, env.APPL2PATH)
       run: |
+        echo "${{ github.sha }}" > version.txt
+        aws s3 cp version.txt s3://pj-corridor.net/stick-figure/ version.txt
         aws s3 sync ${{ env.APPL2PATH }} s3://pj-corridor.net/stick-figure/ --exclude ".git/*"
     - name: sync-4
       if: contains(env.FILES, env.APPL3PATH)
@@ -76,7 +80,4 @@ jobs:
     - name: clear cache
       run: |
         aws cloudfront create-invalidation --distribution-id ${{ secrets.AWS_CLOUDFRONT_DISTRIBUTION }} --paths "/*"
-    - name: send version.txt
-      run: |
-        echo "${{ github.sha }}" > version.txt
-        aws s3 cp version.txt s3://pj-corridor.net/version.txt
+
