@@ -2660,6 +2660,11 @@ function startDialog(in_element, in_callback = null) {
 }
 
 function uiHelp() {
+	const url = {
+		ver : './version.txt',
+		img : './stick-figure-help.gif',
+		src : 'https://github.com/nakayama-kazuki/202x/commit/'
+	};
 	const dialog = document.createElement('div');
 	Object.assign(dialog.style, {
 		width : 'auto',
@@ -2668,7 +2673,7 @@ function uiHelp() {
 		borderRadius : '1em',
 		padding : '1em 1em 0em 1em'
 	});
-	dialog.innerHTML += '<div><img src="./stick-figure-help.gif" /></div>';
+	dialog.innerHTML += '<div><img src="' + url.img + '" /></div>';
 	const verLabel = document.createElement('div');
 	Object.assign(verLabel.style, {
 		textAlign : 'right',
@@ -2676,7 +2681,7 @@ function uiHelp() {
 	});
 	dialog.appendChild(verLabel);
 	const url = {
-		ver : 'https://pj-corridor.net/version.txt',
+		ver : './version.txt',
 		src : 'https://github.com/nakayama-kazuki/202x/commit/'
 	};
 	getVersion(url.ver).then(in_hash => {
