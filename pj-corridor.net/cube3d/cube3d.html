@@ -23,6 +23,19 @@ import * as UTILS from 'utils';
 	(1) utilities
 */
 
+async function getVersion(in_version_file) {
+	try {
+		const response = await fetch(in_version_file);
+		if (response.ok) {
+			return await response.text();
+		} else {
+			throw new Error('4xx or 5xx Error');
+		}
+	} catch (in_err) {
+		throw new Error('SOP Error etc');
+	}
+}
+
 function parseParam(in_url = location.href) {
 	const req = new URL(in_url);
 	const parsed = {
@@ -2541,6 +2554,44 @@ function shuffle10() {
 	shuffle(10);
 }
 
+function uiHelp() {
+	const url = {
+		ver : './version.txt',
+		im1 : 'https://pj-corridor.net/images/cube-2-03.png',
+		im2 : 'https://pj-corridor.net/images/diamond-2-4.png',
+		im3 : 'https://pj-corridor.net/images/cube-6-03.png',
+		im4 : 'https://pj-corridor.net/images/diamond-6-4.png',
+		src : 'https://github.com/nakayama-kazuki/202x/commit/'
+	};
+	const dialog = document.createElement('div');
+	Object.assign(dialog.style, {
+		width : 'auto',
+		height : 'auto',
+		background : 'white',
+		borderRadius : '1em',
+		padding : '1em'
+	});
+	dialog.innerHTML += '<div>';
+	[url.im1, url.im2, url.im3, url.im4].forEach(in_img => {
+		dialog.innerHTML += '<img width="100" src="' + in_img + '" />';
+	});
+	dialog.innerHTML += '</div>';
+	const verLabel = document.createElement('div');
+	Object.assign(verLabel.style, {
+		textAlign : 'right'
+	});
+	dialog.appendChild(verLabel);
+	getVersion(url.ver).then(in_hash => {
+		verLabel.innerHTML = 'version : <a href="' + url.src + in_hash + '">' + in_hash.substring(0, 7) + '</a>';
+		verLabel.addEventListener('mousedown', in_e => in_e.stopPropagation());
+		verLabel.addEventListener('touchstart', in_e => in_e.stopPropagation());
+	}).catch(in_err => {
+	    console.error(in_err);
+		verLabel.innerHTML = 'version : unknown';
+	});
+	startDialog(dialog);
+}
+
 function uiRights() {
 	const dialog = document.createElement('dl');
 	Object.assign(dialog.style, {
@@ -2620,6 +2671,10 @@ function nextLevel(in_sound = true) {
 		{
 			text : 'Shuffle x10',
 			func : shuffle10
+		},
+		{
+			text : 'help',
+			func : uiHelp
 		},
 		{
 			text : 'Rights',
