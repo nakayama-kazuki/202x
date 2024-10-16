@@ -2577,6 +2577,7 @@ async function uiGetScreenShot() {
 }
 
 function startDialog(in_element, in_callback = null) {
+	const maxInt = 2 ** 31 - 1;
 	const background = document.createElement('div');
 	Object.assign(background.style, {
 		position : 'fixed',
@@ -2584,20 +2585,18 @@ function startDialog(in_element, in_callback = null) {
 		top : '0px',
 		width : '100%',
 		height : '100%',
-		zIndex : 2 ** 31 - 2
+		zIndex : maxInt
 	});
+	background.appendChild(in_element);
 	Object.assign(in_element.style, {
 		position : 'absolute',
 		left : '50%',
 		top : '50%',
-		transform : 'translate(-50%, -50%)',
-		zIndex : 2 ** 31 - 1
+		transform : 'translate(-50%, -50%)'
 	});
 	document.body.appendChild(background);
-	document.body.appendChild(in_element);
 	const closeDialog = () => {
 		document.body.removeChild(background);
-		document.body.removeChild(in_element);
 		if (in_callback) {
 			(in_callback)();
 		}
@@ -2628,6 +2627,8 @@ function uiHelp() {
 	dialog.appendChild(verLabel);
 	getVersion(url.ver).then(in_hash => {
 		verLabel.innerHTML = 'version : <a href="' + url.src + in_hash + '">' + in_hash.substring(0, 7) + '</a>';
+		verLabel.addEventListener('mousedown', in_e => in_e.stopPropagation());
+		verLabel.addEventListener('touchstart', in_e => in_e.stopPropagation());
 	}).catch(in_err => {
 	    console.error(in_err);
 		verLabel.innerHTML = 'version : unknown';
