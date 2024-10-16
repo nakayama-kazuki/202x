@@ -2639,18 +2639,20 @@ function startDialog(in_element, in_callback = null) {
 		top : '0px',
 		width : '100%',
 		height : '100%',
-		zIndex : 2 ** 31 - 1
+		zIndex : 2 ** 31 - 2
 	});
-	background.appendChild(in_element);
 	Object.assign(in_element.style, {
 		position : 'absolute',
 		left : '50%',
 		top : '50%',
-		transform : 'translate(-50%, -50%)'
+		transform : 'translate(-50%, -50%)',
+		zIndex : 2 ** 31 - 1
 	});
 	document.body.appendChild(background);
+	document.body.appendChild(in_element);
 	const closeDialog = () => {
 		document.body.removeChild(background);
+		document.body.removeChild(in_element);
 		if (in_callback) {
 			(in_callback)();
 		}
@@ -2671,19 +2673,14 @@ function uiHelp() {
 		height : 'auto',
 		background : 'white',
 		borderRadius : '1em',
-		padding : '1em 1em 0em 1em'
+		padding : '1em'
 	});
 	dialog.innerHTML += '<div><img src="' + url.img + '" /></div>';
 	const verLabel = document.createElement('div');
 	Object.assign(verLabel.style, {
-		textAlign : 'right',
-		marginTop : '0.3em'
+		textAlign : 'right'
 	});
 	dialog.appendChild(verLabel);
-	const url = {
-		ver : './version.txt',
-		src : 'https://github.com/nakayama-kazuki/202x/commit/'
-	};
 	getVersion(url.ver).then(in_hash => {
 		verLabel.innerHTML = 'version : <a href="' + url.src + in_hash + '">' + in_hash.substring(0, 7) + '</a>';
 	}).catch(in_err => {
