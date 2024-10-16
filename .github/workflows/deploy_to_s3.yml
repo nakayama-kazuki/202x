@@ -63,7 +63,7 @@ jobs:
       if: contains(env.FILES, env.APPL2PATH)
       run: |
         echo "${{ github.sha }}" > version.txt
-        aws s3 cp version.txt s3://pj-corridor.net/stick-figure/ version.txt
+        aws s3 cp version.txt s3://pj-corridor.net/stick-figure/version.txt
         aws s3 sync ${{ env.APPL2PATH }} s3://pj-corridor.net/stick-figure/ --exclude ".git/*"
     - name: sync-4
       if: contains(env.FILES, env.APPL3PATH)
