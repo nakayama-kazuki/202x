@@ -571,7 +571,8 @@ THREE.Object3D.prototype[lookAtWithoutRotation] = function(in_dstV3, in_prjV3 = 
 	const updateChildren = false;
 	this.updateWorldMatrix(updateParents, updateChildren);
 	const worldPosition = (VEC3()).setFromMatrixPosition(this.matrixWorld);
-	const up = VEC3(0, 1, 0).applyQuaternion(this.getWorldQuaternion(new THREE.Quaternion()));
+	// unless this.up vector is modified, it remains (0, 1, 0)
+	const up = this.up.clone().applyQuaternion(this.getWorldQuaternion(new THREE.Quaternion()));
 	const eye = in_dstV3.clone();
 	if (in_prjV3) {
 		up.projectOnPlane(in_prjV3).normalize();
@@ -2088,10 +2089,19 @@ class cFigure extends THREE.Object3D {
 		if (item) {
 			item.removeFromParent();
 		}
+		this.#setCache('ITEM', in_item);
 		if (in_item) {
 			this.#getCache('NARM').addToMoving(in_item);
 		}
-		this.#setCache('ITEM', in_item);
+	}
+	resetItemUpToHead() {
+		const item = this.#getCache('ITEM');
+		if (!item) {
+			return;
+		}
+		const inverse = new THREE.Matrix4().copy(item.matrixWorld).invert();
+		const local = this.#getCache('HEAD').getWorldPosition(VEC3()).applyMatrix4(inverse);
+		item.up.copy(local).normalize();
 	}
 	resetMaterial(in_material) {
 		this.#cached.forEach(in_part => {
@@ -2765,7 +2775,8 @@ gWorld.canvas.addEventListener('mousedown', in_ev => {
 		}
 		const cameraPos = gWorld.copyCameraPosition();
 		const objectPos = target.getWorldPosition(VEC3());
-		gDrag.far = (rayHit.distance > cameraPos.distanceTo(objectPos));
+		const fineAdjustment = 0.9;
+		gDrag.far = (rayHit.distance * fineAdjustment > cameraPos.distanceTo(objectPos));
 		gDrag.vec = vec2;
 		gDrag.obj = target;
 		// not lookAt(cameraPos), but lookAt(raycaster.ray.direction.negate())
@@ -2791,6 +2802,9 @@ gWorld.canvas.addEventListener('mousemove', in_ev => {
 	if (intersects.length > 0) {
 		gDrag.obj.bendAt(intersects[0].point);
 		gDrag.vec = vec2;
+		if (gDrag.obj instanceof cSmartPhone) {
+			gCyclicFigures.currValue().resetItemUpToHead();
+		}
 	} else {
 		if (gDrag.animating) {
 			return;
