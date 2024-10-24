@@ -1745,11 +1745,23 @@ class cRubiksCube extends THREE.Object3D {
 			});
 		});
 	}
-	#composeGroup(in_pieces) {
+	#setupGroup(in_pieces) {
+		const unionBox = new THREE.Box3();
+		in_pieces.forEach(in_piece => {
+			unionBox.union(new THREE.Box3().setFromObject(in_piece));
+		});
+		/*
+			*** NOTE ***
+			property of rotation will be changed in uiUpdatePosition().
+			at that time, it will be decided based on position of group.
+			though position was fixed to (0, 0, 0) before,
+			center of the box is used now.
+		*/
 		const group = new THREE.Object3D();
 		this.add(group);
+		group.position.copy(unionBox.getCenter(VEC3()));
 		in_pieces.forEach(in_piece => {
-			group.add(in_piece);
+			group.attach(in_piece);
 		});
 		return group;
 	}
@@ -1766,7 +1778,7 @@ class cRubiksCube extends THREE.Object3D {
 		});
 		this.remove(in_group);
 	}
-	#makeGroupOnAxis_1_groupBySameScalar(io_scalarMap, in_axis) {
+	#splitGroupByAxis_1_groupBySameScalar(io_scalarMap, in_axis) {
 		this.children.forEach(in_piece => {
 			const component = in_piece.position.dot(in_axis);
 			const reference = io_scalarMap.get(component);
@@ -1777,12 +1789,12 @@ class cRubiksCube extends THREE.Object3D {
 			} else {
 				io_scalarMap.set(component, {
 					pieces : [in_piece],
-					tmpBox : new THREE.Box3().setFromObject(in_piece)
+					tmpBox : (new THREE.Box3()).setFromObject(in_piece)
 				});
 			}
 		});
 	}
-	static #makeGroupOnAxis_2_calculateEdges(io_scalarMap, in_axis) {
+	static #splitGroupByAxis_2_calculateEdges(io_scalarMap, in_axis) {
 		for (const [scalar, info] of io_scalarMap.entries()) {
 			const length = (new THREE.Vector3().subVectors(info.tmpBox.max, info.tmpBox.min)).dot(in_axis);
 			info.edgeL = scalar - length / 2;
@@ -1790,7 +1802,7 @@ class cRubiksCube extends THREE.Object3D {
 			delete info.tmpBox;
 		}
 	}
-	static #makeGroupOnAxis_3_makeCandidatesBorder(in_scalarMap) {
+	static #splitGroupByAxis_3_makeCandidatesBorder(in_scalarMap) {
 		const candidateBorderSet = new cApproximateSet(cRubiksCube.err);
 		for (const info of in_scalarMap.values()) {
 			candidateBorderSet.add(info.edgeL);
@@ -1802,7 +1814,7 @@ class cRubiksCube extends THREE.Object3D {
 		candidateBorder.pop();
 		return candidateBorder;
 	}
-	static #makeGroupOnAxis_4_makeActualBorder(in_scalarMap, in_candidateBorder) {
+	static #splitGroupByAxis_4_makeActualBorder(in_scalarMap, in_candidateBorder) {
 		const actualBorder = [];
 		for (let i = 0; i < in_candidateBorder.length; i++) {
 			let isBorder = true;
@@ -1818,7 +1830,7 @@ class cRubiksCube extends THREE.Object3D {
 		}
 		return actualBorder;
 	}
-	static #makeGroupOnAxis_5_makeActualBorder(in_scalarMap, in_actualBorder) {
+	static #splitGroupByAxis_5_makeActualBorder(in_scalarMap, in_actualBorder) {
 		const groups = [];
 		let next = 0;
 		in_actualBorder.push(Infinity);
@@ -1838,7 +1850,7 @@ class cRubiksCube extends THREE.Object3D {
 		});
 		return groups;
 	}
-	#makeGroupOnAxis(in_axis) {
+	#splitGroupByAxis(in_axis) {
 		/*
 			step #1 : scalarMap is the group of position based on in_axis. for example ...
 
@@ -1876,13 +1888,13 @@ class cRubiksCube extends THREE.Object3D {
 		if (this.#instanceTest.mode) {
 			scalarMap = this.#instanceTest.obj;
 		} else {
-			this.#makeGroupOnAxis_1_groupBySameScalar(scalarMap, in_axis);
-			cRubiksCube.#makeGroupOnAxis_2_calculateEdges(scalarMap, in_axis);
+			this.#splitGroupByAxis_1_groupBySameScalar(scalarMap, in_axis);
+			cRubiksCube.#splitGroupByAxis_2_calculateEdges(scalarMap, in_axis);
 		}
 		/*
 			step #3 : make candidates of border which decides group
 		*/
-		const candidateBorder = cRubiksCube.#makeGroupOnAxis_3_makeCandidatesBorder(scalarMap);
+		const candidateBorder = cRubiksCube.#splitGroupByAxis_3_makeCandidatesBorder(scalarMap);
 		if (this.#instanceTest.mode) {
 			/*
 				*** NOTE ***
@@ -1915,21 +1927,21 @@ class cRubiksCube extends THREE.Object3D {
 			|   x   | x |
 			+---+---+---+
 		*/
-		const actualBorder = cRubiksCube.#makeGroupOnAxis_4_makeActualBorder(scalarMap, candidateBorder);
+		const actualBorder = cRubiksCube.#splitGroupByAxis_4_makeActualBorder(scalarMap, candidateBorder);
 		if (this.#instanceTest.mode) {
 			console.log('#4', [...actualBorder]);
 		}
 		/*
 			step #5 : finally, make group which will move together
 		*/
-		const groups = cRubiksCube.#makeGroupOnAxis_5_makeActualBorder(scalarMap, actualBorder)
+		const groups = cRubiksCube.#splitGroupByAxis_5_makeActualBorder(scalarMap, actualBorder)
 		if (this.#instanceTest.mode) {
 			console.log('#5', [...groups]);
 		}
 		return groups;
 	}
-	makeRotationGroup(in_piece, in_axis) {
-		const groups = this.#makeGroupOnAxis(in_axis);
+	#makeRotationGroup(in_piece, in_axis) {
+		const groups = this.#splitGroupByAxis(in_axis);
 		for (let i = 0; i < groups.length; i++) {
 			if (groups[i].includes(in_piece)) {
 				return groups[i];
@@ -1947,7 +1959,7 @@ class cRubiksCube extends THREE.Object3D {
 			}
 			const _piece = (this.children)[arrRand]();
 			axis = (Object.values(cRubiksCube.#axes))[arrRand]();
-			pieces = this.makeRotationGroup(_piece, axis);
+			pieces = this.#makeRotationGroup(_piece, axis);
 			if (pieces.length < this.children.length) {
 				break;
 			}
@@ -1955,7 +1967,7 @@ class cRubiksCube extends THREE.Object3D {
 		let percentCurrent = 0;
 		let sounded = false;
 		const percentStep = 1 / 20;
-		const group = this.#composeGroup(pieces);
+		const group = this.#setupGroup(pieces);
 		// this progress function assumes to be called by requestAnimationFrame()
 		const progress = () => {
 			percentCurrent += percentStep;
@@ -2021,6 +2033,9 @@ class cRubiksCube extends THREE.Object3D {
 			}
 		});
 		return ret;
+	}
+	static #isMovable90(in_object, in_axis) {
+		return true
 	}
 	static #uiStates  = {
 		DISABLED : Symbol(),
@@ -2118,6 +2133,7 @@ class cRubiksCube extends THREE.Object3D {
 			initPosV2 : in_posV2,
 			surfaceV3 : in_surfaceV3,
 			roGroup : null,
+			roUnitAngle : Math.PI,
 			roRadian : 0,
 			roAxisDir : 0,
 			roAxisXYZ : null,
@@ -2162,10 +2178,13 @@ class cRubiksCube extends THREE.Object3D {
 		}
 		// component for makeRotationGroup should be +1
 		const axis = moving.rotationAxis.clone().multiply(moving.rotationAxis);
-		const pieces = this.makeRotationGroup(ctx.piece, axis);
+		const pieces = this.#makeRotationGroup(ctx.piece, axis);
 		if (pieces.length < this.children.length) {
 			this.#transition('movable');
-			ctx.roGroup = this.#composeGroup(pieces);
+			ctx.roGroup = this.#setupGroup(pieces);
+			if (cRubiksCube.#isMovable90(ctx.roGroup, axis)) {
+				ctx.roUnitAngle = Math.PI / 2;
+			}
 			// use Vector3(1, 1, 1) to extruct +1 or -1
 			ctx.roAxisDir = moving.rotationAxis.dot(new THREE.Vector3(1, 1, 1));
 			ctx.roAxisXYZ = cRubiksCube.#axisKey(axis);
@@ -2196,10 +2215,10 @@ class cRubiksCube extends THREE.Object3D {
 			if making group every time too, the same issue will happen.
 		*/
 		ctx.roGroup.rotation[ctx.roAxisXYZ] = rad;
-		if (snapTo05PI(rad) != snapTo05PI(ctx.roRadian)) {
-			AUDIO_ROTATION.play();
-		}
+		const overTheTop = (snapTo05PI(rad) != snapTo05PI(ctx.roRadian));
 		ctx.roRadian = rad;
+		// if true, caller may show some effects.
+		return overTheTop;
 	}
 	uiRelease(in_ending_callback) {
 		if (this.#uiSession.state === cRubiksCube.#uiStates.DRAGGING) {
@@ -2248,7 +2267,7 @@ function test_makeGroupOnAxis(in_arr) {
 		in_elem[1].edgeR += Math.random() / 10000;
 		scalarMap.set(in_elem[0], in_elem[1]);
 	});
-	(new cRubiksCube()).unitTest('#makeGroupOnAxis', scalarMap);
+	(new cRubiksCube()).unitTest('#splitGroupByAxis', scalarMap);
 }
 
 /*
@@ -2790,7 +2809,9 @@ gWorld.canvas.addEventListener('mousemove', async (in_ev) => {
 	const vec2 = eventPos2RaycasterPos(in_ev);
 	const vec2Scaled = vec2.clone().multiplyScalar(EVPOS_MULTIPLY_PARAM);
 	if (gCube.uiIsMoving()) {
-		gCube.uiUpdatePosition(vec2Scaled);
+		if (gCube.uiUpdatePosition(vec2Scaled)) {
+			AUDIO_ROTATION.play();
+		}
 		return;
 	}
 	if (!gCube.uiIsDragging()) {
