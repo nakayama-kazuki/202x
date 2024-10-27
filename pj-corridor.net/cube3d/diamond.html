@@ -144,8 +144,6 @@ function eventPos2RaycasterPos(in_ev)
 		elem.offsetHeight);
 }
 
-const EVPOS_MULTIPLY_PARAM = 3;
-
 function snapToNotch(in_value, in_notch)
 {
 	let notch = in_notch / 2;
@@ -161,6 +159,15 @@ function snapToNotch(in_value, in_notch)
 	}
 }
 
+function snapToPI(in_value)
+{
+	/*
+		{in : Math.PI / 2 - delta, expected : 0},
+		{in : Math.PI / 2 + delta, expected : Math.PI}
+	*/
+	return snapToNotch(in_value, Math.PI);
+}
+
 function snapTo05PI(in_value)
 {
 	/*
@@ -173,6 +180,7 @@ function snapTo05PI(in_value)
 function nearlyEqual(in_a, in_b, in_error = 0.01) {
 	const diff = Math.abs(in_a - in_b);
 	const comp = Math.max(Math.abs(in_a), Math.abs(in_b));
+	// scale-adjusted error
 	return diff < comp * in_error;
 }
 
@@ -954,6 +962,8 @@ function customCapsuleGeometry(in_rad_t, in_rad_b, in_h, in_rSeg = 32, in_hSeg =
 		+- PerspectiveCamera
 */
 
+const EV_DISTANCE_MULTIPLIER = 2.5;
+
 const DEVICE_PIXEL_RATIO = window.devicePixelRatio;
 
 class cSphericalWorld {
@@ -1073,7 +1083,7 @@ class cSphericalWorld {
 		if (delta.length() < cSphericalWorld.#deltaThreshold) {
 			return;
 		}
-		delta.multiplyScalar(EVPOS_MULTIPLY_PARAM);
+		delta.multiplyScalar(EV_DISTANCE_MULTIPLIER);
 		this.#moveCameraCtrl(delta.x, delta.y);
 		this.#anchorPosV2 = vec2;
 	}
@@ -1659,8 +1669,16 @@ class cRubiksCube extends THREE.Object3D {
 		y : new THREE.Vector3(0, 1, 0),
 		z : new THREE.Vector3(0, 0, 1)
 	};
-	static #axisKey(in_axis) {
-		return Object.keys(cRubiksCube.#axes).filter(in_key => cRubiksCube.#axes[in_key].equals(in_axis));
+	static #axisProp(in_axis, in_match = true) {
+		const props = Object.keys(cRubiksCube.#axes).filter(in_key => {
+			const equal = cRubiksCube.#axes[in_key].equals(in_axis);
+			return in_match ? equal : !equal;
+		});
+		if (props.length > 1) {
+			return props;
+		} else {
+			return props[0];
+		}
 	}
 	static #staticTest = {mode : false, obj : null};
 	static unitTest(in_method, in_testObj = {}, ...in_args) {
@@ -1746,9 +1764,10 @@ class cRubiksCube extends THREE.Object3D {
 		});
 	}
 	#setupGroup(in_pieces) {
+		const buffer = new THREE.Box3();
 		const unionBox = new THREE.Box3();
 		in_pieces.forEach(in_piece => {
-			unionBox.union(new THREE.Box3().setFromObject(in_piece));
+			unionBox.union(buffer.setFromObject(in_piece));
 		});
 		/*
 			*** NOTE ***
@@ -1971,9 +1990,9 @@ class cRubiksCube extends THREE.Object3D {
 		// this progress function assumes to be called by requestAnimationFrame()
 		const progress = () => {
 			percentCurrent += percentStep;
-			group.rotation[cRubiksCube.#axisKey(axis)] = Math.PI / 2 * percentCurrent;
+			group.rotation[cRubiksCube.#axisProp(axis)] = Math.PI / 2 * percentCurrent;
 			if (percentCurrent >= 1) {
-				group.rotation[cRubiksCube.#axisKey(axis)] = Math.PI / 2;
+				group.rotation[cRubiksCube.#axisProp(axis)] = Math.PI / 2;
 				this.#releaseGroup(group);
 				(in_ending_callback)();
 				this.#settingVal.shuffled = true;
@@ -2034,8 +2053,80 @@ class cRubiksCube extends THREE.Object3D {
 		});
 		return ret;
 	}
-	static #isMovable90(in_object, in_axis) {
-		return true
+	static #groupIsMovable90(in_group, in_axis) {
+		// assume in_group has children which compose rotateion group
+		const [ax1, ax2] = cRubiksCube.#axisProp(in_axis, false);
+		const groupPosition = new THREE.Vector3();
+		in_group.getWorldPosition(groupPosition);
+		const center = {};
+		center[ax1] = groupPosition[ax1];
+		center[ax2] = groupPosition[ax2];
+		const quadrant1st = [];
+		const quadrant2nd = [];
+		const error = 0.01;
+		in_group.children.forEach(child => {
+			const childPosition = new THREE.Vector3();
+			child.getWorldPosition(childPosition);
+			if (Math.abs(center[ax1] - childPosition[ax1]) < error) {
+				if (Math.abs(center[ax2] - childPosition[ax2]) < error) {
+					// at the origin
+					return;
+				} else {
+					if (center[ax2] < childPosition[ax2]) {
+						quadrant1st.push(child);
+					} else {
+						// at the 3rd quadrant
+						return;
+					}
+				}
+			} else {
+				if (Math.abs(center[ax2] - childPosition[ax2]) < error) {
+					if (center[ax1] < childPosition[ax1]) {
+						quadrant2nd.push(child);
+					} else {
+						// at the 4th quadrant
+						return;
+					}
+				} else {
+					if (center[ax1] < childPosition[ax1]) {
+						if (center[ax2] < childPosition[ax2]) {
+							quadrant1st.push(child);
+						} else {
+							quadrant2nd.push(child);
+						}
+					} else {
+						// at the 3rd or 4th quadrant
+						return;
+					}
+				}
+			}
+		});
+		if (quadrant1st.length === 0) {
+			if (quadrant2nd.length === 0) {
+				// only origin
+				return true;
+			} else {
+				return false;
+			}
+		} else {
+			if (quadrant2nd.length === 0) {
+				return false;
+			} else {
+				const buffer = new THREE.Box3();
+				const unionBox1 = new THREE.Box3();
+				const unionBox2 = new THREE.Box3();
+				quadrant1st.forEach(in_piece => {
+					unionBox1.union(buffer.setFromObject(in_piece));
+				});
+				quadrant2nd.forEach(in_piece => {
+					unionBox2.union(buffer.setFromObject(in_piece));
+				});
+				const area1 = (unionBox1.max[ax1] - unionBox1.min[ax1]) * (unionBox1.max[ax2] - unionBox1.min[ax2]);
+				const area2 = (unionBox2.max[ax1] - unionBox2.min[ax1]) * (unionBox2.max[ax2] - unionBox2.min[ax2]);
+				// adhoc : even of the area is the same, they may not be symmetrical.
+				return Math.abs(area1 - area2) < error;
+			}
+		}
 	}
 	static #uiStates  = {
 		DISABLED : Symbol(),
@@ -2182,12 +2273,12 @@ class cRubiksCube extends THREE.Object3D {
 		if (pieces.length < this.children.length) {
 			this.#transition('movable');
 			ctx.roGroup = this.#setupGroup(pieces);
-			if (cRubiksCube.#isMovable90(ctx.roGroup, axis)) {
+			if (cRubiksCube.#groupIsMovable90(ctx.roGroup, axis)) {
 				ctx.roUnitAngle = Math.PI / 2;
 			}
 			// use Vector3(1, 1, 1) to extruct +1 or -1
 			ctx.roAxisDir = moving.rotationAxis.dot(new THREE.Vector3(1, 1, 1));
-			ctx.roAxisXYZ = cRubiksCube.#axisKey(axis);
+			ctx.roAxisXYZ = cRubiksCube.#axisProp(axis);
 			ctx.initDirV2 = in_posV2.clone().sub(ctx.initPosV2);
 			return RC.MOVABLE;
 		} else {
@@ -2215,7 +2306,13 @@ class cRubiksCube extends THREE.Object3D {
 			if making group every time too, the same issue will happen.
 		*/
 		ctx.roGroup.rotation[ctx.roAxisXYZ] = rad;
-		const overTheTop = (snapTo05PI(rad) != snapTo05PI(ctx.roRadian));
+		let snap;
+		if (ctx.roUnitAngle === Math.PI) {
+			snap = snapToPI;
+		} else {
+			snap = snapTo05PI;
+		}
+		const overTheTop = ((snap)(rad) != (snap)(ctx.roRadian));
 		ctx.roRadian = rad;
 		// if true, caller may show some effects.
 		return overTheTop;
@@ -2232,7 +2329,13 @@ class cRubiksCube extends THREE.Object3D {
 		this.#transition('release');
 		const ctx = this.#uiSession.ctx;
 		const startRad = ctx.roRadian;
-		const finalRad = snapTo05PI(ctx.roRadian);
+		let snap;
+		if (ctx.roUnitAngle === Math.PI) {
+			snap = snapToPI;
+		} else {
+			snap = snapTo05PI;
+		}
+		const finalRad = (snap)(ctx.roRadian);
 		const duration = 100;
 		const ease = new cEase(startRad, finalRad, duration);
 		// this progress function assumes to be called by requestAnimationFrame()
@@ -2564,7 +2667,7 @@ function uiHelp() {
 		verLabel.addEventListener('mousedown', in_e => in_e.stopPropagation());
 		verLabel.addEventListener('touchstart', in_e => in_e.stopPropagation());
 	}).catch(in_err => {
-	    console.error(in_err);
+	    console.log(in_err);
 		verLabel.innerHTML = 'version : unknown';
 	});
 	startDialog(dialog);
@@ -2780,7 +2883,7 @@ document.addEventListener('DOMContentLoaded', (() => {
 
 gWorld.canvas.addEventListener('mousedown', async (in_ev) => {
 	const vec2 = eventPos2RaycasterPos(in_ev);
-	const vec2Scaled = vec2.clone().multiplyScalar(EVPOS_MULTIPLY_PARAM);
+	const vec2Scaled = vec2.clone().multiplyScalar(EV_DISTANCE_MULTIPLIER);
 	let intersects = gWorld.intersectPositive(vec2);
 	if (intersects.length > 0) {
 		const matrix = (new THREE.Matrix3()).getNormalMatrix(intersects[0].object.matrixWorld);
@@ -2807,7 +2910,7 @@ let canKnock = true;
 
 gWorld.canvas.addEventListener('mousemove', async (in_ev) => {
 	const vec2 = eventPos2RaycasterPos(in_ev);
-	const vec2Scaled = vec2.clone().multiplyScalar(EVPOS_MULTIPLY_PARAM);
+	const vec2Scaled = vec2.clone().multiplyScalar(EV_DISTANCE_MULTIPLIER);
 	if (gCube.uiIsMoving()) {
 		if (gCube.uiUpdatePosition(vec2Scaled)) {
 			AUDIO_ROTATION.play();
