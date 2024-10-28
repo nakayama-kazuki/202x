@@ -572,6 +572,42 @@ const DIRECTION = {
 	ZN : VEC3(0, 0, -1)
 }
 
+class cBoxCollection {
+	#boxes = [];
+	constructor(in_objArr = []) {
+		in_objArr.forEach(in_obj => {
+			this.addBox((new THREE.Box3()).setFromObject(in_obj));
+		});
+	}
+	addBox(in_box) {
+		this.#boxes.push(in_box);
+	}
+	containsPoint(in_vec3) {
+		for (const box of this.#boxes) {
+			if (box.containsPoint(in_vec3)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	getRandomPoints(in_cnt) {
+		const points = [];
+		while (points.length < in_cnt) {
+			for (const box of this.#boxes) {
+				const min = box.min;
+				const max = box.max;
+				points.push(VEC3(
+					Math.random() * (max.x - min.x) + min.x,
+					Math.random() * (max.y - min.y) + min.y,
+					Math.random() * (max.z - min.z) + min.z
+				));
+			}
+		}
+		points.length = in_cnt;
+		return points;
+	}
+}
+
 const lookAtWithoutRotation = Symbol();
 
 THREE.Object3D.prototype[lookAtWithoutRotation] = function(in_dstV3, in_prjV3 = null) {
@@ -962,7 +998,7 @@ function customCapsuleGeometry(in_rad_t, in_rad_b, in_h, in_rSeg = 32, in_hSeg =
 		+- PerspectiveCamera
 */
 
-const EV_DISTANCE_MULTIPLIER = 2.5;
+const EV_DISTANCE_MULTIPLIER = 3;
 
 const DEVICE_PIXEL_RATIO = window.devicePixelRatio;
 
@@ -2096,78 +2132,17 @@ class cRubiksCube extends THREE.Object3D {
 	}
 	static #groupIsMovable90(in_group, in_axis) {
 		// assume in_group has children which compose rotateion group
-		const [ax1, ax2] = cRubiksCube.#axisProp(in_axis, false);
-		const groupPosition = new THREE.Vector3();
-		in_group.getWorldPosition(groupPosition);
-		const center = {};
-		center[ax1] = groupPosition[ax1];
-		center[ax2] = groupPosition[ax2];
-		const quadrant1st = [];
-		const quadrant2nd = [];
-		const error = 0.01;
-		in_group.children.forEach(child => {
-			const childPosition = new THREE.Vector3();
-			child.getWorldPosition(childPosition);
-			if (Math.abs(center[ax1] - childPosition[ax1]) < error) {
-				if (Math.abs(center[ax2] - childPosition[ax2]) < error) {
-					// at the origin
-					return;
-				} else {
-					if (center[ax2] < childPosition[ax2]) {
-						quadrant1st.push(child);
-					} else {
-						// at the 3rd quadrant
-						return;
-					}
-				}
-			} else {
-				if (Math.abs(center[ax2] - childPosition[ax2]) < error) {
-					if (center[ax1] < childPosition[ax1]) {
-						quadrant2nd.push(child);
-					} else {
-						// at the 4th quadrant
-						return;
-					}
-				} else {
-					if (center[ax1] < childPosition[ax1]) {
-						if (center[ax2] < childPosition[ax2]) {
-							quadrant1st.push(child);
-						} else {
-							quadrant2nd.push(child);
-						}
-					} else {
-						// at the 3rd or 4th quadrant
-						return;
-					}
-				}
-			}
-		});
-		if (quadrant1st.length === 0) {
-			if (quadrant2nd.length === 0) {
-				// only origin
-				return true;
-			} else {
+		const boxes = new cBoxCollection(in_group.children);
+		const quat = (new THREE.Quaternion()).setFromAxisAngle(in_axis, Math.PI / 2);
+		let testCnt = 10;
+		const points = boxes.getRandomPoints(testCnt);
+		for (let i = 0; i < testCnt; i++) {
+			points[i].applyQuaternion(quat);
+			if (!boxes.containsPoint(points[i])) {
 				return false;
-			}
-		} else {
-			if (quadrant2nd.length === 0) {
-				return false;
-			} else {
-				const buffer = new THREE.Box3();
-				const unionBox1 = new THREE.Box3();
-				const unionBox2 = new THREE.Box3();
-				quadrant1st.forEach(in_piece => {
-					unionBox1.union(buffer.setFromObject(in_piece));
-				});
-				quadrant2nd.forEach(in_piece => {
-					unionBox2.union(buffer.setFromObject(in_piece));
-				});
-				const area1 = (unionBox1.max[ax1] - unionBox1.min[ax1]) * (unionBox1.max[ax2] - unionBox1.min[ax2]);
-				const area2 = (unionBox2.max[ax1] - unionBox2.min[ax1]) * (unionBox2.max[ax2] - unionBox2.min[ax2]);
-				// adhoc : even of the area is the same, they may not be symmetrical.
-				return Math.abs(area1 - area2) < error;
 			}
 		}
+		return true;
 	}
 	static #uiStates  = {
 		DISABLED : Symbol(),
