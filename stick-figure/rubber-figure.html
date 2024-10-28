@@ -572,6 +572,42 @@ const DIRECTION = {
 	ZN : VEC3(0, 0, -1)
 }
 
+class cBoxCollection {
+	#boxes = [];
+	constructor(in_objArr = []) {
+		in_objArr.forEach(in_obj => {
+			this.addBox((new THREE.Box3()).setFromObject(in_obj));
+		});
+	}
+	addBox(in_box) {
+		this.#boxes.push(in_box);
+	}
+	containsPoint(in_vec3) {
+		for (const box of this.#boxes) {
+			if (box.containsPoint(in_vec3)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	getRandomPoints(in_cnt) {
+		const points = [];
+		while (points.length < in_cnt) {
+			for (const box of this.#boxes) {
+				const min = box.min;
+				const max = box.max;
+				points.push(VEC3(
+					Math.random() * (max.x - min.x) + min.x,
+					Math.random() * (max.y - min.y) + min.y,
+					Math.random() * (max.z - min.z) + min.z
+				));
+			}
+		}
+		points.length = in_cnt;
+		return points;
+	}
+}
+
 const lookAtWithoutRotation = Symbol();
 
 THREE.Object3D.prototype[lookAtWithoutRotation] = function(in_dstV3, in_prjV3 = null) {
@@ -962,7 +998,7 @@ function customCapsuleGeometry(in_rad_t, in_rad_b, in_h, in_rSeg = 32, in_hSeg =
 		+- PerspectiveCamera
 */
 
-const EV_DISTANCE_MULTIPLIER = 2.5;
+const EV_DISTANCE_MULTIPLIER = 3;
 
 const DEVICE_PIXEL_RATIO = window.devicePixelRatio;
 
