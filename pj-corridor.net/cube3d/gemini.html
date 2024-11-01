@@ -1504,195 +1504,98 @@ if (getParam('color') === 'easy') {
 	SURFACEPROP.push({V3 : DIRECTION.ZN, COLOR : GREEN});
 }
 
-function pieceColorList(in_dimV3, in_ixV3) {
-	/*
-		piece ( hexahedron ) has surface x6
-		|
-		+- edge surface x0-3
-		|	|
-		|	+- orange, red, white, ...
-		|
-		+- inner surface x3-6
-			|
-			+- dark gray
-	*/
-	const colorList = [];
-	const insedeColor = GRAY;
-	// when in_ixV3 is on an edge, the color of SURFACEPROP is used
-	SURFACEPROP.forEach(({V3, COLOR}) => {
-		XYZ.forEach(in_xyz => {
-			switch (V3[in_xyz]) {
-			// the surface is facing the positive direction
-			case +1 :
-				// the position is at the positive edge
-				if (in_ixV3[in_xyz] === in_dimV3[in_xyz] - 1) {
-					colorList.push(COLOR);
-				} else {
-					colorList.push(insedeColor);
-				}
-				break;
-			// the surface is facing the negative direction
-			case -1 :
-				// the position is at the negative edge
-				if (in_ixV3[in_xyz] === 0) {
-					colorList.push(COLOR);
-				} else {
-					colorList.push(insedeColor);
-				}
-				break;
-			case 0 :
-				break;
-			}
-		});
-	});
-	return colorList;
-}
-
 /*
 	(4) dimension of Cube and Meshes of them
 */
-
-class cCubeDimV3 extends THREE.Vector3 {
-	get maxDim() {
-		return Math.max(...this.toArray());
-	}
-	#sizeList(in_unitSize = 1) {
-		const list = {};
-		/*
-			in case of 3x2x2, ...
-			list.x = [in_unitSize, in_unitSize, in_unitSize]
-			list.y = [in_unitSize, in_unitSize * 2]
-			list.z = [in_unitSize, in_unitSize * 2]
-		*/
-		XYZ.forEach(in_xyz => {
-			if (this[in_xyz] < this.maxDim) {
-				// separate not 4=3+1 but 4=2+2
-				if (this.maxDim % this[in_xyz] === 0) {
-					const quotient = this.maxDim / this[in_xyz];
-					list[in_xyz] = Array(this[in_xyz]).fill(in_unitSize * quotient);
-				} else {
-					list[in_xyz] = Array(this[in_xyz] - 1).fill(in_unitSize);
-					list[in_xyz].push((this.maxDim - this[in_xyz] + 1) * in_unitSize);
-				}
-			} else {
-				list[in_xyz] = Array(this[in_xyz]).fill(in_unitSize);
-			}
-		});
-		return list;
-	}
-	#indexLoop(in_callback) {
-		// first surface is at "new THREE.Vector3(0, 0, -1)"
-		for (let z = 0; z < this.z; z++) {
-			for (let y = 0; y < this.y; y++) {
-				for (let x = 0; x < this.x; x++) {
-					(in_callback)(new THREE.Vector3(x, y, z));
-				}
-			}
-		}
-	}
-	positionLoop(in_callback, in_unitSize, in_moveToV3 = new THREE.Vector3(0, 0, 0)) {
-		const sizeList = this.#sizeList(in_unitSize);
-		/*
-			each piece should be translated using translateV3
-
-			before translated :
-
-			   |
-			   +---+
-			   |   |
-			   |   |
-			   |   |
-			---+---+-
-			   |
-			   |
-			   |
-
-			after translated :
-
-			   |
-			   |
-			   |
-			 +-+-+
-			 | | |
-			-+-+-+---
-			 | | |
-			 +-+-+
-			   |
-		*/
-		const cubeCneter = this.maxDim * in_unitSize / 2;
-		const translateV3 = in_moveToV3.clone().sub(new THREE.Vector3(cubeCneter, cubeCneter, cubeCneter));
-		this.#indexLoop(in_ixV3 => {
-			const pieceSizeV3 = VEC3();
-			const piecePosV3 = VEC3();
-			XYZ.forEach(in_xyz => {
-				const curr = in_ixV3[in_xyz];
-				let start = 0;
-				for (let i = 0; i < curr; i++) {
-					start += sizeList[in_xyz][i];
-				}
-				pieceSizeV3[in_xyz] = sizeList[in_xyz][curr];
-				piecePosV3[in_xyz] = start + pieceSizeV3[in_xyz] / 2;
-			});
-			piecePosV3.add(translateV3);
-			(in_callback)(in_ixV3, piecePosV3, pieceSizeV3);
-		});
-	}
-	isInsideCube(in_ixV3) {
-		return XYZ.every(in_xyz => {
-			return (0 < in_ixV3[in_xyz]) && (in_ixV3[in_xyz] < this[in_xyz] - 1);
-		});
-	}
-}
 
 const CUBE_SIZE = 400;
 
 const gMeshLevelMap = ((in_cubeSize) => {
 	const map = new cCyclicMap();
 	const edgeMaterial = new THREE.MeshLambertMaterial({color : GRAY});
-	const cubeDimList = [
-		new cCubeDimV3(2, 2, 1),	/* =  4 */
-		new cCubeDimV3(3, 2, 1),	/* =  6 */
-		new cCubeDimV3(2, 2, 2),	/* =  8 */
-		new cCubeDimV3(3, 2, 2),	/* = 12 */
-		new cCubeDimV3(4, 2, 2),	/* = 16 */
-		new cCubeDimV3(3, 3, 2),	/* = 18 */
-		new cCubeDimV3(4, 3, 2),	/* = 24 */
-		new cCubeDimV3(3, 3, 3),	/* = 27 */
-		new cCubeDimV3(4, 4, 2),	/* = 32 */
-		new cCubeDimV3(4, 3, 3),	/* = 36 */
-		new cCubeDimV3(4, 4, 3),	/* = 48 */
-		new cCubeDimV3(4, 4, 4)		/* = 64 */
+	const settings = [
+		{
+			dimension : 2,
+			intersect : VEC3(2, 1, 1)
+		},
+		{
+			dimension : 2,
+			intersect : VEC3(1, 1, 1)
+		},
+		{
+			dimension : 3,
+			intersect : VEC3(3, 2, 2)
+		},
+		{
+			dimension : 3,
+			intersect : VEC3(2, 2, 2)
+		},
+		{
+			dimension : 3,
+			intersect : VEC3(3, 2, 1)
+		},
+		{
+			dimension : 3,
+			intersect : VEC3(2, 2, 1)
+		},
+		{
+			dimension : 3,
+			intersect : VEC3(3, 1, 2)
+		},
+		{
+			dimension : 3,
+			intersect : VEC3(2, 1, 1)
+		},
+		{
+			dimension : 3,
+			intersect : VEC3(1, 1, 1)
+		},
 	];
-	cubeDimList.forEach(in_cubeDim => {
-		const unitSize = in_cubeSize / in_cubeDim.maxDim;
+	settings.forEach(in_setting => {
+		const unitSize = in_cubeSize / in_setting.dimension;
+		const delta = in_setting.intersect.clone().multiplyScalar(unitSize * 0.5);
 		const pieces = [];
-		// see cCubeDimV3 implementation
-		in_cubeDim.positionLoop((in_ixV3, in_posV3, in_sizeV3) => {
-			if (in_cubeDim.isInsideCube(in_ixV3)) {
-				// console.log('inside', in_ixV3);
-				return;
+		for (let z = 0; z <= in_setting.dimension - 1; z++) {
+			for (let y = 0; y <= in_setting.dimension - 1; y++) {
+				for (let x = 0; x <= in_setting.dimension - 1; x++) {
+					const colors = SURFACEPROP.map(in_obj => in_obj.COLOR);
+					const geometry = boxGeometryFactory.create(unitSize, unitSize, unitSize);
+					// geometry has 7 groups (sub meshes)
+					const materials = boxMaterials(unitSize, unitSize, unitSize, colors);
+					materials.push(edgeMaterial);
+					const positiveSide = VEC3(
+						unitSize * (x + 0.5),
+						unitSize * (y + 0.5),
+						unitSize * (z + 0.5)
+					).add(delta.clone().negate());
+					const negativeSide = VEC3(
+						unitSize * (x + 0.5) - in_cubeSize,
+						unitSize * (y + 0.5) - in_cubeSize,
+						unitSize * (z + 0.5) - in_cubeSize
+					).add(delta);
+					const isIntersected = [x, y, z].every((in_v, in_ix) => in_v < in_setting.intersect.toArray()[in_ix]);
+					if (isIntersected) {
+						// create x1
+						const piece = new THREE.Mesh(geometry, materials);
+						piece.position.copy(negativeSide);
+						pieces.push(piece);
+					} else {
+						// create x2 (+ translated)
+						const gemini1 = new THREE.Mesh(geometry, materials);
+						gemini1.position.copy(negativeSide);
+						pieces.push(gemini1);
+						const gemini2 = new THREE.Mesh(geometry, materials);
+						gemini2.position.copy(positiveSide);
+						pieces.push(gemini2);
+					}
+				}
 			}
-			const geometry = boxGeometryFactory.create(...in_sizeV3.toArray());
-			// geometry has 7 groups (sub meshes)
-			const colors = pieceColorList(in_cubeDim, in_ixV3);
-			const materials = boxMaterials(...in_sizeV3.toArray(), colors);
-			materials.push(edgeMaterial);
-			/*
-				*** NOTE ***
-				when you use materials (= array) for "new THREE.Mesh",
-				the geometry should be devided into groups (= sub meshes).
-			*/
-			const piece = new THREE.Mesh(geometry, materials);
-			piece.position.copy(in_posV3);
-			pieces.push(piece);
-		}, unitSize);
-		const LEVEL1 = 27;
-		let level = in_cubeDim.toArray().reduce((product, current) => {
-			return product * current;
-		}, 1);
-		level = (level / LEVEL1).toFixed(1);
-		const keyString = in_cubeDim.toArray().join('x') + ' = lv ' + level;
-		map.set(keyString, pieces);
+		}
+		const volume_default = 15;
+		const volume_intersect = in_setting.intersect.toArray().reduce((acc, cur) => acc * cur, 1);
+		const volume_current = (in_setting.dimension ** 3) * 2 - volume_intersect;
+		const level = (volume_current / volume_default).toFixed(1);
+		map.set('lv ' + level, pieces);
 	});
 	return map;
 })(CUBE_SIZE);
@@ -1700,7 +1603,7 @@ const gMeshLevelMap = ((in_cubeSize) => {
 let gMeshCurrentLevel = getParam('level');
 
 if (gMeshCurrentLevel === false) {
-	gMeshCurrentLevel = 7;
+	gMeshCurrentLevel = 1;
 }
 
 function getColorBySide(in_mesh, in_targetV3) {
@@ -2472,7 +2375,7 @@ const gCube = new cRubiksCube();
 
 gWorld.add(gCube);
 
-gWorld.moveView(0.5, 0.5);
+gWorld.moveView(2.5, 0.5);
 gWorld.motionZoom2(WORLD_INIT_ZOOM, 1000);
 
 /*

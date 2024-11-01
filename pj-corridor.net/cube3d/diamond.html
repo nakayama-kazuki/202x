@@ -7,8 +7,8 @@
 <script type='importmap'>
 {
 	"imports": {
-		"three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.min.js",
-		"utils": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/utils/BufferGeometryUtils.js"
+		"three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+		"utils": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/utils/BufferGeometryUtils.js"
 	}
 }
 </script>
@@ -2267,7 +2267,8 @@ class cRubiksCube extends THREE.Object3D {
 		}
 		const ctx = this.#uiSession.ctx;
 		const currentDirV2 = in_posV2.clone().sub(ctx.initPosV2);
-		let rad = in_posV2.distanceTo(ctx.initPosV2) * ctx.roAxisDir;
+		let speedupWhen180 = ctx.roUnitAngle / (Math.PI / 2);
+		let rad = in_posV2.distanceTo(ctx.initPosV2) * ctx.roAxisDir * speedupWhen180;
 		if (ctx.initDirV2.dot(currentDirV2) > 0) {
 			// currentDirV2 & initDirV2 --> SAME direction
 			rad *= +1;
