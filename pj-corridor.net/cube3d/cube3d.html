@@ -575,8 +575,15 @@ const DIRECTION = {
 class cBoxCollection {
 	#boxes = [];
 	constructor(in_objArr = []) {
+		this.max = VEC3(Infinity * -1, Infinity * -1, Infinity * -1);
+		this.min = VEC3(Infinity * +1, Infinity * +1, Infinity * +1);
 		in_objArr.forEach(in_obj => {
-			this.addBox((new THREE.Box3()).setFromObject(in_obj));
+			const box = (new THREE.Box3()).setFromObject(in_obj)
+			this.addBox(box);
+			XYZ.forEach(in_xyz => {
+				this.max[in_xyz] = this.max[in_xyz] > box.max[in_xyz] ? this.max[in_xyz] : box.max[in_xyz];
+				this.min[in_xyz] = this.min[in_xyz] < box.min[in_xyz] ? this.min[in_xyz] : box.min[in_xyz];
+			});
 		});
 	}
 	addBox(in_box) {
@@ -2045,7 +2052,7 @@ class cRubiksCube extends THREE.Object3D {
 		}
 		return null;
 	}
-	makeRandomRotationProgress(in_ending_callback) {
+	makeRandomRotationProgress(in_callback) {
 		let axis;
 		let pieces;
 		let maxLoopCount = 100;
@@ -2060,25 +2067,25 @@ class cRubiksCube extends THREE.Object3D {
 				break;
 			}
 		}
-		let percentCurrent = 0;
-		let sounded = false;
-		const percentStep = 1 / 20;
+		let ratioCurrent = 0;
+		const ratioStep = 1 / 20;
 		const group = this.#setupGroup(pieces);
+		let unitAngle = Math.PI;
+		if (cRubiksCube.#groupIsMovable90(group, axis)) {
+			unitAngle = Math.PI / 2;
+		}
 		// this progress function assumes to be called by requestAnimationFrame()
 		const progress = () => {
-			percentCurrent += percentStep;
-			group.rotation[cRubiksCube.#axisProp(axis)] = Math.PI / 2 * percentCurrent;
-			if (percentCurrent >= 1) {
-				group.rotation[cRubiksCube.#axisProp(axis)] = Math.PI / 2;
+			ratioCurrent += ratioStep;
+			group.rotation[cRubiksCube.#axisProp(axis)] = unitAngle * ratioCurrent;
+			if (ratioCurrent >= 1) {
+				group.rotation[cRubiksCube.#axisProp(axis)] = unitAngle;
 				this.#releaseGroup(group);
-				(in_ending_callback)();
 				this.#settingVal.shuffled = true;
-			} else {
-				if ((percentCurrent > 0.4) && !sounded) {
-					AUDIO_ROTATION.play();
-					sounded = true;
-				}
+				// this progress function should be stopped in callback
+				ratioCurrent = 1;
 			}
+			(in_callback)(ratioCurrent);
 		};
 		return progress;
 	}
@@ -2133,11 +2140,20 @@ class cRubiksCube extends THREE.Object3D {
 	static #groupIsMovable90(in_group, in_axis) {
 		// assume in_group has children which compose rotateion group
 		const boxes = new cBoxCollection(in_group.children);
+		const ax = cRubiksCube.#axisProp(in_axis, false);
+		const error = 0.01;
+		const size1 = boxes.max[ax[0]] - boxes.min[ax[0]];
+		const size2 = boxes.max[ax[1]] - boxes.min[ax[1]];
+		if (Math.abs(size1 - size2) > error) {
+			return false;
+		}
 		const quat = (new THREE.Quaternion()).setFromAxisAngle(in_axis, Math.PI / 2);
 		let testCnt = 10;
 		const points = boxes.getRandomPoints(testCnt);
 		for (let i = 0; i < testCnt; i++) {
-			points[i].applyQuaternion(quat);
+			const preRotation = in_group.position.clone().negate();
+			const postRotation = in_group.position;
+			points[i].add(preRotation).applyQuaternion(quat).add(postRotation);
 			if (!boxes.containsPoint(points[i])) {
 				return false;
 			}
@@ -2472,7 +2488,7 @@ const gCube = new cRubiksCube();
 
 gWorld.add(gCube);
 
-gWorld.moveView(0.5, 0.5);
+gWorld.moveView(2.5, 0.5);
 gWorld.motionZoom2(WORLD_INIT_ZOOM, 1000);
 
 /*
@@ -2584,7 +2600,15 @@ function complete() {
 
 function shuffle(in_count) {
 	const randomRotation = (in_remaining_count) => {
-		const lastCallback = () => {
+		let overTheTop = false;
+		const callback = (in_ratio) => {
+			if ((in_ratio > 0.4) && !overTheTop) {
+				AUDIO_ROTATION.play();
+				overTheTop = true;
+			}
+			if (in_ratio < 1) {
+				return;
+			}
 			gWorld.removeAnimationHook(progress);
 			if (in_remaining_count > 1) {
 				(randomRotation)(in_remaining_count - 1);
@@ -2593,7 +2617,7 @@ function shuffle(in_count) {
 				gCube.uiEnable();
 			}
 		};
-		const progress = gCube.makeRandomRotationProgress(lastCallback);
+		const progress = gCube.makeRandomRotationProgress(callback);
 		gWorld.addAnimationHook(progress);
 	};
 	gCube.registerCompleteCallback(complete);
