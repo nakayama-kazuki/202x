@@ -597,20 +597,17 @@ class cBoxCollection {
 		}
 		return false;
 	}
-	getRandomPoints(in_cnt) {
+	getContainedPoints() {
 		const points = [];
-		while (points.length < in_cnt) {
-			for (const box of this.#boxes) {
-				const min = box.min;
-				const max = box.max;
-				points.push(VEC3(
-					Math.random() * (max.x - min.x) + min.x,
-					Math.random() * (max.y - min.y) + min.y,
-					Math.random() * (max.z - min.z) + min.z
-				));
-			}
+		for (const box of this.#boxes) {
+			const min = box.min;
+			const max = box.max;
+			points.push(VEC3(
+				(max.x - min.x) / 2 + min.x,
+				(max.y - min.y) / 2 + min.y,
+				(max.z - min.z) / 2 + min.z
+			));
 		}
-		points.length = in_cnt;
 		return points;
 	}
 }
@@ -1592,12 +1589,12 @@ class cCubeDimV3 extends THREE.Vector3 {
 		for (let z = 0; z < this.z; z++) {
 			for (let y = 0; y < this.y; y++) {
 				for (let x = 0; x < this.x; x++) {
-					(in_callback)(new THREE.Vector3(x, y, z));
+					(in_callback)(VEC3(x, y, z));
 				}
 			}
 		}
 	}
-	positionLoop(in_callback, in_unitSize, in_moveToV3 = new THREE.Vector3(0, 0, 0)) {
+	positionLoop(in_callback, in_unitSize, in_moveToV3 = VEC3()) {
 		const sizeList = this.#sizeList(in_unitSize);
 		/*
 			each piece should be translated using translateV3
@@ -1627,7 +1624,7 @@ class cCubeDimV3 extends THREE.Vector3 {
 			   |
 		*/
 		const cubeCneter = this.maxDim * in_unitSize / 2;
-		const translateV3 = in_moveToV3.clone().sub(new THREE.Vector3(cubeCneter, cubeCneter, cubeCneter));
+		const translateV3 = in_moveToV3.clone().sub(VEC3(cubeCneter, cubeCneter, cubeCneter));
 		this.#indexLoop(in_ixV3 => {
 			const pieceSizeV3 = VEC3();
 			const piecePosV3 = VEC3();
@@ -1749,9 +1746,9 @@ class cRubiksCube extends THREE.Object3D {
 		return true;
 	}
 	static #axes = {
-		x : new THREE.Vector3(1, 0, 0),
-		y : new THREE.Vector3(0, 1, 0),
-		z : new THREE.Vector3(0, 0, 1)
+		x : VEC3(1, 0, 0),
+		y : VEC3(0, 1, 0),
+		z : VEC3(0, 0, 1)
 	};
 	static #axisProp(in_axis, in_match = true) {
 		const props = Object.keys(cRubiksCube.#axes).filter(in_key => {
@@ -1899,7 +1896,7 @@ class cRubiksCube extends THREE.Object3D {
 	}
 	static #splitGroupByAxis_2_calculateEdges(io_scalarMap, in_axis) {
 		for (const [scalar, info] of io_scalarMap.entries()) {
-			const length = (new THREE.Vector3().subVectors(info.tmpBox.max, info.tmpBox.min)).dot(in_axis);
+			const length = (VEC3().subVectors(info.tmpBox.max, info.tmpBox.min)).dot(in_axis);
 			info.edgeL = scalar - length / 2;
 			info.edgeR = scalar + length / 2;
 			delete info.tmpBox;
@@ -2103,19 +2100,19 @@ class cRubiksCube extends THREE.Object3D {
 			{surface : new THREE.Vector3(-1, 0, 0), direction : new THREE.Vector3(0, -1, 0), expected : new THREE.Vector3(0, 0, +1)},
 			...
 		*/
-		const rotationAxis = new THREE.Vector3();
+		const rotationAxis = VEC3();
 		rotationAxis.crossVectors(in_surfaceV3, in_directionV3);
 		return rotationAxis;
 	}
 	static #detectMovingDirection(in_dstV3, in_srcV3, in_surfaceV3) {
-		const vec3 = (new THREE.Vector3()).subVectors(in_dstV3, in_srcV3);
+		const vec3 = VEC3().subVectors(in_dstV3, in_srcV3);
 		const axes = [
-			new THREE.Vector3(+1, 0, 0),
-			new THREE.Vector3(-1, 0, 0),
-			new THREE.Vector3(0, +1, 0),
-			new THREE.Vector3(0, -1, 0),
-			new THREE.Vector3(0, 0, +1),
-			new THREE.Vector3(0, 0, -1)
+			VEC3(+1, 0, 0),
+			VEC3(-1, 0, 0),
+			VEC3(0, +1, 0),
+			VEC3(0, -1, 0),
+			VEC3(0, 0, +1),
+			VEC3(0, 0, -1)
 		];
 		const ret = {
 			minAngle : Infinity,
@@ -2148,9 +2145,8 @@ class cRubiksCube extends THREE.Object3D {
 			return false;
 		}
 		const quat = (new THREE.Quaternion()).setFromAxisAngle(in_axis, Math.PI / 2);
-		let testCnt = 10;
-		const points = boxes.getRandomPoints(testCnt);
-		for (let i = 0; i < testCnt; i++) {
+		const points = boxes.getContainedPoints();
+		for (let i = 0; i < points.length; i++) {
 			const preRotation = in_group.position.clone().negate();
 			const postRotation = in_group.position;
 			points[i].add(preRotation).applyQuaternion(quat).add(postRotation);
@@ -2309,7 +2305,7 @@ class cRubiksCube extends THREE.Object3D {
 				ctx.roUnitAngle = Math.PI / 2;
 			}
 			// use Vector3(1, 1, 1) to extruct +1 or -1
-			ctx.roAxisDir = moving.rotationAxis.dot(new THREE.Vector3(1, 1, 1));
+			ctx.roAxisDir = moving.rotationAxis.dot(VEC3(1, 1, 1));
 			ctx.roAxisXYZ = cRubiksCube.#axisProp(axis);
 			ctx.initDirV2 = in_posV2.clone().sub(ctx.initPosV2);
 			return RC.MOVABLE;
