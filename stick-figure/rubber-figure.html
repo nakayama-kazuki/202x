@@ -575,8 +575,15 @@ const DIRECTION = {
 class cBoxCollection {
 	#boxes = [];
 	constructor(in_objArr = []) {
+		this.max = VEC3(Infinity * -1, Infinity * -1, Infinity * -1);
+		this.min = VEC3(Infinity * +1, Infinity * +1, Infinity * +1);
 		in_objArr.forEach(in_obj => {
-			this.addBox((new THREE.Box3()).setFromObject(in_obj));
+			const box = (new THREE.Box3()).setFromObject(in_obj)
+			this.addBox(box);
+			XYZ.forEach(in_xyz => {
+				this.max[in_xyz] = this.max[in_xyz] > box.max[in_xyz] ? this.max[in_xyz] : box.max[in_xyz];
+				this.min[in_xyz] = this.min[in_xyz] < box.min[in_xyz] ? this.min[in_xyz] : box.min[in_xyz];
+			});
 		});
 	}
 	addBox(in_box) {
@@ -590,20 +597,17 @@ class cBoxCollection {
 		}
 		return false;
 	}
-	getRandomPoints(in_cnt) {
+	getContainedPoints() {
 		const points = [];
-		while (points.length < in_cnt) {
-			for (const box of this.#boxes) {
-				const min = box.min;
-				const max = box.max;
-				points.push(VEC3(
-					Math.random() * (max.x - min.x) + min.x,
-					Math.random() * (max.y - min.y) + min.y,
-					Math.random() * (max.z - min.z) + min.z
-				));
-			}
+		for (const box of this.#boxes) {
+			const min = box.min;
+			const max = box.max;
+			points.push(VEC3(
+				(max.x - min.x) / 2 + min.x,
+				(max.y - min.y) / 2 + min.y,
+				(max.z - min.z) / 2 + min.z
+			));
 		}
-		points.length = in_cnt;
 		return points;
 	}
 }
