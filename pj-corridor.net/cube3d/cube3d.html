@@ -2327,7 +2327,10 @@ class cRubiksCube extends THREE.Object3D {
 			rad *= +1;
 		} else {
 			// currentDirV2 & initDirV2 --> OPPOSITE direction
-			rad *= -1;
+			const thresholdToStopWarp = Math.PI / 8;
+			if (Math.abs(ctx.roRadian + rad) < thresholdToStopWarp) {
+				rad *= -1;
+			}
 		}
 		/*
 			*** NOTE ***
