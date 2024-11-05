@@ -1071,7 +1071,10 @@ class cSphericalWorld {
 		this.#cameraCtrl.add(camera);
 		// light
 		const lightColor = 0xFFFFFF;
-		const light = new THREE.DirectionalLight(lightColor);
+		const intensity = 1;
+		const noLimit = 0;
+		const noDecay = 0;
+		const light = new THREE.PointLight(lightColor, intensity, noLimit, noDecay);
 		light.position.set(
 			0,
 			in_radius * cSphericalWorld.#view.cameraUp.y,
@@ -2234,8 +2237,8 @@ const gCyclicMaterials = (in_color => {
 	const cyclic = new cCyclicValues();
 	cyclic.push(new THREE.MeshStandardMaterial({
 		color : in_color,
-		metalness : 0.2,
-		roughness : 0.2
+		metalness : 0.3,
+		roughness : 0.3
 	}));
 	cyclic.push(new THREE.MeshStandardMaterial({
 		color : in_color,
