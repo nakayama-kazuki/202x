@@ -1071,7 +1071,10 @@ class cSphericalWorld {
 		this.#cameraCtrl.add(camera);
 		// light
 		const lightColor = 0xFFFFFF;
-		const light = new THREE.DirectionalLight(lightColor);
+		const intensity = 1;
+		const noLimit = 0;
+		const noDecay = 0;
+		const light = new THREE.PointLight(lightColor, intensity, noLimit, noDecay);
 		light.position.set(
 			0,
 			in_radius * cSphericalWorld.#view.cameraUp.y,
