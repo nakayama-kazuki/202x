@@ -612,7 +612,23 @@ class cBoxCollection {
 	}
 }
 
+const instanceInAncestor = Symbol();
 const lookAtWithoutRotation = Symbol();
+
+THREE.Object3D.prototype[instanceInAncestor] = function(in_class) {
+	const recurse = (in_current) => {
+		if (in_current instanceof in_class) {
+			return in_current;
+		} else {
+			if (in_current.parent) {
+				return recurse(in_current.parent);
+			} else {
+				return null;
+			}
+		}
+	};
+	return (recurse)(this);
+}
 
 THREE.Object3D.prototype[lookAtWithoutRotation] = function(in_dstV3, in_prjV3 = null) {
 	const updateParents = true;
