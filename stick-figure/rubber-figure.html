@@ -612,7 +612,23 @@ class cBoxCollection {
 	}
 }
 
+const instanceInAncestor = Symbol();
 const lookAtWithoutRotation = Symbol();
+
+THREE.Object3D.prototype[instanceInAncestor] = function(in_class) {
+	const recurse = (in_current) => {
+		if (in_current instanceof in_class) {
+			return in_current;
+		} else {
+			if (in_current.parent) {
+				return recurse(in_current.parent);
+			} else {
+				return null;
+			}
+		}
+	};
+	return (recurse)(this);
+}
 
 THREE.Object3D.prototype[lookAtWithoutRotation] = function(in_dstV3, in_prjV3 = null) {
 	const updateParents = true;
@@ -1373,20 +1389,6 @@ class cAbstractPart extends THREE.SkinnedMesh {
 		INTERLOCKING : Symbol()
 	};
 	static operatingLayer = 1;
-	static searchInstance(in_obj) {
-		const recurse = (in_current) => {
-			if (!in_current) {
-				return null;
-			}
-			if (in_current instanceof cAbstractPart) {
-				return in_current;
-			} else {
-				// for object by #makeRoughGeometry(), and addMeshToBone()
-				return recurse(in_current.parent);
-			}
-		};
-		return (recurse)(in_obj);
-	}
 	static #activateReceiver(in_receiver, in_activate) {
 		if (in_activate) {
 			in_receiver.raycast = THREE.Mesh.prototype.raycast;
@@ -1940,6 +1942,25 @@ class cJointedSolidPart extends cSolidPart {
 	}
 	static createUtil2(in_geoArm, in_armCnt, in_restricted) {
 		return cJointedSolidPart.createUtil1(in_geoArm, null, in_armCnt, in_restricted);
+	}
+	static #jointedFrom(in_startObj, in_direction) {
+		const ancestor = in_startObj[instanceInAncestor](cJointedSolidPart);
+		if (!ancestor) {
+			return [];
+		}
+		const buff = [ancestor, ...ancestor.userData.jointed];
+		if (in_direction) {
+			buff.reverse();
+		}
+		return buff.slice(buff.indexOf(in_startObj));
+	}
+	static ancestors(in_obj) {
+		// in_startObj + ancestors
+		return cJointedSolidPart.#jointedFrom(in_obj, true);
+	}
+	static descendants(in_obj) {
+		// in_startObj + descendants
+		return cJointedSolidPart.#jointedFrom(in_obj, false);
 	}
 	constructor(in_geoArr, in_restricted) {
 		let prev = null;
@@ -2857,7 +2878,8 @@ gWorld.canvas.addEventListener('mousedown', in_ev => {
 	let intersects = gWorld.intersectPositive(vec2);
 	if (intersects.length > 0) {
 		const rayHit = intersects[0];
-		const target = cAbstractPart.searchInstance(rayHit.object);
+		// for #makeRoughGeometry(), and addMeshToBone()
+		const target = rayHit.object[instanceInAncestor](cAbstractPart)
 		if (!target) {
 			// uncontrollable object
 			return;
@@ -2878,9 +2900,11 @@ gWorld.canvas.addEventListener('mousemove', in_ev => {
 		return;
 	}
 	let vec2 = eventPos2RaycasterPos(in_ev);
-	let delta = vec2.clone().sub(gDrag.vec);
-	if (delta.length() < 0.01) {
+	let delta = vec2.clone().sub(gDrag.vec).length();
+	if (delta < 0.01) {
 		return;
+	} else {
+		gDrag.vec = vec2;
 	}
 	let intersects;
 	if (gDrag.far) {
@@ -2889,12 +2913,69 @@ gWorld.canvas.addEventListener('mousemove', in_ev => {
 		intersects = gWorld.intersectPositive(vec2, cAbstractPart.operatingLayer);
 	}
 	if (intersects.length > 0) {
+		// receiver (CircleGeometry or SphereGeometry)
+		if (intersects.length === 1) {
+			// receiver (only CircleGeometry)
+			const ancestors = cJointedSolidPart.ancestors(gDrag.obj);
+			if (ancestors.length > 1) {
+				/*
+					[0] > threshold : using normal bendAt
+					[0] < threshold : 
+					  [1] > threshold : affect [1] + bendAt [0]
+					  [1] < threshold : i++
+					    [2] > threshold : affect [2] + bendAt [1] ([0] is the same angle with [1])
+					    [2] < threshold : i++
+				*/
+				const threshold = 0.02;
+				const getWorldFront = in_obj => {
+					const localFront = VEC3(0, 0, 1);
+					return localFront.applyQuaternion(in_obj.getWorldQuaternion(new THREE.Quaternion()));
+				};
+				const vectorToIntersect = (in_point => {
+					return in_obj => {
+						const worldPosition = in_obj.getWorldPosition(VEC3());
+						return VEC3().subVectors(in_point, worldPosition);
+					};
+				})(intersects[0].point);
+				const angleToIntersect = in_obj => {
+					return vectorToIntersect(in_obj).angleTo(getWorldFront(in_obj));
+				};
+				if (angleToIntersect(ancestors[0]) < threshold) {
+					// (1) special case : bendAt() may be applied to ancestor
+					let target = 0;
+					for (let i = 1; i < ancestors.length; i++) {
+						if (angleToIntersect(ancestors[i]) < threshold) {
+							continue;
+						} else {
+							target = i;
+							break;
+						}
+					}
+					if (target > 0) {
+						// affect [n]
+						const parent = ancestors[target];
+						const srcDir = getWorldFront(parent);
+						const dstDir = vectorToIntersect(parent);
+						const angle = Math.min(srcDir.angleTo(dstDir), delta * 10);
+						const axis = VEC3().crossVectors(srcDir, dstDir).normalize();
+						const quat = new THREE.Quaternion().setFromAxisAngle(axis, angle);
+						srcDir.applyQuaternion(quat).multiplyScalar(WORLD_RADIUS);
+						parent[lookAtWithoutRotation](parent.position.clone().add(srcDir));
+						// bendAt [n - 1]
+						const child = ancestors[target - 1];
+						child[lookAtWithoutRotation](intersects[0].point);
+					}
+					return;
+				}
+			}
+		}
+		// (2) normal case : bendAt() is applied to gDrag.obj
 		gDrag.obj.bendAt(intersects[0].point);
-		gDrag.vec = vec2;
 		if (gDrag.obj instanceof cSmartPhone) {
 			gCyclicFigures.currValue().resetItemUpToHead();
 		}
 	} else {
+		// (3) gDrag.obj is released
 		if (gDrag.animating) {
 			return;
 		} else {
@@ -2916,7 +2997,6 @@ gWorld.canvas.addEventListener('mousemove', in_ev => {
 			}
 		})(gDrag.obj);
 		gWorld.addAnimationHook(hook);
-		gDrag.vec = vec2;
 	}
 });
 
