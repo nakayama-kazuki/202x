@@ -487,6 +487,19 @@ function emulateTouchEvent(in_elem) {
 	});
 }
 
+const debounce = (() => {
+	const maxLen = 100;
+	let timeoutIds = {};
+	return (in_callback, in_delay) => {
+		const callbackId = pseudoMessageDigest2(in_callback.toString().substring(0, maxLen));
+		if (callbackId in timeoutIds) {
+			// only the latest in_callback should be queued
+			window.clearTimeout(timeoutIds[callbackId]);
+		}
+		timeoutIds[callbackId] = window.setTimeout(in_callback, in_delay);
+	};
+})();
+
 const clipArea = Symbol();
 const clipClearArea = Symbol();
 
@@ -1743,14 +1756,6 @@ function getColorBySide(in_mesh, in_targetV3) {
 	(5) Rubik's Cube related functions
 */
 
-let AUDIO_ROTATION, AUDIO_ERROR, AUDIO_DUMMY;
-
-createAudio('eJzt0jnTqkgYhuEfRNCigBC+zQ4i+5qJC6sim4C/furz1KkJpiac8kwVd9Lp1d0PQkc1AZAWkLorw6tgZ/SlyLCNAVo1EQsX5qEFOtRoV9i/ufh2eBCNaLwo6+WfHwbqBKpUzhZCAn1BGCF2RIi1EG2h3xE5GOHZQqwy3TAfYZZXLNrZIRIQBtGabgLTgHAhqVGLGx07B8mXQUBcdsN72Li+XMYuJjR7vy27oPYtRty4Kj0cx1J3N+jHz/eW53JkyoYVQErBA7wMA9xnu7/bOIq3z0I3Fe5oVu9QSqN8YbZ7bsuEh1pqPCf142kwW4cr0vA4ee3woggv4vSILeWOc5crbRFteWaINFrQYV7I53sa60VyApoZHeEpsJMNGD4XZp8IeYyvejfqUSbXfXVDTcOW1ydJeC2o9wiRVZmmD4V4Pto50KWPH1h1UCR0I0QD7KLd1bY2YQBBGCWxlouXEHZz3z9JW5xOcmQ3G/7hQWu+jpeW4k84tPW6kQtjOegpGvsI9ZLz2OQG5ufnI4mmpfx8Q5lwnLjcuBfhoc2N82kU0H2B9saO6FH/QEFkIaZY1BYAtCK0jUwpznlVZHZzPtT2dsfptZmISSpOR/Dksa4xZf96f1HdyeQln0DAWaFCNQGINuxewmk6GfmkZIt7Cob7u7jzziCWXby5G3MgHKjpfk6DOKtOWnkt9ovyGcz7mS5mq5Y7gu9655JNcrlVX5ZnG32HowbGoQxkTnU3QwRgt5WcvJB/p/RYDz0fi/k4T7JCJeM+9t1k6U+1QQqBM+smNKeSbc28reNdZ6TMbut9/IKhOd5FNjNchFniElcbAM6XU2sG4nFfu+xC2zN2VK6+P3Jx0EjBvLD5D/Xu6ZMv8ucS9UUv4UCpjHtQCzDFcscdz+/jkjwFlxvDJTeOoRIs150VXkty3F+44taQAnOxGHOw2G6DEhIhVc9ABU1TMUKo6H42RQR80+rVjegDyYmYPA5TLm71YjBsn/y1H7ERZzC6coISftpkn8NYqNkQcPCn5YnS0fGM0fBg+vg1StgBH1o/fvtv/7ed/9Y//OoPWq7gd6v/P231f7fV/91W/3db/d9t9X+31f/dVv93W/3fbfV/t9X/5/R/9/8Fg3FQCQ==').then(in_audio => AUDIO_ROTATION = in_audio);
-
-createAudio('eJzt0smyslgWhuELYrAAAWG4kU2PSA/OUARppD2AcPUZ/6mqUUWOzYzwnazpEys+gLN2RUg5Izm8cScNOWmHxoR1xOL0xJabdrU7mCWVXBaM/UXiGYlbc1EgTigxF75liobJgceqfOHnnNHsjQUgcoy7O4BeRO4W48TO8cMcLtSTn4kf5rI8q0DRNPXS6BIrxITfGO9aQXHnFNlm6E8Sr5kjaWZVi0hiJF4kFDZQNIl/VoWu6ddr67chBZkv2S388Z8YYzflO7LSCYnITaZXWOwFOj+D2reClfpZMOYFIFKLhvEsrPTwxtrNd0dWjzWL6GLRUi8OdQRbWbsbgZB4DwgFI5HNIv+EzNTBgq2+nRh3RnuKjLWUdFJ6lp0j9c1OZ7VPnkdOyoxeGf2qKq/XvKR+XpXYkwJwAoCQoh0hoTc8SwKAQ9w/dn1MJeb16xc1bdLlp0p4E0LsUxsSaVcK1OiKN4fXyCZtag6ew/Zg5r5cBq69c4S5DMki7Pe3WpAKgByfzlvLC+vATGoOQMpt0xtZEaQTsvTX7RZNsiAcYo0liyU76SjP7xTWxfX19vXAD86UO5RH82KXr76NtlAnKBOGKNMKAwBgOeYAjdOh4lKrRHXicNf6iR3Sv37EqLQua3MRGTZidGPSH2hyiChaheGdRZmQeo4ZX2ZBPVsep6qXHqCzXEaMFDmHQJXF9BhlbEhR8rUF0E3JXsmaD9FPXZp11XQFzraNwYkTlyWtVHfuofpxRJ5vWcjHsn3LzlePrIEzUIWkHII0Z0PHIrKip2YAGmK/7Ejk1wRZcVS5pxNrq25JCpX7x++KmnrXA0YpFNVExEYN7APhvqQ6udkjih5b7Xh2GGK40tmS96qoSOtTqm1gk4gNiV7qkxy30Q6Q1bNbOUg7qDeDvaWI2uVORxatpiLjm9LkSgcxsO+vYfsZGulikrgKEzP782EyTTgB+obLo5K2rgBAAHBJd6QHPTTDQLdsR5OsaJVlbyovUhDIamoX/92Pujr8Zq6ocQrBULo3gWrfmLgMc6oRjDL25mif+qTuEuNk5sSYBnDvg5E7NgLQvulSUm/mIPikFwyXQSTdybOjEmF30P18rmZf98mFvUERks1hurbho7ZEUVKdA7hACt5LkPG0X7ZQp8Of1716oVeTA7HJ+yBifnXPxgLpa4CBu3u6am5ju8c4G9zqP34sJ3rNKqvT++twNZuEPuHtwVPAxwBlhCwkN3ExAnfIYT8AnOI3Bmkh2mjzUONZZzypUfZa2g1HJX4DmGPbQk0x2K8pFcZ8vXILewCiGW75aAMZHmjC9eZ+phex94NhTsswY07H2Qys20yNer4AvF3B4OJ4Bl4A4EhLv91uUUdPx2gvnOFh+oPk/fqlBAPCi7miEjl9Ijb9A2HndAjGsV0yH46iJIjcQhUaP4zh5EL3WARiAeJna/zw8LyXPbpkFqJwiYXydQ+ci5y/SyXn0ODlMPrAdCn8AJ1vvgrM0GzuHgp5monVKRiexUZONCr1Orqtxs4pj8KYAMKjysjpxcu4+mH+mdPeB2/RD8LQx/LZ9a3Z8tH665d5zCFJyFenRKgvxLyjT5ZzCv+h/Z9fcxBCSo3+F1n8nk87/66v/7N9/Z/t6/9sX/9n+/o/29f/2b7+z/b1f7av/7N9/f+c/u3+vwAz5Yo+').then(in_audio => AUDIO_ERROR = in_audio);
-
-createAudio('eJztzsuOoloUgOEHYrDUXSAM1wbkfm0RYdaCbLwBoojw9J2qdCeVnJzp4XTCP/mnH4BrpIiGHy0dz5INNE41bU95QBFX7Y4VAPxZH7wCvBzG16AC14wACy8DHozVueAawo+Vl3GBgmM1qEbGi6Ws+hcjOP9QKy8TmUZPpEfqI2KGn6URmK/ABz4klaP6jzfKuugUdsmZfTF8FGs+JMBp/lgNLNknhzXLFHY4rol0HjDzNqrgmF68Loy+AHCNkCaGay2JnakMA64snqHEFCYDZ5sqABfxdY5ADmMrPD6E1unaLrl1RapfFk3YPNYKP7Rp8vCg2a3pCyR7t5BZEK+updcZaJWEf5fvPVjqUk1C4OqVcXKUhR6wLI8+cu3+3F1qQd/eADqPRT8db7lY7zofV+HLEwquP23oOAx1zyl4jJWI6XW3YczWnAusPv0pRf0cZb3WRQaiJFyqa/EOEYF73g7pioAYNVFOIY3FkJ5+PB246S6VbzAAcCKRdBA093rgiJDslyVJ27t25vb7eI9W/NPAwLNKc4TPuCcJHm+RxrvRsFzCyu0CorC8LQAWr1tjRy9xy7Wjz7+EGEpqJyffesRHj3d7rm7uNvCmbR41E3vKXDnpZOO3fyNRB/T3pcGg6806PcpJL6e08RTnoQS5jcu3lTe8fi0s4FMgRbnc2/orBakC8bm4PmO3i2MSk1PAEmrKgay+7rSWaK1Vdz9Y0miT3fNxdQQDarieiVCIZ5AqgRx30uZg2oz2PsNHnjq1Rz/kU+sLZV4BbMr8eUeMlAhtPW5pkGUJKcTdAThbeEfxl1/u5Z4eShv7M2KM3iFNNDXBrbpxw63TOVvsd/+jvru+/PoDEbUL/mnBvja189/6h98IZv9/2Oyfttk/bbN/2mb/tM3+aZv90zb7p232T9vsn7bZP22zf9r+dv/3/nb/L/4gyhY=').then(in_audio => AUDIO_DUMMY = in_audio);
-
 class cRubiksCube extends THREE.Object3D {
 	static #smallError = 0.01;
 	static get err() {
@@ -2616,6 +2621,19 @@ function complete() {
 	}, duration);
 }
 
+/*
+	*** NOTE ***
+	in Safari, using await to get audio will cause the process to fail.
+	I'm not sure of the reason, but top-level await might be the cause.
+	this time use then() to avoid the issue.
+*/
+
+let AUDIO_ROTATION, AUDIO_ERROR, AUDIO_DUMMY;
+
+createAudio('eJzt0jnTqkgYhuEfRNCigBC+zQ4i+5qJC6sim4C/furz1KkJpiac8kwVd9Lp1d0PQkc1AZAWkLorw6tgZ/SlyLCNAVo1EQsX5qEFOtRoV9i/ufh2eBCNaLwo6+WfHwbqBKpUzhZCAn1BGCF2RIi1EG2h3xE5GOHZQqwy3TAfYZZXLNrZIRIQBtGabgLTgHAhqVGLGx07B8mXQUBcdsN72Li+XMYuJjR7vy27oPYtRty4Kj0cx1J3N+jHz/eW53JkyoYVQErBA7wMA9xnu7/bOIq3z0I3Fe5oVu9QSqN8YbZ7bsuEh1pqPCf142kwW4cr0vA4ee3woggv4vSILeWOc5crbRFteWaINFrQYV7I53sa60VyApoZHeEpsJMNGD4XZp8IeYyvejfqUSbXfXVDTcOW1ydJeC2o9wiRVZmmD4V4Pto50KWPH1h1UCR0I0QD7KLd1bY2YQBBGCWxlouXEHZz3z9JW5xOcmQ3G/7hQWu+jpeW4k84tPW6kQtjOegpGvsI9ZLz2OQG5ufnI4mmpfx8Q5lwnLjcuBfhoc2N82kU0H2B9saO6FH/QEFkIaZY1BYAtCK0jUwpznlVZHZzPtT2dsfptZmISSpOR/Dksa4xZf96f1HdyeQln0DAWaFCNQGINuxewmk6GfmkZIt7Cob7u7jzziCWXby5G3MgHKjpfk6DOKtOWnkt9ovyGcz7mS5mq5Y7gu9655JNcrlVX5ZnG32HowbGoQxkTnU3QwRgt5WcvJB/p/RYDz0fi/k4T7JCJeM+9t1k6U+1QQqBM+smNKeSbc28reNdZ6TMbut9/IKhOd5FNjNchFniElcbAM6XU2sG4nFfu+xC2zN2VK6+P3Jx0EjBvLD5D/Xu6ZMv8ucS9UUv4UCpjHtQCzDFcscdz+/jkjwFlxvDJTeOoRIs150VXkty3F+44taQAnOxGHOw2G6DEhIhVc9ABU1TMUKo6H42RQR80+rVjegDyYmYPA5TLm71YjBsn/y1H7ERZzC6coISftpkn8NYqNkQcPCn5YnS0fGM0fBg+vg1StgBH1o/fvtv/7ed/9Y//OoPWq7gd6v/P231f7fV/91W/3db/d9t9X+31f/dVv93W/3fbfV/t9X/5/R/9/8Fg3FQCQ==').then(in_audio => AUDIO_ROTATION = AUDIO_DUMMY = in_audio);
+
+createAudio('eJzt0smyslgWhuELYrAAAWG4kU2PSA/OUARppD2AcPUZ/6mqUUWOzYzwnazpEys+gLN2RUg5Izm8cScNOWmHxoR1xOL0xJabdrU7mCWVXBaM/UXiGYlbc1EgTigxF75liobJgceqfOHnnNHsjQUgcoy7O4BeRO4W48TO8cMcLtSTn4kf5rI8q0DRNPXS6BIrxITfGO9aQXHnFNlm6E8Sr5kjaWZVi0hiJF4kFDZQNIl/VoWu6ddr67chBZkv2S388Z8YYzflO7LSCYnITaZXWOwFOj+D2reClfpZMOYFIFKLhvEsrPTwxtrNd0dWjzWL6GLRUi8OdQRbWbsbgZB4DwgFI5HNIv+EzNTBgq2+nRh3RnuKjLWUdFJ6lp0j9c1OZ7VPnkdOyoxeGf2qKq/XvKR+XpXYkwJwAoCQoh0hoTc8SwKAQ9w/dn1MJeb16xc1bdLlp0p4E0LsUxsSaVcK1OiKN4fXyCZtag6ew/Zg5r5cBq69c4S5DMki7Pe3WpAKgByfzlvLC+vATGoOQMpt0xtZEaQTsvTX7RZNsiAcYo0liyU76SjP7xTWxfX19vXAD86UO5RH82KXr76NtlAnKBOGKNMKAwBgOeYAjdOh4lKrRHXicNf6iR3Sv37EqLQua3MRGTZidGPSH2hyiChaheGdRZmQeo4ZX2ZBPVsep6qXHqCzXEaMFDmHQJXF9BhlbEhR8rUF0E3JXsmaD9FPXZp11XQFzraNwYkTlyWtVHfuofpxRJ5vWcjHsn3LzlePrIEzUIWkHII0Z0PHIrKip2YAGmK/7Ejk1wRZcVS5pxNrq25JCpX7x++KmnrXA0YpFNVExEYN7APhvqQ6udkjih5b7Xh2GGK40tmS96qoSOtTqm1gk4gNiV7qkxy30Q6Q1bNbOUg7qDeDvaWI2uVORxatpiLjm9LkSgcxsO+vYfsZGulikrgKEzP782EyTTgB+obLo5K2rgBAAHBJd6QHPTTDQLdsR5OsaJVlbyovUhDIamoX/92Pujr8Zq6ocQrBULo3gWrfmLgMc6oRjDL25mif+qTuEuNk5sSYBnDvg5E7NgLQvulSUm/mIPikFwyXQSTdybOjEmF30P18rmZf98mFvUERks1hurbho7ZEUVKdA7hACt5LkPG0X7ZQp8Of1716oVeTA7HJ+yBifnXPxgLpa4CBu3u6am5ju8c4G9zqP34sJ3rNKqvT++twNZuEPuHtwVPAxwBlhCwkN3ExAnfIYT8AnOI3Bmkh2mjzUONZZzypUfZa2g1HJX4DmGPbQk0x2K8pFcZ8vXILewCiGW75aAMZHmjC9eZ+phex94NhTsswY07H2Qys20yNer4AvF3B4OJ4Bl4A4EhLv91uUUdPx2gvnOFh+oPk/fqlBAPCi7miEjl9Ijb9A2HndAjGsV0yH46iJIjcQhUaP4zh5EL3WARiAeJna/zw8LyXPbpkFqJwiYXydQ+ci5y/SyXn0ODlMPrAdCn8AJ1vvgrM0GzuHgp5monVKRiexUZONCr1Orqtxs4pj8KYAMKjysjpxcu4+mH+mdPeB2/RD8LQx/LZ9a3Z8tH665d5zCFJyFenRKgvxLyjT5ZzCv+h/Z9fcxBCSo3+F1n8nk87/66v/7N9/Z/t6/9sX/9n+/o/29f/2b7+z/b1f7av/7N9/f+c/u3+vwAz5Yo+').then(in_audio => AUDIO_ERROR = in_audio);
+
 function shuffle(in_count) {
 	const randomRotation = (in_remaining_count) => {
 		let overTheTop = false;
@@ -2659,6 +2677,7 @@ function setTransition(in_elem, in_shorthand, in_val1, in_val2) {
 }
 
 function startDialog(in_element, in_callback = null) {
+	const maxInt = 2 ** 31 - 1;
 	const background = document.createElement('div');
 	Object.assign(background.style, {
 		position : 'fixed',
@@ -2666,7 +2685,7 @@ function startDialog(in_element, in_callback = null) {
 		top : '0px',
 		width : '100%',
 		height : '100%',
-		zIndex : 2 ** 31 - 1
+		zIndex : maxInt
 	});
 	background.appendChild(in_element);
 	Object.assign(in_element.style, {
@@ -2792,35 +2811,7 @@ function nextLevel(in_sound = true) {
 	changeLevel(+1);
 }
 
-(() => {
-	const settings = [
-		{
-			id : ID_PREV_LEVEL,
-			text : '(Prev)',
-			func : prevLevel
-		},
-		{
-			id : ID_NEXT_LEVEL,
-			text : '(Next)',
-			func : nextLevel
-		},
-		{
-			text : 'Shuffle x3',
-			func : shuffle3
-		},
-		{
-			text : 'Shuffle x10',
-			func : shuffle10
-		},
-		{
-			text : 'help',
-			func : uiHelp
-		},
-		{
-			text : 'Rights',
-			func : uiRights
-		}
-	];
+(in_settings => {
 	let container = document.createElement('div');
 	Object.assign(container.style, {
 		position : 'absolute',
@@ -2828,7 +2819,7 @@ function nextLevel(in_sound = true) {
 		top : '5%'
 	});
 	document.body.appendChild(container);
-	settings.forEach(in_setting => {
+	in_settings.forEach(in_setting => {
 		let button = document.createElement('button');
 		if (in_setting.id) {
 			button.id = in_setting.id;
@@ -2844,7 +2835,34 @@ function nextLevel(in_sound = true) {
 		});
 		container.appendChild(button);
 	});
-})();
+})([
+	{
+		id : ID_PREV_LEVEL,
+		text : '(Prev)',
+		func : prevLevel
+	},
+	{
+		id : ID_NEXT_LEVEL,
+		text : '(Next)',
+		func : nextLevel
+	},
+	{
+		text : 'shuffle x3',
+		func : shuffle3
+	},
+	{
+		text : 'shuffle x10',
+		func : shuffle10
+	},
+	{
+		text : 'help',
+		func : uiHelp
+	},
+	{
+		text : 'rights',
+		func : uiRights
+	}
+]);
 
 changeLevel(0);
 
@@ -2904,27 +2922,22 @@ document.addEventListener('DOMContentLoaded', (() => {
 		gBackgroundCanvas.height = window.innerHeight;
 		drawCosmicView(gBackgroundCanvas, 400, 50);
 	});
-	let resizeTimeout = null;
-	const debounce_delay = 300;
-	window.addEventListener('resize', () => {
-		if (resizeTimeout) {
-			window.clearTimeout(resizeTimeout);
-		}
-		resizeTimeout = window.setTimeout(resizeWorld, debounce_delay);
-	});
+	window.addEventListener('resize', () => debounce(resizeWorld, 300));
 	(resizeWorld)();
 	if (!document.body) {
 		document.documentElement.appendChild(document.createElement('BODY'));
 	}
-	document.body.style.margin = '0';
-	document.body.style.overflow = 'hidden';
+	Object.assign(document.body.style, {
+		margin : '0',
+		overflow : 'hidden'
+	});
 	document.body.appendChild(gWorld.canvas);
 	document.body.appendChild(gBackgroundCanvas);
 	gWorld.start();
 }));
 
 /*
-	(7) event handlers + emulation
+	(7) event handlers
 */
 
 (() => {
