@@ -625,8 +625,18 @@ class cBoxCollection {
 	}
 }
 
+const getWorldVector = Symbol();
+const getWorldUp = Symbol();
 const instanceInAncestor = Symbol();
 const lookAtWithoutRotation = Symbol();
+
+THREE.Object3D.prototype[getWorldVector] = function(in_localVector) {
+	return in_localVector.applyQuaternion(this.getWorldQuaternion(new THREE.Quaternion()));
+}
+
+THREE.Object3D.prototype[getWorldUp] = function() {
+	return this[getWorldVector](VEC3(0, 1, 0));
+}
 
 THREE.Object3D.prototype[instanceInAncestor] = function(in_class) {
 	const recurse = (in_current) => {
@@ -648,7 +658,7 @@ THREE.Object3D.prototype[lookAtWithoutRotation] = function(in_dstV3, in_prjV3 = 
 	const updateChildren = false;
 	this.updateWorldMatrix(updateParents, updateChildren);
 	const worldPosition = (VEC3()).setFromMatrixPosition(this.matrixWorld);
-	const up = VEC3(0, 1, 0).applyQuaternion(this.getWorldQuaternion(new THREE.Quaternion()));
+	const up = this[getWorldUp]();
 	const eye = in_dstV3.clone();
 	if (in_prjV3) {
 		up.projectOnPlane(in_prjV3).normalize();
