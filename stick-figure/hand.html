@@ -627,8 +627,18 @@ class cBoxCollection {
 	}
 }
 
+const getWorldVector = Symbol();
+const getWorldUp = Symbol();
 const instanceInAncestor = Symbol();
 const lookAtWithoutRotation = Symbol();
+
+THREE.Object3D.prototype[getWorldVector] = function(in_localVector) {
+	return in_localVector.applyQuaternion(this.getWorldQuaternion(new THREE.Quaternion()));
+}
+
+THREE.Object3D.prototype[getWorldUp] = function() {
+	return this[getWorldVector](VEC3(0, 1, 0));
+}
 
 THREE.Object3D.prototype[instanceInAncestor] = function(in_class) {
 	const recurse = (in_current) => {
@@ -650,7 +660,7 @@ THREE.Object3D.prototype[lookAtWithoutRotation] = function(in_dstV3, in_prjV3 = 
 	const updateChildren = false;
 	this.updateWorldMatrix(updateParents, updateChildren);
 	const worldPosition = (VEC3()).setFromMatrixPosition(this.matrixWorld);
-	const up = VEC3(0, 1, 0).applyQuaternion(this.getWorldQuaternion(new THREE.Quaternion()));
+	const up = this[getWorldUp]();
 	const eye = in_dstV3.clone();
 	if (in_prjV3) {
 		up.projectOnPlane(in_prjV3).normalize();
@@ -1886,8 +1896,7 @@ class cSolidPart extends cAbstractPart {
 	bendAt(in_dstV3) {
 		let projection;
 		if (this.plane_1_0_0) {
-			projection = VEC3(1, 0, 0);
-			projection.applyQuaternion(this.getWorldQuaternion(new THREE.Quaternion()));
+			projection = this[getWorldVector](VEC3(1, 0, 0));
 		} else {
 			projection = null;
 		}
@@ -1976,6 +1985,57 @@ class cJointedSolidPart extends cSolidPart {
 	static descendants(in_obj) {
 		// in_startObj + descendants
 		return cJointedSolidPart.#jointedFrom(in_obj, false);
+	}
+	static stretchAt(in_obj, in_dstV3, in_delta) {
+		const ancestors = cJointedSolidPart.ancestors(in_obj);
+		if (ancestors.length === 0) {
+			// not cJointedSolidPart
+			return false;
+		}
+		/*
+			[0] > threshold : using normal bendAt
+			[0] < threshold : 
+			  [1] > threshold : affect [1] + bendAt [0]
+			  [1] < threshold : i++
+			    [2] > threshold : affect [2] + bendAt [1] ([0] is the same angle with [1])
+			    [2] < threshold : i++
+		*/
+		const threshold = 0.02;
+		const vectorToStretch = in_targetObj => {
+			return VEC3().subVectors(in_dstV3, in_targetObj.getWorldPosition(VEC3()));
+		};
+		const angleToStretch = in_targetObj => {
+			return vectorToStretch(in_targetObj).angleTo(in_targetObj.getWorldDirection(VEC3()));
+		};
+		if (angleToStretch(ancestors[0]) < threshold) {
+			let target = 0;
+			for (let i = 1; i < ancestors.length; i++) {
+				if (angleToStretch(ancestors[i]) < threshold) {
+					continue;
+				} else {
+					target = i;
+					break;
+				}
+			}
+			if (target > 0) {
+				// affect [n]
+				const parent = ancestors[target];
+				const srcDir = parent.getWorldDirection(VEC3());
+				const dstDir = vectorToStretch(parent);
+				const angle = Math.min(srcDir.angleTo(dstDir), in_delta * 10);
+				const axis = VEC3().crossVectors(srcDir, dstDir).normalize();
+				const quat = new THREE.Quaternion().setFromAxisAngle(axis, angle);
+				srcDir.applyQuaternion(quat).multiplyScalar(WORLD_RADIUS);
+				parent[lookAtWithoutRotation](parent.position.clone().add(srcDir));
+				// bendAt [n - 1]
+				const child = ancestors[target - 1];
+				child[lookAtWithoutRotation](in_dstV3);
+			}
+			// streched
+			return true;
+		}
+		// can bendAt
+		return false;
 	}
 	constructor(in_geoArr, in_restricted) {
 		let prev = null;
@@ -2792,60 +2852,12 @@ gWorld.canvas.addEventListener('mousemove', in_ev => {
 		// receiver (CircleGeometry or SphereGeometry)
 		if (intersects.length === 1) {
 			// receiver (only CircleGeometry)
-			const ancestors = cJointedSolidPart.ancestors(gDrag.obj);
-			if (ancestors.length > 1) {
-				/*
-					[0] > threshold : using normal bendAt
-					[0] < threshold : 
-					  [1] > threshold : affect [1] + bendAt [0]
-					  [1] < threshold : i++
-					    [2] > threshold : affect [2] + bendAt [1] ([0] is the same angle with [1])
-					    [2] < threshold : i++
-				*/
-				const threshold = 0.02;
-				const getWorldFront = in_obj => {
-					const localFront = VEC3(0, 0, 1);
-					return localFront.applyQuaternion(in_obj.getWorldQuaternion(new THREE.Quaternion()));
-				};
-				const vectorToIntersect = (in_point => {
-					return in_obj => {
-						const worldPosition = in_obj.getWorldPosition(VEC3());
-						return VEC3().subVectors(in_point, worldPosition);
-					};
-				})(intersects[0].point);
-				const angleToIntersect = in_obj => {
-					return vectorToIntersect(in_obj).angleTo(getWorldFront(in_obj));
-				};
-				if (angleToIntersect(ancestors[0]) < threshold) {
-					// (1) special case : bendAt() may be applied to ancestor
-					let target = 0;
-					for (let i = 1; i < ancestors.length; i++) {
-						if (angleToIntersect(ancestors[i]) < threshold) {
-							continue;
-						} else {
-							target = i;
-							break;
-						}
-					}
-					if (target > 0) {
-						// affect [n]
-						const parent = ancestors[target];
-						const srcDir = getWorldFront(parent);
-						const dstDir = vectorToIntersect(parent);
-						const angle = Math.min(srcDir.angleTo(dstDir), delta * 10);
-						const axis = VEC3().crossVectors(srcDir, dstDir).normalize();
-						const quat = new THREE.Quaternion().setFromAxisAngle(axis, angle);
-						srcDir.applyQuaternion(quat).multiplyScalar(WORLD_RADIUS);
-						parent[lookAtWithoutRotation](parent.position.clone().add(srcDir));
-						// bendAt [n - 1]
-						const child = ancestors[target - 1];
-						child[lookAtWithoutRotation](intersects[0].point);
-					}
-					return;
-				}
+			if (cJointedSolidPart.stretchAt(gDrag.obj, intersects[0].point, delta)) {
+				// (1) bendAt() may be applied to ancestor
+				return;
 			}
 		}
-		// (2) normal case : bendAt() is applied to gDrag.obj
+		// (2) bendAt() is applied to gDrag.obj
 		gDrag.obj.bendAt(intersects[0].point);
 	} else {
 		// (3) gDrag.obj is released
