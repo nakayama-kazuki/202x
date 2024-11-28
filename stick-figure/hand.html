@@ -627,17 +627,17 @@ class cBoxCollection {
 	}
 }
 
-const getWorldVector = Symbol();
+const getWorldVec3 = Symbol();
 const getWorldUp = Symbol();
 const instanceInAncestor = Symbol();
 const lookAtWithoutRotation = Symbol();
 
-THREE.Object3D.prototype[getWorldVector] = function(in_localVector) {
-	return in_localVector.applyQuaternion(this.getWorldQuaternion(new THREE.Quaternion()));
+THREE.Object3D.prototype[getWorldVec3] = function(in_vec3) {
+	return in_vec3.clone().applyQuaternion(this.getWorldQuaternion(new THREE.Quaternion()));
 }
 
 THREE.Object3D.prototype[getWorldUp] = function() {
-	return this[getWorldVector](VEC3(0, 1, 0));
+	return this[getWorldVec3](DIRECTION.YP);
 }
 
 THREE.Object3D.prototype[instanceInAncestor] = function(in_class) {
@@ -1048,140 +1048,114 @@ const EV_DISTANCE_MULTIPLIER = 2.5;
 const DEVICE_PIXEL_RATIO = window.devicePixelRatio;
 
 class cSphericalWorld {
-	static #defaultCameraSetting = 2;
-	static #view = [
-		{
-			cameraFrom : DIRECTION.ZN,
-			cameraUp : DIRECTION.YP,
-			dxDir : -1,
-			dyDir : -1
-		},
-		{
-			cameraFrom : DIRECTION.ZN,
-			cameraUp : DIRECTION.YN,
-			dxDir : 1,
-			dyDir : 1
-		},
-		{
-			cameraFrom : DIRECTION.ZP,
-			cameraUp : DIRECTION.YP,
-			dxDir : -1,
-			dyDir : 1
-		},
-		{
-			cameraFrom : DIRECTION.ZP,
-			cameraUp : DIRECTION.YN,
-			dxDir : 1,
-			dyDir : -1
-		}
-	][cSphericalWorld.#defaultCameraSetting];
-	static #rotationCallbackName = Symbol();
-	static #cameraName = randomString();
 	#scene = null;
 	#renderer = null;
-	#cameraCtrl = null;
-	#anchorPosV2 = null;
-	zoomMin = Number.NEGATIVE_INFINITY;
-	zoomMax = Number.POSITIVE_INFINITY;
+	#centerBall = null;
+	#zoomMin = Number.NEGATIVE_INFINITY;
+	#zoomMax = Number.POSITIVE_INFINITY;
 	#userObjects = new Set();
 	#animationHooks = new Set();
-	static #deltaThreshold = 0.05;
 	constructor(in_radius) {
 		// scene
 		this.#scene = new THREE.Scene();
-		//this.#scene.background = new THREE.Color(0xFFFFFF);
+		if (false) {
+			this.#scene.background = new THREE.Color(0xFFFFFF);
+		}
 		// renderer
 		this.#renderer = new THREE.WebGLRenderer({alpha : true, antialias : true});
 		this.#renderer.setPixelRatio(DEVICE_PIXEL_RATIO);
 		// camera
 		const camera = new THREE.PerspectiveCamera();
-		camera.name = cSphericalWorld.#cameraName;
 		camera.fov = 45;
 		camera.near = 1;
 		camera.far = in_radius * 2;
-		camera.position.set(
-			0,
-			0,
-			in_radius * cSphericalWorld.#view.cameraFrom.z);
-		camera.up.copy(cSphericalWorld.#view.cameraUp);
+		camera.position.copy(VEC3(0, 0, 1).multiplyScalar(in_radius));
 		camera.lookAt(VEC3(0, 0, 0));
 		if (false) {
 			camera.layers.enableAll();
 		}
-		this.#cameraCtrl = new THREE.Object3D();
-		this.#cameraCtrl.add(camera);
+		this.#centerBall = new THREE.Object3D();
+		this.#centerBall.add(camera);
 		// light
 		const lightColor = 0xFFFFFF;
 		const intensity = 1;
 		const noLimit = 0;
 		const noDecay = 0;
 		const light = new THREE.PointLight(lightColor, intensity, noLimit, noDecay);
-		light.position.set(
-			0,
-			in_radius * cSphericalWorld.#view.cameraUp.y,
-			in_radius * cSphericalWorld.#view.cameraFrom.z);
-		this.#cameraCtrl.add(light);
+		light.position.copy(VEC3(0, 1, 1).multiplyScalar(in_radius));
+		this.#centerBall.add(light);
 		this.add(new THREE.AmbientLight(lightColor), true);
 		// other
 		this.resize(this.canvas.width, this.canvas.height);
-		this.canvas.addEventListener('mousedown', this.#evMoveStart.bind(this));
-		this.canvas.addEventListener('mousemove', this.#evMoveUpdate.bind(this));
-		this.canvas.addEventListener('mouseleave', this.#evMoveStop.bind(this));
-		this.canvas.addEventListener('mouseout', this.#evMoveStop.bind(this));
-		this.canvas.addEventListener('mouseup', this.#evMoveStop.bind(this));
-		this.canvas.addEventListener('wheel', this.#evZoom.bind(this));
+		this.#setupEventHandler();
 		emulateTouchEvent(this.canvas);
+	}
+	#setupEventHandler() {
+		const events = (() => {
+			let startPosition = null;
+			const threshold = 0.05;
+			const start = in_ev => {
+				const vec2 = eventPos2RaycasterPos(in_ev);
+				if (this.intersectPositive(vec2).length > 0) {
+					return;
+				}
+				startPosition = vec2;
+			}
+			const update = in_ev => {
+				if (!startPosition) {
+					return;
+				}
+				const vec2 = eventPos2RaycasterPos(in_ev);
+				let delta = vec2.clone().sub(startPosition);
+				if (delta.length() < threshold) {
+					return;
+				}
+				delta.multiplyScalar(EV_DISTANCE_MULTIPLIER);
+				this.moveView(delta.x * -1, delta.y * -1);
+				startPosition = vec2;
+			}
+			const stop = in_ev => {
+				if (!startPosition) {
+					return;
+				}
+				startPosition = null;
+			}
+			const zoom = in_ev => {
+				const distance = this.#camera.position.length() + in_ev.deltaY;
+				if ((this.#zoomMax < distance) && (distance < this.#zoomMin)) {
+					this.#setZoom(distance);
+				}
+			}
+			return {
+				'mousedown' : start,
+				'mousemove' : update,
+				'mouseleave' : stop,
+				'mouseout' : stop,
+				'mouseup' : stop,
+				'wheel' : zoom
+			};
+		})();
+		for (let [name, func] of Object.entries(events)) {
+			this.canvas.addEventListener(name, func.bind(this));
+		}
 	}
 	get canvas() {
 		return this.#renderer.domElement;
 	}
 	get #camera() {
-		return this.#cameraCtrl.getObjectByName(cSphericalWorld.#cameraName);
+		return this.#centerBall.children.find(in_child => in_child instanceof THREE.Camera);
 	}
 	getLookAt() {
 		return this.#camera.position.clone().negate();
 	}
-	#moveCameraCtrl(in_world_dx, in_world_dy) {
-		this.#cameraCtrl.rotateY(in_world_dx * cSphericalWorld.#view.dxDir);
-		this.#cameraCtrl.rotateX(in_world_dy * cSphericalWorld.#view.dyDir);
-	}
 	moveView(in_world_dx, in_world_dy) {
-		this.#moveCameraCtrl(in_world_dx * -1, in_world_dy * -1);
+		// event-x ++ : world-x ++ : camera-rotate-y ++ : object-rotate-y -- : object-view-x ++
+		this.#centerBall.rotateY(in_world_dx * +1);
+		// event-y -- : world-y ++ : camera-rotate-x -- : object-rotate-x ++ : object-view-y --
+		this.#centerBall.rotateX(in_world_dy * -1);
 	}
 	#setZoom(in_distance) {
 		this.#camera.position.normalize().multiplyScalar(in_distance);
-	}
-	#evMoveStart(in_ev) {
-		const vec2 = eventPos2RaycasterPos(in_ev);
-		if (this.intersectPositive(vec2).length > 0) {
-			return;
-		}
-		this.#anchorPosV2 = vec2;
-	}
-	#evMoveUpdate(in_ev) {
-		if (!this.#anchorPosV2) {
-			return;
-		}
-		const vec2 = eventPos2RaycasterPos(in_ev);
-		let delta = vec2.clone().sub(this.#anchorPosV2);
-		if (delta.length() < cSphericalWorld.#deltaThreshold) {
-			return;
-		}
-		delta.multiplyScalar(EV_DISTANCE_MULTIPLIER);
-		this.#moveCameraCtrl(delta.x, delta.y);
-		this.#anchorPosV2 = vec2;
-	}
-	#evMoveStop(in_ev) {
-		if (!this.#anchorPosV2) {
-			return;
-		}
-		this.#anchorPosV2 = null;
-	}
-	#evZoom(in_ev) {
-		const distance = this.#camera.position.length() + in_ev.deltaY;
-		if ((this.zoomMax < distance) && (distance < this.zoomMin)) {
-			this.#setZoom(distance);
-		}
 	}
 	#intersectObjects(in_vec2, in_direction, in_layer) {
 		const raycaster = new THREE.Raycaster();
@@ -1271,9 +1245,9 @@ class cSphericalWorld {
 	}
 	motionDefaultView(in_duration = 2000) {
 		const targetQuat = new THREE.Quaternion();
-		const targetRad = this.#cameraCtrl.quaternion.angleTo(targetQuat);
+		const targetRad = this.#centerBall.quaternion.angleTo(targetQuat);
 		return this.easeIn(0, targetRad, in_duration, in_currRad => {
-			this.#cameraCtrl.quaternion.rotateTowards(targetQuat, in_currRad);
+			this.#centerBall.quaternion.rotateTowards(targetQuat, in_currRad);
 		});
 	}
 	motionFog(in_color, in_initFogged, in_stopFogged, in_duration = 500) {
@@ -1300,14 +1274,17 @@ class cSphericalWorld {
 		});
 	}
 	startRotation(in_vec3) {
-		this[cSphericalWorld.#rotationCallbackName] = () => {
-			ROTATE(this.#cameraCtrl, in_vec3);
+		if (this.stopRotation) {
+			return;
+		}
+		const rotation = () => {
+			ROTATE(this.#centerBall, in_vec3);
 		};
-		this.addAnimationHook(this[cSphericalWorld.#rotationCallbackName]);
-	}
-	stopRotation() {
-		this.removeAnimationHook(this[cSphericalWorld.#rotationCallbackName]);
-		delete this[cSphericalWorld.#rotationCallbackName];
+		this.addAnimationHook(rotation);
+		this.stopRotation = () => {
+			this.removeAnimationHook(rotation);
+			delete this.stopRotation;
+		};
 	}
 	resize(in_w, in_h) {
 		this.#renderer.setSize(in_w, in_h);
@@ -1341,8 +1318,8 @@ class cSphericalWorld {
 				delayed *= 2;
 				window.setTimeout(update, delayed);
 			} else {
-				this.zoomMin = this.#camera.far - radius;
-				this.zoomMax = radius
+				this.#zoomMin = this.#camera.far - radius;
+				this.#zoomMax = radius
 			}
 		};
 		(update)();
@@ -1372,7 +1349,7 @@ class cSphericalWorld {
 		this.#renderer.render(this.#scene, this.#camera);
 	}
 	start() {
-		this.add(this.#cameraCtrl, true);
+		this.add(this.#centerBall, true);
 		this.#renderer.setAnimationLoop(() => {
 			this.render();
 			this.#animationHooks.forEach(in_hook => {
@@ -1896,7 +1873,7 @@ class cSolidPart extends cAbstractPart {
 	bendAt(in_dstV3) {
 		let projection;
 		if (this.plane_1_0_0) {
-			projection = this[getWorldVector](VEC3(1, 0, 0));
+			projection = this[getWorldVec3](DIRECTION.XP);
 		} else {
 			projection = null;
 		}
