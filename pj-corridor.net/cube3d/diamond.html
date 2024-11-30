@@ -1688,10 +1688,10 @@ if (gMeshCurrentLevel === false) {
 function getColorBySide(in_mesh, in_targetV3) {
 	const matrix = (new THREE.Matrix4()).makeRotationFromQuaternion(in_mesh.quaternion);
 	const invertV3 = in_targetV3.clone().applyMatrix4(matrix.invert());
-	const err = 0.001;
+	const error = 0.001;
 	for (let i = 0; i < SURFACEPROP.length; i++) {
 		const surfaceV3 = SURFACEPROP[i].V3;
-		if (XYZ.every(in_xyz => Math.abs(invertV3[in_xyz] - surfaceV3[in_xyz]) < err)) {
+		if (XYZ.every(in_xyz => Math.abs(invertV3[in_xyz] - surfaceV3[in_xyz]) < error)) {
 			return in_mesh.material[i].color.getHex();
 		}
 	}
@@ -1703,13 +1703,10 @@ function getColorBySide(in_mesh, in_targetV3) {
 */
 
 class cRubiksCube extends THREE.Object3D {
-	static #smallError = 0.01;
-	static get err() {
-		return cRubiksCube.#smallError;
-	}
+	static error = 0.01;
 	static #orderBy(...in_args) {
 		for (let i = 0; i < in_args.length - 1 ; i++) {
-			if (in_args[i + 1] - in_args[i] < cRubiksCube.err) {
+			if (in_args[i + 1] - in_args[i] < cRubiksCube.error) {
 				return false;
 			}
 		}
@@ -1873,7 +1870,7 @@ class cRubiksCube extends THREE.Object3D {
 		}
 	}
 	static #splitGroupByAxis_3_makeCandidatesBorder(in_scalarMap) {
-		const candidateBorderSet = new cApproximateSet(cRubiksCube.err);
+		const candidateBorderSet = new cApproximateSet(cRubiksCube.error);
 		for (const info of in_scalarMap.values()) {
 			candidateBorderSet.add(info.edgeL);
 			candidateBorderSet.add(info.edgeR);
@@ -1954,7 +1951,7 @@ class cRubiksCube extends THREE.Object3D {
 				19.00, {edgeL = 17.00, edgeR = 21.00, piece + piece}
 				23.00, {edgeL = 21.00, edgeR = 25.00, piece + piece + piece}
 		*/
-		let scalarMap = new cApproximateMap(cRubiksCube.err);
+		let scalarMap = new cApproximateMap(cRubiksCube.error);
 		if (this.#instanceTest.mode) {
 			scalarMap = this.#instanceTest.obj;
 		} else {
@@ -2365,7 +2362,7 @@ class cRubiksCube extends THREE.Object3D {
 }
 
 function test_makeGroupOnAxis(in_arr) {
-	const scalarMap = new cApproximateMap(cRubiksCube.err);
+	const scalarMap = new cApproximateMap(cRubiksCube.error);
 	in_arr.forEach(in_elem => {
 		in_elem[0] += Math.random() / 10000;
 		in_elem[1].edgeL += Math.random() / 10000;
