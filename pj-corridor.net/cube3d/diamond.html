@@ -1728,22 +1728,6 @@ class cRubiksCube extends THREE.Object3D {
 			return props[0];
 		}
 	}
-	static #staticTest = {mode : false, obj : null};
-	static unitTest(in_method, in_testObj = {}, ...in_args) {
-		cRubiksCube.#staticTest.mode = true;
-		cRubiksCube.#staticTest.obj = in_testObj
-		const ret = eval('cRubiksCube.' + in_method + '(...in_args)');
-		console.log(ret);
-		throw new Error('end of unitTest'); 
-	}
-	#instanceTest = {mode : false, obj : null};
-	unitTest(in_method, in_testObj = {}, ...in_args) {
-		this.#instanceTest.mode = true;
-		this.#instanceTest.obj = in_testObj
-		const ret = eval('this.' + in_method + '(...in_args)');
-		console.log(ret);
-		throw new Error('unitTest'); 
-	}
 	get #settingVal() {
 		if (this.userData.currentSettingKey) {
 			return this.userData.settingPerPieces[this.userData.currentSettingKey];
@@ -1845,176 +1829,15 @@ class cRubiksCube extends THREE.Object3D {
 		});
 		this.remove(in_group);
 	}
-	#splitGroupByAxis_1_groupBySameScalar(io_scalarMap, in_axis) {
-		this.children.forEach(in_piece => {
-			const component = in_piece.position.dot(in_axis);
-			const reference = io_scalarMap.get(component);
-			if (reference) {
-				// there already exists almost the same component
-				reference.pieces.push(in_piece);
-				reference.tmpBox.union(new THREE.Box3().setFromObject(in_piece));
-			} else {
-				io_scalarMap.set(component, {
-					pieces : [in_piece],
-					tmpBox : (new THREE.Box3()).setFromObject(in_piece)
-				});
-			}
-		});
-	}
-	static #splitGroupByAxis_2_calculateEdges(io_scalarMap, in_axis) {
-		for (const [scalar, info] of io_scalarMap.entries()) {
-			const length = (VEC3().subVectors(info.tmpBox.max, info.tmpBox.min)).dot(in_axis);
-			info.edgeL = scalar - length / 2;
-			info.edgeR = scalar + length / 2;
-			delete info.tmpBox;
-		}
-	}
-	static #splitGroupByAxis_3_makeCandidatesBorder(in_scalarMap) {
-		const candidateBorderSet = new cApproximateSet(cRubiksCube.error);
-		for (const info of in_scalarMap.values()) {
-			candidateBorderSet.add(info.edgeL);
-			candidateBorderSet.add(info.edgeR);
-		}
-		const candidateBorder = Array.from(candidateBorderSet);
-		candidateBorder.sort((a, b) => a - b);
-		candidateBorder.shift();
-		candidateBorder.pop();
-		return candidateBorder;
-	}
-	static #splitGroupByAxis_4_makeActualBorder(in_scalarMap, in_candidateBorder) {
-		const actualBorder = [];
-		for (let i = 0; i < in_candidateBorder.length; i++) {
-			let isBorder = true;
-			for (const info of in_scalarMap.values()) {
-				if (cRubiksCube.#orderBy(info.edgeL, in_candidateBorder[i], info.edgeR)) {
-					isBorder = false;
-					break;
-				}
-			}
-			if (isBorder) {
-				actualBorder.push(in_candidateBorder[i]);
-			}
-		}
-		return actualBorder;
-	}
-	static #splitGroupByAxis_5_makeActualBorder(in_scalarMap, in_actualBorder) {
+	makeRotationGroup(in_piece, in_axis) {
 		const groups = [];
-		let next = 0;
-		in_actualBorder.push(Infinity);
-		in_actualBorder.forEach(border => {
-			const pieces = [];
-			for (let i = next; i < in_scalarMap.size; i++) {
-				const ascendingScalar = in_scalarMap.sortedKey(i);
-				if (ascendingScalar < border) {
-					const info = in_scalarMap.get(ascendingScalar);
-					pieces.push(...info.pieces);
-				} else {
-					next = i;
-					break;
-				}
+		const component = in_piece.position.dot(in_axis);
+		this.children.forEach(in_child => {
+			if (Math.abs(component - in_child.position.dot(in_axis)) < cRubiksCube.error) {
+				groups.push(in_child);
 			}
-			groups.push(pieces);
 		});
 		return groups;
-	}
-	#splitGroupByAxis(in_axis) {
-		/*
-			step #1 : scalarMap is the group of position based on in_axis. for example ...
-
-				+---+---+---+---+---+---+
-				| x | x | x | x | x | x |
-				+---+---+---+---+---+---+
-				| x |   x   | x | x | x |
-				+---+---+---+---+---+---+
-				| x |       x       | x |
-				+---+---+---+---+---+---+
-
-				--x---x-x-x-x-x---x---x--> : in_axis
-
-				 3.00, {tmpBox, piece + piece + piece}
-				 7.00, {tmpBox, piece}
-				 9.00, {tmpBox, piece}
-				11.00, {tmpBox, piece}
-				13.00, {tmpBox, piece}
-				15.00, {tmpBox, piece + piece}
-				19.00, {tmpBox, piece + piece}
-				23.00, {tmpBox, piece + piece + piece}
-
-			step #2 : calculate edges for the bounding box. for example ...
-
-				 3.00, {edgeL =  1.00, edgeR =  5.00, piece + piece + piece}
-				 7.00, {edgeL =  5.00, edgeR =  9.00, piece}
-				 9.00, {edgeL =  5.00, edgeR = 13.00, piece}
-				11.00, {edgeL =  9.00, edgeR = 13.00, piece}
-				13.00, {edgeL =  5.00, edgeR = 21.00, piece}
-				15.00, {edgeL = 13.00, edgeR = 17.00, piece + piece}
-				19.00, {edgeL = 17.00, edgeR = 21.00, piece + piece}
-				23.00, {edgeL = 21.00, edgeR = 25.00, piece + piece + piece}
-		*/
-		let scalarMap = new cApproximateMap(cRubiksCube.error);
-		if (this.#instanceTest.mode) {
-			scalarMap = this.#instanceTest.obj;
-		} else {
-			this.#splitGroupByAxis_1_groupBySameScalar(scalarMap, in_axis);
-			cRubiksCube.#splitGroupByAxis_2_calculateEdges(scalarMap, in_axis);
-		}
-		/*
-			step #3 : make candidates of border which decides group
-		*/
-		const candidateBorder = cRubiksCube.#splitGroupByAxis_3_makeCandidatesBorder(scalarMap);
-		if (this.#instanceTest.mode) {
-			/*
-				*** NOTE ***
-				to display a reference using "console.log", you should use a copy of the reference.
-				without it, the entity may appear updated when displayed because the console holds a reference,
-				and any subsequent changes to the object will be reflected in the console.
-			*/
-			console.log('#3', [...candidateBorder]);
-		}
-		/*
-			step #4 : check if candidates is actual border
-
-			    v   v
-			+---+---+---+
-			| x | x | x |
-			+---+---+---+ : border = 2
-			| x | x | x |
-			+---+---+---+
-
-			        v
-			+---+---+---+
-			| x | x | x |
-			+---+---+---+ : border = 1
-			|   x   | x |
-			+---+---+---+
-
-			+---+---+---+
-			| x |   x   |
-			+---+---+---+ : border = 0
-			|   x   | x |
-			+---+---+---+
-		*/
-		const actualBorder = cRubiksCube.#splitGroupByAxis_4_makeActualBorder(scalarMap, candidateBorder);
-		if (this.#instanceTest.mode) {
-			console.log('#4', [...actualBorder]);
-		}
-		/*
-			step #5 : finally, make group which will move together
-		*/
-		const groups = cRubiksCube.#splitGroupByAxis_5_makeActualBorder(scalarMap, actualBorder)
-		if (this.#instanceTest.mode) {
-			console.log('#5', [...groups]);
-		}
-		return groups;
-	}
-	#makeRotationGroup(in_piece, in_axis) {
-		const groups = this.#splitGroupByAxis(in_axis);
-		for (let i = 0; i < groups.length; i++) {
-			if (groups[i].includes(in_piece)) {
-				return groups[i];
-			}
-		}
-		return null;
 	}
 	makeRandomRotationProgress(in_callback) {
 		let axis;
@@ -2026,7 +1849,7 @@ class cRubiksCube extends THREE.Object3D {
 			}
 			const _piece = (this.children)[arrRand]();
 			axis = (Object.values(cRubiksCube.#axes))[arrRand]();
-			pieces = this.#makeRotationGroup(_piece, axis);
+			pieces = this.makeRotationGroup(_piece, axis);
 			if (pieces.length < this.children.length) {
 				break;
 			}
@@ -2264,7 +2087,7 @@ class cRubiksCube extends THREE.Object3D {
 		}
 		// component for makeRotationGroup should be +1
 		const axis = moving.rotationAxis.clone().multiply(moving.rotationAxis);
-		const pieces = this.#makeRotationGroup(ctx.piece, axis);
+		const pieces = this.makeRotationGroup(ctx.piece, axis);
 		if (pieces.length < this.children.length) {
 			this.#transition('movable');
 			ctx.roGroup = this.#setupGroup(pieces);
@@ -2360,80 +2183,6 @@ class cRubiksCube extends THREE.Object3D {
 		return progress;
 	}
 }
-
-function test_makeGroupOnAxis(in_arr) {
-	const scalarMap = new cApproximateMap(cRubiksCube.error);
-	in_arr.forEach(in_elem => {
-		in_elem[0] += Math.random() / 10000;
-		in_elem[1].edgeL += Math.random() / 10000;
-		in_elem[1].edgeR += Math.random() / 10000;
-		scalarMap.set(in_elem[0], in_elem[1]);
-	});
-	(new cRubiksCube()).unitTest('#splitGroupByAxis', scalarMap);
-}
-
-/*
-	--x-x---x-x-->
-
-	+---+---+---+
-	| x |   x   |
-	+---+---+---+
-	|   x   | x |
-	+---+---+---+
-
-test_makeGroupOnAxis([
-	[ 3.0000, {edgeL : 1.0000, edgeR :  5.0000, pieces : ['a']}],
-	[ 5.0000, {edgeL : 1.0000, edgeR :  9.0000, pieces : ['b']}],
-	[ 9.0000, {edgeL : 5.0000, edgeR : 13.0000, pieces : ['c']}],
-	[11.0000, {edgeL : 9.0000, edgeR : 13.0000, pieces : ['d']}]
-]);
-
-*/
-
-/*
-	--x-x-x-x-x-->
-
-	+---+---+---+
-	| x | x | x |
-	+---+---+---+
-	| x |   x   |
-	+---+---+---+
-	|   x   | x |
-	+---+---+---+
-
-test_makeGroupOnAxis([
-	[ 3.0000, {edgeL : 1.0000, edgeR :  5.0000, pieces : ['a','b']}],
-	[ 5.0000, {edgeL : 1.0000, edgeR :  9.0000, pieces : ['c']}],
-	[ 7.0000, {edgeL : 5.0000, edgeR :  9.0000, pieces : ['d']}],
-	[ 9.0000, {edgeL : 5.0000, edgeR : 13.0000, pieces : ['e']}],
-	[11.0000, {edgeL : 9.0000, edgeR : 13.0000, pieces : ['f','g']}]
-]);
-
-*/
-
-/*
-	--x---x-x-x-x-x---x---x-->
-
-	+---+---+---+---+---+---+
-	| x | x | x | x | x | x |
-	+---+---+---+---+---+---+
-	| x |   x   | x | x | x |
-	+---+---+---+---+---+---+
-	| x |       x       | x |
-	+---+---+---+---+---+---+
-
-test_makeGroupOnAxis([
-	[ 3.0000, {edgeL :  1.0000, edgeR :  5.0000, pieces : ['a','b','c']}],
-	[ 7.0000, {edgeL :  5.0000, edgeR :  9.0000, pieces : ['d']}],
-	[ 9.0000, {edgeL :  5.0000, edgeR : 13.0000, pieces : ['f']}],
-	[11.0000, {edgeL :  9.0000, edgeR : 13.0000, pieces : ['g']}],
-	[13.0000, {edgeL :  5.0000, edgeR : 21.0000, pieces : ['e']}],
-	[15.0000, {edgeL : 13.0000, edgeR : 17.0000, pieces : ['h','i']}],
-	[19.0000, {edgeL : 17.0000, edgeR : 21.0000, pieces : ['j','k']}],
-	[23.0000, {edgeL : 21.0000, edgeR : 25.0000, pieces : ['l','m','n']}]
-]);
-
-*/
 
 /*
 	(6) ui & dom setting
