@@ -1745,14 +1745,6 @@ function getColorBySide(in_mesh, in_targetV3) {
 
 class cRubiksCube extends THREE.Object3D {
 	static error = 0.01;
-	static #orderBy(...in_args) {
-		for (let i = 0; i < in_args.length - 1 ; i++) {
-			if (in_args[i + 1] - in_args[i] < cRubiksCube.error) {
-				return false;
-			}
-		}
-		return true;
-	}
 	static #axes = {
 		x : VEC3(1, 0, 0),
 		y : VEC3(0, 1, 0),
