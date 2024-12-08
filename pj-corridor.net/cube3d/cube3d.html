@@ -2589,7 +2589,7 @@ function complete() {
 	const progress = warpViewProgress(gBackgroundCanvas, 50);
 	gWorld.addAnimationHook(progress);
 	const duration = 2000;
-	gWorld.motionZoom2(gWorld.zoomMin, duration * 0.9);
+	gWorld.motionZoom2(WORLD_RADIUS * 1.5, duration * 0.9);
 	window.setTimeout(() => {
 		gWorld.removeAnimationHook(progress);
 		gCube.removeCompleteCallback();
