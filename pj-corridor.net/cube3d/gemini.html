@@ -7,8 +7,8 @@
 <script type='importmap'>
 {
 	"imports": {
-		"three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
-		"utils": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/utils/BufferGeometryUtils.js"
+		"three": "https://cdn.jsdelivr.net/npm/three@0.171.0/build/three.module.min.js",
+		"utils": "https://cdn.jsdelivr.net/npm/three@0.171.0/examples/jsm/utils/BufferGeometryUtils.js"
 	}
 }
 </script>
@@ -68,8 +68,7 @@ function getParam(in_name) {
 	return false;
 }
 
-function randomString(in_length = 5)
-{
+function randomString(in_length = 5) {
 	return Math.floor(Math.random() * (10 ** in_length)).toString(16).padStart(in_length, '0');
 }
 
@@ -106,46 +105,7 @@ testSets.forEach(test => {
 
 */
 
-function convertUnitRect(in_src_x, in_src_y, in_src_rect, in_dst_rect)
-{
-	return (new THREE.Vector2(
-		convertUnit(in_src_x, in_src_rect.l, in_src_rect.r, in_dst_rect.l, in_dst_rect.r),
-		convertUnit(in_src_y, in_src_rect.t, in_src_rect.b, in_dst_rect.t, in_dst_rect.b)
-	));
-}
-
-function convertRaycasterUnit(in_src_x, in_src_y, in_src_w, in_src_h)
-{
-	const src_rect = {
-		l : 0,
-		t : 0,
-		r : in_src_w,
-		b : in_src_h
-	};
-	const dst_rect = {
-		l : -1,
-		t : -1,
-		r : 1,
-		b : 1
-	};
-	const vec2 = convertUnitRect(in_src_x, in_src_y, src_rect, dst_rect);
-	// finally, dst_rect.t and dst_rect.b should be inverted
-	vec2.y *= -1;
-	return vec2;
-}
-
-function eventPos2RaycasterPos(in_ev)
-{
-	const elem = in_ev.currentTarget
-	return convertRaycasterUnit(
-		in_ev.clientX - elem.offsetLeft,
-		in_ev.clientY - elem.offsetTop,
-		elem.offsetWidth,
-		elem.offsetHeight);
-}
-
-function snapToNotch(in_value, in_notch)
-{
+function snapToNotch(in_value, in_notch) {
 	let notch = in_notch / 2;
 	let abs = Math.abs(in_value);
 	let cnt = Math.floor(abs / notch);
@@ -159,8 +119,7 @@ function snapToNotch(in_value, in_notch)
 	}
 }
 
-function snapToPI(in_value)
-{
+function snapToPI(in_value) {
 	/*
 		{in : Math.PI / 2 - delta, expected : 0},
 		{in : Math.PI / 2 + delta, expected : Math.PI}
@@ -168,8 +127,7 @@ function snapToPI(in_value)
 	return snapToNotch(in_value, Math.PI);
 }
 
-function snapTo05PI(in_value)
-{
+function snapTo05PI(in_value) {
 	/*
 		{in : Math.PI / 4 - delta, expected : 0},
 		{in : Math.PI / 4 + delta, expected : Math.PI / 2}
@@ -487,18 +445,128 @@ function emulateTouchEvent(in_elem) {
 	});
 }
 
-const debounce = (() => {
-	const maxLen = 100;
-	let timeoutIds = {};
-	return (in_callback, in_delay) => {
-		const callbackId = pseudoMessageDigest2(in_callback.toString().substring(0, maxLen));
-		if (callbackId in timeoutIds) {
-			// only the latest in_callback should be queued
-			window.clearTimeout(timeoutIds[callbackId]);
+const MOUSEMOVE_IGNORE = 10;
+const MOUSEMOVE_AMPLIFIER = 2.0;
+
+function timingController(in_callback, in_params = {}) {
+	const last = {x : Infinity, y : Infinity, t : 0};
+	const init = {interval : -1, delta : -1, and : true};
+	const params = {};
+	for (const [key, value] of Object.entries(init)) {
+		params[key] = in_params.hasOwnProperty(key) ? in_params[key] : value;
+	}
+	const checkInterval = (in_now) => {
+		if (params.interval < 0) {
+			return true;
 		}
-		timeoutIds[callbackId] = window.setTimeout(in_callback, in_delay);
+		return (in_now - last.t) > params.interval;
 	};
-})();
+	const checkDelta = in_ev => {
+		if (params.delta < 0) {
+			return true;
+		}
+		return ((in_ev.clientX - last.x) ** 2 + (in_ev.clientY - last.y) ** 2) ** 0.5 > params.delta;
+	};
+	return in_ev => {
+		let now = Date.now();
+		let executable;
+		if (params.and) {
+			executable = checkInterval(now) && checkDelta(in_ev);
+		} else {
+			executable = checkInterval(now) || checkDelta(in_ev);
+		}
+		if (executable) {
+			(in_callback)(in_ev);
+			last.x = in_ev.clientX;
+			last.y = in_ev.clientY;
+			last.t = now;
+		} else {
+			// console.log('skipped');
+		}
+	};
+}
+
+function throttling(in_callback, in_interval) {
+	return timingController(in_callback, {
+		interval : in_interval
+	});
+}
+
+function thresholding(in_callback, in_delta = MOUSEMOVE_IGNORE) {
+	const allowSmallMove = 200;
+	return timingController(in_callback, {
+		interval : allowSmallMove,
+		delta : in_delta,
+		and : false
+	});
+}
+
+function debouncing(in_callback, in_interval) {
+	let timerId = null;
+	return in_ev => {
+		if (timerId) {
+			window.clearTimeout(timerId);
+		}
+		timerId = window.setTimeout(() => (in_callback)(in_ev), in_interval);
+	}
+}
+
+class cNDCVector2 extends THREE.Vector2 {
+	#aspect;
+	constructor(in_x, in_y, in_w, in_h) {
+		const src_rect = {
+			l : 0,
+			t : 0,
+			r : in_w,
+			b : in_h
+		};
+		const dst_rect = {
+			l : -1,
+			t : -1,
+			r : 1,
+			b : 1
+		};
+		super(
+			convertUnit(in_x, src_rect.l, src_rect.r, dst_rect.l, dst_rect.r),
+			convertUnit(in_y, src_rect.t, src_rect.b, dst_rect.t, dst_rect.b)
+		);
+		// finally, dst_rect.t and dst_rect.b should be inverted
+		this.y *= -1;
+		this.#aspect = in_w / in_h;
+	}
+	/*
+		*** NOTE ***
+		when you use NDC for calculating delta of user interaction like mousemove,
+		it will be affected by screen (canvas) size.
+		so, you can use this method for the purpose.
+	*/
+	toAbs(in_amplifier = 1) {
+		/*
+			*** NOTE ***
+			this.clone() can't be used here.
+			at first, this code couldn't work because of it.
+			https://github.com/mrdoob/three.js/blob/master/src/math/Vector2.js
+			in addition, both cNDCVector2 and Vector2 instances are basically operable at the same time
+		*/
+		const ndc = new THREE.Vector2(this.x, this.y);
+		ndc.x *= this.#aspect;
+		return ndc.multiplyScalar(in_amplifier);
+	}
+}
+
+function ndcFromEvent(in_ev) {
+	const elem = in_ev.currentTarget
+	return new cNDCVector2(
+		in_ev.clientX - elem.offsetLeft,
+		in_ev.clientY - elem.offsetTop,
+		elem.offsetWidth,
+		elem.offsetHeight
+	);
+}
+
+function ndcToAbs(in_ndc) {
+	return in_ndc.toAbs(MOUSEMOVE_AMPLIFIER);
+}
 
 const clipArea = Symbol();
 const clipClearArea = Symbol();
@@ -1041,8 +1109,6 @@ function customCapsuleGeometry(in_rad_t, in_rad_b, in_h, in_rSeg = 32, in_hSeg =
 		+- PerspectiveCamera
 */
 
-const EV_DISTANCE_MULTIPLIER = 2.5;
-
 const DEVICE_PIXEL_RATIO = window.devicePixelRatio;
 
 class cSphericalWorld {
@@ -1090,40 +1156,33 @@ class cSphericalWorld {
 	}
 	#setupEventHandler() {
 		const events = (() => {
-			let startPosition = null;
-			const threshold = 0.05;
+			let vecPrev = null;
 			const start = in_ev => {
-				const vec2 = eventPos2RaycasterPos(in_ev);
-				if (this.intersectPositive(vec2).length > 0) {
+				const ndc = ndcFromEvent(in_ev);
+				if (this.intersectPositive(ndc).length > 0) {
 					return;
 				}
-				startPosition = vec2;
-			}
-			const update = in_ev => {
-				if (!startPosition) {
+				vecPrev = ndcToAbs(ndc);
+			};
+			const update = thresholding(in_ev => {
+				if (!vecPrev) {
 					return;
 				}
-				const vec2 = eventPos2RaycasterPos(in_ev);
-				let delta = vec2.clone().sub(startPosition);
-				if (delta.length() < threshold) {
-					return;
-				}
-				delta.multiplyScalar(EV_DISTANCE_MULTIPLIER);
-				this.moveView(delta.x * -1, delta.y * -1);
-				startPosition = vec2;
-			}
+				const vecNext = ndcToAbs(ndcFromEvent(in_ev));
+				// the direction of moveView() is the opposite side against toward mousemove.
+				const vecDelta = vecPrev.sub(vecNext);
+				this.moveView(vecDelta.x, vecDelta.y);
+				vecPrev = vecNext;
+			});
 			const stop = in_ev => {
-				if (!startPosition) {
-					return;
-				}
-				startPosition = null;
-			}
+				vecPrev = null;
+			};
 			const zoom = in_ev => {
 				const distance = this.#camera.position.length() + in_ev.deltaY;
 				if ((this.#zoomMax < distance) && (distance < this.#zoomMin)) {
 					this.#setZoom(distance);
 				}
-			}
+			};
 			return {
 				'mousedown' : start,
 				'mousemove' : update,
@@ -1155,11 +1214,11 @@ class cSphericalWorld {
 	#setZoom(in_distance) {
 		this.#camera.position.normalize().multiplyScalar(in_distance);
 	}
-	#intersectObjects(in_vec2, in_direction, in_layer) {
+	#intersectObjects(in_ndc, in_direction, in_layer) {
 		const raycaster = new THREE.Raycaster();
 		raycaster.layers.set(in_layer);
 		// camera ---[ raycast ]---> object
-		raycaster.setFromCamera(in_vec2, this.#camera);
+		raycaster.setFromCamera(in_ndc, this.#camera);
 		const intersects = raycaster.intersectObjects(this.#scene.children);
 		if (in_direction || (intersects.length === 0)) {
 			return intersects;
@@ -1170,11 +1229,11 @@ class cSphericalWorld {
 		raycaster.set(opposit, (raycaster.ray.direction.clone()).negate());
 		return raycaster.intersectObjects(this.#scene.children);
 	}
-	intersectPositive(in_vec2, in_layer = 0) {
-		return this.#intersectObjects(in_vec2, true, in_layer);
+	intersectPositive(in_ndc, in_layer = 0) {
+		return this.#intersectObjects(in_ndc, true, in_layer);
 	}
-	intersectNegative(in_vec2, in_layer = 0) {
-		return this.#intersectObjects(in_vec2, false, in_layer);
+	intersectNegative(in_ndc, in_layer = 0) {
+		return this.#intersectObjects(in_ndc, false, in_layer);
 	}
 	copyCameraPosition() {
 		return this.#camera.getWorldPosition(VEC3());
@@ -1499,7 +1558,9 @@ const boxGeometryFactory = factoryBuilder((in_x, in_y, in_z) => {
 	return roundBoxGeometry(in_x - radian * 2, in_y - radian * 2, in_z - radian * 2, radian);
 });
 
-const GRAY = 0x222222;
+const DARKGRAY = 0x222222;
+const LIGHTGRAY = 0x555555;
+const HIGHLIGHT = 0x888888;
 
 const ORANGE = 0xFFAA00;
 const RED = 0xFF0000;
@@ -1535,7 +1596,7 @@ const CUBE_SIZE = 400;
 
 const gMeshLevelMap = ((in_cubeSize) => {
 	const map = new cCyclicMap();
-	const edgeMaterial = new THREE.MeshLambertMaterial({color : GRAY});
+	const edgeMaterial = new THREE.MeshLambertMaterial({color : DARKGRAY});
 	const settings = [
 		{
 			dimension : 2,
@@ -1716,7 +1777,7 @@ class cRubiksCube extends THREE.Object3D {
 			let sameColor = -1;
 			return this.children.every(in_piece => {
 				const color = getColorBySide(in_piece, surfaceV3);
-				if (color === GRAY) {
+				if (color === DARKGRAY) {
 					return true;
 				}
 				if (sameColor < 0) {
@@ -1985,12 +2046,6 @@ class cRubiksCube extends THREE.Object3D {
 			initDirV2 : null
 		};
 		this.#transition('drag');
-	}
-	uiDeltaFromStartV2(in_posV2) {
-		return in_posV2.distanceTo(this.#uiSession.ctx.initPosV2);
-	}
-	uiDeltaFromStartV3(in_posV3) {
-		return in_posV3.distanceTo(this.#uiSession.ctx.initPosV3);
 	}
 	uiIsDragging() {
 		return (this.#uiSession.state === cRubiksCube.#uiStates.DRAGGING);
@@ -2542,16 +2597,16 @@ Object.assign(gBackgroundCanvas.style, {
 });
 
 document.addEventListener('DOMContentLoaded', (() => {
-	let resizeWorld = (() => {
+	let resizeWorld = in_ev => {
 		gWorld.resize(
 			window.innerWidth,
 			window.innerHeight);
 		gBackgroundCanvas.width = window.innerWidth;
 		gBackgroundCanvas.height = window.innerHeight;
 		drawCosmicView(gBackgroundCanvas, 400, 50);
-	});
-	window.addEventListener('resize', () => debounce(resizeWorld, 300));
-	(resizeWorld)();
+	};
+	window.addEventListener('resize', debouncing(resizeWorld, 300));
+	window.dispatchEvent(new Event('resize'));
 	if (!document.body) {
 		document.documentElement.appendChild(document.createElement('BODY'));
 	}
@@ -2582,55 +2637,39 @@ document.addEventListener('DOMContentLoaded', (() => {
 })();
 
 gWorld.canvas.addEventListener('mousedown', async (in_ev) => {
-	const vec2 = eventPos2RaycasterPos(in_ev);
-	const vec2Scaled = vec2.clone().multiplyScalar(EV_DISTANCE_MULTIPLIER);
-	let intersects = gWorld.intersectPositive(vec2);
-	if (intersects.length > 0) {
-		const matrix = (new THREE.Matrix3()).getNormalMatrix(intersects[0].object.matrixWorld);
-		const normal = intersects[0].face.normal.clone().applyMatrix3(matrix).normalize();
-		const snap = (in_err => {
-			return (in_value, ...in_targets) => {
-				let snapped = in_value;
-				in_targets.forEach(in_target => {
-					if (Math.abs(in_value - in_target) < in_err) {
-						snapped = in_target;
-					}
-				});
-				return snapped;
-			};
-		})(0.0001);
-		XYZ.forEach(in_xyz => {
-			normal[in_xyz] = snap(normal[in_xyz], -1, 0, +1);
-		});
-		gCube.uiSetInitPosition(intersects[0].object, normal, intersects[0].point, vec2Scaled);
+	const ndc = ndcFromEvent(in_ev);
+	let intersects = gWorld.intersectPositive(ndc);
+	if (intersects.length === 0) {
+		return;
 	}
+	const matrix = (new THREE.Matrix3()).getNormalMatrix(intersects[0].object.matrixWorld);
+	const normal = intersects[0].face.normal.clone().applyMatrix3(matrix).normalize();
+	const snap = (in_err => {
+		return (in_value, ...in_targets) => {
+			let snapped = in_value;
+			in_targets.forEach(in_target => {
+				if (Math.abs(in_value - in_target) < in_err) {
+					snapped = in_target;
+				}
+			});
+			return snapped;
+		};
+	})(0.0001);
+	XYZ.forEach(in_xyz => {
+		normal[in_xyz] = snap(normal[in_xyz], -1, 0, +1);
+	});
+	gCube.uiSetInitPosition(intersects[0].object, normal, intersects[0].point, ndcToAbs(ndc));
 });
 
 let canKnock = true;
 
-gWorld.canvas.addEventListener('mousemove', async (in_ev) => {
-	const vec2 = eventPos2RaycasterPos(in_ev);
-	const vec2Scaled = vec2.clone().multiplyScalar(EV_DISTANCE_MULTIPLIER);
-	if (gCube.uiIsMoving()) {
-		if (gCube.uiUpdatePosition(vec2Scaled)) {
-			AUDIO_ROTATION.play();
-		}
-		return;
-	}
-	if (!gCube.uiIsDragging()) {
-		return;
-	}
-	// to avoid frequent using of THREE.Raycaster, need to adjust
-	const threshold = 0.1;
-	if (gCube.uiDeltaFromStartV2(vec2) < threshold) {
-		return;
-	}
-	let intersects = gWorld.intersectPositive(vec2);
+async function notifyDelta(in_ndc) {
+	let intersects = gWorld.intersectPositive(in_ndc);
 	if (intersects.length === 0) {
 		return;
 	}
+	const result = gCube.uiNotifyDeltaPosition(intersects[0].object, intersects[0].point, ndcToAbs(in_ndc));
 	const RC = cRubiksCube.uiSetDeltaPositionRC;
-	const result = gCube.uiNotifyDeltaPosition(intersects[0].object, intersects[0].point, vec2Scaled);
 	if (result === RC.UNMOVABLE) {
 		if (!canKnock) {
 			return;
@@ -2641,7 +2680,20 @@ gWorld.canvas.addEventListener('mousemove', async (in_ev) => {
 		await gWorld.motionKnock();
 		canKnock = true;
 	}
-});
+}
+
+gWorld.canvas.addEventListener('mousemove', thresholding(async (in_ev) => {
+	const ndc = ndcFromEvent(in_ev);
+	if (gCube.uiIsMoving()) {
+		if (gCube.uiUpdatePosition(ndcToAbs(ndc))) {
+			AUDIO_ROTATION.play();
+		}
+	} else {
+		if (gCube.uiIsDragging()) {
+			await notifyDelta(ndc);
+		}
+	}
+}));
 
 async function dragstop() {
 	const progress = gCube.uiRelease(() => {
