@@ -446,7 +446,7 @@ function emulateTouchEvent(in_elem) {
 }
 
 const MOUSEMOVE_IGNORE = 10;
-const MOUSEMOVE_AMPLIFIER = 2.0;
+const MOUSEMOVE_AMPLIFIER = 2.5;
 
 function timingController(in_callback, in_params = {}) {
 	const last = {x : Infinity, y : Infinity, t : 0};
@@ -3007,7 +3007,7 @@ document.addEventListener('DOMContentLoaded', (() => {
 
 gWorld.canvas.addEventListener('mousedown', async (in_ev) => {
 	const ndc = ndcFromEvent(in_ev);
-	let intersects = gWorld.intersectPositive(ndc);
+	const intersects = gWorld.intersectPositive(ndc);
 	if (intersects.length === 0) {
 		return;
 	}
@@ -3033,7 +3033,7 @@ gWorld.canvas.addEventListener('mousedown', async (in_ev) => {
 let canKnock = true;
 
 async function notifyDelta(in_ndc) {
-	let intersects = gWorld.intersectPositive(in_ndc);
+	const intersects = gWorld.intersectPositive(in_ndc);
 	if (intersects.length === 0) {
 		return;
 	}
