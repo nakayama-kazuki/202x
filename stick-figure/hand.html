@@ -7,8 +7,8 @@
 <script type='importmap'>
 {
 	"imports": {
-		"three" : "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
-		"utils" : "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/utils/BufferGeometryUtils.js",
+		"three": "https://cdn.jsdelivr.net/npm/three@0.171.0/build/three.module.min.js",
+		"utils": "https://cdn.jsdelivr.net/npm/three@0.171.0/examples/jsm/utils/BufferGeometryUtils.js",
 		"modif" : "https://cdn.jsdelivr.net/npm/three-subdivide@1.1.5/build/index.module.min.js"
 	}
 }
@@ -19,6 +19,7 @@
 
 import * as THREE from 'three';
 import * as UTILS from 'utils';
+import * as SOUND from './sound-effect.js';
 import { LoopSubdivision } from 'modif';
 
 /*
@@ -70,8 +71,9 @@ function getParam(in_name) {
 	return false;
 }
 
-function randomString(in_length = 5)
-{
+const DEBUG = getParam('debug') !== false;
+
+function randomString(in_length = 5) {
 	return Math.floor(Math.random() * (10 ** in_length)).toString(16).padStart(in_length, '0');
 }
 
@@ -108,46 +110,7 @@ testSets.forEach(test => {
 
 */
 
-function convertUnitRect(in_src_x, in_src_y, in_src_rect, in_dst_rect)
-{
-	return (new THREE.Vector2(
-		convertUnit(in_src_x, in_src_rect.l, in_src_rect.r, in_dst_rect.l, in_dst_rect.r),
-		convertUnit(in_src_y, in_src_rect.t, in_src_rect.b, in_dst_rect.t, in_dst_rect.b)
-	));
-}
-
-function convertRaycasterUnit(in_src_x, in_src_y, in_src_w, in_src_h)
-{
-	const src_rect = {
-		l : 0,
-		t : 0,
-		r : in_src_w,
-		b : in_src_h
-	};
-	const dst_rect = {
-		l : -1,
-		t : -1,
-		r : 1,
-		b : 1
-	};
-	const vec2 = convertUnitRect(in_src_x, in_src_y, src_rect, dst_rect);
-	// finally, dst_rect.t and dst_rect.b should be inverted
-	vec2.y *= -1;
-	return vec2;
-}
-
-function eventPos2RaycasterPos(in_ev)
-{
-	const elem = in_ev.currentTarget
-	return convertRaycasterUnit(
-		in_ev.clientX - elem.offsetLeft,
-		in_ev.clientY - elem.offsetTop,
-		elem.offsetWidth,
-		elem.offsetHeight);
-}
-
-function snapToNotch(in_value, in_notch)
-{
+function snapToNotch(in_value, in_notch) {
 	let notch = in_notch / 2;
 	let abs = Math.abs(in_value);
 	let cnt = Math.floor(abs / notch);
@@ -161,8 +124,7 @@ function snapToNotch(in_value, in_notch)
 	}
 }
 
-function snapToPI(in_value)
-{
+function snapToPI(in_value) {
 	/*
 		{in : Math.PI / 2 - delta, expected : 0},
 		{in : Math.PI / 2 + delta, expected : Math.PI}
@@ -170,8 +132,7 @@ function snapToPI(in_value)
 	return snapToNotch(in_value, Math.PI);
 }
 
-function snapTo05PI(in_value)
-{
+function snapTo05PI(in_value) {
 	/*
 		{in : Math.PI / 4 - delta, expected : 0},
 		{in : Math.PI / 4 + delta, expected : Math.PI / 2}
@@ -228,35 +189,53 @@ function pseudoMessageDigest2(in_string) {
 	return pseudoMessageDigest1([in_string]);
 }
 
-const createAudio = (() => {
-	async function deflate(in_arrBuff) {
-		const stream1 = new Blob([in_arrBuff]).stream();
-		const stream2 = stream1.pipeThrough(new CompressionStream('deflate'));
-		return await new Response(stream2).arrayBuffer();
+function beep(in_amplitude = 3000) {
+	const frequency = 5000;
+	const duration = 0.01
+	const sampleRate = 44100;
+	const numChannels = 1;
+	const numSamples = sampleRate * duration;
+	const bytesPerSample = 2;
+	const blockAlign = numChannels * bytesPerSample;
+	const byteRate = sampleRate * blockAlign;
+	const dataSize = numSamples * blockAlign;
+	const buffer = new ArrayBuffer(44 + dataSize);
+	const view = new DataView(buffer);
+	// RIFF identifier
+	view.setUint32(0, 0x52494646, false);
+	// RIFF chunk length
+	view.setUint32(4, 36 + dataSize, true);
+	// RIFF type
+	view.setUint32(8, 0x57415645, false);
+	// Format chunk identifier
+	view.setUint32(12, 0x666d7420, false);
+	// Format chunk length
+	view.setUint32(16, 16, true);
+	// Sample format (raw)
+	view.setUint16(20, 1, true);
+	// Channel count
+	view.setUint16(22, numChannels, true);
+	// Sample rate
+	view.setUint32(24, sampleRate, true);
+	// Byte rate
+	view.setUint32(28, byteRate, true);
+	// Block align
+	view.setUint16(32, blockAlign, true);
+	// Bits per sample
+	view.setUint16(34, bytesPerSample * 8, true);
+	// Data chunk identifier
+	view.setUint32(36, 0x64617461, false);
+	// Data chunk length
+	view.setUint32(40, dataSize, true);
+	// generate base64
+	for (let i = 0; i < numSamples; i++) {
+		const sample = in_amplitude * Math.sin(2 * Math.PI * frequency * (i / sampleRate));
+		view.setInt16(44 + i * bytesPerSample, sample, true);
 	}
-	async function inflate(in_arrBuff) {
-		const stream1 = new Blob([in_arrBuff]).stream();
-		const stream2 = stream1.pipeThrough(new DecompressionStream('deflate'));
-		return await new Response(stream2).arrayBuffer();
-	}
-	async function deflate_and_base64encode(in_src) {
-		const originalArrBuff = new TextEncoder().encode(in_src);
-		const deflatedArrBuff = await deflate(originalArrBuff);
-		return btoa(String.fromCharCode(...new Uint8Array(deflatedArrBuff)));
-	}
-	async function base64decode_and_inflate(in_base64) {
-		const bin = atob(in_base64);
-		const arr = new Uint8Array(bin.length);
-		for (let i = 0; i < bin.length; i++) {
-			arr[i] = bin.charCodeAt(i);
-		}
-		const inflatedArrBuff = await inflate(arr.buffer);
-		return new TextDecoder().decode(inflatedArrBuff);
-	}
-	return async (in_base64) => {
-		return new Audio('data:audio/mpeg;base64,' + await base64decode_and_inflate(in_base64));
-	}
-})();
+	const uint8Array = new Uint8Array(buffer);
+	const binaryString = String.fromCharCode(...uint8Array);
+	return new Audio('data:audio/wav;base64,' + btoa(binaryString));
+}
 
 class cEase {
 	constructor(in_from, in_to, in_duration) {
@@ -489,18 +468,147 @@ function emulateTouchEvent(in_elem) {
 	});
 }
 
-const debounce = (() => {
-	const maxLen = 100;
-	let timeoutIds = {};
-	return (in_callback, in_delay) => {
-		const callbackId = pseudoMessageDigest2(in_callback.toString().substring(0, maxLen));
-		if (callbackId in timeoutIds) {
-			// only the latest in_callback should be queued
-			window.clearTimeout(timeoutIds[callbackId]);
-		}
-		timeoutIds[callbackId] = window.setTimeout(in_callback, in_delay);
+const MOUSEMOVE_IGNORE = 5.0;
+const MOUSEMOVE_AMPLIFIER = 2.5;
+
+function timingController(in_callback, in_params = {}) {
+	const cache = {
+		x : Infinity,
+		y : Infinity,
+		time : 0,
+		call : 0,
+		skip : 0
 	};
-})();
+	const defaultParams = {
+		interval : -1,
+		delta : -1,
+		and : true
+	};
+	const params = {};
+	for (const [key, value] of Object.entries(defaultParams)) {
+		params[key] = in_params.hasOwnProperty(key) ? in_params[key] : value;
+	}
+	const checkInterval = (in_now) => {
+		if (params.interval < 0) {
+			return true;
+		}
+		return (in_now - cache.time) > params.interval;
+	};
+	const checkDelta = in_ev => {
+		if (params.delta < 0) {
+			return true;
+		}
+		return ((in_ev.clientX - cache.x) ** 2 + (in_ev.clientY - cache.y) ** 2) ** 0.5 > params.delta;
+	};
+	return in_ev => {
+		let now = Date.now();
+		let executable;
+		if (params.and) {
+			executable = checkInterval(now) && checkDelta(in_ev);
+		} else {
+			executable = checkInterval(now) || checkDelta(in_ev);
+		}
+		cache.call++;
+		if (executable) {
+			(in_callback)(in_ev);
+			cache.x = in_ev.clientX;
+			cache.y = in_ev.clientY;
+			cache.time = now;
+		} else {
+			cache.skip++;
+			if (!DEBUG) {
+				return;
+			}
+			if (cache.call % 100 === 0) {
+				console.log('skip (%) : ', cache.skip / cache.call);
+				cache.call = 0;
+				cache.skip = 0;
+			}
+		}
+	};
+}
+
+function throttling(in_callback, in_interval) {
+	return timingController(in_callback, {
+		interval : in_interval
+	});
+}
+
+function thresholding(in_callback, in_delta = MOUSEMOVE_IGNORE) {
+	const allowSmallMove = 500;
+	return timingController(in_callback, {
+		interval : allowSmallMove,
+		delta : in_delta,
+		and : false
+	});
+}
+
+function debouncing(in_callback, in_interval) {
+	let timerId = null;
+	return in_ev => {
+		if (timerId) {
+			window.clearTimeout(timerId);
+		}
+		timerId = window.setTimeout(() => (in_callback)(in_ev), in_interval);
+	}
+}
+
+class cNDCVector2 extends THREE.Vector2 {
+	#aspect;
+	constructor(in_x, in_y, in_w, in_h) {
+		const src_rect = {
+			l : 0,
+			t : 0,
+			r : in_w,
+			b : in_h
+		};
+		const dst_rect = {
+			l : -1,
+			t : -1,
+			r : 1,
+			b : 1
+		};
+		super(
+			convertUnit(in_x, src_rect.l, src_rect.r, dst_rect.l, dst_rect.r),
+			convertUnit(in_y, src_rect.t, src_rect.b, dst_rect.t, dst_rect.b)
+		);
+		// finally, dst_rect.t and dst_rect.b should be inverted
+		this.y *= -1;
+		this.#aspect = in_w / in_h;
+	}
+	/*
+		*** NOTE ***
+		when you use NDC for calculating delta of user interaction like mousemove,
+		it will be affected by screen (canvas) size.
+		so, you can use this method for the purpose.
+	*/
+	toAbs(in_amplifier = 1) {
+		/*
+			*** NOTE ***
+			this.clone() can't be used here.
+			at first, this code couldn't work because of it.
+			https://github.com/mrdoob/three.js/blob/master/src/math/Vector2.js
+			in addition, both cNDCVector2 and Vector2 instances are basically operable at the same time
+		*/
+		const ndc = new THREE.Vector2(this.x, this.y);
+		ndc.x *= this.#aspect;
+		return ndc.multiplyScalar(in_amplifier);
+	}
+}
+
+function ndcFromEvent(in_ev) {
+	const elem = in_ev.currentTarget
+	return new cNDCVector2(
+		in_ev.clientX - elem.offsetLeft,
+		in_ev.clientY - elem.offsetTop,
+		elem.offsetWidth,
+		elem.offsetHeight
+	);
+}
+
+function ndcToAbs(in_ndc) {
+	return in_ndc.toAbs(MOUSEMOVE_AMPLIFIER);
+}
 
 const clipArea = Symbol();
 const clipClearArea = Symbol();
@@ -1043,8 +1151,6 @@ function customCapsuleGeometry(in_rad_t, in_rad_b, in_h, in_rSeg = 32, in_hSeg =
 		+- PerspectiveCamera
 */
 
-const EV_DISTANCE_MULTIPLIER = 2.5;
-
 const DEVICE_PIXEL_RATIO = window.devicePixelRatio;
 
 class cSphericalWorld {
@@ -1058,7 +1164,7 @@ class cSphericalWorld {
 	constructor(in_radius) {
 		// scene
 		this.#scene = new THREE.Scene();
-		if (false) {
+		if (DEBUG) {
 			this.#scene.background = new THREE.Color(0xFFFFFF);
 		}
 		// renderer
@@ -1071,7 +1177,7 @@ class cSphericalWorld {
 		camera.far = in_radius * 2;
 		camera.position.copy(VEC3(0, 0, 1).multiplyScalar(in_radius));
 		camera.lookAt(VEC3(0, 0, 0));
-		if (false) {
+		if (DEBUG) {
 			camera.layers.enableAll();
 		}
 		this.#centerBall = new THREE.Object3D();
@@ -1092,40 +1198,33 @@ class cSphericalWorld {
 	}
 	#setupEventHandler() {
 		const events = (() => {
-			let startPosition = null;
-			const threshold = 0.05;
+			let vecPrev = null;
 			const start = in_ev => {
-				const vec2 = eventPos2RaycasterPos(in_ev);
-				if (this.intersectPositive(vec2).length > 0) {
+				const ndc = ndcFromEvent(in_ev);
+				if (this.intersectPositive(ndc).length > 0) {
 					return;
 				}
-				startPosition = vec2;
-			}
-			const update = in_ev => {
-				if (!startPosition) {
+				vecPrev = ndcToAbs(ndc);
+			};
+			const update = thresholding(in_ev => {
+				if (!vecPrev) {
 					return;
 				}
-				const vec2 = eventPos2RaycasterPos(in_ev);
-				let delta = vec2.clone().sub(startPosition);
-				if (delta.length() < threshold) {
-					return;
-				}
-				delta.multiplyScalar(EV_DISTANCE_MULTIPLIER);
-				this.moveView(delta.x * -1, delta.y * -1);
-				startPosition = vec2;
-			}
+				const vecNext = ndcToAbs(ndcFromEvent(in_ev));
+				// the direction of moveView() is the opposite side against toward mousemove.
+				const vecDelta = vecPrev.sub(vecNext);
+				this.moveView(vecDelta.x, vecDelta.y);
+				vecPrev = vecNext;
+			});
 			const stop = in_ev => {
-				if (!startPosition) {
-					return;
-				}
-				startPosition = null;
-			}
+				vecPrev = null;
+			};
 			const zoom = in_ev => {
 				const distance = this.#camera.position.length() + in_ev.deltaY;
 				if ((this.#zoomMax < distance) && (distance < this.#zoomMin)) {
 					this.#setZoom(distance);
 				}
-			}
+			};
 			return {
 				'mousedown' : start,
 				'mousemove' : update,
@@ -1157,11 +1256,11 @@ class cSphericalWorld {
 	#setZoom(in_distance) {
 		this.#camera.position.normalize().multiplyScalar(in_distance);
 	}
-	#intersectObjects(in_vec2, in_direction, in_layer) {
+	#intersectObjects(in_ndc, in_direction, in_layer) {
 		const raycaster = new THREE.Raycaster();
 		raycaster.layers.set(in_layer);
 		// camera ---[ raycast ]---> object
-		raycaster.setFromCamera(in_vec2, this.#camera);
+		raycaster.setFromCamera(in_ndc, this.#camera);
 		const intersects = raycaster.intersectObjects(this.#scene.children);
 		if (in_direction || (intersects.length === 0)) {
 			return intersects;
@@ -1172,11 +1271,11 @@ class cSphericalWorld {
 		raycaster.set(opposit, (raycaster.ray.direction.clone()).negate());
 		return raycaster.intersectObjects(this.#scene.children);
 	}
-	intersectPositive(in_vec2, in_layer = 0) {
-		return this.#intersectObjects(in_vec2, true, in_layer);
+	intersectPositive(in_ndc, in_layer = 0) {
+		return this.#intersectObjects(in_ndc, true, in_layer);
 	}
-	intersectNegative(in_vec2, in_layer = 0) {
-		return this.#intersectObjects(in_vec2, false, in_layer);
+	intersectNegative(in_ndc, in_layer = 0) {
+		return this.#intersectObjects(in_ndc, false, in_layer);
 	}
 	copyCameraPosition() {
 		return this.#camera.getWorldPosition(VEC3());
@@ -1963,7 +2062,7 @@ class cJointedSolidPart extends cSolidPart {
 		// in_startObj + descendants
 		return cJointedSolidPart.#jointedFrom(in_obj, false);
 	}
-	static stretchAt(in_obj, in_dstV3, in_delta) {
+	static stretchAt(in_obj, in_dstV3) {
 		const ancestors = cJointedSolidPart.ancestors(in_obj);
 		if (ancestors.length === 0) {
 			// not cJointedSolidPart
@@ -1999,7 +2098,9 @@ class cJointedSolidPart extends cSolidPart {
 				const parent = ancestors[target];
 				const srcDir = parent.getWorldDirection(VEC3());
 				const dstDir = vectorToStretch(parent);
-				const angle = Math.min(srcDir.angleTo(dstDir), in_delta * 10);
+				const adhocScale = 1000; // how can I decide this ?
+				const delta = in_dstV3.distanceTo(parent.getWorldPosition(VEC3())) / adhocScale;
+				const angle = Math.min(srcDir.angleTo(dstDir), delta);
 				const axis = VEC3().crossVectors(srcDir, dstDir).normalize();
 				const quat = new THREE.Quaternion().setFromAxisAngle(axis, angle);
 				srcDir.applyQuaternion(quat).multiplyScalar(WORLD_RADIUS);
@@ -2511,11 +2612,17 @@ function uiDefaultView() {
 	this time use then() to avoid the issue.
 */
 
-let AUDIO_SHUTTER, AUDIO_RELEASE, AUDIO_DUMMY;
+let SE_DUMMY = beep();
+let SE_SHUTTER = SE_DUMMY;
+let SE_RELEASE = SE_DUMMY;
 
-createAudio('eJztlluvsjgXgH8QF3jeerkKBQoClpPAHYhUTqKigv76CbwzFzPjfLP3l+xkJ+NKjA2F9mm7nra2S58IfkVUWtRycF/UAEB0ptbdkVfHaKuDh0tXZwCACAAYYrAdl7sKX135cI8rt9Ufow4kCzm4rwfjL99f3ZELnmQ4Fu2rl/0reuCHleGwm54XN92BFv4UIs+N4QuB1LgK78OXfUs4AEDjDKA2sYU9GbGd8tBz9VGf1znuDIctN+JKpKNEs4u55Xle4EtdGkyMY1TNbzvfG++VbsmIqRxmZzM/yV4ZZrvjnMtPi/35cl501zib3dcc3y5T5dF8WKPEDybGk83MzXFxu9yWqTLmNvmSH0aG+vHm/XgNh/4BzbRf/wXSln88S4LKjiBcvhok8HxDQ4BNXxsNzfSLMhpWpv+d+kdCPwl2X8LEhpTny6VzPyOU8jmfBfDsQiJLGs9EtZUxAEknMxF2IhVZjMDIj9OluMnarvJaAAqw4fllLQNabhYCHVrfjHVD4blOLQjrR/e3bgFALvrSkC1DStBYYEdcw9WROjGWHiqzNmRuT87a48pfvDRd+CmxZ4ApgKguW396S1aCEB6qsOoTRuRwpHaaogPihOmu6WeNgcjzu6vP81yHCot8lsXSSthOSiyqYuvqWDzs9tZWVFGoOF1yLg+qZq745+p+PwfN1AO+AZDbppyGB6xieaWNlQubHIVx5J13dy45MBwAMlJ+OuVS/gNXVpWngPsOyZ+mADMwrBHQ3xetBkCyzcRYbwonccWjiHK6uArH2nEJFCKJVgbu+LKZYpsBsUEQ+nxxb8Vcj9bK0Q6vJ/x8gO4SOsbFoqQxGUXkrGXXLBOQ3LPINgbAleLpslIDCBS24Q4IENcN/GSWEIA13YVlCwykckQVLne5OuFJEbWbAlAsyBPqe2u9DmGyrOCwvW2nD6vNjvmVQslzzmGWuLCtMRjnR2Ye6JnZM4mRUacWWtfg8SL9GPV5a4eKiwq1VsJ0pxNo1zUE8xkwBGdACRGwpcMJUOoSkrMDAcR/XKJNOs67pH5kwCIzPjANqSz0d5vkIcZCJjz8q/vUvWI8LhTsnAQPVFQBgI6jYl8KtbKXPI/mCwBjV8+UoFT8dTs4pDAR67Wx3YEsu0RjKNwCJgjSNt0RwEEFd5BSBoThULu1iyhL9vcrnhTDPrU8cBoEVrOJIwlirwS4fmSurExjrNCwPsw2UhM63HmVusFYWC6Fm82tSHEqpa6sa6J7wN+bnDiDQ3smd1Z3iCII1RErGQox0DwTFWl8B7AKQAXIKwAR7BoAJ6erOm/ytok1jRSXe3KRzGrf6o0U7m/WwtlJmb8ON6cAJdqCBEBv8pW585PTGqrW1HUZB08vlbtNvOc+LhchmT/pdAfK4NBuhtsWoYgADoGdQHoEAC3Gsixd6jUSRkIG2pSBABQOFJvuM1u59zmaUscDPM6ZdO5sbE+SxOqM+4Va8pMnC40ZUYvRVqAi3Z/WWb648DbiV7HbwN0Rs0I1y/2Snzf+MTnI5D44dGO+aAsJ3woiNKINWgSQm0Sn5lYApBNiss2BSmldyhPeIlhN42L8tF3YjzGjSCVm2N2rcRxS7ahdHsukHrsrcgaUM4BRocVIP30g/vJxZOCI5pkJpDZn6TXnYOuybtq4m8em7Flk68QsgUMTqQZH0MUbrncgbhC1MN3eGbHXxGBQf4Cgg/Jha0wIwpEFhM0ABJmGuVOnToVcHTuJ/PzYSFa/G2zmvi8AMMqUzDRbUPgJW5ywXfjyc3F/8LL7mEBmuJm+xFeDgjY4JAPSNWpOHoAoBbNG51HfLWStn81AJxfWgdWB0DJgTNimGJ9Lu31qcH+0QIHnaIZintOu3riSJR3pMluuLreRhSYnZiJu6+OitC/hZO3xIk0Eb53RA6pT0c+iC4uDBOUR9ujgkEzE3bqh2xVD1CMmUy8jgABDAHG9A91S2A2qigG0mnRg1G+DjJI2qb2Ez4pGuD6saLZGedpWBZaR+nQyCcRW4bmpuyzsyJbYcOLxWuUJo+wUFICZwm3JlV9eScPzfFtI4cfgUEg3bceOxR5wm8M8r6gOs4uGQjADBgh0UTaDHRjPFhaW2yHHdZ/rHLe65P1rOFgyLEcf7ij/+01/cCiCiu46FFHAUQMVSI0LhMnoLiZbAFS0wgyiGCAH9O+d/78sv86hTkzQGTDXbyOtyMRqJhmeTiWqWhYAlqjeRgcEQKpPzMNfQqfuWNIfs04X/2UcwzlkLYQEmaA1dX8UCwvwgrbfRiQCasUQBkYIsi0QCCq/j2VwiLBP35++TPKF3Boc0s4/gMUfHHp+/v70ZZSvOjQNfgDL4JCTiPyr6+yLRft2h5wk/wEsg0PG6Afk7e8OGZMfwPLLoSn9AXn7duifWd4OvWJ5O/SS5e3QS5a3Q69Y3g69ZHk79JLl7dArlm916Gt5+59x6Gt5+19x6Gt5+3bob/He+/+R5b33v2J5359esrwdesnydugVy9uhlyxvh16yfK9Dn45vd+hrLN/r0Kfj+x36Gsv3OvTp+H6HvsbyQxz6DeKykME=').then(in_audio => AUDIO_SHUTTER = in_audio);
+SOUND.SHUTTER.then(in_decompress => {
+	SE_SHUTTER = new Audio('data:audio/mpeg;base64,' + in_decompress);
+});
 
-createAudio('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').then(in_audio => AUDIO_RELEASE = AUDIO_DUMMY = in_audio);
+SOUND.RELEASE.then(in_decompress => {
+	SE_RELEASE = new Audio('data:audio/mpeg;base64,' + in_decompress);
+});
 
 function setTransition(in_elem, in_shorthand, in_val1, in_val2) {
 	const components = in_shorthand.split(/\s+/);
@@ -2532,7 +2639,7 @@ function setTransition(in_elem, in_shorthand, in_val1, in_val2) {
 }
 
 function takeShotSound() {
-	AUDIO_SHUTTER.play();
+	SE_SHUTTER.play();
 }
 
 function takeShotFlash() {
@@ -2723,13 +2830,13 @@ function uiRights() {
 const TRANSPARENT_IMAGE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAADBJREFUOE9jTEtL+8+ABxgbG+OTZmAcNWBYhMHMmTPxpoOzZ8/iTwejBjAwDv0wAADSgj/p4jinSwAAAABJRU5ErkJggg==';
 
 document.addEventListener('DOMContentLoaded', (() => {
-	let resizeWorld = (() => {
+	let resizeWorld = in_ev => {
 		gWorld.resize(
 			window.innerWidth,
 			window.innerHeight);
-	});
-	window.addEventListener('resize', () => debounce(resizeWorld, 300));
-	(resizeWorld)();
+	};
+	window.addEventListener('resize', debouncing(resizeWorld, 300));
+	window.dispatchEvent(new Event('resize'));
 	if (!document.body) {
 		document.documentElement.appendChild(document.createElement('BODY'));
 	}
@@ -2749,14 +2856,10 @@ document.addEventListener('DOMContentLoaded', (() => {
 */
 
 const gDrag = {
-	vec : null,
 	obj : null,
 	far : false,
 	animating : false,
 	isActive : function() {
-		if (!this.vec) {
-			return false;
-		}
 		if (!this.obj) {
 			return false;
 		}
@@ -2771,7 +2874,7 @@ const gDrag = {
 		because of this, the sound does not work without this code.
 	*/
 	const once = (in_ev) => {
-		AUDIO_DUMMY.play();
+		SE_DUMMY.play();
 		gWorld.canvas.removeEventListener('mousedown', once);
 	};
 	gWorld.canvas.addEventListener('mousedown', once);
@@ -2781,67 +2884,63 @@ function startInteraction(in_ev) {
 	if (gDrag.isActive()) {
 		return;
 	}
-	let vec2 = eventPos2RaycasterPos(in_ev);
-	let intersects = gWorld.intersectPositive(vec2);
-	if (intersects.length == 0) {
+	const ndc = ndcFromEvent(in_ev);
+	const intersects = gWorld.intersectPositive(ndc);
+	if (intersects.length === 0) {
 		return;
 	}
 	const rayHit = intersects[0];
 	// for #makeRoughGeometry(), and addMeshToBone()
-	let target = rayHit.object[instanceInAncestor](cAbstractPart);
-	if (target) {
-		const cameraPos = gWorld.copyCameraPosition();
-		const objectPos = target.getWorldPosition(VEC3());
-		const fineAdjustment = 0.9;
-		gDrag.far = (rayHit.distance * fineAdjustment > cameraPos.distanceTo(objectPos));
-		gDrag.vec = vec2;
-		gDrag.obj = target;
-		// not lookAt(cameraPos), but lookAt(raycaster.ray.direction.negate())
-		gDrag.obj.activateDraggingRcv(objectPos.add(cameraPos));
-	} else {
+	const target = rayHit.object[instanceInAncestor](cAbstractPart);
+	if (!target) {
 		if (cFigure.isDetailed(rayHit.object)) {
 			gFigure.toStandard();
 			startInteraction(in_ev);
 		}
+		return;
 	}
+	const cameraPos = gWorld.copyCameraPosition();
+	const objectPos = target.getWorldPosition(VEC3());
+	const fineAdjustment = 0.9;
+	gDrag.far = (rayHit.distance * fineAdjustment > cameraPos.distanceTo(objectPos));
+	gDrag.obj = target;
+	// not lookAt(cameraPos), but lookAt(raycaster.ray.direction.negate())
+	gDrag.obj.activateDraggingRcv(objectPos.add(cameraPos));
 }
 
 gWorld.canvas.addEventListener('mousedown', startInteraction);
 
-gWorld.canvas.addEventListener('mousemove', in_ev => {
+gWorld.canvas.addEventListener('mousemove', thresholding(in_ev => {
 	if (!gDrag.isActive()) {
 		return;
 	}
-	let vec2 = eventPos2RaycasterPos(in_ev);
-	let delta = vec2.clone().sub(gDrag.vec).length();
-	if (delta < 0.01) {
-		return;
-	} else {
-		gDrag.vec = vec2;
-	}
+	const ndc = ndcFromEvent(in_ev);
 	let intersects;
 	if (gDrag.far) {
-		intersects = gWorld.intersectNegative(vec2, cAbstractPart.operatingLayer);
+		intersects = gWorld.intersectNegative(ndc, cAbstractPart.operatingLayer);
 	} else {
-		intersects = gWorld.intersectPositive(vec2, cAbstractPart.operatingLayer);
+		intersects = gWorld.intersectPositive(ndc, cAbstractPart.operatingLayer);
 	}
 	if (intersects.length > 0) {
 		// receiver (CircleGeometry or SphereGeometry)
 		if (intersects.length === 1) {
 			// receiver (only CircleGeometry)
-			if (cJointedSolidPart.stretchAt(gDrag.obj, intersects[0].point, delta)) {
+			if (cJointedSolidPart.stretchAt(gDrag.obj, intersects[0].point)) {
 				// (1) bendAt() may be applied to ancestor
 				return;
 			}
 		}
 		// (2) bendAt() is applied to gDrag.obj
 		gDrag.obj.bendAt(intersects[0].point);
+		if (gDrag.obj instanceof cSmartPhone) {
+			gCyclicFigures.currValue().resetItemUpToHead();
+		}
 	} else {
 		// (3) gDrag.obj is released
 		if (gDrag.animating) {
 			return;
 		} else {
-			AUDIO_RELEASE.play();
+			SE_RELEASE.play();
 			gDrag.animating = true;
 		}
 		const hook = (in_obj => {
@@ -2860,19 +2959,19 @@ gWorld.canvas.addEventListener('mousemove', in_ev => {
 		})(gDrag.obj);
 		gWorld.addAnimationHook(hook);
 	}
-});
+}));
 
 function updateToDetailed() {
 	if (!gDetail) {
 		return;
 	}
-	debounce(() => {
+	(debouncing(() => {
 		if (gDrag.isActive()) {
 			return;
 		} else {
 			gFigure.toDetailed();
 		}
-	}, 500);
+	}, 500))(new Event('dummy'));
 }
 
 updateToDetailed();
@@ -2882,7 +2981,6 @@ function dragstop() {
 		return;
 	}
 	gDrag.obj.activateReleasedRcv();
-	gDrag.vec = null;
 	gDrag.obj = null;
 	gDrag.animating = false;
 	updateToDetailed();
