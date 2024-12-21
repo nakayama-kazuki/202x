@@ -18,6 +18,7 @@
 
 import * as THREE from 'three';
 import * as UTILS from 'utils';
+import * as SOUND from './sound-effect.js';
 
 /*
 	(1) utilities
@@ -67,6 +68,8 @@ function getParam(in_name) {
 	}
 	return false;
 }
+
+const DEBUG = getParam('debug') !== false;
 
 function randomString(in_length = 5) {
 	return Math.floor(Math.random() * (10 ** in_length)).toString(16).padStart(in_length, '0');
@@ -184,35 +187,53 @@ function pseudoMessageDigest2(in_string) {
 	return pseudoMessageDigest1([in_string]);
 }
 
-const createAudio = (() => {
-	async function deflate(in_arrBuff) {
-		const stream1 = new Blob([in_arrBuff]).stream();
-		const stream2 = stream1.pipeThrough(new CompressionStream('deflate'));
-		return await new Response(stream2).arrayBuffer();
+function beep(in_amplitude = 3000) {
+	const frequency = 5000;
+	const duration = 0.01
+	const sampleRate = 44100;
+	const numChannels = 1;
+	const numSamples = sampleRate * duration;
+	const bytesPerSample = 2;
+	const blockAlign = numChannels * bytesPerSample;
+	const byteRate = sampleRate * blockAlign;
+	const dataSize = numSamples * blockAlign;
+	const buffer = new ArrayBuffer(44 + dataSize);
+	const view = new DataView(buffer);
+	// RIFF identifier
+	view.setUint32(0, 0x52494646, false);
+	// RIFF chunk length
+	view.setUint32(4, 36 + dataSize, true);
+	// RIFF type
+	view.setUint32(8, 0x57415645, false);
+	// Format chunk identifier
+	view.setUint32(12, 0x666d7420, false);
+	// Format chunk length
+	view.setUint32(16, 16, true);
+	// Sample format (raw)
+	view.setUint16(20, 1, true);
+	// Channel count
+	view.setUint16(22, numChannels, true);
+	// Sample rate
+	view.setUint32(24, sampleRate, true);
+	// Byte rate
+	view.setUint32(28, byteRate, true);
+	// Block align
+	view.setUint16(32, blockAlign, true);
+	// Bits per sample
+	view.setUint16(34, bytesPerSample * 8, true);
+	// Data chunk identifier
+	view.setUint32(36, 0x64617461, false);
+	// Data chunk length
+	view.setUint32(40, dataSize, true);
+	// generate base64
+	for (let i = 0; i < numSamples; i++) {
+		const sample = in_amplitude * Math.sin(2 * Math.PI * frequency * (i / sampleRate));
+		view.setInt16(44 + i * bytesPerSample, sample, true);
 	}
-	async function inflate(in_arrBuff) {
-		const stream1 = new Blob([in_arrBuff]).stream();
-		const stream2 = stream1.pipeThrough(new DecompressionStream('deflate'));
-		return await new Response(stream2).arrayBuffer();
-	}
-	async function deflate_and_base64encode(in_src) {
-		const originalArrBuff = new TextEncoder().encode(in_src);
-		const deflatedArrBuff = await deflate(originalArrBuff);
-		return btoa(String.fromCharCode(...new Uint8Array(deflatedArrBuff)));
-	}
-	async function base64decode_and_inflate(in_base64) {
-		const bin = atob(in_base64);
-		const arr = new Uint8Array(bin.length);
-		for (let i = 0; i < bin.length; i++) {
-			arr[i] = bin.charCodeAt(i);
-		}
-		const inflatedArrBuff = await inflate(arr.buffer);
-		return new TextDecoder().decode(inflatedArrBuff);
-	}
-	return async (in_base64) => {
-		return new Audio('data:audio/mpeg;base64,' + await base64decode_and_inflate(in_base64));
-	}
-})();
+	const uint8Array = new Uint8Array(buffer);
+	const binaryString = String.fromCharCode(...uint8Array);
+	return new Audio('data:audio/wav;base64,' + btoa(binaryString));
+}
 
 class cEase {
 	constructor(in_from, in_to, in_duration) {
@@ -445,27 +466,37 @@ function emulateTouchEvent(in_elem) {
 	});
 }
 
-const MOUSEMOVE_IGNORE = 10;
+const MOUSEMOVE_IGNORE = 5.0;
 const MOUSEMOVE_AMPLIFIER = 2.5;
 
 function timingController(in_callback, in_params = {}) {
-	const last = {x : Infinity, y : Infinity, t : 0};
-	const init = {interval : -1, delta : -1, and : true};
+	const cache = {
+		x : Infinity,
+		y : Infinity,
+		time : 0,
+		call : 0,
+		skip : 0
+	};
+	const defaultParams = {
+		interval : -1,
+		delta : -1,
+		and : true
+	};
 	const params = {};
-	for (const [key, value] of Object.entries(init)) {
+	for (const [key, value] of Object.entries(defaultParams)) {
 		params[key] = in_params.hasOwnProperty(key) ? in_params[key] : value;
 	}
 	const checkInterval = (in_now) => {
 		if (params.interval < 0) {
 			return true;
 		}
-		return (in_now - last.t) > params.interval;
+		return (in_now - cache.time) > params.interval;
 	};
 	const checkDelta = in_ev => {
 		if (params.delta < 0) {
 			return true;
 		}
-		return ((in_ev.clientX - last.x) ** 2 + (in_ev.clientY - last.y) ** 2) ** 0.5 > params.delta;
+		return ((in_ev.clientX - cache.x) ** 2 + (in_ev.clientY - cache.y) ** 2) ** 0.5 > params.delta;
 	};
 	return in_ev => {
 		let now = Date.now();
@@ -475,13 +506,22 @@ function timingController(in_callback, in_params = {}) {
 		} else {
 			executable = checkInterval(now) || checkDelta(in_ev);
 		}
+		cache.call++;
 		if (executable) {
 			(in_callback)(in_ev);
-			last.x = in_ev.clientX;
-			last.y = in_ev.clientY;
-			last.t = now;
+			cache.x = in_ev.clientX;
+			cache.y = in_ev.clientY;
+			cache.time = now;
 		} else {
-			// console.log('skipped');
+			cache.skip++;
+			if (!DEBUG) {
+				return;
+			}
+			if (cache.call % 100 === 0) {
+				console.log('skip (%) : ', cache.skip / cache.call);
+				cache.call = 0;
+				cache.skip = 0;
+			}
 		}
 	};
 }
@@ -493,7 +533,7 @@ function throttling(in_callback, in_interval) {
 }
 
 function thresholding(in_callback, in_delta = MOUSEMOVE_IGNORE) {
-	const allowSmallMove = 200;
+	const allowSmallMove = 500;
 	return timingController(in_callback, {
 		interval : allowSmallMove,
 		delta : in_delta,
@@ -1122,7 +1162,7 @@ class cSphericalWorld {
 	constructor(in_radius) {
 		// scene
 		this.#scene = new THREE.Scene();
-		if (false) {
+		if (DEBUG) {
 			this.#scene.background = new THREE.Color(0xFFFFFF);
 		}
 		// renderer
@@ -1135,7 +1175,7 @@ class cSphericalWorld {
 		camera.far = in_radius * 2;
 		camera.position.copy(VEC3(0, 0, 1).multiplyScalar(in_radius));
 		camera.lookAt(VEC3(0, 0, 0));
-		if (false) {
+		if (DEBUG) {
 			camera.layers.enableAll();
 		}
 		this.#centerBall = new THREE.Object3D();
@@ -2367,18 +2407,24 @@ function complete() {
 	this time use then() to avoid the issue.
 */
 
-let AUDIO_ROTATION, AUDIO_ERROR, AUDIO_DUMMY;
+let SE_DUMMY = beep();
+let SE_MOVED = SE_DUMMY;
+let SE_ERROR = SE_DUMMY;
 
-createAudio('eJzt0jnTqkgYhuEfRNCigBC+zQ4i+5qJC6sim4C/furz1KkJpiac8kwVd9Lp1d0PQkc1AZAWkLorw6tgZ/SlyLCNAVo1EQsX5qEFOtRoV9i/ufh2eBCNaLwo6+WfHwbqBKpUzhZCAn1BGCF2RIi1EG2h3xE5GOHZQqwy3TAfYZZXLNrZIRIQBtGabgLTgHAhqVGLGx07B8mXQUBcdsN72Li+XMYuJjR7vy27oPYtRty4Kj0cx1J3N+jHz/eW53JkyoYVQErBA7wMA9xnu7/bOIq3z0I3Fe5oVu9QSqN8YbZ7bsuEh1pqPCf142kwW4cr0vA4ee3woggv4vSILeWOc5crbRFteWaINFrQYV7I53sa60VyApoZHeEpsJMNGD4XZp8IeYyvejfqUSbXfXVDTcOW1ydJeC2o9wiRVZmmD4V4Pto50KWPH1h1UCR0I0QD7KLd1bY2YQBBGCWxlouXEHZz3z9JW5xOcmQ3G/7hQWu+jpeW4k84tPW6kQtjOegpGvsI9ZLz2OQG5ufnI4mmpfx8Q5lwnLjcuBfhoc2N82kU0H2B9saO6FH/QEFkIaZY1BYAtCK0jUwpznlVZHZzPtT2dsfptZmISSpOR/Dksa4xZf96f1HdyeQln0DAWaFCNQGINuxewmk6GfmkZIt7Cob7u7jzziCWXby5G3MgHKjpfk6DOKtOWnkt9ovyGcz7mS5mq5Y7gu9655JNcrlVX5ZnG32HowbGoQxkTnU3QwRgt5WcvJB/p/RYDz0fi/k4T7JCJeM+9t1k6U+1QQqBM+smNKeSbc28reNdZ6TMbut9/IKhOd5FNjNchFniElcbAM6XU2sG4nFfu+xC2zN2VK6+P3Jx0EjBvLD5D/Xu6ZMv8ucS9UUv4UCpjHtQCzDFcscdz+/jkjwFlxvDJTeOoRIs150VXkty3F+44taQAnOxGHOw2G6DEhIhVc9ABU1TMUKo6H42RQR80+rVjegDyYmYPA5TLm71YjBsn/y1H7ERZzC6coISftpkn8NYqNkQcPCn5YnS0fGM0fBg+vg1StgBH1o/fvtv/7ed/9Y//OoPWq7gd6v/P231f7fV/91W/3db/d9t9X+31f/dVv93W/3fbfV/t9X/5/R/9/8Fg3FQCQ==').then(in_audio => AUDIO_ROTATION = AUDIO_DUMMY = in_audio);
+SOUND.MOVED.then(in_decompress => {
+	SE_MOVED = new Audio('data:audio/mpeg;base64,' + in_decompress);
+});
 
-createAudio('eJzt0smyslgWhuELYrAAAWG4kU2PSA/OUARppD2AcPUZ/6mqUUWOzYzwnazpEys+gLN2RUg5Izm8cScNOWmHxoR1xOL0xJabdrU7mCWVXBaM/UXiGYlbc1EgTigxF75liobJgceqfOHnnNHsjQUgcoy7O4BeRO4W48TO8cMcLtSTn4kf5rI8q0DRNPXS6BIrxITfGO9aQXHnFNlm6E8Sr5kjaWZVi0hiJF4kFDZQNIl/VoWu6ddr67chBZkv2S388Z8YYzflO7LSCYnITaZXWOwFOj+D2reClfpZMOYFIFKLhvEsrPTwxtrNd0dWjzWL6GLRUi8OdQRbWbsbgZB4DwgFI5HNIv+EzNTBgq2+nRh3RnuKjLWUdFJ6lp0j9c1OZ7VPnkdOyoxeGf2qKq/XvKR+XpXYkwJwAoCQoh0hoTc8SwKAQ9w/dn1MJeb16xc1bdLlp0p4E0LsUxsSaVcK1OiKN4fXyCZtag6ew/Zg5r5cBq69c4S5DMki7Pe3WpAKgByfzlvLC+vATGoOQMpt0xtZEaQTsvTX7RZNsiAcYo0liyU76SjP7xTWxfX19vXAD86UO5RH82KXr76NtlAnKBOGKNMKAwBgOeYAjdOh4lKrRHXicNf6iR3Sv37EqLQua3MRGTZidGPSH2hyiChaheGdRZmQeo4ZX2ZBPVsep6qXHqCzXEaMFDmHQJXF9BhlbEhR8rUF0E3JXsmaD9FPXZp11XQFzraNwYkTlyWtVHfuofpxRJ5vWcjHsn3LzlePrIEzUIWkHII0Z0PHIrKip2YAGmK/7Ejk1wRZcVS5pxNrq25JCpX7x++KmnrXA0YpFNVExEYN7APhvqQ6udkjih5b7Xh2GGK40tmS96qoSOtTqm1gk4gNiV7qkxy30Q6Q1bNbOUg7qDeDvaWI2uVORxatpiLjm9LkSgcxsO+vYfsZGulikrgKEzP782EyTTgB+obLo5K2rgBAAHBJd6QHPTTDQLdsR5OsaJVlbyovUhDIamoX/92Pujr8Zq6ocQrBULo3gWrfmLgMc6oRjDL25mif+qTuEuNk5sSYBnDvg5E7NgLQvulSUm/mIPikFwyXQSTdybOjEmF30P18rmZf98mFvUERks1hurbho7ZEUVKdA7hACt5LkPG0X7ZQp8Of1716oVeTA7HJ+yBifnXPxgLpa4CBu3u6am5ju8c4G9zqP34sJ3rNKqvT++twNZuEPuHtwVPAxwBlhCwkN3ExAnfIYT8AnOI3Bmkh2mjzUONZZzypUfZa2g1HJX4DmGPbQk0x2K8pFcZ8vXILewCiGW75aAMZHmjC9eZ+phex94NhTsswY07H2Qys20yNer4AvF3B4OJ4Bl4A4EhLv91uUUdPx2gvnOFh+oPk/fqlBAPCi7miEjl9Ijb9A2HndAjGsV0yH46iJIjcQhUaP4zh5EL3WARiAeJna/zw8LyXPbpkFqJwiYXydQ+ci5y/SyXn0ODlMPrAdCn8AJ1vvgrM0GzuHgp5monVKRiexUZONCr1Orqtxs4pj8KYAMKjysjpxcu4+mH+mdPeB2/RD8LQx/LZ9a3Z8tH665d5zCFJyFenRKgvxLyjT5ZzCv+h/Z9fcxBCSo3+F1n8nk87/66v/7N9/Z/t6/9sX/9n+/o/29f/2b7+z/b1f7av/7N9/f+c/u3+vwAz5Yo+').then(in_audio => AUDIO_ERROR = in_audio);
+SOUND.ERROR.then(in_decompress => {
+	SE_ERROR = new Audio('data:audio/mpeg;base64,' + in_decompress);
+});
 
 function shuffle(in_count) {
 	const randomRotation = (in_remaining_count) => {
 		let overTheTop = false;
 		const callback = (in_ratio) => {
 			if ((in_ratio > 0.4) && !overTheTop) {
-				AUDIO_ROTATION.play();
+				SE_MOVED.play();
 				overTheTop = true;
 			}
 			if (in_ratio < 1) {
@@ -2538,14 +2584,14 @@ async function changeLevel(in_delta) {
 
 function prevLevel(in_sound = true) {
 	if (in_sound) {
-		AUDIO_ROTATION.play();
+		SE_MOVED.play();
 	}
 	changeLevel(-1);
 }
 
 function nextLevel(in_sound = true) {
 	if (in_sound) {
-		AUDIO_ROTATION.play();
+		SE_MOVED.play();
 	}
 	changeLevel(+1);
 }
@@ -2686,7 +2732,7 @@ document.addEventListener('DOMContentLoaded', (() => {
 		because of this, the sound does not work without this code.
 	*/
 	const once = (in_ev) => {
-		AUDIO_DUMMY.play();
+		SE_DUMMY.play();
 		gWorld.canvas.removeEventListener('mousedown', once);
 	};
 	gWorld.canvas.addEventListener('mousedown', once);
@@ -2732,7 +2778,7 @@ async function notifyDelta(in_ndc) {
 		} else {
 			canKnock = false;
 		}
-		AUDIO_ERROR.play();
+		SE_ERROR.play();
 		await gWorld.motionKnock();
 		canKnock = true;
 	}
@@ -2742,7 +2788,7 @@ gWorld.canvas.addEventListener('mousemove', thresholding(async (in_ev) => {
 	const ndc = ndcFromEvent(in_ev);
 	if (gCube.uiIsMoving()) {
 		if (gCube.uiUpdatePosition(ndcToAbs(ndc))) {
-			AUDIO_ROTATION.play();
+			SE_MOVED.play();
 		}
 	} else {
 		if (gCube.uiIsDragging()) {
