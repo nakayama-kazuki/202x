@@ -2810,21 +2810,22 @@ function uiGetScreenShot() {
 	tmpElem.height = box.h;
 	const ctx = tmpElem.getContext('2d');
 	ctx.drawImage(gWorld.canvas, box.l, box.t, box.w, box.h, 0, 0, box.w, box.h);
-	/*
-		*** NOTE ***
-		the browser treats the data URL as a resource when using fetch.
-		the fetch function retrieves the data and allows to convert it into a Blob.
-	*/
-	fetch(tmpElem.toDataURL('image/png'))
-		.then(in_resp => in_resp.blob())
-		.then(in_blob => {
-			return navigator.clipboard.write([
-				new ClipboardItem({'image/png': in_blob})
+	(async () => {
+		/*
+			*** NOTE ***
+			the browser treats the data URL as a resource when using fetch.
+			the fetch function retrieves the data and allows us to convert it into a Blob.
+		*/
+		const response = await fetch(tmpElem.toDataURL('image/png'));
+		const blob = await response.blob();
+		try {
+			await navigator.clipboard.write([
+				new ClipboardItem({'image/png': blob})
 			]);
-		})
-		.catch(in_err => {
-			alert(in_err);
-		});
+		} catch (err) {
+			alert(err);
+		}
+	})();
 }
 
 function startDialog(in_element, in_callback = null) {
