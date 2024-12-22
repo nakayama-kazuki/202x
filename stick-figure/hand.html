@@ -543,15 +543,20 @@ function thresholding(in_callback, in_delta = MOUSEMOVE_IGNORE) {
 	});
 }
 
-function debouncing(in_callback, in_interval) {
-	let timerId = null;
-	return in_ev => {
-		if (timerId) {
-			window.clearTimeout(timerId);
+const debouncing = (() => {
+	const timerIds = {};
+	return (in_callback, in_interval, in_group = Symbol()) => {
+		return in_ev => {
+			if (timerIds.hasOwnProperty(in_group)) {
+				window.clearTimeout(timerIds[in_group]);
+			}
+			timerIds[in_group] = window.setTimeout(() => {
+				(in_callback)(in_ev);
+				delete timerIds[in_group];
+			}, in_interval);
 		}
-		timerId = window.setTimeout(() => (in_callback)(in_ev), in_interval);
-	}
-}
+	};
+})();
 
 class cNDCVector2 extends THREE.Vector2 {
 	#aspect;
@@ -2963,6 +2968,8 @@ gWorld.canvas.addEventListener('mousemove', thresholding(in_ev => {
 	}
 }));
 
+const DEBOUNCING_GROUP = Symbol();
+
 function updateToDetailed() {
 	if (!gDetail) {
 		return;
@@ -2973,7 +2980,7 @@ function updateToDetailed() {
 		} else {
 			gFigure.toDetailed();
 		}
-	}, 500))(new Event('dummy'));
+	}, 500, DEBOUNCING_GROUP))(new Event('dummy'));
 }
 
 updateToDetailed();
