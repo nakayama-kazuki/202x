@@ -2681,20 +2681,18 @@ function uiGetScreenShot() {
 	/*
 		*** NOTE ***
 		the browser treats the data URL as a resource when using fetch.
-		the fetch function retrieves the data and allows us to convert it into a Blob.
+		the fetch function retrieves the data and allows to convert it into a Blob.
 	*/
-	(async () => {
-		const dataUrl = tmpElem.toDataURL('image/png');
-		const response = await fetch(dataUrl);
-		const blob = await response.blob();
-		try {
-			await navigator.clipboard.write([
-				new ClipboardItem({'image/png': blob})
+	fetch(tmpElem.toDataURL('image/png'))
+		.then(in_resp => in_resp.blob())
+		.then(in_blob => {
+			return navigator.clipboard.write([
+				new ClipboardItem({'image/png': in_blob})
 			]);
-		} catch (err) {
-			alert(err);
-		}
-	})();
+		})
+		.catch(in_err => {
+			alert(in_err);
+		});
 }
 
 function startDialog(in_element, in_callback = null) {
