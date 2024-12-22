@@ -187,7 +187,7 @@ function pseudoMessageDigest2(in_string) {
 	return pseudoMessageDigest1([in_string]);
 }
 
-function beep(in_amplitude = 3000) {
+function beep(in_amplitude = 2000) {
 	const frequency = 5000;
 	const duration = 0.01
 	const sampleRate = 44100;
@@ -2799,9 +2799,10 @@ async function uiWithoutDouble(in_ev) {
 	this time use then() to avoid the issue.
 */
 
-let SE_DUMMY = beep();
-let SE_SHUTTER = SE_DUMMY;
-let SE_RELEASE = SE_DUMMY;
+let SE_BEEP = beep(2000);
+let SE_DUMMY = beep(10);
+let SE_SHUTTER = SE_BEEP;
+let SE_RELEASE = SE_BEEP;
 
 SOUND.SHUTTER.then(in_decompress => {
 	SE_SHUTTER = new Audio('data:audio/mpeg;base64,' + in_decompress);
