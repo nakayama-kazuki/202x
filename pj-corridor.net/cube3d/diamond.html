@@ -1454,7 +1454,9 @@ gWorld.canvas.addEventListener('mousemove', thresholding(async (in_ev) => {
 		if (gCube.uiIsDragging()) {
 			await notifyDelta(ndc);
 		} else {
-			setFocus(ndc);
+			if (!gWorld.isDragging()) {
+				setFocus(ndc);
+			}
 		}
 	}
 }));
