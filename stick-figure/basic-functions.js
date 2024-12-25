@@ -1205,28 +1205,28 @@ export class cSphericalWorld {
 		this.#setupEventHandler();
 		_emulateTouchEvent(this.canvas);
 	}
+	#eventVec = null;
 	#setupEventHandler() {
 		const events = (() => {
-			let vecPrev = null;
 			const start = in_ev => {
 				const ndc = ndcFromEvent(in_ev);
 				if (this.intersectPositive(ndc).length > 0) {
 					return;
 				}
-				vecPrev = ndcToAbs(ndc);
+				this.#eventVec = ndcToAbs(ndc);
 			};
 			const update = thresholding(in_ev => {
-				if (!vecPrev) {
+				if (!this.#eventVec) {
 					return;
 				}
 				const vecNext = ndcToAbs(ndcFromEvent(in_ev));
 				// the direction of moveView() is the opposite side against toward mousemove.
-				const vecDelta = vecPrev.sub(vecNext);
+				const vecDelta = this.#eventVec.sub(vecNext);
 				this.moveView(vecDelta.x, vecDelta.y);
-				vecPrev = vecNext;
+				this.#eventVec = vecNext;
 			});
 			const stop = in_ev => {
-				vecPrev = null;
+				this.#eventVec = null;
 			};
 			const zoom = in_ev => {
 				const distance = this.#camera.position.length() + in_ev.deltaY;
@@ -1246,6 +1246,9 @@ export class cSphericalWorld {
 		for (let [name, func] of Object.entries(events)) {
 			this.canvas.addEventListener(name, func.bind(this));
 		}
+	}
+	isDragging() {
+		return !!this.#eventVec;
 	}
 	get canvas() {
 		return this.#renderer.domElement;
