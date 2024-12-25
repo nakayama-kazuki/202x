@@ -1293,7 +1293,7 @@ document.addEventListener('DOMContentLoaded', (() => {
 	gWorld.canvas.addEventListener('mousedown', once);
 })();
 
-gWorld.canvas.addEventListener('mousedown', async (in_ev) => {
+gWorld.canvas.addEventListener('mousedown', in_ev => {
 	const ndc = ndcFromEvent(in_ev);
 	const intersects = gWorld.intersectPositive(ndc);
 	if (intersects.length === 0) {
@@ -1318,26 +1318,28 @@ gWorld.canvas.addEventListener('mousedown', async (in_ev) => {
 	gCube.uiSetInitPosition(intersects[0].object, normal, intersects[0].point, ndcToAbs(ndc));
 });
 
-let canKnock = true;
-
-async function notifyDelta(in_ndc) {
-	const intersects = gWorld.intersectPositive(in_ndc);
-	if (intersects.length === 0) {
-		return;
-	}
-	const result = gCube.uiNotifyDeltaPosition(intersects[0].object, intersects[0].point, ndcToAbs(in_ndc));
+const notifyDelta = (() => {
+	let canKnock = true;
 	const RC = cRubiksCube.uiSetDeltaPositionRC;
-	if (result === RC.UNMOVABLE) {
-		if (!canKnock) {
+	return in_ndc => {
+		const intersects = gWorld.intersectPositive(in_ndc);
+		if (intersects.length === 0) {
 			return;
-		} else {
-			canKnock = false;
 		}
-		SE_ERROR.play();
-		await gWorld.motionKnock();
-		canKnock = true;
+		const result = gCube.uiNotifyDeltaPosition(intersects[0].object, intersects[0].point, ndcToAbs(in_ndc));
+		if (result === RC.UNMOVABLE) {
+			if (!canKnock) {
+				return;
+			}
+			canKnock = false;
+			(async () => {
+				SE_ERROR.play();
+				await gWorld.motionKnock();
+				canKnock = true;
+			})();
+		}
 	}
-}
+})();
 
 const setFocus = (() => {
 	const backup = {
@@ -1389,7 +1391,7 @@ const setFocus = (() => {
 	}
 })();
 
-gWorld.canvas.addEventListener('mousemove', thresholding(async (in_ev) => {
+gWorld.canvas.addEventListener('mousemove', thresholding(in_ev => {
 	const ndc = ndcFromEvent(in_ev);
 	if (gCube.uiIsMoving()) {
 		if (gCube.uiUpdatePosition(ndcToAbs(ndc))) {
@@ -1397,7 +1399,7 @@ gWorld.canvas.addEventListener('mousemove', thresholding(async (in_ev) => {
 		}
 	} else {
 		if (gCube.uiIsDragging()) {
-			await notifyDelta(ndc);
+			notifyDelta(ndc);
 		} else {
 			if (!gWorld.isDragging()) {
 				setFocus(ndc);
@@ -1406,7 +1408,7 @@ gWorld.canvas.addEventListener('mousemove', thresholding(async (in_ev) => {
 	}
 }));
 
-async function dragstop() {
+function dragstop(in_ev) {
 	const progress = gCube.uiRelease(() => {
 		gWorld.removeAnimationHook(progress);
 	});
