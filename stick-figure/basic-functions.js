@@ -1160,8 +1160,6 @@ export function customCapsuleGeometry(in_rad_t, in_rad_b, in_h, in_rSeg = 32, in
 		+- PerspectiveCamera
 */
 
-const DEVICE_PIXEL_RATIO = window.devicePixelRatio;
-
 export class cSphericalWorld {
 	#scene = null;
 	#renderer = null;
@@ -1178,7 +1176,7 @@ export class cSphericalWorld {
 		}
 		// renderer
 		this.#renderer = new THREE.WebGLRenderer({alpha : true, antialias : true});
-		this.#renderer.setPixelRatio(DEVICE_PIXEL_RATIO);
+		this.#renderer.setPixelRatio(window.devicePixelRatio);
 		// camera
 		const camera = new THREE.PerspectiveCamera();
 		camera.fov = 45;
