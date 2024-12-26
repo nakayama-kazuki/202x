@@ -30,6 +30,7 @@ import {
 	pseudoMessageDigest1,
 	pseudoMessageDigest2,
 	beep,
+	isEmulated,
 	throttling,
 	thresholding,
 	debouncing,
@@ -1714,16 +1715,16 @@ const setFocus = (() => {
 		focused : null,
 		material : []
 	};
-	const highlight = (in_target, in_alpha) => {
+	const highlight = (in_target, in_alpha, in_index = -1) => {
 		const colors = [];
-		in_target.material.forEach(in_material => {
-			const color = in_material.color.clone();
-			if (color.getHex() === INSIDECOLOR) {
-				colors.push(INSIDECOLOR);
-			} else {
+		for (let i = 0; i < in_target.material.length; i++) {
+			const color = in_target.material[i].color.clone();
+			if ((in_index < 0) || (i === in_index)) {
 				colors.push(color.lerp(new THREE.Color(0xFFFFFF), in_alpha).getHex());
+			} else {
+				colors.push(color.getHex());
 			}
-		});
+		}
 		const setting = in_target.geometry.parameters;
 		const materials = boxMaterials(setting.x, setting.y, setting.z, colors);
 		materials.push(edgeMaterial);
@@ -1738,7 +1739,7 @@ const setFocus = (() => {
 				/*
 					*** NOTE ***
 					as materials made by boxMaterials will be cached using cCache,
-					you don't need to call dispose().
+					you don't need to call dispose() when mouseout.
 				*/
 				backup.material = [];
 			}
@@ -1769,7 +1770,7 @@ gWorld.canvas.addEventListener('mousemove', thresholding(in_ev => {
 		if (gCube.uiIsDragging()) {
 			notifyDelta(ndc);
 		} else {
-			if (!gWorld.isDragging()) {
+			if (!in_ev[isEmulated]) {
 				setFocus(ndc);
 			}
 		}

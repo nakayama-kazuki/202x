@@ -189,6 +189,8 @@ export function beep(in_amplitude = 2000) {
 	return new Audio('data:audio/wav;base64,' + btoa(binaryString));
 }
 
+export const isEmulated = Symbol();
+
 function _emulateTouchEvent(in_elem) {
 	const eventMapper = [
 		{
@@ -262,6 +264,7 @@ function _emulateTouchEvent(in_elem) {
 				alternative = createAltMouseEv(in_pair.dst, in_ev);
 			}
 			if (alternative) {
+				alternative[isEmulated] = true;
 				in_ev.target.dispatchEvent(alternative);
 			}
 		});
@@ -1203,28 +1206,28 @@ export class cSphericalWorld {
 		this.#setupEventHandler();
 		_emulateTouchEvent(this.canvas);
 	}
-	#eventVec = null;
 	#setupEventHandler() {
 		const events = (() => {
+			let vecPrev = null;
 			const start = in_ev => {
 				const ndc = ndcFromEvent(in_ev);
 				if (this.intersectPositive(ndc).length > 0) {
 					return;
 				}
-				this.#eventVec = ndcToAbs(ndc);
+				vecPrev = ndcToAbs(ndc);
 			};
 			const update = thresholding(in_ev => {
-				if (!this.#eventVec) {
+				if (!vecPrev) {
 					return;
 				}
 				const vecNext = ndcToAbs(ndcFromEvent(in_ev));
 				// the direction of moveView() is the opposite side against toward mousemove.
-				const vecDelta = this.#eventVec.sub(vecNext);
+				const vecDelta = vecPrev.sub(vecNext);
 				this.moveView(vecDelta.x, vecDelta.y);
-				this.#eventVec = vecNext;
+				vecPrev = vecNext;
 			});
 			const stop = in_ev => {
-				this.#eventVec = null;
+				vecPrev = null;
 			};
 			const zoom = in_ev => {
 				const distance = this.#camera.position.length() + in_ev.deltaY;
@@ -1244,9 +1247,6 @@ export class cSphericalWorld {
 		for (let [name, func] of Object.entries(events)) {
 			this.canvas.addEventListener(name, func.bind(this));
 		}
-	}
-	isDragging() {
-		return !!this.#eventVec;
 	}
 	get canvas() {
 		return this.#renderer.domElement;
