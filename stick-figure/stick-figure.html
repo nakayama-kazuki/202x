@@ -1662,119 +1662,117 @@ document.addEventListener('DOMContentLoaded', (() => {
 	(4) event handlers
 */
 
-const gDrag = {
-	obj : null,
-	far : false,
-	animating : false,
-	isActive : function() {
-		if (!this.obj) {
-			return false;
-		}
-		return true;
-	}
-};
-
-(() => {
-	/*
-		*** NOTE ***
-		Safari may restrict sound without user interaction.
-		because of this, the sound does not work without this code.
-	*/
-	const once = (in_ev) => {
-		SE_DUMMY.play();
-		gWorld.canvas.removeEventListener('mousedown', once);
+const gHandlers = (() => {
+	const c = {
+		obj : null,
+		far : false,
+		animating : false,
+		once : false
 	};
-	gWorld.canvas.addEventListener('mousedown', once);
-})();
-
-gWorld.canvas.addEventListener('mousedown', in_ev => {
-	if (gDrag.isActive()) {
-		return;
-	}
-	const ndc = ndcFromEvent(in_ev);
-	const intersects = gWorld.intersectPositive(ndc);
-	if (intersects.length === 0) {
-		return;
-	}
-	const rayHit = intersects[0];
-	// for #makeRoughGeometry(), and addMeshToBone()
-	const target = rayHit.object[instanceInAncestor](cAbstractPart);
-	if (!target) {
-		// uncontrollable object
-		return;
-	}
-	const cameraPos = gWorld.copyCameraPosition();
-	const objectPos = target.getWorldPosition(VEC3());
-	const fineAdjustment = 0.9;
-	gDrag.far = (rayHit.distance * fineAdjustment > cameraPos.distanceTo(objectPos));
-	gDrag.obj = target;
-	// not lookAt(cameraPos), but lookAt(raycaster.ray.direction.negate())
-	gDrag.obj.activateDraggingRcv(objectPos.add(cameraPos));
-});
-
-gWorld.canvas.addEventListener('mousemove', thresholding(in_ev => {
-	if (!gDrag.isActive()) {
-		return;
-	}
-	const ndc = ndcFromEvent(in_ev);
-	let intersects;
-	if (gDrag.far) {
-		intersects = gWorld.intersectNegative(ndc, cAbstractPart.operatingLayer);
-	} else {
-		intersects = gWorld.intersectPositive(ndc, cAbstractPart.operatingLayer);
-	}
-	if (intersects.length > 0) {
-		// receiver (CircleGeometry or SphereGeometry)
-		if (intersects.length === 1) {
-			// receiver (only CircleGeometry)
-			if (cJointedSolidPart.stretchAt(gDrag.obj, intersects[0].point)) {
-				// (1) bendAt() may be applied to ancestor
-				return;
-			}
+	const start = in_ev => {
+		if (!c.once) {
+			/*
+				*** NOTE ***
+				Safari may restrict sound without user interaction.
+				because of this, the sound does not work without this code.
+			*/
+			SE_DUMMY.play();
+			c.once = true;
 		}
-		// (2) bendAt() is applied to gDrag.obj
-		gDrag.obj.bendAt(intersects[0].point);
-		if (gDrag.obj instanceof cSmartPhone) {
-			gCyclicFigures.currValue().resetItemUpToHead();
-		}
-	} else {
-		// (3) gDrag.obj is released
-		if (gDrag.animating) {
+		if (c.obj) {
 			return;
-		} else {
-			SE_RELEASE.play();
-			gDrag.animating = true;
 		}
-		const hook = (in_obj => {
-			return () => {
-				/*
-					when dragstop will be called during animation,
-					gDrag.obj will be set to null.
-					so bind gDrag.obj to callback.
-				*/
-				if (in_obj.moreShrink()) {
+		const ndc = ndcFromEvent(in_ev);
+		const intersects = gWorld.intersectPositive(ndc);
+		if (intersects.length === 0) {
+			return;
+		}
+		const rayHit = intersects[0];
+		// for #makeRoughGeometry(), and addMeshToBone()
+		const target = rayHit.object[instanceInAncestor](cAbstractPart);
+		if (!target) {
+			// uncontrollable object
+			return;
+		}
+		const cameraPos = gWorld.copyCameraPosition();
+		const objectPos = target.getWorldPosition(VEC3());
+		const fineAdjustment = 0.9;
+		c.far = (rayHit.distance * fineAdjustment > cameraPos.distanceTo(objectPos));
+		c.obj = target;
+		// not lookAt(cameraPos), but lookAt(raycaster.ray.direction.negate())
+		c.obj.activateDraggingRcv(objectPos.add(cameraPos));
+	};
+	const move = in_ev => {
+		if (!c.obj) {
+			return;
+		}
+		const ndc = ndcFromEvent(in_ev);
+		let intersects;
+		if (c.far) {
+			intersects = gWorld.intersectNegative(ndc, cAbstractPart.operatingLayer);
+		} else {
+			intersects = gWorld.intersectPositive(ndc, cAbstractPart.operatingLayer);
+		}
+		if (intersects.length > 0) {
+			// receiver (CircleGeometry or SphereGeometry)
+			if (intersects.length === 1) {
+				// receiver (only CircleGeometry)
+				if (cJointedSolidPart.stretchAt(c.obj, intersects[0].point)) {
+					// (1) bendAt() may be applied to ancestor
 					return;
 				}
-				gWorld.removeAnimationHook(hook);
-				dragstop();
 			}
-		})(gDrag.obj);
-		gWorld.addAnimationHook(hook);
-	}
-}));
+			// (2) bendAt() is applied to c.obj
+			c.obj.bendAt(intersects[0].point);
+			if (c.obj instanceof cSmartPhone) {
+				gCyclicFigures.currValue().resetItemUpToHead();
+			}
+		} else {
+			// (3) c.obj is released
+			if (c.animating) {
+				return;
+			} else {
+				SE_RELEASE.play();
+				c.animating = true;
+			}
+			const hook = (in_obj => {
+				return () => {
+					/*
+						when stop will be called during animation,
+						c.obj will be set to null.
+						so bind c.obj to callback.
+					*/
+					if (in_obj.moreShrink()) {
+						return;
+					}
+					gWorld.removeAnimationHook(hook);
+					stop(new Event('mouseout'));
+				}
+			})(c.obj);
+			gWorld.addAnimationHook(hook);
+		}
+	};
+	const stop = in_ev => {
+		if (!c.obj) {
+			return;
+		}
+		c.obj.activateReleasedRcv();
+		c.obj = null;
+		c.far = false;
+		c.animating = false;
+	};
+	return {
+		'mousedown' : start,
+		'mousemove' : move,
+		'mouseleave' : stop,
+		'mouseout' : stop,
+		'mouseup' : stop
+	};
+})();
 
-function dragstop() {
-	if (!gDrag.isActive()) {
-		return;
-	}
-	gDrag.obj.activateReleasedRcv();
-	gDrag.obj = null;
-	gDrag.animating = false;
+for (let [name, func] of Object.entries(gHandlers)) {
+	gWorld.canvas.addEventListener(name, func.bind(this));
 }
-
-gWorld.canvas.addEventListener('mouseleave', dragstop);
-gWorld.canvas.addEventListener('mouseout', dragstop);
-gWorld.canvas.addEventListener('mouseup', dragstop);
 
 </script>
 </body>
