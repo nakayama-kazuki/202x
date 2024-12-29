@@ -1281,44 +1281,6 @@ document.addEventListener('DOMContentLoaded', (() => {
 	(5) event handlers
 */
 
-(() => {
-	/*
-		*** NOTE ***
-		Safari may restrict sound without user interaction.
-		because of this, the sound does not work without this code.
-	*/
-	const once = (in_ev) => {
-		SE_DUMMY.play();
-		gWorld.canvas.removeEventListener('mousedown', once);
-	};
-	gWorld.canvas.addEventListener('mousedown', once);
-})();
-
-gWorld.canvas.addEventListener('mousedown', in_ev => {
-	const ndc = ndcFromEvent(in_ev);
-	const intersects = gWorld.intersectPositive(ndc);
-	if (intersects.length === 0) {
-		return;
-	}
-	const matrix = (new THREE.Matrix3()).getNormalMatrix(intersects[0].object.matrixWorld);
-	const normal = intersects[0].face.normal.clone().applyMatrix3(matrix).normalize();
-	const snap = (in_err => {
-		return (in_value, ...in_targets) => {
-			let snapped = in_value;
-			in_targets.forEach(in_target => {
-				if (Math.abs(in_value - in_target) < in_err) {
-					snapped = in_target;
-				}
-			});
-			return snapped;
-		};
-	})(0.0001);
-	XYZ.forEach(in_xyz => {
-		normal[in_xyz] = snap(normal[in_xyz], -1, 0, +1);
-	});
-	gCube.uiSetInitPosition(intersects[0].object, normal, intersects[0].point, ndcToAbs(ndc));
-});
-
 const notifyDelta = (() => {
 	let canKnock = true;
 	const RC = cRubiksCube.uiSetDeltaPositionRC;
@@ -1342,85 +1304,190 @@ const notifyDelta = (() => {
 	}
 })();
 
-const setFocus = (() => {
-	const backup = {
-		focused : null,
-		material : []
-	};
-	const highlight = (in_target, in_alpha, in_index = -1) => {
-		const colors = [];
-		for (let i = 0; i < in_target.material.length; i++) {
-			const color = in_target.material[i].color.clone();
-			if ((in_index < 0) || (i === in_index)) {
-				colors.push(color.lerp(new THREE.Color(0xFFFFFF), in_alpha).getHex());
-			} else {
-				colors.push(color.getHex());
-			}
+function colorUtil(in_target, in_index, in_callback) {
+	const colors = [];
+	for (let i = 0; i < in_target.material.length; i++) {
+		const hex = in_target.material[i].color.getHex();
+		if ((in_index < 0) || (i === in_index)) {
+			colors.push(in_callback(hex));
+		} else {
+			colors.push(hex);
 		}
-		const setting = in_target.geometry.parameters;
-		const materials = boxMaterials(setting.x, setting.y, setting.z, colors);
-		materials.push(edgeMaterial);
-		in_target.material = materials;
+	}
+	const setting = in_target.geometry.parameters;
+	const materials = boxMaterials(setting.x, setting.y, setting.z, colors);
+	materials.push(edgeMaterial);
+	/*
+		*** NOTE ***
+		materials created by boxMaterials are cached using cCache.
+		therefore, you don't need to worry about memory leaks without calling dispose().
+	*/
+	in_target.material = materials;
+}
+
+function highlight(in_target, in_index, in_alpha) {
+	colorUtil(in_target, in_index, in_currHex => {
+		return (new THREE.Color(in_currHex)).lerp(new THREE.Color(0xFFFFFF), in_alpha).getHex();
+	});
+}
+
+function highlightAll(in_target, in_alpha) {
+	highlight(in_target, -1, in_alpha);
+}
+
+function changeColor(in_target, in_index, in_nextHex) {
+	colorUtil(in_target, in_index, in_currHex => {
+		return in_nextHex;
+	});
+}
+
+function changeColorAll(in_target, in_nextHex) {
+	changeColor(in_target, -1, in_nextHex);
+}
+
+const setFocus = (() => {
+	const c = {
+		prev : null,
+		materials : []
 	};
 	return in_ndc => {
 		let intersects = gWorld.intersectPositive(in_ndc);
 		if (intersects.length === 0) {
-			if (backup.focused) {
-				backup.focused.material = backup.material;
-				backup.focused = null;
+			if (c.prev) {
+				c.prev.target.material = c.materials;
 				/*
 					*** NOTE ***
 					as materials made by boxMaterials will be cached using cCache,
 					you don't need to call dispose() when mouseout.
 				*/
-				backup.material = [];
+				c.materials = [];
+				c.prev = null;
 			}
 			return;
 		}
-		const target = intersects[0].object;
-		if (backup.focused) {
-			if (backup.focused === target) {
+		const currTarget = intersects[0].object;
+		// assume that each face is composed of two faces
+		const currSurface = Math.floor(intersects[0].faceIndex / 2);
+		if (currSurface >= SURFACEPROP.length) {
+			// faces included in the edge
+			return;
+		}
+		if (c.prev) {
+			if ((c.prev.target === currTarget) && (c.prev.surface === currSurface)) {
 				return;
 			} else {
-				backup.focused.material = backup.material;
+				c.prev.target.material = c.materials;
 			}
 		}
-		backup.focused = target;
-		backup.material = target.material;
+		c.prev = {
+			target : currTarget,
+			surface : currSurface
+		};
+		c.materials = currTarget.material;
 		const alpha = 0.3;
-		highlight(target, alpha);
+		highlight(currTarget, currSurface, alpha);
 	}
 })();
 
-gWorld.canvas.addEventListener('mousemove', thresholding(in_ev => {
-	const ndc = ndcFromEvent(in_ev);
-	if (gCube.uiIsMoving()) {
-		if (gCube.uiUpdatePosition(ndcToAbs(ndc))) {
-			SE_MOVED.play();
-		}
-	} else {
-		if (gCube.uiIsDragging()) {
-			notifyDelta(ndc);
-		} else {
-			if (!in_ev[isEmulated]) {
-				setFocus(ndc);
-			}
-		}
-	}
-}));
-
-function dragstop(in_ev) {
-	const progress = gCube.uiRelease(() => {
-		gWorld.removeAnimationHook(progress);
+function decideSurface(in_intersects) {
+	// as face.normal is local coordination of the object, need to convert
+	const matrix = (new THREE.Matrix3()).getNormalMatrix(in_intersects[0].object.matrixWorld);
+	const surface = in_intersects[0].face.normal.clone().applyMatrix3(matrix).normalize();
+	const snap = (in_err => {
+		return (in_value, ...in_targets) => {
+			let snapped = in_value;
+			in_targets.forEach(in_target => {
+				if (Math.abs(in_value - in_target) < in_err) {
+					snapped = in_target;
+				}
+			});
+			return snapped;
+		};
+	})(0.0001);
+	XYZ.forEach(in_xyz => {
+		surface[in_xyz] = snap(surface[in_xyz], -1, 0, +1);
 	});
-	if (progress) {
-		gWorld.addAnimationHook(progress);
-	}
+	return surface;
 }
 
-gWorld.canvas.addEventListener('mouseleave', dragstop);
-gWorld.canvas.addEventListener('mouseout', dragstop);
-gWorld.canvas.addEventListener('mouseup', dragstop);
+function choose(in_ev) {
+	const ndc = ndcFromEvent(in_ev);
+	let intersects = gWorld.intersectPositive(ndc);
+	if (intersects.length === 0) {
+		return;
+	}
+	// console.log('click : ', intersects[0].object);
+}
+
+const gHandlers = (() => {
+	const c = {
+		x : -1,
+		y : -1,
+		once : false
+	};
+	const start = in_ev => {
+		if (!c.once) {
+			/*
+				*** NOTE ***
+				Safari may restrict sound without user interaction.
+				because of this, the sound does not work without this code.
+			*/
+			SE_DUMMY.play();
+			c.once = true;
+		}
+		const ndc = ndcFromEvent(in_ev);
+		const intersects = gWorld.intersectPositive(ndc);
+		if (intersects.length === 0) {
+			return;
+		}
+		c.x = in_ev.clientX;
+		c.y = in_ev.clientY;
+		const surface = decideSurface(intersects);
+		gCube.uiSetInitPosition(intersects[0].object, surface, intersects[0].point, ndcToAbs(ndc));
+	};
+	const move = thresholding(in_ev => {
+		c.x = -1;
+		c.y = -1;
+		const ndc = ndcFromEvent(in_ev);
+		if (gCube.uiIsMoving()) {
+			if (gCube.uiUpdatePosition(ndcToAbs(ndc))) {
+				SE_MOVED.play();
+			}
+		} else {
+			if (gCube.uiIsDragging()) {
+				notifyDelta(ndc);
+			} else {
+				if (!in_ev[isEmulated]) {
+					setFocus(ndc);
+				}
+			}
+		}
+	});
+	const stop = in_ev => {
+		const releaseProgress = gCube.uiRelease(() => {
+			gWorld.removeAnimationHook(releaseProgress);
+		});
+		if (releaseProgress) {
+			gWorld.addAnimationHook(releaseProgress);
+		} else {
+			if ((c.x !== in_ev.clientX) || (c.y !== in_ev.clientY)) {
+				return;
+			}
+			choose(in_ev);
+		}
+	};
+	return {
+		'mousedown' : start,
+		'mousemove' : move,
+		'mouseleave' : stop,
+		'mouseout' : stop,
+		'mouseup' : stop
+	};
+})();
+
+for (let [name, func] of Object.entries(gHandlers)) {
+	gWorld.canvas.addEventListener(name, func.bind(this));
+}
 
 </script>
 </body>
