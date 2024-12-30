@@ -34,6 +34,7 @@ import {
 	throttling,
 	thresholding,
 	debouncing,
+	nonReentrantAsync,
 	arrRand,
 	cEase,
 	cApproximateMap,
@@ -1649,8 +1650,12 @@ document.addEventListener('DOMContentLoaded', (() => {
 	(5) event handlers
 */
 
+const knock = nonReentrantAsync(async () => {
+	SE_ERROR.play();
+	await gWorld.motionKnock();
+});
+
 const notifyDelta = (() => {
-	let canKnock = true;
 	const RC = cRubiksCube.uiSetDeltaPositionRC;
 	return in_ndc => {
 		const intersects = gWorld.intersectPositive(in_ndc);
@@ -1659,15 +1664,7 @@ const notifyDelta = (() => {
 		}
 		const result = gCube.uiNotifyDeltaPosition(intersects[0].object, intersects[0].point, ndcToAbs(in_ndc));
 		if (result === RC.UNMOVABLE) {
-			if (!canKnock) {
-				return;
-			}
-			canKnock = false;
-			(async () => {
-				SE_ERROR.play();
-				await gWorld.motionKnock();
-				canKnock = true;
-			})();
+			knock();
 		}
 	}
 })();
@@ -1784,7 +1781,7 @@ function choose(in_ev) {
 	if (intersects.length === 0) {
 		return;
 	}
-	// console.log('click : ', intersects[0].object);
+	knock();
 }
 
 const gHandlers = (() => {
