@@ -361,6 +361,18 @@ export const debouncing = (() => {
 	};
 })();
 
+export function nonReentrantAsync(in_async) {
+	let executable = true;
+	return async () => {
+		if (!executable) {
+			return;
+		}
+		executable = false;
+		await (in_async)();
+		executable = true;
+	};
+}
+
 export class cEase {
 	constructor(in_from, in_to, in_duration) {
 		this.from = in_from;
