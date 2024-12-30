@@ -119,6 +119,22 @@ export function snapTo05PI(in_value) {
 	return _snapToNotch(in_value, Math.PI / 2);
 }
 
+function createPeriodicFunction(in_period, in_min, in_max, in_trigonometric, in_flip) {
+	const amplitude = (in_max - in_min) / 2 * (in_flip ? -1 : +1);
+	const offset = (in_max + in_min) / 2;
+	return in_rad => {
+		return offset + amplitude * (in_trigonometric)((2 * Math.PI / in_period) * in_rad);
+	};
+}
+
+export function createPeriodicSin(in_period, in_min, in_max, in_flip = false) {
+	return createPeriodicFunction(in_period, in_min, in_max, Math.sin, in_flip);
+}
+
+export function createPeriodicCos(in_period, in_min, in_max, in_flip = false) {
+	return createPeriodicFunction(in_period, in_min, in_max, Math.cos, in_flip);
+}
+
 function _nearlyEqual(in_a, in_b, in_error = 0.01) {
 	const diff = Math.abs(in_a - in_b);
 	const comp = Math.max(Math.abs(in_a), Math.abs(in_b));
