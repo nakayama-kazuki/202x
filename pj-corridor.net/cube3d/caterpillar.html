@@ -220,216 +220,62 @@ const BLUE = 0x3333FF;
 const GREEN = 0x33CC33;
 
 const EDGECOLOR = DARKGRAY;
-const INSIDECOLOR = DARKGRAY;
+const INSIDECOLOR = LIGHTGRAY;
 
-const SURFACEPROP = [];
-
-if (getParam('color') === 'easy') {
-	SURFACEPROP.push({V3 : DIRECTION.XP, COLOR : WHITE});
-	SURFACEPROP.push({V3 : DIRECTION.XN, COLOR : WHITE});
-	SURFACEPROP.push({V3 : DIRECTION.YP, COLOR : BLUE});
-	SURFACEPROP.push({V3 : DIRECTION.YN, COLOR : BLUE});
-	SURFACEPROP.push({V3 : DIRECTION.ZP, COLOR : BLUE});
-	SURFACEPROP.push({V3 : DIRECTION.ZN, COLOR : BLUE});
-} else {
-	// standard color scheme
-	SURFACEPROP.push({V3 : DIRECTION.XP, COLOR : ORANGE});
-	SURFACEPROP.push({V3 : DIRECTION.XN, COLOR : RED});
-	SURFACEPROP.push({V3 : DIRECTION.YP, COLOR : WHITE});
-	SURFACEPROP.push({V3 : DIRECTION.YN, COLOR : YELLOW});
-	SURFACEPROP.push({V3 : DIRECTION.ZP, COLOR : BLUE});
-	SURFACEPROP.push({V3 : DIRECTION.ZN, COLOR : GREEN});
-}
+const SURFACEPROP = [
+	{V3 : DIRECTION.XP, COLOR : WHITE},
+	{V3 : DIRECTION.XN, COLOR : WHITE},
+	{V3 : DIRECTION.YP, COLOR : WHITE},
+	{V3 : DIRECTION.YN, COLOR : WHITE},
+	{V3 : DIRECTION.ZP, COLOR : WHITE},
+	{V3 : DIRECTION.ZN, COLOR : WHITE}
+];
 
 const edgeMaterial = new THREE.MeshLambertMaterial({color : EDGECOLOR});
-
-function pieceColorList(in_dimV3, in_ixV3) {
-	/*
-		piece ( hexahedron ) has surface x6
-		|
-		+- edge surface x0-3
-		|	|
-		|	+- orange, red, white, ...
-		|
-		+- inner surface x3-6
-			|
-			+- dark gray
-	*/
-	const colorList = [];
-	// when in_ixV3 is on an edge, the color of SURFACEPROP is used
-	SURFACEPROP.forEach(({V3, COLOR}) => {
-		XYZ.forEach(in_xyz => {
-			switch (V3[in_xyz]) {
-			// the surface is facing the positive direction
-			case +1 :
-				// the position is at the positive edge
-				if (in_ixV3[in_xyz] === in_dimV3[in_xyz] - 1) {
-					colorList.push(COLOR);
-				} else {
-					colorList.push(INSIDECOLOR);
-				}
-				break;
-			// the surface is facing the negative direction
-			case -1 :
-				// the position is at the negative edge
-				if (in_ixV3[in_xyz] === 0) {
-					colorList.push(COLOR);
-				} else {
-					colorList.push(INSIDECOLOR);
-				}
-				break;
-			case 0 :
-				break;
-			}
-		});
-	});
-	return colorList;
-}
 
 /*
 	(2) dimension of Cube and Meshes of them
 */
 
-class cCubeDimV3 extends THREE.Vector3 {
-	get maxDim() {
-		return Math.max(...this.toArray());
-	}
-	#sizeList(in_unitSize = 1) {
-		const list = {};
-		/*
-			in case of 3x2x2, ...
-			list.x = [in_unitSize, in_unitSize, in_unitSize]
-			list.y = [in_unitSize, in_unitSize * 2]
-			list.z = [in_unitSize, in_unitSize * 2]
-		*/
-		XYZ.forEach(in_xyz => {
-			if (this[in_xyz] < this.maxDim) {
-				// separate not 4=3+1 but 4=2+2
-				if (this.maxDim % this[in_xyz] === 0) {
-					const quotient = this.maxDim / this[in_xyz];
-					list[in_xyz] = Array(this[in_xyz]).fill(in_unitSize * quotient);
-				} else {
-					list[in_xyz] = Array(this[in_xyz] - 1).fill(in_unitSize);
-					list[in_xyz].push((this.maxDim - this[in_xyz] + 1) * in_unitSize);
-				}
-			} else {
-				list[in_xyz] = Array(this[in_xyz]).fill(in_unitSize);
-			}
-		});
-		return list;
-	}
-	#indexLoop(in_callback) {
-		// first surface is at "new THREE.Vector3(0, 0, -1)"
-		for (let z = 0; z < this.z; z++) {
-			for (let y = 0; y < this.y; y++) {
-				for (let x = 0; x < this.x; x++) {
-					(in_callback)(VEC3(x, y, z));
-				}
-			}
-		}
-	}
-	positionLoop(in_callback, in_unitSize, in_moveToV3 = VEC3()) {
-		const sizeList = this.#sizeList(in_unitSize);
-		/*
-			each piece should be translated using translateV3
-
-			before translated :
-
-			   |
-			   +---+
-			   |   |
-			   |   |
-			   |   |
-			---+---+-
-			   |
-			   |
-			   |
-
-			after translated :
-
-			   |
-			   |
-			   |
-			 +-+-+
-			 | | |
-			-+-+-+---
-			 | | |
-			 +-+-+
-			   |
-		*/
-		const cubeCneter = this.maxDim * in_unitSize / 2;
-		const translateV3 = in_moveToV3.clone().sub(VEC3(cubeCneter, cubeCneter, cubeCneter));
-		this.#indexLoop(in_ixV3 => {
-			const pieceSizeV3 = VEC3();
-			const piecePosV3 = VEC3();
-			XYZ.forEach(in_xyz => {
-				const curr = in_ixV3[in_xyz];
-				let start = 0;
-				for (let i = 0; i < curr; i++) {
-					start += sizeList[in_xyz][i];
-				}
-				pieceSizeV3[in_xyz] = sizeList[in_xyz][curr];
-				piecePosV3[in_xyz] = start + pieceSizeV3[in_xyz] / 2;
-			});
-			piecePosV3.add(translateV3);
-			(in_callback)(in_ixV3, piecePosV3, pieceSizeV3);
-		});
-	}
-	isInsideCube(in_ixV3) {
-		return XYZ.every(in_xyz => {
-			return (0 < in_ixV3[in_xyz]) && (in_ixV3[in_xyz] < this[in_xyz] - 1);
-		});
-	}
-}
-
 const CUBE_SIZE = 400;
 
 const gMeshLevelMap = ((in_cubeSize) => {
 	const map = new cCyclicMap();
-	const cubeDimList = [
-		new cCubeDimV3(2, 2, 1),	/* =  4 */
-		new cCubeDimV3(3, 2, 1),	/* =  6 */
-		new cCubeDimV3(2, 2, 2),	/* =  8 */
-		new cCubeDimV3(3, 2, 2),	/* = 12 */
-		new cCubeDimV3(4, 2, 2),	/* = 16 */
-		new cCubeDimV3(3, 3, 2),	/* = 18 */
-		new cCubeDimV3(4, 3, 2),	/* = 24 */
-		new cCubeDimV3(3, 3, 3),	/* = 27 */
-		new cCubeDimV3(4, 4, 2),	/* = 32 */
-		new cCubeDimV3(4, 3, 3),	/* = 36 */
-		new cCubeDimV3(4, 4, 3),	/* = 48 */
-		new cCubeDimV3(4, 4, 4)		/* = 64 */
-	];
-	cubeDimList.forEach(in_cubeDim => {
-		const unitSize = in_cubeSize / in_cubeDim.maxDim;
+	const dimList = [2, 3, 4];
+	const loopVec3 = (in_dim, in_callback) => {
+		for (let z = 0; z < in_dim; z++) {
+			for (let y = 0; y < in_dim; y++) {
+				for (let x = 0; x < in_dim; x++) {
+					in_callback(VEC3(x, y, z));
+				}
+			}
+		}
+	};
+	dimList.forEach(in_dim => {
+		const unitSize = in_cubeSize / in_dim;
 		const pieces = [];
-		// see cCubeDimV3 implementation
-		in_cubeDim.positionLoop((in_ixV3, in_posV3, in_sizeV3) => {
-			if (in_cubeDim.isInsideCube(in_ixV3)) {
-				// console.log('inside', in_ixV3);
+		loopVec3(in_dim, in_vec3 => {
+			if (XYZ.every(in_xyz => (0 < in_vec3[in_xyz]) && (in_vec3[in_xyz] < in_dim - 1))) {
 				return;
 			}
-			const geometry = boxGeometryFactory.create(...in_sizeV3.toArray());
+			const geometry = boxGeometryFactory.create(unitSize, unitSize, unitSize);
+			const colors = [];
+			SURFACEPROP.forEach(({V3, COLOR}) => {
+				const scalar = V3.dot(in_vec3);
+				if ((scalar === 0) || (scalar === in_dim - 1)) {
+					colors.push(COLOR);
+				} else {
+					colors.push(INSIDECOLOR);
+				}
+			});
 			// geometry has 7 groups (sub meshes)
-			const colors = pieceColorList(in_cubeDim, in_ixV3);
-			const materials = boxMaterials(...in_sizeV3.toArray(), colors);
+			const materials = boxMaterials(unitSize, unitSize, unitSize, colors);
 			materials.push(edgeMaterial);
-			/*
-				*** NOTE ***
-				when you use materials (= array) for "new THREE.Mesh",
-				the geometry should be devided into groups (= sub meshes).
-			*/
 			const piece = new THREE.Mesh(geometry, materials);
-			piece.position.copy(in_posV3);
+			piece.position.copy(in_vec3.addScalar(0.5 - in_dim / 2).multiplyScalar(unitSize));
 			pieces.push(piece);
-		}, unitSize);
-		const LEVEL1 = 27;
-		let level = in_cubeDim.toArray().reduce((product, current) => {
-			return product * current;
-		}, 1);
-		level = (level / LEVEL1).toFixed(1);
-		const keyString = in_cubeDim.toArray().join('x') + ' = lv ' + level;
-		map.set(keyString, pieces);
+		});
+		map.set('lv ' + in_dim, pieces);
 	});
 	return map;
 })(CUBE_SIZE);
@@ -600,6 +446,17 @@ class cRubiksCube extends THREE.Object3D {
 	}
 	static #rotate(in_group, in_xyz, in_rad) {
 		in_group.rotation[in_xyz] = in_rad;
+		// this scalar is used to align position
+		const scalar = (createPeriodicCos(Math.PI / 2, 1, Math.sqrt(2), true))(in_rad);
+		in_group.children.forEach(in_child => {
+			in_child.rotation[in_xyz] = in_rad * -1;
+			if (!in_child.userData.tmpCache) {
+				// this will be deleted after rotation
+				in_child.userData.tmpCache = in_child.position.clone();
+			}
+			// you don't need to worry about roAxisXYZ because it will be zero ( see setupGroup )
+			in_child.position.copy(in_child.userData.tmpCache.clone().multiplyScalar(scalar));
+		});
 	}
 	#makeRotationProgress(in_group, in_xyz, in_start_rad, in_final_rad, in_callback) {
 		const distance = Math.abs(in_final_rad - in_start_rad);
@@ -610,6 +467,9 @@ class cRubiksCube extends THREE.Object3D {
 			cRubiksCube.#rotate(in_group, in_xyz, currRad);
 			let ratio = Math.abs(currRad - in_start_rad) / distance;
 			if (currRad === in_final_rad) {
+				in_group.children.forEach(in_child => {
+					delete in_child.userData.tmpCache;
+				});
 				this.#releaseGroup(in_group);
 				this.#settingVal.shuffled = true;
 				// this progress function should be stopped in callback
@@ -933,284 +793,12 @@ class cRubiksCube extends THREE.Object3D {
 	}
 }
 
-class cExRubiksCube extends cRubiksCube {
-	static #staticTest = {mode : false, obj : null};
-	static unitTest(in_method, in_testObj = {}, ...in_args) {
-		cExRubiksCube.#staticTest.mode = true;
-		cExRubiksCube.#staticTest.obj = in_testObj
-		const ret = eval('cExRubiksCube.' + in_method + '(...in_args)');
-		console.log(ret);
-		throw new Error('end of unitTest'); 
-	}
-	#instanceTest = {mode : false, obj : null};
-	unitTest(in_method, in_testObj = {}, ...in_args) {
-		this.#instanceTest.mode = true;
-		this.#instanceTest.obj = in_testObj
-		const ret = eval('this.' + in_method + '(...in_args)');
-		console.log(ret);
-		throw new Error('unitTest'); 
-	}
-	static #orderBy(...in_args) {
-		for (let i = 0; i < in_args.length - 1 ; i++) {
-			if (in_args[i + 1] - in_args[i] < cRubiksCube.error) {
-				return false;
-			}
-		}
-		return true;
-	}
-	#splitGroupByAxis_1_groupBySameScalar(io_scalarMap, in_axis) {
-		this.children.forEach(in_piece => {
-			const component = in_piece.position.dot(in_axis);
-			const reference = io_scalarMap.get(component);
-			if (reference) {
-				// there already exists almost the same component
-				reference.pieces.push(in_piece);
-				reference.tmpBox.union(new THREE.Box3().setFromObject(in_piece));
-			} else {
-				io_scalarMap.set(component, {
-					pieces : [in_piece],
-					tmpBox : (new THREE.Box3()).setFromObject(in_piece)
-				});
-			}
-		});
-	}
-	static #splitGroupByAxis_2_calculateEdges(io_scalarMap, in_axis) {
-		for (const [scalar, info] of io_scalarMap.entries()) {
-			const length = (VEC3().subVectors(info.tmpBox.max, info.tmpBox.min)).dot(in_axis);
-			info.edgeL = scalar - length / 2;
-			info.edgeR = scalar + length / 2;
-			delete info.tmpBox;
-		}
-	}
-	static #splitGroupByAxis_3_makeCandidatesBorder(in_scalarMap) {
-		const candidateBorderSet = new cApproximateSet(cRubiksCube.error);
-		for (const info of in_scalarMap.values()) {
-			candidateBorderSet.add(info.edgeL);
-			candidateBorderSet.add(info.edgeR);
-		}
-		const candidateBorder = Array.from(candidateBorderSet);
-		candidateBorder.sort((a, b) => a - b);
-		candidateBorder.shift();
-		candidateBorder.pop();
-		return candidateBorder;
-	}
-	static #splitGroupByAxis_4_makeActualBorder(in_scalarMap, in_candidateBorder) {
-		const actualBorder = [];
-		for (let i = 0; i < in_candidateBorder.length; i++) {
-			let isBorder = true;
-			for (const info of in_scalarMap.values()) {
-				if (cExRubiksCube.#orderBy(info.edgeL, in_candidateBorder[i], info.edgeR)) {
-					isBorder = false;
-					break;
-				}
-			}
-			if (isBorder) {
-				actualBorder.push(in_candidateBorder[i]);
-			}
-		}
-		return actualBorder;
-	}
-	static #splitGroupByAxis_5_makeActualBorder(in_scalarMap, in_actualBorder) {
-		const groups = [];
-		let next = 0;
-		in_actualBorder.push(Infinity);
-		in_actualBorder.forEach(border => {
-			const pieces = [];
-			for (let i = next; i < in_scalarMap.size; i++) {
-				const ascendingScalar = in_scalarMap.sortedKey(i);
-				if (ascendingScalar < border) {
-					const info = in_scalarMap.get(ascendingScalar);
-					pieces.push(...info.pieces);
-				} else {
-					next = i;
-					break;
-				}
-			}
-			groups.push(pieces);
-		});
-		return groups;
-	}
-	#splitGroupByAxis(in_axis) {
-		/*
-			step #1 : scalarMap is the group of position based on in_axis. for example ...
-
-				+---+---+---+---+---+---+
-				| x | x | x | x | x | x |
-				+---+---+---+---+---+---+
-				| x |   x   | x | x | x |
-				+---+---+---+---+---+---+
-				| x |       x       | x |
-				+---+---+---+---+---+---+
-
-				--x---x-x-x-x-x---x---x--> : in_axis
-
-				 3.00, {tmpBox, piece + piece + piece}
-				 7.00, {tmpBox, piece}
-				 9.00, {tmpBox, piece}
-				11.00, {tmpBox, piece}
-				13.00, {tmpBox, piece}
-				15.00, {tmpBox, piece + piece}
-				19.00, {tmpBox, piece + piece}
-				23.00, {tmpBox, piece + piece + piece}
-
-			step #2 : calculate edges for the bounding box. for example ...
-
-				 3.00, {edgeL =  1.00, edgeR =  5.00, piece + piece + piece}
-				 7.00, {edgeL =  5.00, edgeR =  9.00, piece}
-				 9.00, {edgeL =  5.00, edgeR = 13.00, piece}
-				11.00, {edgeL =  9.00, edgeR = 13.00, piece}
-				13.00, {edgeL =  5.00, edgeR = 21.00, piece}
-				15.00, {edgeL = 13.00, edgeR = 17.00, piece + piece}
-				19.00, {edgeL = 17.00, edgeR = 21.00, piece + piece}
-				23.00, {edgeL = 21.00, edgeR = 25.00, piece + piece + piece}
-		*/
-		let scalarMap = new cApproximateMap(cRubiksCube.error);
-		if (this.#instanceTest.mode) {
-			scalarMap = this.#instanceTest.obj;
-		} else {
-			this.#splitGroupByAxis_1_groupBySameScalar(scalarMap, in_axis);
-			cExRubiksCube.#splitGroupByAxis_2_calculateEdges(scalarMap, in_axis);
-		}
-		/*
-			step #3 : make candidates of border which decides group
-		*/
-		const candidateBorder = cExRubiksCube.#splitGroupByAxis_3_makeCandidatesBorder(scalarMap);
-		if (this.#instanceTest.mode) {
-			/*
-				*** NOTE ***
-				to display a reference using "console.log", you should use a copy of the reference.
-				without it, the entity may appear updated when displayed because the console holds a reference,
-				and any subsequent changes to the object will be reflected in the console.
-			*/
-			console.log('#3', [...candidateBorder]);
-		}
-		/*
-			step #4 : check if candidates is actual border
-
-			    v   v
-			+---+---+---+
-			| x | x | x |
-			+---+---+---+ : border = 2
-			| x | x | x |
-			+---+---+---+
-
-			        v
-			+---+---+---+
-			| x | x | x |
-			+---+---+---+ : border = 1
-			|   x   | x |
-			+---+---+---+
-
-			+---+---+---+
-			| x |   x   |
-			+---+---+---+ : border = 0
-			|   x   | x |
-			+---+---+---+
-		*/
-		const actualBorder = cExRubiksCube.#splitGroupByAxis_4_makeActualBorder(scalarMap, candidateBorder);
-		if (this.#instanceTest.mode) {
-			console.log('#4', [...actualBorder]);
-		}
-		/*
-			step #5 : finally, make group which will move together
-		*/
-		const groups = cExRubiksCube.#splitGroupByAxis_5_makeActualBorder(scalarMap, actualBorder)
-		if (this.#instanceTest.mode) {
-			console.log('#5', [...groups]);
-		}
-		return groups;
-	}
-	makeRotationGroup(in_piece, in_axis) {
-		const groups = this.#splitGroupByAxis(in_axis);
-		for (let i = 0; i < groups.length; i++) {
-			if (groups[i].includes(in_piece)) {
-				return groups[i];
-			}
-		}
-		return null;
-	}
-}
-
-function test_makeGroupOnAxis(in_arr) {
-	const scalarMap = new cApproximateMap(cRubiksCube.error);
-	in_arr.forEach(in_elem => {
-		in_elem[0] += Math.random() / 10000;
-		in_elem[1].edgeL += Math.random() / 10000;
-		in_elem[1].edgeR += Math.random() / 10000;
-		scalarMap.set(in_elem[0], in_elem[1]);
-	});
-	(new cExRubiksCube()).unitTest('#splitGroupByAxis', scalarMap);
-}
-
-/*
-	--x-x---x-x-->
-
-	+---+---+---+
-	| x |   x   |
-	+---+---+---+
-	|   x   | x |
-	+---+---+---+
-
-test_makeGroupOnAxis([
-	[ 3.0000, {edgeL : 1.0000, edgeR :  5.0000, pieces : ['a']}],
-	[ 5.0000, {edgeL : 1.0000, edgeR :  9.0000, pieces : ['b']}],
-	[ 9.0000, {edgeL : 5.0000, edgeR : 13.0000, pieces : ['c']}],
-	[11.0000, {edgeL : 9.0000, edgeR : 13.0000, pieces : ['d']}]
-]);
-
-*/
-
-/*
-	--x-x-x-x-x-->
-
-	+---+---+---+
-	| x | x | x |
-	+---+---+---+
-	| x |   x   |
-	+---+---+---+
-	|   x   | x |
-	+---+---+---+
-
-test_makeGroupOnAxis([
-	[ 3.0000, {edgeL : 1.0000, edgeR :  5.0000, pieces : ['a','b']}],
-	[ 5.0000, {edgeL : 1.0000, edgeR :  9.0000, pieces : ['c']}],
-	[ 7.0000, {edgeL : 5.0000, edgeR :  9.0000, pieces : ['d']}],
-	[ 9.0000, {edgeL : 5.0000, edgeR : 13.0000, pieces : ['e']}],
-	[11.0000, {edgeL : 9.0000, edgeR : 13.0000, pieces : ['f','g']}]
-]);
-
-*/
-
-/*
-	--x---x-x-x-x-x---x---x-->
-
-	+---+---+---+---+---+---+
-	| x | x | x | x | x | x |
-	+---+---+---+---+---+---+
-	| x |   x   | x | x | x |
-	+---+---+---+---+---+---+
-	| x |       x       | x |
-	+---+---+---+---+---+---+
-
-test_makeGroupOnAxis([
-	[ 3.0000, {edgeL :  1.0000, edgeR :  5.0000, pieces : ['a','b','c']}],
-	[ 7.0000, {edgeL :  5.0000, edgeR :  9.0000, pieces : ['d']}],
-	[ 9.0000, {edgeL :  5.0000, edgeR : 13.0000, pieces : ['f']}],
-	[11.0000, {edgeL :  9.0000, edgeR : 13.0000, pieces : ['g']}],
-	[13.0000, {edgeL :  5.0000, edgeR : 21.0000, pieces : ['e']}],
-	[15.0000, {edgeL : 13.0000, edgeR : 17.0000, pieces : ['h','i']}],
-	[19.0000, {edgeL : 17.0000, edgeR : 21.0000, pieces : ['j','k']}],
-	[23.0000, {edgeL : 21.0000, edgeR : 25.0000, pieces : ['l','m','n']}]
-]);
-
-*/
-
 /*
 	(4) ui & dom setting
 
 	gWorld (cSphericalWorld)
 	|
-	+-- gCube (cExRubiksCube)
+	+-- gCube (cRubiksCube)
 		|
 		+-- meshes <--- gMeshLevelMap
 */
@@ -1220,7 +808,7 @@ const WORLD_INIT_ZOOM = WORLD_RADIUS / 3;
 
 const gWorld = new cSphericalWorld(WORLD_RADIUS);
 
-const gCube = new cExRubiksCube();
+const gCube = new cRubiksCube();
 
 gWorld.add(gCube);
 

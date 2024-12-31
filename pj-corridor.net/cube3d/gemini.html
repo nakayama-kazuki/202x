@@ -425,15 +425,27 @@ class cRubiksCube extends THREE.Object3D {
 		const max = 100;
 		return Math.max(Math.ceil((max - this.#settingVal.rotationCount) / 10) * 10, 0);
 	}
-	isComplete() {
+	#isSurface(in_piece, in_surface, in_scale = 1000) {
+		const far = VEC3();
+		XYZ.forEach(in_xyz => {
+			if (in_surface[in_xyz] === 0) {
+				far[in_xyz] = in_piece.position[in_xyz];
+			} else {
+				far[in_xyz] = in_surface[in_xyz] * in_scale;
+			}
+		});
+		const raycaster = new THREE.Raycaster(far, in_surface.clone().negate());
+		const intersects = raycaster.intersectObjects(this.children, false);
+		return (intersects[0].object === in_piece);
+	}
+	#isComplete() {
 		return SURFACEPROP.every(in_prop => {
-			const surfaceV3 = in_prop.V3;
 			let sameColor = -1;
 			return this.children.every(in_piece => {
-				const color = getColorBySide(in_piece, surfaceV3);
-				if (color === INSIDECOLOR) {
+				if (!this.#isSurface(in_piece, in_prop.V3)) {
 					return true;
 				}
+				const color = getColorBySide(in_piece, in_prop.V3);
 				if (sameColor < 0) {
 					sameColor = color;
 					return true;
@@ -490,6 +502,27 @@ class cRubiksCube extends THREE.Object3D {
 		});
 		return groups;
 	}
+	static #rotate(in_group, in_xyz, in_rad) {
+		in_group.rotation[in_xyz] = in_rad;
+	}
+	#makeRotationProgress(in_group, in_xyz, in_start_rad, in_final_rad, in_callback) {
+		const distance = Math.abs(in_final_rad - in_start_rad);
+		const duration = distance / (Math.PI / 2) * 500;
+		const ease = new cEase(in_start_rad, in_final_rad, duration);
+		const progress = () => {
+			const currRad = ease.currentEasingIn();
+			cRubiksCube.#rotate(in_group, in_xyz, currRad);
+			let ratio = Math.abs(currRad - in_start_rad) / distance;
+			if (currRad === in_final_rad) {
+				this.#releaseGroup(in_group);
+				this.#settingVal.shuffled = true;
+				// this progress function should be stopped in callback
+				ratio = 1.0;
+			}
+			(in_callback)(ratio);
+		};
+		return progress;
+	}
 	makeRandomRotationProgress(in_callback) {
 		let axis;
 		let pieces;
@@ -505,27 +538,9 @@ class cRubiksCube extends THREE.Object3D {
 				break;
 			}
 		}
-		let ratioCurrent = 0;
-		const ratioStep = 1 / 20;
 		const group = this.#setupGroup(pieces);
-		let unitAngle = Math.PI;
-		if (cRubiksCube.#groupIsMovable90(group, axis)) {
-			unitAngle = Math.PI / 2;
-		}
-		// this progress function assumes to be called by requestAnimationFrame()
-		const progress = () => {
-			ratioCurrent += ratioStep;
-			group.rotation[cRubiksCube.#axisProp(axis)] = unitAngle * ratioCurrent;
-			if (ratioCurrent >= 1) {
-				group.rotation[cRubiksCube.#axisProp(axis)] = unitAngle;
-				this.#releaseGroup(group);
-				this.#settingVal.shuffled = true;
-				// this progress function should be stopped in callback
-				ratioCurrent = 1;
-			}
-			(in_callback)(ratioCurrent);
-		};
-		return progress;
+		const xyz = cRubiksCube.#axisProp(axis);
+		return this.#makeRotationProgress(group, xyz, 0, Math.PI / 2, in_callback);
 	}
 	registerCompleteCallback(in_callback) {
 		this.#settingVal.completeCallback = in_callback;
@@ -682,7 +697,7 @@ class cRubiksCube extends THREE.Object3D {
 	}
 	uiSetInitPosition(in_piece, in_surfaceV3, in_posV3, in_posV2) {
 		// in_posV3 : intersection with a in_piece
-		// in_posV2 : NDC (Normalized Device Coordinates)
+		// in_posV2 : abs value generated from NDC (Normalized Device Coordinates)
 		if (this.#uiSession.state !== cRubiksCube.#uiStates.ENABLED) {
 			console.log('state is not ENABLED');
 			return;
@@ -718,7 +733,7 @@ class cRubiksCube extends THREE.Object3D {
 	};
 	uiNotifyDeltaPosition(in_piece, in_posV3, in_posV2) {
 		// in_posV3 : intersection with a in_piece
-		// in_posV2 : NDC (Normalized Device Coordinates)
+		// in_posV2 : abs value generated from NDC (Normalized Device Coordinates)
 		const RC = cRubiksCube.uiSetDeltaPositionRC;
 		if (this.#uiSession.state !== cRubiksCube.#uiStates.DRAGGING) {
 			console.log('state is not DRAGGING');
@@ -749,7 +764,7 @@ class cRubiksCube extends THREE.Object3D {
 		}
 	}
 	uiUpdatePosition(in_posV2) {
-		// in_posV2 : NDC (Normalized Device Coordinates)
+		// in_posV2 : abs value generated from NDC (Normalized Device Coordinates)
 		if (this.#uiSession.state !== cRubiksCube.#uiStates.MOVING) {
 			return;
 		}
@@ -772,7 +787,7 @@ class cRubiksCube extends THREE.Object3D {
 			if using rotateOnAxis() several times, small errors will be expanded.
 			if making group every time too, the same issue will happen.
 		*/
-		ctx.roGroup.rotation[ctx.roAxisXYZ] = rad;
+		cRubiksCube.#rotate(ctx.roGroup, ctx.roAxisXYZ, rad);
 		let snap;
 		if (ctx.roUnitAngle === Math.PI) {
 			snap = snapToPI;
@@ -803,16 +818,10 @@ class cRubiksCube extends THREE.Object3D {
 			snap = snapTo05PI;
 		}
 		const finalRad = (snap)(ctx.roRadian);
-		const duration = 100;
-		const ease = new cEase(startRad, finalRad, duration);
-		// this progress function assumes to be called by requestAnimationFrame()
-		const progress = () => {
-			ctx.roRadian = ease.currentEasingIn();
-			ctx.roGroup.rotation[ctx.roAxisXYZ] = ctx.roRadian;
-			if (ctx.roRadian !== finalRad) {
+		return this.#makeRotationProgress(ctx.roGroup, ctx.roAxisXYZ, startRad, finalRad, in_ratio => {
+			if (in_ratio < 1) {
 				return;
 			}
-			// execute once at the end
 			this.#uiInitSession();
 			this.#transition('stop');
 			(in_ending_callback)();
@@ -821,11 +830,10 @@ class cRubiksCube extends THREE.Object3D {
 				return;
 			}
 			this.#settingVal.rotationCount++;
-			if (this.#settingVal.completeCallback && this.isComplete()) {
+			if (this.#settingVal.completeCallback && this.#isComplete()) {
 				(this.#settingVal.completeCallback)(this.#settingVal.rotationCount);
 			}
-		};
-		return progress;
+		});
 	}
 }
 
@@ -1457,7 +1465,7 @@ const gHandlers = (() => {
 				notifyDelta(ndc);
 			} else {
 				if (!in_ev[isEmulated]) {
-					setFocus(ndc);
+					// setFocus(ndc);
 				}
 			}
 		}
