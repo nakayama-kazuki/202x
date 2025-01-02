@@ -52,7 +52,6 @@ import {
 	DIRECTION,
 	ndcFromEvent,
 	ndcToAbs,
-	cBoxCollection,
 	getWorldVec3,
 	getWorldUp,
 	instanceInAncestor,
@@ -220,7 +219,7 @@ const BLUE = 0x3333FF;
 const GREEN = 0x33CC33;
 
 const EDGECOLOR = DARKGRAY;
-const INSIDECOLOR = DARKGRAY;
+let INSIDECOLOR;
 
 const SURFACEPROP = [];
 
@@ -231,6 +230,7 @@ if (getParam('color') === 'easy') {
 	SURFACEPROP.push({V3 : DIRECTION.YN, COLOR : BLUE});
 	SURFACEPROP.push({V3 : DIRECTION.ZP, COLOR : BLUE});
 	SURFACEPROP.push({V3 : DIRECTION.ZN, COLOR : BLUE});
+	INSIDECOLOR = BLUE;
 } else {
 	// standard color scheme
 	SURFACEPROP.push({V3 : DIRECTION.XP, COLOR : ORANGE});
@@ -239,6 +239,7 @@ if (getParam('color') === 'easy') {
 	SURFACEPROP.push({V3 : DIRECTION.YN, COLOR : YELLOW});
 	SURFACEPROP.push({V3 : DIRECTION.ZP, COLOR : BLUE});
 	SURFACEPROP.push({V3 : DIRECTION.ZN, COLOR : GREEN});
+	INSIDECOLOR = DARKGRAY;
 }
 
 const edgeMaterial = new THREE.MeshLambertMaterial({color : EDGECOLOR});
@@ -502,6 +503,85 @@ class cRubiksCube extends THREE.Object3D {
 		});
 		return groups;
 	}
+	static #rotatableAngle(in_group, in_axis) {
+		const aabb = new THREE.Box3();
+		const objBoxes = [];
+		in_group.children.forEach(in_object => {
+			const box = (new THREE.Box3()).setFromObject(in_object);
+			aabb.union(box);
+			objBoxes.push(box);
+		});
+		// 1. divide #aabb into 8 areas
+		const center = aabb.getCenter(VEC3());
+		const range = {};
+		XYZ.forEach(in_xyz => {
+			range[in_xyz] = [
+				{
+					min : -Infinity,
+					max : center[in_xyz]
+				},
+				{
+					min : center[in_xyz],
+					max : +Infinity
+				}
+			];
+		});
+		const areaBoxes = [];
+		range.x.forEach(in_x => {
+			range.y.forEach(in_y => {
+				range.z.forEach(in_z => {
+					areaBoxes.push(new THREE.Box3(
+						VEC3(in_x.min, in_y.min, in_z.min),
+						VEC3(in_x.max, in_y.max, in_z.max)
+					));
+				});
+			});
+		});
+		// 2. divide objBoxes into 8 areas
+		const intersectBoxes = [];
+		areaBoxes.forEach(in_area => {
+			const boxes = [];
+			objBoxes.forEach(in_box => {
+				const box = in_area.clone().intersect(in_box);
+				if (box.isEmpty()) {
+					return;
+				}
+				boxes.push(box);
+			});
+			intersectBoxes.push(boxes);
+		});
+		// 3. use 4 boxes by in_axis ("x", "y", or "z")
+		const target = {
+			x : {arr : [0, 1, 2, 3], a1 : 'y', a2 : 'z'},
+			y : {arr : [0, 1, 4, 5], a1 : 'z', a2 : 'x'},
+			z : {arr : [0, 2, 4, 6], a1 : 'x', a2 : 'y'},
+		}[in_axis];
+		// 4. compute area
+		const areas = [];
+		target.arr.forEach(in_ix => {
+			const boxes = intersectBoxes[in_ix];
+			let area = 0;
+			boxes.forEach(in_box => {
+				const size = in_box.getSize(VEC3());
+				area += size[target.a1] * size[target.a2];
+			});
+			areas.push(area);
+		});
+		// 5. check angle
+		const error = 0.01;
+		const allEqual = (...in_args) => {
+			return in_args.every(in_arg => Math.abs(in_arg - in_args[0]) < error);
+		};
+		if (allEqual(areas[0], areas[1], areas[2], areas[3])) {
+			return Math.PI / 2;
+		} else {
+			if (allEqual(areas[0] + areas[1], areas[2] + areas[3])) {
+				return Math.PI;
+			} else {
+				return Math.PI * 2;
+			}
+		}
+	}
 	static #rotate(in_group, in_xyz, in_rad) {
 		in_group.rotation[in_xyz] = in_rad;
 	}
@@ -589,28 +669,6 @@ class cRubiksCube extends THREE.Object3D {
 			}
 		});
 		return ret;
-	}
-	static #groupIsMovable90(in_group, in_axis) {
-		// assume in_group has children which compose rotateion group
-		const boxes = new cBoxCollection(in_group.children);
-		const ax = cRubiksCube.#axisProp(in_axis, false);
-		const error = 0.01;
-		const size1 = boxes.max[ax[0]] - boxes.min[ax[0]];
-		const size2 = boxes.max[ax[1]] - boxes.min[ax[1]];
-		if (Math.abs(size1 - size2) > error) {
-			return false;
-		}
-		const quat = (new THREE.Quaternion()).setFromAxisAngle(in_axis, Math.PI / 2);
-		const points = boxes.getContainedPoints();
-		for (let i = 0; i < points.length; i++) {
-			const preRotation = in_group.position.clone().negate();
-			const postRotation = in_group.position;
-			points[i].add(preRotation).applyQuaternion(quat).add(postRotation);
-			if (!boxes.containsPoint(points[i])) {
-				return false;
-			}
-		}
-		return true;
 	}
 	static #uiStates  = {
 		DISABLED : Symbol(),
@@ -751,12 +809,10 @@ class cRubiksCube extends THREE.Object3D {
 		if (pieces.length < this.children.length) {
 			this.#transition('movable');
 			ctx.roGroup = this.#setupGroup(pieces);
-			if (cRubiksCube.#groupIsMovable90(ctx.roGroup, axis)) {
-				ctx.roUnitAngle = Math.PI / 2;
-			}
 			// use Vector3(1, 1, 1) to extruct +1 or -1
 			ctx.roAxisDir = moving.rotationAxis.dot(VEC3(1, 1, 1));
 			ctx.roAxisXYZ = cRubiksCube.#axisProp(axis);
+			ctx.roUnitAngle = cRubiksCube.#rotatableAngle(ctx.roGroup, ctx.roAxisXYZ);
 			ctx.initDirV2 = in_posV2.clone().sub(ctx.initPosV2);
 			return RC.MOVABLE;
 		} else {

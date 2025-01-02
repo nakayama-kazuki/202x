@@ -732,46 +732,6 @@ export function ndcToAbs(in_ndc) {
 	return in_ndc.toAbs(_MOUSEMOVE_AMPLIFIER);
 }
 
-export class cBoxCollection {
-	#boxes = [];
-	constructor(in_objArr = []) {
-		this.max = VEC3(Infinity * -1, Infinity * -1, Infinity * -1);
-		this.min = VEC3(Infinity * +1, Infinity * +1, Infinity * +1);
-		in_objArr.forEach(in_obj => {
-			const box = (new THREE.Box3()).setFromObject(in_obj)
-			this.addBox(box);
-			XYZ.forEach(in_xyz => {
-				this.max[in_xyz] = this.max[in_xyz] > box.max[in_xyz] ? this.max[in_xyz] : box.max[in_xyz];
-				this.min[in_xyz] = this.min[in_xyz] < box.min[in_xyz] ? this.min[in_xyz] : box.min[in_xyz];
-			});
-		});
-	}
-	addBox(in_box) {
-		this.#boxes.push(in_box);
-	}
-	containsPoint(in_vec3) {
-		for (const box of this.#boxes) {
-			if (box.containsPoint(in_vec3)) {
-				return true;
-			}
-		}
-		return false;
-	}
-	getContainedPoints() {
-		const points = [];
-		for (const box of this.#boxes) {
-			const min = box.min;
-			const max = box.max;
-			points.push(VEC3(
-				(max.x - min.x) / 2 + min.x,
-				(max.y - min.y) / 2 + min.y,
-				(max.z - min.z) / 2 + min.z
-			));
-		}
-		return points;
-	}
-}
-
 export const getWorldVec3 = Symbol();
 
 THREE.Object3D.prototype[getWorldVec3] = function(in_vec3) {
