@@ -244,6 +244,49 @@ if (getParam('color') === 'easy') {
 
 const edgeMaterial = new THREE.MeshLambertMaterial({color : EDGECOLOR});
 
+function pieceColorList(in_dimV3, in_ixV3) {
+	/*
+		piece ( hexahedron ) has surface x6
+		|
+		+- edge surface x0-3
+		|	|
+		|	+- orange, red, white, ...
+		|
+		+- inner surface x3-6
+			|
+			+- dark gray
+	*/
+	const colorList = [];
+	// when in_ixV3 is on an edge, the color of SURFACEPROP is used
+	SURFACEPROP.forEach(({V3, COLOR}) => {
+		XYZ.forEach(in_xyz => {
+			switch (V3[in_xyz]) {
+			// the surface is facing the positive direction
+			case +1 :
+				// the position is at the positive edge
+				if (in_ixV3[in_xyz] === in_dimV3[in_xyz] - 1) {
+					colorList.push(COLOR);
+				} else {
+					colorList.push(INSIDECOLOR);
+				}
+				break;
+			// the surface is facing the negative direction
+			case -1 :
+				// the position is at the negative edge
+				if (in_ixV3[in_xyz] === 0) {
+					colorList.push(COLOR);
+				} else {
+					colorList.push(INSIDECOLOR);
+				}
+				break;
+			case 0 :
+				break;
+			}
+		});
+	});
+	return colorList;
+}
+
 /*
 	(2) dimension of Cube and Meshes of them
 */
@@ -267,18 +310,11 @@ const gMeshLevelMap = ((in_cubeSize) => {
 		const pieces = [];
 		loopVec3(in_dim, in_vec3 => {
 			if (XYZ.every(in_xyz => (0 < in_vec3[in_xyz]) && (in_vec3[in_xyz] < in_dim - 1))) {
+				// inside
 				return;
 			}
 			const geometry = boxGeometryFactory.create(unitSize, unitSize, unitSize);
-			const colors = [];
-			SURFACEPROP.forEach(({V3, COLOR}) => {
-				const scalar = V3.dot(in_vec3);
-				if ((scalar === 0) || (scalar === in_dim - 1)) {
-					colors.push(COLOR);
-				} else {
-					colors.push(INSIDECOLOR);
-				}
-			});
+			const colors = pieceColorList(VEC3(in_dim, in_dim, in_dim), in_vec3);
 			// geometry has 7 groups (sub meshes)
 			const materials = boxMaterials(unitSize, unitSize, unitSize, colors);
 			materials.push(edgeMaterial);
