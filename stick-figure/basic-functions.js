@@ -1164,6 +1164,7 @@ export class cSphericalWorld {
 		this.#scene = new THREE.Scene();
 		if (DEBUG) {
 			this.#scene.background = new THREE.Color(0xFFFFFF);
+			this.#scene.add(new THREE.AxesHelper(in_radius));
 		}
 		// renderer
 		this.#renderer = new THREE.WebGLRenderer({alpha : true, antialias : true});
