@@ -503,10 +503,6 @@ class cRubiksCube extends THREE.Object3D {
 		this.removePieces();
 		const uuids = [];
 		in_pieces.forEach(in_piece => {
-			if (!in_piece.userData.initialPosition) {
-				// all pieces should have initial position to check complete
-				in_piece.userData.initialPosition = in_piece.position.clone();
-			}
 			uuids.push(in_piece.uuid);
 			this.add(in_piece);
 		});
