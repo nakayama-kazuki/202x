@@ -626,21 +626,9 @@ class cRubiksCube extends THREE.Object3D {
 	removeCompleteCallback() {
 		this.#settingVal.completeCallback = null;
 	}
-	static #getRotationAxis(in_surfaceV3, in_directionV3) {
-		/*
-			{surface : new THREE.Vector3(+1, 0, 0), direction : new THREE.Vector3(0, +1, 0), expected : new THREE.Vector3(0, 0, +1)},
-			{surface : new THREE.Vector3(+1, 0, 0), direction : new THREE.Vector3(0, -1, 0), expected : new THREE.Vector3(0, 0, -1)},
-			{surface : new THREE.Vector3(-1, 0, 0), direction : new THREE.Vector3(0, +1, 0), expected : new THREE.Vector3(0, 0, -1)},
-			{surface : new THREE.Vector3(-1, 0, 0), direction : new THREE.Vector3(0, -1, 0), expected : new THREE.Vector3(0, 0, +1)},
-			...
-		*/
-		const rotationAxis = VEC3();
-		rotationAxis.crossVectors(in_surfaceV3, in_directionV3);
-		return rotationAxis;
-	}
 	static #detectMovingDirection(in_dstV3, in_srcV3, in_surfaceV3) {
 		const vec3 = VEC3().subVectors(in_dstV3, in_srcV3);
-		const axes = [
+		const directions = [
 			VEC3(+1, 0, 0),
 			VEC3(-1, 0, 0),
 			VEC3(0, +1, 0),
@@ -649,21 +637,19 @@ class cRubiksCube extends THREE.Object3D {
 			VEC3(0, 0, -1)
 		];
 		const ret = {
-			minAngle : Infinity,
-			directionAxis : null,
+			errorAngle : Infinity,
 			rotationAxis : null
 		};
-		axes.forEach(in_axis => {
-			if (in_axis.dot(in_surfaceV3) !== 0) {
-				// in_axis which is not the same as in_surfaceV3 will be taken for rotation
+		directions.forEach(in_direction => {
+			if (in_direction.dot(in_surfaceV3) !== 0) {
+				// in_direction which is not the same as in_surfaceV3 will be taken for rotation
 				return;
 			}
-			const angle = vec3.angleTo(in_axis);
-			if (angle < ret.minAngle) {
-				ret.minAngle = angle;
-				ret.directionAxis = in_axis;
-				// rotationAxis may have negative value as component
-				ret.rotationAxis = cRubiksCube.#getRotationAxis(in_surfaceV3, in_axis);
+			const angle = vec3.angleTo(in_direction);
+			if (angle < ret.errorAngle) {
+				ret.errorAngle = angle;
+				// rotationAxis is perpendicular to both in_surfaceV3 and in_direction
+				ret.rotationAxis = VEC3().crossVectors(in_surfaceV3, in_direction);
 			}
 		});
 		return ret;
@@ -798,7 +784,7 @@ class cRubiksCube extends THREE.Object3D {
 		const ctx = this.#uiSession.ctx;
 		const moving = cRubiksCube.#detectMovingDirection(in_posV3, ctx.initPosV3, ctx.surfaceV3);
 		const angle22_5 = Math.PI / 8;
-		if (moving.minAngle > angle22_5) {
+		if (moving.errorAngle > angle22_5) {
 			return RC.NOTENOUGH;
 		}
 		// component for makeRotationGroup should be +1
