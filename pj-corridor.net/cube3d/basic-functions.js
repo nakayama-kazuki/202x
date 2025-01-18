@@ -89,7 +89,7 @@ testSets.forEach(test => {
 
 */
 
-function _snapToNotch(in_value, in_notch) {
+export function snapToNotch(in_value, in_notch) {
 	let notch = in_notch / 2;
 	let abs = Math.abs(in_value);
 	let cnt = Math.floor(abs / notch);
@@ -108,7 +108,7 @@ export function snapToPI(in_value) {
 		{in : Math.PI / 2 - delta, expected : 0},
 		{in : Math.PI / 2 + delta, expected : Math.PI}
 	*/
-	return _snapToNotch(in_value, Math.PI);
+	return snapToNotch(in_value, Math.PI);
 }
 
 export function snapTo05PI(in_value) {
@@ -116,7 +116,7 @@ export function snapTo05PI(in_value) {
 		{in : Math.PI / 4 - delta, expected : 0},
 		{in : Math.PI / 4 + delta, expected : Math.PI / 2}
 	*/
-	return _snapToNotch(in_value, Math.PI / 2);
+	return snapToNotch(in_value, Math.PI / 2);
 }
 
 function createPeriodicFunction(in_period, in_min, in_max, in_trigonometric, in_flip) {
@@ -386,6 +386,60 @@ export function nonReentrantAsync(in_async) {
 		executable = false;
 		await (in_async)();
 		executable = true;
+	};
+}
+
+export function factoryBuilder(in_constructor) {
+	const group = pseudoMessageDigest2(in_constructor.toString().substring(0, 200));
+	class cCache {
+		static #cache = {};
+		constructor(...in_args) {
+			this.entity = (in_constructor)(...in_args);
+		}
+		static #genKey(...in_args) {
+			const args = [];
+			// assume in_args is primitive
+			in_args.forEach(in_arg => {
+				if (Number.isFinite(in_arg)) {
+					args.push(Math.ceil(in_arg));
+				} else {
+					args.push(in_arg);
+				}
+			});
+			return '_' + args.join('-');
+		}
+		static getRef(...in_args) {
+			const key = cCache.#genKey(...in_args);
+			if (key in cCache.#cache) {
+				// console.log('cache hit ( cCache key : ' + key + ' )');
+			} else {
+				cCache.#cache[key] = new cCache(...in_args);
+			}
+			if (DEBUG) {
+				(debouncing(() => {
+					console.log(Object.keys(cCache.#cache).length, cCache.#cache);
+				}, 500, group))(new Event('dummy'));
+			}
+			return cCache.#cache[key].entity;
+		}
+		static allClear(in_callback = null) {
+			if (in_callback) {
+				Object.keys(cCache.#cache).forEach(in_key => {
+					(in_callback)(cCache.#cache[in_key].entity);
+				});
+			}
+			cCache.#cache = {};
+		}
+	}
+	/*
+		*** NOTE ***
+		when there are a lot of the same objects,
+		and they can be shared using reference,
+		cCache.getRef() returns reference.
+	*/
+	return {
+		create : cCache.getRef,
+		allClear : cCache.allClear
 	};
 }
 

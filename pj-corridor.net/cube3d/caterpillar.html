@@ -25,6 +25,7 @@ import {
 	getParam,
 	DEBUG,
 	randomString,
+	snapToNotch,
 	snapToPI,
 	snapTo05PI,
 	createPeriodicSin,
@@ -37,6 +38,7 @@ import {
 	thresholding,
 	debouncing,
 	nonReentrantAsync,
+	factoryBuilder,
 	arrRand,
 	cEase,
 	cApproximateMap,
@@ -71,60 +73,6 @@ import * as SOUND from 'sound';
 /*
 	(1) Texture, MeshLambertMaterial, and BoxGeometry using cCache, which returns the same object in cache without creating.
 */
-
-function factoryBuilder(in_constructor) {
-	const group = pseudoMessageDigest2(in_constructor.toString().substring(0, 200));
-	class cCache {
-		static #cache = {};
-		constructor(...in_args) {
-			this.entity = (in_constructor)(...in_args);
-		}
-		static #genKey(...in_args) {
-			const args = [];
-			// assume in_args is primitive
-			in_args.forEach(in_arg => {
-				if (Number.isFinite(in_arg)) {
-					args.push(Math.ceil(in_arg));
-				} else {
-					args.push(in_arg);
-				}
-			});
-			return '_' + args.join('-');
-		}
-		static getRef(...in_args) {
-			const key = cCache.#genKey(...in_args);
-			if (key in cCache.#cache) {
-				// console.log('cache hit ( cCache key : ' + key + ' )');
-			} else {
-				cCache.#cache[key] = new cCache(...in_args);
-			}
-			if (DEBUG) {
-				(debouncing(() => {
-					console.log(Object.keys(cCache.#cache).length, cCache.#cache);
-				}, 500, group))(new Event('dummy'));
-			}
-			return cCache.#cache[key].entity;
-		}
-		static allClear(in_callback = null) {
-			if (in_callback) {
-				Object.keys(cCache.#cache).forEach(in_key => {
-					(in_callback)(cCache.#cache[in_key].entity);
-				});
-			}
-			cCache.#cache = {};
-		}
-	}
-	/*
-		*** NOTE ***
-		when there are a lot of the same objects,
-		and they can be shared using reference,
-		cCache.getRef() returns reference.
-	*/
-	return {
-		create : cCache.getRef,
-		allClear : cCache.allClear
-	};
-}
 
 const textureFactory = factoryBuilder((in_w, in_h) => {
 	const gradation = 4
