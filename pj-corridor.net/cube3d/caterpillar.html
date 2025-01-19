@@ -425,6 +425,7 @@ class cRubiksCube extends THREE.Object3D {
 		});
 		this.remove(in_group);
 	}
+	// public because of customizing
 	makeRotationGroup(in_piece, in_axis) {
 		const groups = [];
 		const component = in_piece.position.dot(in_axis);
@@ -514,19 +515,23 @@ class cRubiksCube extends THREE.Object3D {
 			}
 		}
 	}
-	static #rotate(in_group, in_xyz, in_rad) {
-		in_group.rotation[in_xyz] = in_rad;
-		// this scalar is used to align position
-		const scalar = (createPeriodicCos(Math.PI / 2, 1, Math.sqrt(2), true))(in_rad);
+	static #groupInitialize(in_group) {
 		in_group.children.forEach(in_child => {
-			in_child.rotation[in_xyz] = in_rad * -1;
-			if (!in_child.userData.tmpCache) {
-				// this will be deleted after rotation
-				in_child.userData.tmpCache = in_child.position.clone();
-			}
-			// you don't need to worry about roAxisXYZ because it will be zero ( see setupGroup )
-			in_child.position.copy(in_child.userData.tmpCache.clone().multiplyScalar(scalar));
+			// to use for customizing animation
+			in_child.userData.tmpCache = {
+				position : in_child.position.clone(),
+				rotation : in_child.rotation.clone()
+			};
 		});
+	}
+	static #groupFinalize(in_group) {
+		in_group.children.forEach(in_child => {
+			delete in_child.userData.tmpCache;
+		});
+	}
+	// public because of customizing
+	rotate(in_group, in_xyz, in_rad) {
+		in_group.rotation[in_xyz] = in_rad;
 	}
 	#makeRotationProgress(in_group, in_xyz, in_start_rad, in_final_rad, in_callback) {
 		const distance = Math.abs(in_final_rad - in_start_rad);
@@ -534,12 +539,10 @@ class cRubiksCube extends THREE.Object3D {
 		const ease = new cEase(in_start_rad, in_final_rad, duration);
 		const progress = () => {
 			const currRad = ease.currentEasingIn();
-			cRubiksCube.#rotate(in_group, in_xyz, currRad);
+			this.rotate(in_group, in_xyz, currRad);
 			let ratio = Math.abs(currRad - in_start_rad) / distance;
 			if (currRad === in_final_rad) {
-				in_group.children.forEach(in_child => {
-					delete in_child.userData.tmpCache;
-				});
+				cRubiksCube.#groupFinalize(in_group);
 				this.#releaseGroup(in_group);
 				this.#settingVal.shuffled = true;
 				// this progress function should be stopped in callback
@@ -565,6 +568,7 @@ class cRubiksCube extends THREE.Object3D {
 			}
 		}
 		const group = this.#setupGroup(pieces);
+		cRubiksCube.#groupInitialize(group);
 		const xyz = cRubiksCube.#axisProp(axis);
 		return this.#makeRotationProgress(group, xyz, 0, Math.PI / 2, in_callback);
 	}
@@ -741,6 +745,7 @@ class cRubiksCube extends THREE.Object3D {
 		if (pieces.length < this.children.length) {
 			this.#transition('movable');
 			ctx.roGroup = this.#setupGroup(pieces);
+			cRubiksCube.#groupInitialize(ctx.roGroup);
 			// use Vector3(1, 1, 1) to extruct +1 or -1
 			ctx.roAxisDir = moving.rotationAxis.dot(VEC3(1, 1, 1));
 			ctx.roAxisXYZ = cRubiksCube.#axisProp(axis);
@@ -775,7 +780,7 @@ class cRubiksCube extends THREE.Object3D {
 			if using rotateOnAxis() several times, small errors will be expanded.
 			if making group every time too, the same issue will happen.
 		*/
-		cRubiksCube.#rotate(ctx.roGroup, ctx.roAxisXYZ, rad);
+		this.rotate(ctx.roGroup, ctx.roAxisXYZ, rad);
 		let snap;
 		if (ctx.roUnitAngle === Math.PI) {
 			snap = snapToPI;
@@ -825,6 +830,18 @@ class cRubiksCube extends THREE.Object3D {
 	}
 }
 
+class cExRubiksCube extends cRubiksCube {
+	rotate(in_group, in_xyz, in_rad) {
+		in_group.rotation[in_xyz] = in_rad;
+		const scalar = (createPeriodicCos(Math.PI / 2, 1, Math.sqrt(2), true))(in_rad);
+		in_group.children.forEach(in_child => {
+			// you don't need to worry about roAxisXYZ because it will be zero ( see setupGroup )
+			in_child.position.copy(in_child.userData.tmpCache.position.clone().multiplyScalar(scalar));
+			in_child.rotation[in_xyz] = in_rad * -1;
+		});
+	}
+}
+
 /*
 	(4) ui & dom setting
 
@@ -840,7 +857,7 @@ const WORLD_INIT_ZOOM = WORLD_RADIUS / 3;
 
 const gWorld = new cSphericalWorld(WORLD_RADIUS);
 
-const gCube = new cRubiksCube();
+const gCube = new cExRubiksCube();
 
 gWorld.add(gCube);
 
