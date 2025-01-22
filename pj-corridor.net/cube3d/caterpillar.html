@@ -286,13 +286,14 @@ if (gMeshCurrentLevel === false) {
 }
 
 class cExRubiksCube extends cRubiksCube {
-	rotate(in_group, in_xyz, in_rad) {
-		in_group.rotation[in_xyz] = in_rad;
+	rotate(in_group, in_axis, in_rad) {
+		const component = cRubiksCube.axisComponent(in_axis);
+		in_group.rotation[component] = in_rad;
 		const scalar = (createPeriodicCos(Math.PI / 2, 1, Math.sqrt(2), true))(in_rad);
 		in_group.children.forEach(in_child => {
 			// you don't need to worry about roAxisXYZ because it will be zero ( see setupGroup )
 			in_child.position.copy(in_child.userData.tmpCache.position.clone().multiplyScalar(scalar));
-			in_child.rotation[in_xyz] = in_rad * -1;
+			in_child.rotation[component] = in_rad * -1;
 		});
 	}
 }

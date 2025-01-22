@@ -56,7 +56,7 @@ export class cRubiksCube extends THREE.Object3D {
 		y : VEC3(0, 1, 0),
 		z : VEC3(0, 0, 1)
 	};
-	static #axisComponent(in_axis, in_match = true) {
+	static axisComponent(in_axis, in_match = true) {
 		const props = Object.keys(cRubiksCube.#axes).filter(in_key => {
 			const equal = cRubiksCube.#axes[in_key].equals(in_axis);
 			return in_match ? equal : !equal;
@@ -254,7 +254,7 @@ export class cRubiksCube extends THREE.Object3D {
 			intersectBoxes.push(boxes);
 		});
 		// 3. compute area
-		const [a1, a2] = cRubiksCube.#axisComponent(in_axis, false);
+		const [a1, a2] = cRubiksCube.axisComponent(in_axis, false);
 		const areas = [];
 		intersectBoxes.forEach(in_boxes => {
 			if (in_boxes[0].getCenter(VEC3()).dot(in_axis) <= center.dot(in_axis)) {
@@ -284,7 +284,7 @@ export class cRubiksCube extends THREE.Object3D {
 	}
 	// public because of customizing
 	rotate(in_group, in_axis, in_rad) {
-		in_group.rotation[cRubiksCube.#axisComponent(in_axis)] = in_rad;
+		in_group.rotation[cRubiksCube.axisComponent(in_axis)] = in_rad;
 	}
 	#makeRotationProgress(in_group, in_axis, in_start_rad, in_final_rad, in_callback) {
 		const distance = Math.abs(in_final_rad - in_start_rad);
