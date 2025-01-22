@@ -909,8 +909,7 @@ const gHandlers = (() => {
 		}
 		c.x = in_ev.clientX;
 		c.y = in_ev.clientY;
-		const surface = decideSurface(intersects);
-		gCube.uiSetInitPosition(intersects[0].object, surface, intersects[0].point, ndcToAbs(ndc));
+		gCube.uiSetInitPosition(decideSurface(intersects), intersects[0].point, ndcToAbs(ndc));
 	};
 	const move = thresholding(in_ev => {
 		c.x = -1;

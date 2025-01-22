@@ -172,6 +172,11 @@ export class cRubiksCube extends THREE.Object3D {
 		group.position.copy(unionBox.getCenter(VEC3()));
 		in_pieces.forEach(in_piece => {
 			group.attach(in_piece);
+			// tmpCache may be used for customizing animations
+			in_piece.userData.tmpCache = {
+				position : in_piece.position.clone(),
+				rotation : in_piece.rotation.clone()
+			};
 		});
 		return group;
 	}
@@ -185,21 +190,22 @@ export class cRubiksCube extends THREE.Object3D {
 				in addition, both of them internally call "remove" from other object.
 			*/
 			this.attach(in_piece);
+			delete in_piece.userData.tmpCache;
 		});
 		this.remove(in_group);
 	}
 	// public because of customizing
-	makeRotationGroup(in_piece, in_axis) {
-		const groups = [];
+	affectedPieces(in_piece, in_axis) {
+		const pieces = [];
 		const component = in_piece.position.dot(in_axis);
 		this.children.forEach(in_child => {
 			if (Math.abs(component - in_child.position.dot(in_axis)) < cRubiksCube.error) {
-				groups.push(in_child);
+				pieces.push(in_child);
 			}
 		});
-		return groups;
+		return pieces;
 	}
-	static #rotatableAngle(in_group, in_xyz) {
+	static #rotatableAngle(in_group, in_axis) {
 		const aabb = new THREE.Box3();
 		const objBoxes = [];
 		in_group.children.forEach(in_object => {
@@ -207,17 +213,18 @@ export class cRubiksCube extends THREE.Object3D {
 			aabb.union(box);
 			objBoxes.push(box);
 		});
-		// 1. divide #aabb into 8 areas
+		// 1. divide aabb into 8 areas from center
 		const center = aabb.getCenter(VEC3());
 		const range = {};
+		const error = 0.01;
 		XYZ.forEach(in_xyz => {
 			range[in_xyz] = [
 				{
 					min : -Infinity,
-					max : center[in_xyz]
+					max : center[in_xyz] - error
 				},
 				{
-					min : center[in_xyz],
+					min : center[in_xyz] + error,
 					max : +Infinity
 				}
 			];
@@ -233,7 +240,7 @@ export class cRubiksCube extends THREE.Object3D {
 				});
 			});
 		});
-		// 2. divide objBoxes into 8 areas
+		// 2. assign objBoxes into 8 areas
 		const intersectBoxes = [];
 		areaBoxes.forEach(in_area => {
 			const boxes = [];
@@ -246,26 +253,23 @@ export class cRubiksCube extends THREE.Object3D {
 			});
 			intersectBoxes.push(boxes);
 		});
-		// 3. use 4 boxes by in_xyz (component of axis)
-		const target = {
-			x : {arr : [0, 1, 2, 3], a1 : 'y', a2 : 'z'},
-			y : {arr : [0, 1, 4, 5], a1 : 'z', a2 : 'x'},
-			z : {arr : [0, 2, 4, 6], a1 : 'x', a2 : 'y'},
-		}[in_xyz];
-		// 4. compute area
+		// 3. compute area
+		const [a1, a2] = cRubiksCube.#axisComponent(in_axis, false);
 		const areas = [];
-		target.arr.forEach(in_ix => {
-			const boxes = intersectBoxes[in_ix];
+		intersectBoxes.forEach(in_boxes => {
+			if (in_boxes[0].getCenter(VEC3()).dot(in_axis) <= center.dot(in_axis)) {
+				return;
+			}
 			let area = 0;
-			boxes.forEach(in_box => {
+			in_boxes.forEach(in_box => {
 				const size = in_box.getSize(VEC3());
-				area += size[target.a1] * size[target.a2];
+				area += size[a1] * size[a2];
 			});
 			areas.push(area);
 		});
-		// 5. check angle
-		const error = 0.01;
+		// 4. check angle
 		const allEqual = (...in_args) => {
+			// error has already been declared
 			return in_args.every(in_arg => Math.abs(in_arg - in_args[0]) < error);
 		};
 		if (allEqual(areas[0], areas[1], areas[2], areas[3])) {
@@ -278,34 +282,19 @@ export class cRubiksCube extends THREE.Object3D {
 			}
 		}
 	}
-	static #groupInitialize(in_group) {
-		in_group.children.forEach(in_child => {
-			// to use for customizing animation
-			in_child.userData.tmpCache = {
-				position : in_child.position.clone(),
-				rotation : in_child.rotation.clone()
-			};
-		});
-	}
-	static #groupFinalize(in_group) {
-		in_group.children.forEach(in_child => {
-			delete in_child.userData.tmpCache;
-		});
-	}
 	// public because of customizing
-	rotate(in_group, in_xyz, in_rad) {
-		in_group.rotation[in_xyz] = in_rad;
+	rotate(in_group, in_axis, in_rad) {
+		in_group.rotation[cRubiksCube.#axisComponent(in_axis)] = in_rad;
 	}
-	#makeRotationProgress(in_group, in_xyz, in_start_rad, in_final_rad, in_callback) {
+	#makeRotationProgress(in_group, in_axis, in_start_rad, in_final_rad, in_callback) {
 		const distance = Math.abs(in_final_rad - in_start_rad);
 		const duration = distance / (Math.PI / 2) * 500;
 		const ease = new cEase(in_start_rad, in_final_rad, duration);
 		const progress = () => {
 			const currRad = ease.currentEasingIn();
-			this.rotate(in_group, in_xyz, currRad);
+			this.rotate(in_group, in_axis, currRad);
 			let ratio = Math.abs(currRad - in_start_rad) / distance;
 			if (currRad === in_final_rad) {
-				cRubiksCube.#groupFinalize(in_group);
 				this.#releaseGroup(in_group);
 				this.#settingVal.shuffled = true;
 				// this progress function should be stopped in callback
@@ -325,16 +314,14 @@ export class cRubiksCube extends THREE.Object3D {
 			}
 			const _piece = (this.children)[arrRand]();
 			axis = (Object.values(cRubiksCube.#axes))[arrRand]();
-			pieces = this.makeRotationGroup(_piece, axis);
+			pieces = this.affectedPieces(_piece, axis);
 			if (pieces.length < this.children.length) {
 				break;
 			}
 		}
 		const group = this.#setupGroup(pieces);
-		cRubiksCube.#groupInitialize(group);
-		const xyz = cRubiksCube.#axisComponent(axis);
-		const angle = cRubiksCube.#rotatableAngle(group, xyz);
-		return this.#makeRotationProgress(group, xyz, 0, angle, in_callback);
+		const angle = cRubiksCube.#rotatableAngle(group, axis);
+		return this.#makeRotationProgress(group, axis, 0, angle, in_callback);
 	}
 	registerCompleteCallback(in_callback) {
 		this.#settingVal.completeCallback = in_callback;
@@ -440,29 +427,28 @@ export class cRubiksCube extends THREE.Object3D {
 		this.#transition('disable');
 	}
 	#uiInitSession() {
-		if (this.#uiSession.ctx.roGroup) {
-			this.#releaseGroup(this.#uiSession.ctx.roGroup);
+		if (this.#uiSession.ctx.movingGroup) {
+			this.#releaseGroup(this.#uiSession.ctx.movingGroup);
 		}
 		this.#uiSession.ctx = {};
 	}
-	uiSetInitPosition(in_piece, in_surfaceV3, in_posV3, in_posV2) {
-		// in_posV3 : intersection with a in_piece
+	uiSetInitPosition(in_surfaceV3, in_posV3, in_posV2) {
+		// in_posV3 : intersection with a object
 		// in_posV2 : abs value generated from NDC (Normalized Device Coordinates)
 		if (this.#uiSession.state !== cRubiksCube.#uiStates.ENABLED) {
 			console.log('state is not ENABLED');
 			return;
 		}
 		this.#uiSession.ctx = {
-			piece : in_piece,
 			initPosV3 : in_posV3,
 			initPosV2 : in_posV2,
+			initDirV2 : null,
+			movingGroup : null,
+			movingAmount : 0,
+			movingDir : 0,
+			rotationAxis : null,
 			surfaceV3 : in_surfaceV3,
-			roGroup : null,
-			roUnitAngle : Math.PI,
-			roRadian : 0,
-			roAxisDir : 0,
-			roAxisXYZ : null,
-			initDirV2 : null
+			amountSnap : null
 		};
 		this.#transition('drag');
 	}
@@ -482,7 +468,7 @@ export class cRubiksCube extends THREE.Object3D {
 		MOVABLE : Symbol()
 	};
 	uiNotifyDeltaPosition(in_piece, in_posV3, in_posV2) {
-		// in_posV3 : intersection with a in_piece
+		// in_posV3 : intersection with a object
 		// in_posV2 : abs value generated from NDC (Normalized Device Coordinates)
 		const RC = cRubiksCube.uiSetDeltaPositionRC;
 		if (this.#uiSession.state !== cRubiksCube.#uiStates.DRAGGING) {
@@ -495,17 +481,21 @@ export class cRubiksCube extends THREE.Object3D {
 		if (moving.errorAngle > angle22_5) {
 			return RC.NOTENOUGH;
 		}
-		// component for makeRotationGroup should be +1
+		// component for affectedPieces should be "1"
 		const axis = moving.rotationAxis.clone().multiply(moving.rotationAxis);
-		const pieces = this.makeRotationGroup(ctx.piece, axis);
+		const pieces = this.affectedPieces(in_piece, axis);
 		if (pieces.length < this.children.length) {
 			this.#transition('movable');
-			ctx.roGroup = this.#setupGroup(pieces);
-			cRubiksCube.#groupInitialize(ctx.roGroup);
+			ctx.movingGroup = this.#setupGroup(pieces);
 			// use Vector3(1, 1, 1) to extruct +1 or -1
-			ctx.roAxisDir = moving.rotationAxis.dot(VEC3(1, 1, 1));
-			ctx.roAxisXYZ = cRubiksCube.#axisComponent(axis);
-			ctx.roUnitAngle = cRubiksCube.#rotatableAngle(ctx.roGroup, ctx.roAxisXYZ);
+			ctx.movingDir = moving.rotationAxis.dot(VEC3(1, 1, 1));
+			ctx.rotationAxis = axis;
+			// angle should be Math.PI or Math.PI / 2
+			if (cRubiksCube.#rotatableAngle(ctx.movingGroup, ctx.rotationAxis) === Math.PI) {
+				ctx.amountSnap = snapToPI;
+			} else {
+				ctx.amountSnap = snapTo05PI;
+			}
 			ctx.initDirV2 = in_posV2.clone().sub(ctx.initPosV2);
 			return RC.MOVABLE;
 		} else {
@@ -519,15 +509,17 @@ export class cRubiksCube extends THREE.Object3D {
 		}
 		const ctx = this.#uiSession.ctx;
 		const currentDirV2 = in_posV2.clone().sub(ctx.initPosV2);
-		let speedupWhen180 = ctx.roUnitAngle / (Math.PI / 2);
-		let rad = in_posV2.distanceTo(ctx.initPosV2) * ctx.roAxisDir * speedupWhen180;
+		let rad = in_posV2.distanceTo(ctx.initPosV2) * ctx.movingDir;
+		if (ctx.amountSnap === snapToPI) {
+			rad *= 2;
+		}
 		if (ctx.initDirV2.dot(currentDirV2) > 0) {
 			// currentDirV2 & initDirV2 --> SAME direction
 			rad *= +1;
 		} else {
 			// currentDirV2 & initDirV2 --> OPPOSITE direction
 			const thresholdToStopWarp = Math.PI / 8;
-			if (Math.abs(ctx.roRadian + rad) < thresholdToStopWarp) {
+			if (Math.abs(ctx.movingAmount + rad) < thresholdToStopWarp) {
 				rad *= -1;
 			}
 		}
@@ -536,15 +528,9 @@ export class cRubiksCube extends THREE.Object3D {
 			if using rotateOnAxis() several times, small errors will be expanded.
 			if making group every time too, the same issue will happen.
 		*/
-		this.rotate(ctx.roGroup, ctx.roAxisXYZ, rad);
-		let snap;
-		if (ctx.roUnitAngle === Math.PI) {
-			snap = snapToPI;
-		} else {
-			snap = snapTo05PI;
-		}
-		const overTheTop = ((snap)(rad) != (snap)(ctx.roRadian));
-		ctx.roRadian = rad;
+		this.rotate(ctx.movingGroup, ctx.rotationAxis, rad);
+		const overTheTop = ((ctx.amountSnap)(rad) != (ctx.amountSnap)(ctx.movingAmount));
+		ctx.movingAmount = rad;
 		// if true, caller may show some effects.
 		return overTheTop;
 	}
@@ -559,15 +545,9 @@ export class cRubiksCube extends THREE.Object3D {
 		}
 		this.#transition('release');
 		const ctx = this.#uiSession.ctx;
-		const startRad = ctx.roRadian;
-		let snap;
-		if (ctx.roUnitAngle === Math.PI) {
-			snap = snapToPI;
-		} else {
-			snap = snapTo05PI;
-		}
-		const finalRad = (snap)(ctx.roRadian);
-		return this.#makeRotationProgress(ctx.roGroup, ctx.roAxisXYZ, startRad, finalRad, in_ratio => {
+		const startRad = ctx.movingAmount;
+		const finalRad = (ctx.amountSnap)(ctx.movingAmount);
+		return this.#makeRotationProgress(ctx.movingGroup, ctx.rotationAxis, startRad, finalRad, in_ratio => {
 			if (in_ratio < 1) {
 				return;
 			}
