@@ -7,8 +7,8 @@
 <script type='importmap'>
 {
 	"imports" : {
-		"three" : "https://cdn.jsdelivr.net/npm/three@0.171.0/build/three.module.min.js",
-		"utils" : "https://cdn.jsdelivr.net/npm/three@0.171.0/examples/jsm/utils/BufferGeometryUtils.js",
+		"three" : "https://cdn.jsdelivr.net/npm/three@0.172.0/build/three.module.min.js",
+		"utils" : "https://cdn.jsdelivr.net/npm/three@0.172.0/examples/jsm/utils/BufferGeometryUtils.js",
 		"basic" : "./basic-functions.js",
 		"sound" : "./sound-effect.js"
 	}
@@ -136,6 +136,10 @@ function shellMaterials(in_size, in_color_main, in_color_back) {
 	return materials;
 }
 
+function getShellColor(in_material) {
+	return in_material[SHELL_COLOR_INDEX].color.getHex();
+}
+
 const shellGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickness) => {
 	const radian = 6;
 	const outerLen = in_size - radian * 2;
@@ -186,13 +190,17 @@ const gMeshLevelMap = ((in_diameter) => {
 	];
 	const shellInfo = [
 		{
-			dim : 6,
+			dim : 5,
 			dmz : [
-				[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5],
-				[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5],
-				[2, 5],
-				[4, 0], [4, 1], [4, 2], [4, 3], [4, 4], [4, 5],
-				[5, 0], [5, 1], [5, 2], [5, 3], [5, 4], [5, 5]
+				[0, 0], [0, 1], [0, 2], [0, 3], [0, 4],
+				[1, 4],
+				[4, 0], [4, 1], [4, 2], [4, 3], [4, 4]
+			]
+		},
+		{
+			dim : 5,
+			dmz : [
+				[0, 4]
 			]
 		},
 		{
@@ -348,61 +356,40 @@ class cRubiksCube extends THREE.Object3D {
 		this.children.forEach(in_child => xSet.add(in_callback(in_child)));
 		return Array.from(xSet).sort((in_e1, in_e2) => (in_e1 - in_e2) * in_order);
 	}
-	#approximateArrX(in_order = 1) {
-		return this.#approximateArr(in_obj => in_obj.position.x, in_order);
-	}
-	#approximateArrR() {
-		return this.#approximateArr(in_obj => Math.atan2(in_obj.position.z, in_obj.position.y));
-	}
 	getScore() {
 		const max = 100;
 		return Math.max(Math.ceil((max - this.#settingVal.shuffleCount) / 10) * 10, 0);
 	}
-
 	#isComplete() {
-		// the same color appears at the same angle
-		const arrR = this.#approximateArrR();
-		const checkR = arrR.every(in_r => {
-			let start = -1;
-			return this.children.every(in_child => {
-				const r = Math.atan2(in_child.position.z, in_child.position.y);
-				const current = in_child.material[SHELL_COLOR_INDEX].color.getHex();
-				if (Math.abs(in_r - r) < cRubiksCube.error) {
-					if (start < 0) {
-						start = current;
-					} else {
-						if (start === current) {
-							return true;
+		const evaluators = [
+			// the same color appears at the same angle
+			in_obj => Math.atan2(in_obj.position.z, in_obj.position.y),
+			// the same color appears at the same position-x
+			in_obj => in_obj.position.x
+		];
+		const results = [];
+		evaluators.forEach(in_evaluator => {
+			const arr = this.#approximateArr(in_evaluator);
+			results.push(arr.every(in_e => {
+				let firstColor;
+				return this.children.every(in_child => {
+					const currentColor = getShellColor(in_child.material);
+					if (Math.abs(in_e - in_evaluator(in_child)) < cRubiksCube.error) {
+						if (typeof firstColor === 'undefined') {
+							firstColor = currentColor;
 						} else {
-							return false;
+							if (firstColor === currentColor) {
+								return true;
+							} else {
+								return false;
+							}
 						}
 					}
-				}
-				return true;
-			});
+					return true;
+				});
+			}));
 		});
-		// the same color appears at the same position-x
-		const arrX = this.#approximateArrX();
-		const checkX = arrX.every(in_x => {
-			let start = -1;
-			return this.children.every(in_child => {
-				const x = in_child.position.x
-				const current = in_child.material[SHELL_COLOR_INDEX].color.getHex();
-				if (Math.abs(in_x - x) < cRubiksCube.error) {
-					if (start < 0) {
-						start = current;
-					} else {
-						if (start === current) {
-							return true;
-						} else {
-							return false;
-						}
-					}
-				}
-				return true;
-			});
-		});
-		return checkR || checkX;
+		return results.some(in_result => in_result);
 	}
 	#setupGroup(in_pieces) {
 		const group = new THREE.Object3D();
@@ -484,7 +471,7 @@ class cRubiksCube extends THREE.Object3D {
 		return affected;
 	}
 	#slidableDistance(in_piece, in_sign) {
-		const xArr = this.#approximateArrX(in_sign);
+		const xArr = this.#approximateArr(in_obj => in_obj.position.x, in_sign);
 		for (let i = 0; i < xArr.length - 1; i++) {
 			if (Math.abs(xArr[i] - in_piece.position.x) < cRubiksCube.error) {
 				return xArr[i + 1] - in_piece.position.x;
@@ -1195,7 +1182,7 @@ function nextLevel(in_sound = true) {
 	}
 ]);
 
-changeLevel(1);
+changeLevel(0);
 
 function hex2rgb(in_hex) {
 	const mask = 0xFF;
