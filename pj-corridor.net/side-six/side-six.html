@@ -1,0 +1,1464 @@
+<html>
+<head>
+<!-- MIT License Copyright (c) 2024 pj-corridor.net -->
+<meta name='viewport' content='width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1' />
+<meta charset='utf-8' />
+<script async src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7863584801355594' crossorigin='anonymous'></script>
+<script type='importmap'>
+{
+	"imports" : {
+		"three" : "https://cdn.jsdelivr.net/npm/three@0.171.0/build/three.module.min.js",
+		"utils" : "https://cdn.jsdelivr.net/npm/three@0.171.0/examples/jsm/utils/BufferGeometryUtils.js",
+		"basic" : "./basic-functions.js",
+		"sound" : "./sound-effect.js"
+	}
+}
+</script>
+</head>
+<body>
+<script type='module'>
+
+import * as THREE from 'three';
+import * as UTILS from 'utils';
+import {
+	getVersion,
+	getParam,
+	DEBUG,
+	randomString,
+	snapToNotch,
+	snapToPI,
+	snapTo05PI,
+	createPeriodicSin,
+	createPeriodicCos,
+	pseudoMessageDigest1,
+	pseudoMessageDigest2,
+	beep,
+	isEmulated,
+	throttling,
+	thresholding,
+	debouncing,
+	nonReentrantAsync,
+	factoryBuilder,
+	arrRand,
+	cEase,
+	cApproximateMap,
+	cApproximateSet,
+	cCyclicMap,
+	cCyclicValues,
+	forEachCombination,
+	clipArea,
+	clipClearArea,
+	fillRoundRect,
+	XYZ,
+	VEC3,
+	DIRECTION,
+	ndcFromEvent,
+	ndcToAbs,
+	getWorldVec3,
+	getWorldUp,
+	instanceInAncestor,
+	lookAtWithoutRotation,
+	safeMergeGeometry,
+	makeTrapezoidGeometryParts,
+	trapezoidGeometryUtil,
+	roundBoxGeometry,
+	roundRegularBoxGeometry,
+	roundTrapezoidGeometry,
+	capsuleConfigure,
+	customCapsuleGeometry,
+	cSphericalWorld
+} from 'basic';
+import * as SOUND from 'sound';
+
+/*
+	(1) Texture, MeshLambertMaterial, and BoxGeometry using cCache, which returns the same object in cache without creating.
+*/
+
+const textureFactory = factoryBuilder((in_w, in_h) => {
+	const gradation = 4
+	// gradation (from black to white)
+	let maxDepth = 255;
+	let styles = [];
+	for (let i = 0; i < gradation; i++) {
+		let depth = Math.ceil(maxDepth / (gradation - 1) * i);
+		styles[i] = 'rgb(' + depth + ',' + depth + ',' + depth + ')';
+	}
+	// draw and convert using toDataUR
+	let canvas = document.createElement('CANVAS');
+	canvas.width = in_w;
+	canvas.height = in_h;
+	const ctx = canvas.getContext('2d');
+	let radius = gradation + 2;
+	/*
+		Rect           RoundRect      RoundRect
+
+		##########     ##########     ##########
+		##########     ##******##     ##******##
+		##########     #********#     #**++++**#
+		##########     #********#     #*++++++*#
+		########## --> #********# --> #*++++++*# --> ...
+		##########     #********#     #*++++++*#
+		##########     #********#     #**++++**#
+		##########     ##******##     ##******##
+		##########     ##########     ##########
+	*/
+	for (let i = 0; i < gradation; i++) {
+		ctx.fillStyle = styles[i];
+		if (i > 0) {
+			ctx[fillRoundRect](i, i, in_w - i * 2, in_h - i * 2, radius - i);
+		} else {
+			ctx.fillRect(i, i, in_w - i * 2, in_h - i * 2);
+		}
+	}
+	return (new THREE.TextureLoader()).load(canvas.toDataURL());
+});
+
+const surfaceFactory = factoryBuilder((in_color, in_size = -1) => {
+	const material = new THREE.MeshLambertMaterial();
+	material.color = new THREE.Color(in_color);
+	if (in_size > 0) {
+		material.map = textureFactory.create(in_size, in_size);
+	}
+	return material;
+});
+
+function shellMaterials(in_size, in_color_main, in_color_back) {
+	return [
+		surfaceFactory.create(in_color_back),
+		surfaceFactory.create(in_color_back),
+		surfaceFactory.create(in_color_main, in_size),
+		surfaceFactory.create(in_color_back),
+		surfaceFactory.create(in_color_back),
+		surfaceFactory.create(in_color_back)
+	];
+}
+
+const shellGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickness) => {
+	const radian = 6;
+	const outerLen = in_size - radian * 2;
+	const innerLen = outerLen * in_innerRatio;
+	const thickness = in_thickness - radian * 2;
+	const geometry = trapezoidGeometryUtil(outerLen, outerLen, outerLen, innerLen, thickness, radian);
+	geometry.parameters = {
+		size : in_size,
+		innerRatio : in_innerRatio,
+		thickness : in_thickness
+	};
+	return geometry;
+});
+
+const DARKGRAY = 0x222222;
+const LIGHTGRAY = 0x555555;
+const HIGHLIGHT = 0x888888;
+
+const ORANGE = 0xFFAA00;
+const RED = 0xFF0000;
+const WHITE = 0xFFFFFF;
+const YELLOW = 0xFFFF00;
+const BLUE = 0x3333FF;
+const GREEN = 0x118811;
+const LIGHTBLUE = 0x5588FF;
+const LIGHTGREEN = 0x55CC55;
+
+const EDGECOLOR = DARKGRAY;
+
+const edgeMaterial = new THREE.MeshLambertMaterial({color : EDGECOLOR});
+
+/*
+	(2) dimension of Cube and Meshes of them
+*/
+
+const CUBE_SIZE = 400;
+
+const gMeshLevelMap = ((in_diameter) => {
+	const map = new cCyclicMap();
+	const colors = [
+		ORANGE,
+		RED,
+		WHITE,
+		YELLOW,
+		BLUE,
+		GREEN,
+		LIGHTBLUE,
+		LIGHTGREEN
+	];
+	const shellInfo = [
+		{
+			dim : 6,
+			dmz : [
+				[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5],
+				[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5],
+				[2, 5],
+				[4, 0], [4, 1], [4, 2], [4, 3], [4, 4], [4, 5],
+				[5, 0], [5, 1], [5, 2], [5, 3], [5, 4], [5, 5]
+			]
+		},
+		{
+			dim : 6,
+			dmz : [
+				[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5],
+				[1, 5],
+				[5, 0], [5, 1], [5, 2], [5, 3], [5, 4], [5, 5]
+			]
+		},
+		{
+			dim : 6,
+			dmz : [
+				[0, 5]
+			]
+		},
+		{
+			dim : 7,
+			dmz : [
+				[0, 6]
+			]
+		},
+		{
+			dim : 8,
+			dmz : [
+				[0, 7]
+			]
+		},
+	];
+	shellInfo.forEach(in_shell => {
+		const radius = in_diameter / 2;
+		const circumf = in_diameter * Math.PI;
+		const unitSize = circumf / in_shell.dim;
+		const unitThick = unitSize * 0.3;
+		const unitAngle = Math.PI * 2 / in_shell.dim;
+		const geometry = shellGeometryFactory.create(unitSize, ((radius - unitThick) / radius), unitThick);
+		const pieces = [];
+		for (let i = 0; i < in_shell.dim; i++) {
+			let x = unitSize * i - circumf / 2 + unitSize / 2;
+			let y = (in_diameter / 2 - unitThick) * 1.2;
+			const pivot = new THREE.Object3D();
+			for (let j = 0; j < in_shell.dim; j++) {
+				if (in_shell.dmz) {
+					if (in_shell.dmz.some(in_el => in_el[0] === i && in_el[1] === j)) {
+						continue;
+					}
+				}
+				const materials = shellMaterials(unitSize, colors[j], EDGECOLOR);
+				materials.push(edgeMaterial);
+				const piece = new THREE.Mesh(geometry, materials);
+				pivot.add(piece);
+				piece.position.copy(VEC3(x, y, 0));
+				pivot.rotateX(unitAngle);
+				/*
+					*** NOTE ***
+					you can use matrix,
+					to apply rotated position before adding to scene
+				*/
+				pivot.updateMatrixWorld();
+				piece.applyMatrix4(pivot.matrix);
+				pivot.remove(piece);
+				pieces.push(piece);
+			}
+		}
+		map.set('lv ' + in_shell.dim + '-' + pieces.length, pieces);
+	});
+	return map;
+})(CUBE_SIZE);
+
+let gMeshCurrentLevel = getParam('level');
+
+if (gMeshCurrentLevel === false) {
+	gMeshCurrentLevel = 0;
+}
+
+/*
+	(3) Puzzle related functions
+*/
+
+//cCylinderPuzzle
+
+class cRubiksCube extends THREE.Object3D {
+	static error = 0.01;
+	static #axes = {
+		x : VEC3(1, 0, 0),
+		y : VEC3(0, 1, 0),
+		z : VEC3(0, 0, 1)
+	};
+	static axisComponent(in_axis, in_match = true) {
+		const props = Object.keys(cRubiksCube.#axes).filter(in_key => {
+			const equal = cRubiksCube.#axes[in_key].equals(in_axis);
+			return in_match ? equal : !equal;
+		});
+		if (props.length > 1) {
+			return props;
+		} else {
+			return props[0];
+		}
+	}
+	get #settingVal() {
+		if (this.userData.currentSettingKey) {
+			return this.userData.settingPerPieces[this.userData.currentSettingKey];
+		} else {
+			throw new Error('no currentSettingKey');
+		}
+	}
+	set #settingKey(in_value) {
+		if (!this.userData.settingPerPieces) {
+			this.userData.settingPerPieces = {};
+		}
+		if (!this.userData.settingPerPieces[in_value]) {
+			this.userData.settingPerPieces[in_value] = {};
+		}
+		this.userData.currentSettingKey = in_value;
+	}
+	removePieces() {
+		const pieces = this.children.slice();
+		pieces.forEach(in_piece => {
+			this.remove(in_piece);
+		});
+		this.userData.currentSettingKey = null;
+	}
+	addPieces(in_pieces) {
+		this.removePieces();
+		const uuids = [];
+		const axisx = new Map();
+		in_pieces.forEach(in_piece => {
+			uuids.push(in_piece.uuid);
+			this.add(in_piece);
+			// how many pieces are at position x ?
+			const x = in_piece.position.x;
+			if (axisx.has(x)) {
+				axisx.set(x, axisx.get(x) + 1);
+			} else {
+				axisx.set(x, 1);
+			}
+		});
+		this.#settingKey = pseudoMessageDigest1(uuids);
+		if (!this.#settingVal.initialized) {
+			this.#settingVal.unitAngle = Math.PI * 2 / Math.max(...Array.from(axisx.values()));
+			this.#settingVal.completeCallback = null;
+			this.#settingVal.shuffleCount = 0;
+			this.#settingVal.shuffled = false;
+			this.#settingVal.initialized = true;
+		}
+	}
+	#approximateArr(in_callback, in_order = 1) {
+		const xSet = new cApproximateSet(cRubiksCube.error);
+		this.children.forEach(in_child => xSet.add(in_callback(in_child)));
+		return Array.from(xSet).sort((in_e1, in_e2) => (in_e1 - in_e2) * in_order);
+	}
+	#approximateArrX(in_order = 1) {
+		return this.#approximateArr(in_obj => in_obj.position.x, in_order);
+	}
+	#approximateArrR() {
+		return this.#approximateArr(in_obj => Math.atan2(in_obj.position.z, in_obj.position.y));
+	}
+	getScore() {
+		const max = 100;
+		return Math.max(Math.ceil((max - this.#settingVal.shuffleCount) / 10) * 10, 0);
+	}
+
+	#isComplete() {
+		const colorIndex = 2;
+		// the same color appears at the same angle
+		const arrR = this.#approximateArrR();
+		const checkR = arrR.every(in_r => {
+			let start = -1;
+			return this.children.every(in_child => {
+				const r = Math.atan2(in_child.position.z, in_child.position.y);
+				const current = in_child.material[colorIndex].color.getHex();
+				if (Math.abs(in_r - r) < cRubiksCube.error) {
+					if (start < 0) {
+						start = current;
+					} else {
+						if (start === current) {
+							return true;
+						} else {
+							return false;
+						}
+					}
+				}
+				return true;
+			});
+		});
+		// the same color appears at the same position-x
+		const arrX = this.#approximateArrX();
+		const checkX = arrX.every(in_x => {
+			let start = -1;
+			return this.children.every(in_child => {
+				const x = in_child.position.x
+				const current = in_child.material[colorIndex].color.getHex();
+				if (Math.abs(in_x - x) < cRubiksCube.error) {
+					if (start < 0) {
+						start = current;
+					} else {
+						if (start === current) {
+							return true;
+						} else {
+							return false;
+						}
+					}
+				}
+				return true;
+			});
+		});
+		return checkR || checkX;
+	}
+	#setupGroup(in_pieces) {
+		const group = new THREE.Object3D();
+		this.add(group);
+		in_pieces.forEach(in_piece => {
+			group.attach(in_piece);
+			// tmpCache may be used for customizing animations
+			in_piece.userData.tmpCache = {
+				position : in_piece.position.clone(),
+				rotation : in_piece.rotation.clone()
+			};
+		});
+		// group position is (0, 0, 0)
+		return group;
+	}
+	#releaseGroup(in_group) {
+		const copiedPieces = [...in_group.children];
+		copiedPieces.forEach(in_piece => {
+			/*
+				*** NOTE ***
+				"add" follows parent position.
+				"attach" keeps world position.
+				in addition, both of them internally call "remove" from other object.
+			*/
+			this.attach(in_piece);
+			delete in_piece.userData.tmpCache;
+		});
+		this.remove(in_group);
+	}
+	// public because of customizing
+	affectedPieces(in_piece, in_axis) {
+		const pieces = [];
+		const component = in_piece.position.dot(in_axis);
+		this.children.forEach(in_child => {
+			if (Math.abs(component - in_child.position.dot(in_axis)) < cRubiksCube.error) {
+				pieces.push(in_child);
+			}
+		});
+		return pieces;
+	}
+	#affectedRotationPieces(in_piece, in_axis) {
+		return this.affectedPieces(in_piece, in_axis);
+	}
+	#affectedSlidePieces(in_piece, in_sign) {
+		const pieces = [];
+		const y = in_piece.position.dot(cRubiksCube.#axes.y);
+		const z = in_piece.position.dot(cRubiksCube.#axes.z);
+		this.children.forEach(in_child => {
+			const pos = in_child.position;
+			if ((Math.abs(y - pos.y) < cRubiksCube.error) && (Math.abs(z - pos.z) < cRubiksCube.error)) {
+				pieces.push(in_child);
+			}
+		});
+		const currSide = (in_sign > 0) ? 'max' : 'min';
+		const nextSide = (in_sign > 0) ? 'min' : 'max';
+		pieces.sort((in_e1, in_e2) => (in_e1.position.x - in_e2.position.x) * in_sign);
+		const getEdgeX = (in_object, in_edge) => {
+			const box = new THREE.Box3();
+			box.setFromObject(in_object);
+			return box[in_edge].x;
+		};
+		let started = false;
+		let edge = getEdgeX(in_piece, currSide);
+		const affected = [in_piece];
+		pieces.forEach(in_sorted => {
+			if (started) {
+				// find the adjacent piece
+				if (Math.abs(edge - getEdgeX(in_sorted, nextSide)) < cRubiksCube.error) {
+					affected.push(in_sorted);
+					edge = getEdgeX(in_sorted, currSide);
+				}
+			} else {
+				if (in_sorted === in_piece) {
+					started = true;
+				}
+			}
+		});
+		// for in_sign direction, there is not piece next to the last element
+		return affected;
+	}
+	#slidableDistance(in_piece, in_sign) {
+		const xArr = this.#approximateArrX(in_sign);
+		for (let i = 0; i < xArr.length - 1; i++) {
+			if (Math.abs(xArr[i] - in_piece.position.x) < cRubiksCube.error) {
+				return xArr[i + 1] - in_piece.position.x;
+			}
+		}
+		return 0;
+	}
+	// public because of customizing
+	rotate(in_group, in_axis, in_rad) {
+		in_group.rotation[cRubiksCube.axisComponent(in_axis)] = in_rad;
+	}
+	#makeAnimationProgress(in_group, in_axis, in_startAmount, in_finalAmount, in_callback) {
+		const amount = Math.abs(in_finalAmount - in_startAmount);
+		let duration;
+		if (in_axis) {
+			duration = amount / (Math.PI / 2) * 500;
+		} else {
+			duration = 100;
+		}
+		const ease = new cEase(in_startAmount, in_finalAmount, duration);
+		const progress = () => {
+			const currAmount = ease.currentEasingIn();
+			if (in_axis) {
+				this.rotate(in_group, in_axis, currAmount);
+			} else {
+				in_group.position.x = currAmount;
+			}
+			let ratio = Math.abs(currAmount - in_startAmount) / amount;
+			if (currAmount === in_finalAmount) {
+				this.#releaseGroup(in_group);
+				this.#settingVal.shuffled = true;
+				// in this case, progress function should be stopped (in in_callback)
+				ratio = 1.0;
+			}
+			(in_callback)(ratio);
+		};
+		return progress;
+	}
+	makeRandomAnimationProgress(in_callback) {
+		let axis, pieces, last;
+		let maxLoopCount = 100;
+		const order = Symbol.for('makeRandomAnimationProgress');
+		if (!this.hasOwnProperty(order)) {
+			this[order] = true;
+		}
+		while (true) {
+			if (--maxLoopCount === 0) {
+				throw new Error('maxLoopCount'); 
+			}
+			const _piece = (this.children)[arrRand]();
+			if (this[order]) {
+				axis = null;
+				let _amount = 0;
+				pieces = this.#affectedSlidePieces(_piece, +1);
+				_amount = this.#slidableDistance(pieces[pieces.length - 1], +1);
+				if (_amount !== 0) {
+					last = _amount;
+					break;
+				}
+				pieces = this.#affectedSlidePieces(_piece, -1);
+				_amount = this.#slidableDistance(pieces[pieces.length - 1], -1);
+				if (_amount !== 0) {
+					last = _amount;
+					break;
+				}
+			} else {
+				axis = cRubiksCube.#axes.x;
+				pieces = this.#affectedRotationPieces(_piece, axis);
+				if (pieces.length < this.children.length) {
+					last = this.#settingVal.unitAngle * [1, 2, 3][arrRand]();
+					break;
+				}
+			}
+		}
+		this[order] = !this[order];
+		const group = this.#setupGroup(pieces);
+		return this.#makeAnimationProgress(group, axis, 0, last, in_callback);
+	}
+	registerCompleteCallback(in_callback) {
+		this.#settingVal.completeCallback = in_callback;
+	}
+	removeCompleteCallback() {
+		this.#settingVal.completeCallback = null;
+	}
+	static #uiStates  = {
+		DISABLED : Symbol(),
+		ENABLED : Symbol(),
+		DRAGGING : Symbol(),
+		MOVING : Symbol(),
+		MOMENTUM : Symbol()
+	}
+	/*
+		ENABLED <-------------------+
+		|                           |
+		+-[disable]-----+           |
+		|               |           |
+		|   DISABLED <--+           |
+		|   |                       |
+		|   +-[enable]--------------+
+		|                           |
+		+-[drag]--------+           |
+		                |           |
+		    DRAGGING <--+           |
+		    |                       |
+		    +-[release]-------------+
+		    |                       |
+		    +-[movable]-----+       |
+		                    |       |
+		        MOVING <----+       |
+		        |                   |
+		        +-[release]-----+   |
+		                        |   |
+		            MOMENTUM <--+   |
+		            |               |
+		            +-[stop]--------+
+	*/
+	static #uiTransitions = {
+		[cRubiksCube.#uiStates.DISABLED]: {
+			enable : cRubiksCube.#uiStates.ENABLED
+		},
+		[cRubiksCube.#uiStates.ENABLED]: {
+			disable : cRubiksCube.#uiStates.DISABLED,
+			drag : cRubiksCube.#uiStates.DRAGGING
+		},
+		[cRubiksCube.#uiStates.DRAGGING]: {
+			release : cRubiksCube.#uiStates.ENABLED,
+			movable : cRubiksCube.#uiStates.MOVING
+		},
+		[cRubiksCube.#uiStates.MOVING]: {
+			release : cRubiksCube.#uiStates.MOMENTUM
+		},
+		[cRubiksCube.#uiStates.MOMENTUM]: {
+			stop : cRubiksCube.#uiStates.ENABLED
+		}
+	};
+	#uiSession = {
+		state : cRubiksCube.#uiStates.ENABLED,
+		ctx : {}
+	};
+	#transition(in_action) {
+		const newState = cRubiksCube.#uiTransitions[this.#uiSession.state]?.[in_action];
+		if (newState) {
+			this.#uiSession.state = newState;
+		} else {
+			throw new Error('invalid transition : ' + in_action);
+		}
+	}
+	uiEnable() {
+		if (this.#uiSession.state !== cRubiksCube.#uiStates.DISABLED) {
+			console.log('state is not DISABLED');
+			return;
+		}
+		this.#transition('enable');
+	}
+	uiDisable() {
+		if (this.#uiSession.state !== cRubiksCube.#uiStates.ENABLED) {
+			console.log('state is not ENABLED');
+			return;
+		}
+		this.#transition('disable');
+	}
+	#uiInitSession() {
+		if (this.#uiSession.ctx.group) {
+			this.#releaseGroup(this.#uiSession.ctx.group);
+		}
+		this.#uiSession.ctx = {};
+	}
+	uiSetInitPosition(in_posV3, in_posV2) {
+		if (this.#uiSession.state !== cRubiksCube.#uiStates.ENABLED) {
+			console.log('state is not ENABLED');
+			return;
+		}
+		this.#uiSession.ctx = {
+			// intersection with a object
+			initPosV3 : in_posV3,
+			// abs value generated from NDC (Normalized Device Coordinates)
+			initPosV2 : in_posV2,
+			// vector from initPosV2
+			initDirV2 : null,
+			// target objects for animation
+			group : null,
+			// current value which will be updated during animation
+			currAmount : 0,
+			// sign which show the direction for animation
+			direction : 0,
+			// rotating animation uses this axis
+			rotationAxis : null,
+			// array of [min, max]
+			movableRange : null,
+		};
+		this.#transition('drag');
+	}
+	uiIsDragging() {
+		return (this.#uiSession.state === cRubiksCube.#uiStates.DRAGGING);
+	}
+	uiIsMoving() {
+		return (this.#uiSession.state === cRubiksCube.#uiStates.MOVING);
+	}
+	static uiSetDeltaPositionRC = {
+		NOOP : Symbol(),
+		// as delta is not enough, need to call uiNotifyDeltaPosition again
+		NOTENOUGH : Symbol(),
+		// though delta is enough, can't make group
+		UNMOVABLE : Symbol(),
+		// as delta is enough, can call uiUpdatePosition
+		MOVABLE : Symbol()
+	};
+	uiNotifyDeltaPosition(in_piece, in_posV3, in_posV2) {
+		const RC = cRubiksCube.uiSetDeltaPositionRC;
+		if (this.#uiSession.state !== cRubiksCube.#uiStates.DRAGGING) {
+			console.log('state is not DRAGGING');
+			return RC.NOOP;
+		}
+		const ctx = this.#uiSession.ctx;
+		const srcYZ = new THREE.Vector2(ctx.initPosV3.y, ctx.initPosV3.z);
+		const dstYZ = new THREE.Vector2(in_posV3.y, in_posV3.z);
+		const rotateDelta = srcYZ.distanceTo(dstYZ);
+		const movingDelta = Math.abs(in_posV3.x - ctx.initPosV3.x);
+		const notEnough = (in_threshold => {
+			return (in_a, in_b) => {
+				return (in_a < in_threshold * in_b) && (in_b < in_threshold * in_a);
+			};
+		})(1.5);
+		if (notEnough(rotateDelta, movingDelta)) {
+			return RC.NOTENOUGH;
+		}
+		let pieces, direction, axis, range;
+		if (rotateDelta > movingDelta) {
+			pieces = this.#affectedRotationPieces(in_piece, cRubiksCube.#axes.x);
+			if (pieces.length < this.children.length) {
+				direction = srcYZ.cross(dstYZ) > 0 ? 1 : -1;
+				axis = cRubiksCube.#axes.x;
+				range = null;
+			} else {
+				return RC.UNMOVABLE;
+			}
+		} else {
+			direction = Math.sign(in_posV3.x - ctx.initPosV3.x);
+			pieces = this.#affectedSlidePieces(in_piece, direction);
+			const amount = this.#slidableDistance(pieces[pieces.length - 1], direction);
+			if (amount !== 0) {
+				axis = null;
+				range = {min : Math.min(0, amount), max : Math.max(0, amount)};
+			} else {
+				return RC.UNMOVABLE;
+			}
+		}
+		this.#transition('movable');
+		ctx.initDirV2 = in_posV2.clone().sub(ctx.initPosV2);
+		ctx.group = this.#setupGroup(pieces);
+		ctx.direction = direction;
+		ctx.rotationAxis = axis;
+		ctx.movableRange = range;
+		return RC.MOVABLE;
+	}
+	uiUpdatePosition(in_posV2) {
+		if (this.#uiSession.state !== cRubiksCube.#uiStates.MOVING) {
+			return;
+		}
+		const ctx = this.#uiSession.ctx;
+		const currentDirV2 = in_posV2.clone().sub(ctx.initPosV2);
+		let prev, next;
+		let amount, notch;
+		if (ctx.rotationAxis) {
+			amount = in_posV2.distanceTo(ctx.initPosV2) * ctx.direction;
+			if (ctx.initDirV2.dot(currentDirV2) > 0) {
+				// currentDirV2 & initDirV2 --> SAME direction
+				amount *= +1;
+			} else {
+				// currentDirV2 & initDirV2 --> OPPOSITE direction
+				const thresholdToStopWarp = Math.PI / 8;
+				if (Math.abs(ctx.currAmount + amount) < thresholdToStopWarp) {
+					amount *= -1;
+				}
+			}
+			this.rotate(ctx.group, ctx.rotationAxis, amount);
+			notch = this.#settingVal.unitAngle;
+		} else {
+			amount = in_posV2.distanceTo(ctx.initPosV2) * ctx.direction * 100;
+			if (amount < ctx.movableRange.min) {
+				amount = ctx.movableRange.min;
+			}
+			if (amount > ctx.movableRange.max) {
+				amount = ctx.movableRange.max;
+			}
+			ctx.group.position.x = amount;
+			notch = Math.abs(ctx.movableRange.min + ctx.movableRange.max);
+		}
+		prev = snapToNotch(ctx.currAmount, notch);
+		next = snapToNotch(amount, notch);
+		ctx.currAmount = amount;
+		// over the top
+		return (prev !== next);
+	}
+	uiRelease(in_ending_callback) {
+		if (this.#uiSession.state === cRubiksCube.#uiStates.DRAGGING) {
+			this.#uiInitSession();
+			this.#transition('release');
+			return null;
+		}
+		if (this.#uiSession.state !== cRubiksCube.#uiStates.MOVING) {
+			return null;
+		}
+		this.#transition('release');
+		const ctx = this.#uiSession.ctx;
+		let notch;
+		if (ctx.rotationAxis) {
+			notch = this.#settingVal.unitAngle;
+		} else {
+			notch = Math.abs(ctx.movableRange.min + ctx.movableRange.max);
+		}
+		const last = snapToNotch(ctx.currAmount, notch);
+		return this.#makeAnimationProgress(ctx.group, ctx.rotationAxis, ctx.currAmount, last, in_ratio => {
+			if (in_ratio < 1) {
+				return;
+			}
+			this.#uiInitSession();
+			this.#transition('stop');
+			(in_ending_callback)();
+			if (!this.#settingVal.shuffled) {
+				// when without shuffled, do nothing
+				return;
+			}
+			this.#settingVal.shuffleCount++;
+			if (this.#settingVal.completeCallback && this.#isComplete()) {
+				(this.#settingVal.completeCallback)(this.#settingVal.shuffleCount);
+			}
+		});
+	}
+}
+
+/*
+	(4) ui & dom setting
+
+	gWorld (cSphericalWorld)
+	|
+	+-- gCube (cRubiksCube)
+		|
+		+-- meshes <--- gMeshLevelMap
+*/
+
+const WORLD_RADIUS = CUBE_SIZE * 10;
+const WORLD_INIT_ZOOM = WORLD_RADIUS / 3;
+
+const gWorld = new cSphericalWorld(WORLD_RADIUS);
+
+const gCube = new cRubiksCube();
+
+gWorld.add(gCube);
+
+gWorld.moveView(2.5, 0.5);
+gWorld.motionZoom2(WORLD_INIT_ZOOM, 1000);
+
+/*
+	*** NOTE ***
+	when you use AxesHelper,
+	// gWorld.add(new THREE.AxesHelper(WORLD_RADIUS));
+	gWorld.setZoom() can not work well.
+*/
+
+class cWarpLine {
+	static #speed = 10;
+	static #gradation = 10;
+	constructor(in_canvas) {
+		const w = in_canvas.width;
+		const h = in_canvas.height;
+		this.ctx = in_canvas.getContext('2d');
+		this.box = new THREE.Box2(
+			new THREE.Vector2(0, 0),
+			new THREE.Vector2(w, h)
+		);
+		this.from = new THREE.Vector2(w / 2, h / 2);
+		this.#reset();
+	}
+	#reset() {
+		const angle = Math.random() * Math.PI * 2;
+		this.direction = new THREE.Vector2(Math.cos(angle), Math.sin(angle));
+		this.speed = Math.random() * cWarpLine.#speed + 5;
+		this.length = 0;
+	}
+	#curVec(in_scalar) {
+		return this.from.clone().add(this.direction.clone().multiplyScalar(in_scalar));
+	}
+	#drawGrayLine(in_from, in_to, in_grayScale) {
+		const gray = (in_grayScale << 16) | (in_grayScale << 8) | in_grayScale;
+		this.ctx.strokeStyle = '#' + gray.toString(16).padStart(6, '0');
+		this.ctx.beginPath();
+		this.ctx.moveTo(in_from.x, in_from.y);
+		this.ctx.lineTo(in_to.x, in_to.y);
+		this.ctx.stroke();
+	}
+	update() {
+		this.length += this.speed;
+		const to = this.#curVec(this.length);
+		if (this.box.containsPoint(to)) {
+			const notch = this.length / cWarpLine.#gradation;
+			for (let i = 0; i < cWarpLine.#gradation; i++) {
+				this.#drawGrayLine(
+					this.#curVec(notch * i),
+					this.#curVec(notch * (i + 1)),
+					255 / cWarpLine.#gradation * (i + 1)
+				);
+			}
+		} else {
+			/*
+				*** NOTE ***
+				even if overwritung using black,
+				this.#drawGrayLine(this.from, to, 0x00);
+				smudge of white line will remain.
+			*/
+			this.#reset();
+		}
+	}
+}
+
+function warpViewProgress(in_canvas, in_lineCount) {
+	const warpLines = [];
+	for (let i = 0; i < in_lineCount; i++) {
+		warpLines.push(new cWarpLine(in_canvas));
+	}
+	return () => {
+		warpLines.forEach(in_line => {
+			in_line.update();
+		});
+	}
+}
+
+function complete() {
+	const progress = warpViewProgress(gBackgroundCanvas, 50);
+	gWorld.addAnimationHook(progress);
+	const duration = 2000;
+	gWorld.motionZoom2(WORLD_RADIUS * 1.5, duration * 0.9);
+	window.setTimeout(() => {
+		gWorld.removeAnimationHook(progress);
+		gCube.removeCompleteCallback();
+		const dialog = document.createElement('div');
+		Object.assign(dialog.style, {
+			width : 'auto',
+			height : 'auto',
+			background : 'black',
+			borderRadius : '1em',
+			padding : '1.5em'
+		});
+		([
+			'<div>Congratulation !!</div>',
+			'<div>( Your score is : ' + gCube.getScore() + ' )</div>',
+			'<div>Thanks to your wisdom, peace in the universe has been preserved.</div>',
+			'<div>Click to go next stage.</div>',
+		]).forEach(in_fragment => {
+			dialog.innerHTML += in_fragment;
+		});
+		setTransition(dialog, 'color 0.5s ease-out', 'gray', 'white');
+		startDialog(dialog, () => {
+			drawCosmicView(gBackgroundCanvas, 400, 50);
+			gWorld.motionZoom2(WORLD_INIT_ZOOM, 1000);
+		});
+		nextLevel(false);
+	}, duration);
+}
+
+/*
+	*** NOTE ***
+	in Safari, using await to get audio will cause the process to fail.
+	I'm not sure of the reason, but top-level await might be the cause.
+	this time use then() to avoid the issue.
+*/
+
+let SE_BEEP = beep(2000);
+let SE_DUMMY = beep(10);
+let SE_MOVED = SE_BEEP;
+let SE_ERROR = SE_BEEP;
+
+SOUND.MOVED.then(in_decompress => {
+	SE_MOVED = new Audio('data:audio/mpeg;base64,' + in_decompress);
+});
+
+SOUND.ERROR.then(in_decompress => {
+	SE_ERROR = new Audio('data:audio/mpeg;base64,' + in_decompress);
+});
+
+function shuffle(in_count) {
+	const randomAnimation = (in_remaining_count) => {
+		let overTheTop = false;
+		const callback = (in_ratio) => {
+			if ((in_ratio > 0.4) && !overTheTop) {
+				SE_MOVED.play();
+				overTheTop = true;
+			}
+			if (in_ratio < 1) {
+				return;
+			}
+			gWorld.removeAnimationHook(progress);
+			if (in_remaining_count > 1) {
+				(randomAnimation)(in_remaining_count - 1);
+			} else {
+				gWorld.stopRotation();
+				gCube.uiEnable();
+			}
+		};
+		const progress = gCube.makeRandomAnimationProgress(callback);
+		gWorld.addAnimationHook(progress);
+	};
+	gCube.registerCompleteCallback(complete);
+	gCube.uiDisable();
+	gWorld.startRotation(VEC3().random().multiplyScalar(0.05));
+	(randomAnimation)(in_count);
+}
+
+function setTransition(in_elem, in_shorthand, in_val1, in_val2) {
+	const components = in_shorthand.split(/\s+/);
+	in_elem.style.transition = in_shorthand;
+	in_elem.style[components[0]] = in_val1;
+	window.setTimeout(() => {
+		/*
+			*** NOTE ***
+			to fire the transition function,
+			the final style should be set in the next event loop.
+		*/
+		in_elem.style[components[0]] = in_val2;
+	}, 0);
+}
+
+function startDialog(in_element, in_callback = null) {
+	const maxInt = 2 ** 31 - 1;
+	const background = document.createElement('div');
+	Object.assign(background.style, {
+		position : 'fixed',
+		left : '0px',
+		top : '0px',
+		width : '100%',
+		height : '100%',
+		zIndex : maxInt
+	});
+	background.appendChild(in_element);
+	Object.assign(in_element.style, {
+		position : 'absolute',
+		left : '50%',
+		top : '50%',
+		transform : 'translate(-50%, -50%)'
+	});
+	document.body.appendChild(background);
+	const closeDialog = () => {
+		document.body.removeChild(background);
+		if (in_callback) {
+			(in_callback)();
+		}
+	};
+	background.addEventListener('mousedown', closeDialog);
+	background.addEventListener('touchstart', closeDialog);
+}
+
+function shuffle3() {
+	shuffle(3);
+}
+
+function shuffle10() {
+	shuffle(10);
+}
+
+function uiHelp() {
+	const url = {
+		ver : './version.txt',
+		im1 : 'https://pj-corridor.net/images/cube-2-03.png',
+		im2 : 'https://pj-corridor.net/images/diamond-2-4.png',
+		im3 : 'https://pj-corridor.net/images/cube-6-03.png',
+		im4 : 'https://pj-corridor.net/images/diamond-6-4.png',
+		src : 'https://github.com/nakayama-kazuki/202x/commit/'
+	};
+	const dialog = document.createElement('div');
+	Object.assign(dialog.style, {
+		width : 'auto',
+		height : 'auto',
+		background : 'white',
+		borderRadius : '1em',
+		padding : '1em'
+	});
+	dialog.innerHTML += '<div>';
+	[url.im1, url.im2, url.im3, url.im4].forEach(in_img => {
+		dialog.innerHTML += '<img width="100" src="' + in_img + '" />';
+	});
+	dialog.innerHTML += '</div>';
+	const verLabel = document.createElement('div');
+	Object.assign(verLabel.style, {
+		textAlign : 'right'
+	});
+	dialog.appendChild(verLabel);
+	getVersion(url.ver).then(in_hash => {
+		verLabel.innerHTML = 'version : <a href="' + url.src + in_hash + '">' + in_hash.substring(0, 7) + '</a>';
+		verLabel.addEventListener('mousedown', in_e => in_e.stopPropagation());
+		verLabel.addEventListener('touchstart', in_e => in_e.stopPropagation());
+	}).catch(in_err => {
+	    console.log(in_err);
+		verLabel.innerHTML = 'version : unknown';
+	});
+	startDialog(dialog);
+}
+
+function uiRights() {
+	const dialog = document.createElement('dl');
+	Object.assign(dialog.style, {
+		width : '30%',
+		height : 'auto',
+		background : 'black',
+		borderRadius : '1em',
+		padding : '1.5em'
+	});
+	([
+		'<dt>Rights</dt>',
+		'<dd>This software is based on MIT License.</dd>',
+		'<dd>The code can be freely modified and reused.</dd>',
+		'<dd>For full license details, please refer to :</dd>',
+		'<dd>https://opensource.org/licenses/MIT</dd>',
+		'<dt>Donations</dt>',
+		'<dd>While the use of images generated by this software is completely free, donations are welcome and greatly appreciated.</dd>',
+		'<dd>If you would like to support the development of this software, please consider making a donation using the QR code below (TBD).</dd>'
+	]).forEach(in_fragment => {
+		dialog.innerHTML += in_fragment;
+	});
+	setTransition(dialog, 'color 0.5s ease-out', 'gray', 'white')
+	startDialog(dialog);
+}
+
+const ID_PREV_LEVEL = randomString();
+const ID_NEXT_LEVEL = randomString();
+
+function updateLevelText() {
+	const prev = gMeshLevelMap.prevItemByOrder(gMeshCurrentLevel);
+	const next = gMeshLevelMap.nextItemByOrder(gMeshCurrentLevel);
+	document.getElementById(ID_PREV_LEVEL).innerText = prev.k;
+	document.getElementById(ID_NEXT_LEVEL).innerText = next.k;
+}
+
+async function changeLevel(in_delta) {
+	const color = 0x000000;
+	await gWorld.motionFog(color, 0, 100);
+	gMeshCurrentLevel = (gMeshCurrentLevel + in_delta + gMeshLevelMap.size) % gMeshLevelMap.size;
+	gCube.removePieces();
+	const current = gMeshLevelMap.currItemByOrder(gMeshCurrentLevel);
+	gCube.addPieces(current.v);
+	await gWorld.motionFog(color, 100, 0);
+	updateLevelText();
+}
+
+function prevLevel(in_sound = true) {
+	if (in_sound) {
+		SE_BEEP.play();
+	}
+	changeLevel(-1);
+}
+
+function nextLevel(in_sound = true) {
+	if (in_sound) {
+		SE_BEEP.play();
+	}
+	changeLevel(+1);
+}
+
+(in_settings => {
+	let container = document.createElement('div');
+	Object.assign(container.style, {
+		position : 'absolute',
+		left : '5%',
+		top : '5%'
+	});
+	document.body.appendChild(container);
+	in_settings.forEach(in_setting => {
+		let button = document.createElement('button');
+		if (in_setting.id) {
+			button.id = in_setting.id;
+		}
+		if (in_setting.text) {
+			button.innerText = in_setting.text;
+		}
+		button.addEventListener('click', in_setting.func);
+		Object.assign(button.style, {
+			margin : '1.5px 1.5px 1.5px 1.5px',
+			borderRadius : '3px',
+			border : '1px solid gray'
+		});
+		container.appendChild(button);
+	});
+})([
+	{
+		id : ID_PREV_LEVEL,
+		text : '(Prev)',
+		func : prevLevel
+	},
+	{
+		id : ID_NEXT_LEVEL,
+		text : '(Next)',
+		func : nextLevel
+	},
+	{
+		text : 'shuffle x3',
+		func : shuffle3
+	},
+	{
+		text : 'shuffle x10',
+		func : shuffle10
+	},
+	{
+		text : 'help',
+		func : uiHelp
+	},
+	{
+		text : 'rights',
+		func : uiRights
+	}
+]);
+
+changeLevel(0);
+
+function hex2rgb(in_hex) {
+	const mask = 0xFF;
+	const r = (in_hex >> 16) & mask;
+	const g = (in_hex >> 8) & mask;
+	const b = in_hex & mask;
+	return [r, g, b];
+}
+
+function drawCosmicView(in_canvas, in_stars, in_nebulae_patterns, in_color = 0x000064) {
+	const ctx = in_canvas.getContext('2d');
+	const w = in_canvas.width;
+	const h = in_canvas.height;
+	ctx.fillStyle = 'black';
+	ctx.fillRect(0, 0, w, h);
+	for (let i = 0; i < in_nebulae_patterns; i++) {
+		const x = Math.random() * w;
+		const y = Math.random() * h;
+		const radius = Math.random() * 100 + 50;
+		const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+		const rgb = hex2rgb(in_color);
+		gradient.addColorStop(0, 'rgba('+ rgb[0] +', '+ rgb[1] +', '+ rgb[2] +', 0.5)');
+		gradient.addColorStop(1, 'rgba('+ rgb[0] +', '+ rgb[1] +', '+ rgb[2] +', 0)');
+		ctx.beginPath();
+		ctx.arc(x, y, radius, 0, Math.PI * 2, false);
+		ctx.fillStyle = gradient;
+		ctx.fill();
+	}
+	for (let i = 0; i < in_stars; i++) {
+		const x = Math.random() * w;
+		const y = Math.random() * h;
+		const radius = Math.random() * 1;
+		ctx.beginPath();
+		ctx.arc(x, y, radius, 0, Math.PI * 2, false);
+		ctx.fillStyle = 'white';
+		ctx.fill();
+	}
+}
+
+const gBackgroundCanvas = document.createElement('CANVAS');
+
+Object.assign(gBackgroundCanvas.style, {
+	position : 'absolute',
+	left : 0,
+	top : 0,
+	zIndex : -1
+});
+
+document.addEventListener('DOMContentLoaded', (() => {
+	let resizeWorld = in_ev => {
+		gWorld.resize(
+			window.innerWidth,
+			window.innerHeight);
+		gBackgroundCanvas.width = window.innerWidth;
+		gBackgroundCanvas.height = window.innerHeight;
+		drawCosmicView(gBackgroundCanvas, 400, 50);
+	};
+	window.addEventListener('resize', debouncing(resizeWorld, 300));
+	window.dispatchEvent(new Event('resize'));
+	if (!document.body) {
+		document.documentElement.appendChild(document.createElement('BODY'));
+	}
+	Object.assign(document.body.style, {
+		margin : '0',
+		overflow : 'hidden'
+	});
+	document.body.appendChild(gWorld.canvas);
+	document.body.appendChild(gBackgroundCanvas);
+	gWorld.start();
+}));
+
+/*
+	(5) event handlers
+*/
+
+const knock = nonReentrantAsync(async () => {
+	SE_ERROR.play();
+	await gWorld.motionKnock();
+});
+
+const notifyDelta = (() => {
+	const RC = cRubiksCube.uiSetDeltaPositionRC;
+	return in_ndc => {
+		const intersects = gWorld.intersectPositive(in_ndc);
+		if (intersects.length === 0) {
+			return;
+		}
+		const result = gCube.uiNotifyDeltaPosition(intersects[0].object, intersects[0].point, ndcToAbs(in_ndc));
+		if (result === RC.UNMOVABLE) {
+			knock();
+		}
+	}
+})();
+
+function colorUtil(in_target, in_index, in_callback) {
+	const colors = [];
+	for (let i = 0; i < in_target.material.length; i++) {
+		const hex = in_target.material[i].color.getHex();
+		if ((in_index < 0) || (i === in_index)) {
+			colors.push(in_callback(hex));
+		} else {
+			colors.push(hex);
+		}
+	}
+	const setting = in_target.geometry.parameters;
+	const materials = shellMaterials(setting.size, colors, DARKGRAY);
+	materials.push(edgeMaterial);
+	/*
+		*** NOTE ***
+		materials created by boxMaterials are cached using cCache.
+		therefore, you don't need to worry about memory leaks without calling dispose().
+	*/
+	in_target.material = materials;
+}
+
+function highlight(in_target, in_index, in_alpha) {
+	colorUtil(in_target, in_index, in_currHex => {
+		return (new THREE.Color(in_currHex)).lerp(new THREE.Color(0xFFFFFF), in_alpha).getHex();
+	});
+}
+
+function highlightAll(in_target, in_alpha) {
+	highlight(in_target, -1, in_alpha);
+}
+
+function changeColor(in_target, in_index, in_nextHex) {
+	colorUtil(in_target, in_index, in_currHex => {
+		return in_nextHex;
+	});
+}
+
+function changeColorAll(in_target, in_nextHex) {
+	changeColor(in_target, -1, in_nextHex);
+}
+
+const setFocus = (() => {
+	const c = {
+		prev : null,
+		materials : []
+	};
+	return in_ndc => {
+		let intersects = gWorld.intersectPositive(in_ndc);
+		if (intersects.length === 0) {
+			if (c.prev) {
+				c.prev.target.material = c.materials;
+				/*
+					*** NOTE ***
+					as materials made by boxMaterials will be cached using cCache,
+					you don't need to call dispose() when mouseout.
+				*/
+				c.materials = [];
+				c.prev = null;
+			}
+			return;
+		}
+		const currTarget = intersects[0].object;
+		// assume that each face is composed of two faces
+		const currSurface = Math.floor(intersects[0].faceIndex / 2);
+		if (currSurface >= Object.keys(DIRECTION).length) {
+			// faces included in the edge
+			return;
+		}
+		if (c.prev) {
+			if ((c.prev.target === currTarget) && (c.prev.surface === currSurface)) {
+				return;
+			} else {
+				c.prev.target.material = c.materials;
+			}
+		}
+		c.prev = {
+			target : currTarget,
+			surface : currSurface
+		};
+		c.materials = currTarget.material;
+		const alpha = 0.3;
+		highlight(currTarget, currSurface, alpha);
+	}
+})();
+
+function resetFocus() {
+	const outOfRange = new THREE.Vector2(Infinity, Infinity);
+	setFocus(outOfRange);
+}
+
+function choose(in_ev) {
+	const ndc = ndcFromEvent(in_ev);
+	let intersects = gWorld.intersectPositive(ndc);
+	if (intersects.length === 0) {
+		return;
+	}
+	knock();
+}
+
+const gHandlers = (() => {
+	const c = {
+		x : -1,
+		y : -1,
+		once : false
+	};
+	const start = in_ev => {
+		if (!c.once) {
+			/*
+				*** NOTE ***
+				Safari may restrict sound without user interaction.
+				because of this, the sound does not work without this code.
+			*/
+			SE_DUMMY.play();
+			c.once = true;
+		}
+		const ndc = ndcFromEvent(in_ev);
+		const intersects = gWorld.intersectPositive(ndc);
+		if (intersects.length === 0) {
+			return;
+		}
+		c.x = in_ev.clientX;
+		c.y = in_ev.clientY;
+		gCube.uiSetInitPosition(intersects[0].point, ndcToAbs(ndc));
+	};
+	const move = thresholding(in_ev => {
+		c.x = -1;
+		c.y = -1;
+		const ndc = ndcFromEvent(in_ev);
+		if (gCube.uiIsMoving()) {
+			if (gCube.uiUpdatePosition(ndcToAbs(ndc))) {
+				SE_MOVED.play();
+			}
+		} else {
+			if (gCube.uiIsDragging()) {
+				notifyDelta(ndc);
+			} else {
+				if (!in_ev[isEmulated]) {
+					// setFocus(ndc);
+				}
+			}
+		}
+	});
+	const stop = in_ev => {
+		const releaseProgress = gCube.uiRelease(() => {
+			gWorld.removeAnimationHook(releaseProgress);
+		});
+		if (releaseProgress) {
+			gWorld.addAnimationHook(releaseProgress);
+		} else {
+			if ((c.x !== in_ev.clientX) || (c.y !== in_ev.clientY)) {
+				return;
+			}
+			choose(in_ev);
+		}
+	};
+	return {
+		'mousedown' : start,
+		'mousemove' : move,
+		'mouseleave' : stop,
+		'mouseout' : stop,
+		'mouseup' : stop
+	};
+})();
+
+let gEnableHandlers = true;
+
+for (let [name, func] of Object.entries(gHandlers)) {
+	gWorld.canvas.addEventListener(name, in_ev => {
+		if (gEnableHandlers) {
+			(func.bind(this))(in_ev)
+		}
+	});
+}
+
+</script>
+</body>
+</html>
