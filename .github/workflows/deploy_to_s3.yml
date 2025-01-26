@@ -13,6 +13,7 @@ on:
       - 'pj-corridor.net/personalitytest/**'
       - 'pj-corridor.net/gallery-256/**'
       - 'pj-corridor.net/gallery-fullcolor/**'
+      - 'pj-corridor.net/side-six/**'
 
 jobs:
   deploy:
@@ -25,6 +26,7 @@ jobs:
       APPL3PATH: pj-corridor.net/personalitytest/
       GA256PATH: pj-corridor.net/gallery-256/
       GAFULPATH: pj-corridor.net/gallery-fullcolor/
+      APPL4PATH: pj-corridor.net/side-six/
     steps:
     - name: checkout
       uses: actions/checkout@v4
@@ -77,6 +79,12 @@ jobs:
       if: contains(env.FILES, env.GAFULPATH)
       run: |
         aws s3 sync ${{ env.GAFULPATH }} s3://pj-corridor.net/gallery-fullcolor/ --exclude ".git/*"
+    - name: sync-7
+      if: contains(env.FILES, env.APPL4PATH)
+      run: |
+        echo "${{ github.sha }}" > "version.txt"
+        aws s3 cp version.txt s3://pj-corridor.net/side-six/version.txt
+        aws s3 sync ${{ env.APPL4PATH }} s3://pj-corridor.net/side-six/ --exclude ".git/*"
     - name: clear cache
       run: |
         aws cloudfront create-invalidation --distribution-id ${{ secrets.AWS_CLOUDFRONT_DISTRIBUTION }} --paths "/*"
