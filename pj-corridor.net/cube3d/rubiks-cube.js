@@ -100,14 +100,14 @@ export class cRubiksCube extends THREE.Object3D {
 		this.#settingKey = pseudoMessageDigest1(uuids);
 		if (!this.#settingVal.initialized) {
 			this.#settingVal.completeCallback = null;
-			this.#settingVal.rotationCount = 0;
+			this.#settingVal.shuffleCount = 0;
 			this.#settingVal.shuffled = false;
 			this.#settingVal.initialized = true;
 		}
 	}
 	getScore() {
 		const max = 100;
-		return Math.max(Math.ceil((max - this.#settingVal.rotationCount) / 10) * 10, 0);
+		return Math.max(Math.ceil((max - this.#settingVal.shuffleCount) / 10) * 10, 0);
 	}
 	#isSurface(in_piece, in_surface, in_scale = 1000) {
 		const far = VEC3();
@@ -427,27 +427,34 @@ export class cRubiksCube extends THREE.Object3D {
 		this.#transition('disable');
 	}
 	#uiInitSession() {
-		if (this.#uiSession.ctx.movingGroup) {
-			this.#releaseGroup(this.#uiSession.ctx.movingGroup);
+		if (this.#uiSession.ctx.group) {
+			this.#releaseGroup(this.#uiSession.ctx.group);
 		}
 		this.#uiSession.ctx = {};
 	}
 	uiSetInitPosition(in_surfaceV3, in_posV3, in_posV2) {
-		// in_posV3 : intersection with a object
-		// in_posV2 : abs value generated from NDC (Normalized Device Coordinates)
 		if (this.#uiSession.state !== cRubiksCube.#uiStates.ENABLED) {
 			console.log('state is not ENABLED');
 			return;
 		}
 		this.#uiSession.ctx = {
+			// intersection with a object
 			initPosV3 : in_posV3,
+			// abs value generated from NDC (Normalized Device Coordinates)
 			initPosV2 : in_posV2,
+			// vector from initPosV2
 			initDirV2 : null,
-			movingGroup : null,
-			movingAmount : 0,
-			movingDir : 0,
+			// target objects for animation
+			group : null,
+			// current value which will be updated during animation
+			currAmount : 0,
+			// sign which show the direction for animation
+			direction : 0,
+			// rotating animation uses this axis
 			rotationAxis : null,
+			// the surface (one of 6 kinds of vectors) with which user interacts
 			surfaceV3 : in_surfaceV3,
+			// currAmount will be snapped using this function
 			amountSnap : null
 		};
 		this.#transition('drag');
@@ -468,8 +475,6 @@ export class cRubiksCube extends THREE.Object3D {
 		MOVABLE : Symbol()
 	};
 	uiNotifyDeltaPosition(in_piece, in_posV3, in_posV2) {
-		// in_posV3 : intersection with a object
-		// in_posV2 : abs value generated from NDC (Normalized Device Coordinates)
 		const RC = cRubiksCube.uiSetDeltaPositionRC;
 		if (this.#uiSession.state !== cRubiksCube.#uiStates.DRAGGING) {
 			console.log('state is not DRAGGING');
@@ -486,12 +491,12 @@ export class cRubiksCube extends THREE.Object3D {
 		const pieces = this.affectedPieces(in_piece, axis);
 		if (pieces.length < this.children.length) {
 			this.#transition('movable');
-			ctx.movingGroup = this.#setupGroup(pieces);
+			ctx.group = this.#setupGroup(pieces);
 			// use Vector3(1, 1, 1) to extruct +1 or -1
-			ctx.movingDir = moving.rotationAxis.dot(VEC3(1, 1, 1));
+			ctx.direction = moving.rotationAxis.dot(VEC3(1, 1, 1));
 			ctx.rotationAxis = axis;
 			// angle should be Math.PI or Math.PI / 2
-			if (cRubiksCube.#rotatableAngle(ctx.movingGroup, ctx.rotationAxis) === Math.PI) {
+			if (cRubiksCube.#rotatableAngle(ctx.group, ctx.rotationAxis) === Math.PI) {
 				ctx.amountSnap = snapToPI;
 			} else {
 				ctx.amountSnap = snapTo05PI;
@@ -503,13 +508,12 @@ export class cRubiksCube extends THREE.Object3D {
 		}
 	}
 	uiUpdatePosition(in_posV2) {
-		// in_posV2 : abs value generated from NDC (Normalized Device Coordinates)
 		if (this.#uiSession.state !== cRubiksCube.#uiStates.MOVING) {
 			return;
 		}
 		const ctx = this.#uiSession.ctx;
 		const currentDirV2 = in_posV2.clone().sub(ctx.initPosV2);
-		let rad = in_posV2.distanceTo(ctx.initPosV2) * ctx.movingDir;
+		let rad = in_posV2.distanceTo(ctx.initPosV2) * ctx.direction;
 		if (ctx.amountSnap === snapToPI) {
 			rad *= 2;
 		}
@@ -519,7 +523,7 @@ export class cRubiksCube extends THREE.Object3D {
 		} else {
 			// currentDirV2 & initDirV2 --> OPPOSITE direction
 			const thresholdToStopWarp = Math.PI / 8;
-			if (Math.abs(ctx.movingAmount + rad) < thresholdToStopWarp) {
+			if (Math.abs(ctx.currAmount + rad) < thresholdToStopWarp) {
 				rad *= -1;
 			}
 		}
@@ -528,9 +532,9 @@ export class cRubiksCube extends THREE.Object3D {
 			if using rotateOnAxis() several times, small errors will be expanded.
 			if making group every time too, the same issue will happen.
 		*/
-		this.rotate(ctx.movingGroup, ctx.rotationAxis, rad);
-		const overTheTop = ((ctx.amountSnap)(rad) != (ctx.amountSnap)(ctx.movingAmount));
-		ctx.movingAmount = rad;
+		this.rotate(ctx.group, ctx.rotationAxis, rad);
+		const overTheTop = ((ctx.amountSnap)(rad) != (ctx.amountSnap)(ctx.currAmount));
+		ctx.currAmount = rad;
 		// if true, caller may show some effects.
 		return overTheTop;
 	}
@@ -545,9 +549,9 @@ export class cRubiksCube extends THREE.Object3D {
 		}
 		this.#transition('release');
 		const ctx = this.#uiSession.ctx;
-		const startRad = ctx.movingAmount;
-		const finalRad = (ctx.amountSnap)(ctx.movingAmount);
-		return this.#makeRotationProgress(ctx.movingGroup, ctx.rotationAxis, startRad, finalRad, in_ratio => {
+		const startRad = ctx.currAmount;
+		const finalRad = (ctx.amountSnap)(ctx.currAmount);
+		return this.#makeRotationProgress(ctx.group, ctx.rotationAxis, startRad, finalRad, in_ratio => {
 			if (in_ratio < 1) {
 				return;
 			}
@@ -558,9 +562,9 @@ export class cRubiksCube extends THREE.Object3D {
 				// when without shuffled, do nothing
 				return;
 			}
-			this.#settingVal.rotationCount++;
+			this.#settingVal.shuffleCount++;
 			if (this.#settingVal.completeCallback && this.#isComplete()) {
-				(this.#settingVal.completeCallback)(this.#settingVal.rotationCount);
+				(this.#settingVal.completeCallback)(this.#settingVal.shuffleCount);
 			}
 		});
 	}
