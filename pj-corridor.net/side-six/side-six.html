@@ -122,15 +122,18 @@ const surfaceFactory = factoryBuilder((in_color, in_size = -1) => {
 	return material;
 });
 
+const SHELL_COLOR_INDEX = 2;
+
 function shellMaterials(in_size, in_color_main, in_color_back) {
-	return [
-		surfaceFactory.create(in_color_back),
-		surfaceFactory.create(in_color_back),
-		surfaceFactory.create(in_color_main, in_size),
-		surfaceFactory.create(in_color_back),
-		surfaceFactory.create(in_color_back),
-		surfaceFactory.create(in_color_back)
-	];
+	const materials = [];
+	for (let i = 0; i < Object.keys(DIRECTION).length; i++) {
+		if (i === SHELL_COLOR_INDEX) {
+			materials.push(surfaceFactory.create(in_color_main, in_size));
+		} else {
+			materials.push(surfaceFactory.create(in_color_back));
+		}
+	}
+	return materials;
 }
 
 const shellGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickness) => {
@@ -147,9 +150,8 @@ const shellGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thicknes
 	return geometry;
 });
 
-const DARKGRAY = 0x222222;
-const LIGHTGRAY = 0x555555;
-const HIGHLIGHT = 0x888888;
+const DARKGRAY1 = 0x222222;
+const DARKGRAY2 = 0x252525;
 
 const ORANGE = 0xFFAA00;
 const RED = 0xFF0000;
@@ -160,7 +162,7 @@ const GREEN = 0x118811;
 const LIGHTBLUE = 0x5588FF;
 const LIGHTGREEN = 0x55CC55;
 
-const EDGECOLOR = DARKGRAY;
+const EDGECOLOR = DARKGRAY1;
 
 const edgeMaterial = new THREE.MeshLambertMaterial({color : EDGECOLOR});
 
@@ -210,13 +212,17 @@ const gMeshLevelMap = ((in_diameter) => {
 		{
 			dim : 7,
 			dmz : [
-				[0, 6]
+				[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6],
+				[1, 6],
+				[6, 0], [6, 1], [6, 2], [6, 3], [6, 4], [6, 5], [6, 6]
 			]
 		},
 		{
 			dim : 8,
 			dmz : [
-				[0, 7]
+				[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6], [0, 7],
+				[1, 7],
+				[7, 0], [7, 1], [7, 2], [7, 3], [7, 4], [7, 5], [7, 6], [7, 7]
 			]
 		},
 	];
@@ -238,7 +244,7 @@ const gMeshLevelMap = ((in_diameter) => {
 						continue;
 					}
 				}
-				const materials = shellMaterials(unitSize, colors[j], EDGECOLOR);
+				const materials = shellMaterials(unitSize, colors[j], DARKGRAY2);
 				materials.push(edgeMaterial);
 				const piece = new THREE.Mesh(geometry, materials);
 				pivot.add(piece);
@@ -354,14 +360,13 @@ class cRubiksCube extends THREE.Object3D {
 	}
 
 	#isComplete() {
-		const colorIndex = 2;
 		// the same color appears at the same angle
 		const arrR = this.#approximateArrR();
 		const checkR = arrR.every(in_r => {
 			let start = -1;
 			return this.children.every(in_child => {
 				const r = Math.atan2(in_child.position.z, in_child.position.y);
-				const current = in_child.material[colorIndex].color.getHex();
+				const current = in_child.material[SHELL_COLOR_INDEX].color.getHex();
 				if (Math.abs(in_r - r) < cRubiksCube.error) {
 					if (start < 0) {
 						start = current;
@@ -382,7 +387,7 @@ class cRubiksCube extends THREE.Object3D {
 			let start = -1;
 			return this.children.every(in_child => {
 				const x = in_child.position.x
-				const current = in_child.material[colorIndex].color.getHex();
+				const current = in_child.material[SHELL_COLOR_INDEX].color.getHex();
 				if (Math.abs(in_x - x) < cRubiksCube.error) {
 					if (start < 0) {
 						start = current;
@@ -1296,7 +1301,7 @@ function colorUtil(in_target, in_index, in_callback) {
 		}
 	}
 	const setting = in_target.geometry.parameters;
-	const materials = shellMaterials(setting.size, colors, DARKGRAY);
+	const materials = shellMaterials(setting.size, colors, DARKGRAY2);
 	materials.push(edgeMaterial);
 	/*
 		*** NOTE ***
