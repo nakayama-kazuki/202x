@@ -136,8 +136,13 @@ function shellMaterials(in_size, in_color_main, in_color_back) {
 	return materials;
 }
 
-function getShellColor(in_material) {
-	return in_material[SHELL_COLOR_INDEX].color.getHex();
+function getShellColor(in_object) {
+	return in_object.material[SHELL_COLOR_INDEX].color.getHex();
+}
+
+function setShellColor(in_object, in_color) {
+	const setting = in_object.geometry.parameters;
+	return in_object.material[SHELL_COLOR_INDEX] = surfaceFactory.create(in_color, setting.size);
 }
 
 const shellGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickness) => {
@@ -373,7 +378,7 @@ class cRubiksCube extends THREE.Object3D {
 			results.push(arr.every(in_e => {
 				let firstColor;
 				return this.children.every(in_child => {
-					const currentColor = getShellColor(in_child.material);
+					const currentColor = getShellColor(in_child);
 					if (Math.abs(in_e - in_evaluator(in_child)) < cRubiksCube.error) {
 						if (typeof firstColor === 'undefined') {
 							firstColor = currentColor;
@@ -1277,88 +1282,37 @@ const notifyDelta = (() => {
 	}
 })();
 
-function colorUtil(in_target, in_index, in_callback) {
-	const colors = [];
-	for (let i = 0; i < in_target.material.length; i++) {
-		const hex = in_target.material[i].color.getHex();
-		if ((in_index < 0) || (i === in_index)) {
-			colors.push(in_callback(hex));
-		} else {
-			colors.push(hex);
-		}
-	}
-	const setting = in_target.geometry.parameters;
-	const materials = shellMaterials(setting.size, colors, DARKGRAY2);
-	materials.push(edgeMaterial);
-	/*
-		*** NOTE ***
-		materials created by boxMaterials are cached using cCache.
-		therefore, you don't need to worry about memory leaks without calling dispose().
-	*/
-	in_target.material = materials;
-}
-
-function highlight(in_target, in_index, in_alpha) {
-	colorUtil(in_target, in_index, in_currHex => {
-		return (new THREE.Color(in_currHex)).lerp(new THREE.Color(0xFFFFFF), in_alpha).getHex();
-	});
-}
-
-function highlightAll(in_target, in_alpha) {
-	highlight(in_target, -1, in_alpha);
-}
-
-function changeColor(in_target, in_index, in_nextHex) {
-	colorUtil(in_target, in_index, in_currHex => {
-		return in_nextHex;
-	});
-}
-
-function changeColorAll(in_target, in_nextHex) {
-	changeColor(in_target, -1, in_nextHex);
-}
-
 const setFocus = (() => {
-	const c = {
-		prev : null,
-		materials : []
-	};
+	let prev = null;
 	return in_ndc => {
 		let intersects = gWorld.intersectPositive(in_ndc);
 		if (intersects.length === 0) {
-			if (c.prev) {
-				c.prev.target.material = c.materials;
+			if (prev) {
+				setShellColor(prev, prev.userData.original);
 				/*
 					*** NOTE ***
 					as materials made by boxMaterials will be cached using cCache,
 					you don't need to call dispose() when mouseout.
 				*/
-				c.materials = [];
-				c.prev = null;
+				delete prev.userData.original;
+				prev = null;
 			}
 			return;
 		}
-		const currTarget = intersects[0].object;
+		const curr = intersects[0].object;
 		// assume that each face is composed of two faces
-		const currSurface = Math.floor(intersects[0].faceIndex / 2);
-		if (currSurface >= Object.keys(DIRECTION).length) {
-			// faces included in the edge
-			return;
-		}
-		if (c.prev) {
-			if ((c.prev.target === currTarget) && (c.prev.surface === currSurface)) {
+		if (prev) {
+			if (prev === curr) {
 				return;
 			} else {
-				c.prev.target.material = c.materials;
+				setShellColor(prev, prev.userData.original);
 			}
 		}
-		c.prev = {
-			target : currTarget,
-			surface : currSurface
-		};
-		c.materials = currTarget.material;
-		const alpha = 0.3;
-		highlight(currTarget, currSurface, alpha);
+		prev = curr;
+		prev.userData.original = getShellColor(curr);
+		const color = new THREE.Color(prev.userData.original);
+		const highlight = 0.3;
+		setShellColor(curr, color.lerp(new THREE.Color(0xFFFFFF), highlight).getHex());
 	}
 })();
 
