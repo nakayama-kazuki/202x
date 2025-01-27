@@ -289,9 +289,7 @@ if (gMeshCurrentLevel === false) {
 	(3) Puzzle related functions
 */
 
-//cCylinderPuzzle
-
-class cRubiksCube extends THREE.Object3D {
+class cCylinderPuzzle extends THREE.Object3D {
 	static error = 0.01;
 	static #axes = {
 		x : VEC3(1, 0, 0),
@@ -299,8 +297,8 @@ class cRubiksCube extends THREE.Object3D {
 		z : VEC3(0, 0, 1)
 	};
 	static axisComponent(in_axis, in_match = true) {
-		const props = Object.keys(cRubiksCube.#axes).filter(in_key => {
-			const equal = cRubiksCube.#axes[in_key].equals(in_axis);
+		const props = Object.keys(cCylinderPuzzle.#axes).filter(in_key => {
+			const equal = cCylinderPuzzle.#axes[in_key].equals(in_axis);
 			return in_match ? equal : !equal;
 		});
 		if (props.length > 1) {
@@ -357,7 +355,7 @@ class cRubiksCube extends THREE.Object3D {
 		}
 	}
 	#approximateArr(in_callback, in_order = 1) {
-		const xSet = new cApproximateSet(cRubiksCube.error);
+		const xSet = new cApproximateSet(cCylinderPuzzle.error);
 		this.children.forEach(in_child => xSet.add(in_callback(in_child)));
 		return Array.from(xSet).sort((in_e1, in_e2) => (in_e1 - in_e2) * in_order);
 	}
@@ -379,7 +377,7 @@ class cRubiksCube extends THREE.Object3D {
 				let firstColor;
 				return this.children.every(in_child => {
 					const currentColor = getShellColor(in_child);
-					if (Math.abs(in_e - in_evaluator(in_child)) < cRubiksCube.error) {
+					if (Math.abs(in_e - in_evaluator(in_child)) < cCylinderPuzzle.error) {
 						if (typeof firstColor === 'undefined') {
 							firstColor = currentColor;
 						} else {
@@ -429,7 +427,7 @@ class cRubiksCube extends THREE.Object3D {
 		const pieces = [];
 		const component = in_piece.position.dot(in_axis);
 		this.children.forEach(in_child => {
-			if (Math.abs(component - in_child.position.dot(in_axis)) < cRubiksCube.error) {
+			if (Math.abs(component - in_child.position.dot(in_axis)) < cCylinderPuzzle.error) {
 				pieces.push(in_child);
 			}
 		});
@@ -440,11 +438,11 @@ class cRubiksCube extends THREE.Object3D {
 	}
 	#affectedSlidePieces(in_piece, in_sign) {
 		const pieces = [];
-		const y = in_piece.position.dot(cRubiksCube.#axes.y);
-		const z = in_piece.position.dot(cRubiksCube.#axes.z);
+		const y = in_piece.position.dot(cCylinderPuzzle.#axes.y);
+		const z = in_piece.position.dot(cCylinderPuzzle.#axes.z);
 		this.children.forEach(in_child => {
 			const pos = in_child.position;
-			if ((Math.abs(y - pos.y) < cRubiksCube.error) && (Math.abs(z - pos.z) < cRubiksCube.error)) {
+			if ((Math.abs(y - pos.y) < cCylinderPuzzle.error) && (Math.abs(z - pos.z) < cCylinderPuzzle.error)) {
 				pieces.push(in_child);
 			}
 		});
@@ -462,7 +460,7 @@ class cRubiksCube extends THREE.Object3D {
 		pieces.forEach(in_sorted => {
 			if (started) {
 				// find the adjacent piece
-				if (Math.abs(edge - getEdgeX(in_sorted, nextSide)) < cRubiksCube.error) {
+				if (Math.abs(edge - getEdgeX(in_sorted, nextSide)) < cCylinderPuzzle.error) {
 					affected.push(in_sorted);
 					edge = getEdgeX(in_sorted, currSide);
 				}
@@ -478,7 +476,7 @@ class cRubiksCube extends THREE.Object3D {
 	#slidableDistance(in_piece, in_sign) {
 		const xArr = this.#approximateArr(in_obj => in_obj.position.x, in_sign);
 		for (let i = 0; i < xArr.length - 1; i++) {
-			if (Math.abs(xArr[i] - in_piece.position.x) < cRubiksCube.error) {
+			if (Math.abs(xArr[i] - in_piece.position.x) < cCylinderPuzzle.error) {
 				return xArr[i + 1] - in_piece.position.x;
 			}
 		}
@@ -486,7 +484,7 @@ class cRubiksCube extends THREE.Object3D {
 	}
 	// public because of customizing
 	rotate(in_group, in_axis, in_rad) {
-		in_group.rotation[cRubiksCube.axisComponent(in_axis)] = in_rad;
+		in_group.rotation[cCylinderPuzzle.axisComponent(in_axis)] = in_rad;
 	}
 	#makeAnimationProgress(in_group, in_axis, in_startAmount, in_finalAmount, in_callback) {
 		const amount = Math.abs(in_finalAmount - in_startAmount);
@@ -543,7 +541,7 @@ class cRubiksCube extends THREE.Object3D {
 					break;
 				}
 			} else {
-				axis = cRubiksCube.#axes.x;
+				axis = cCylinderPuzzle.#axes.x;
 				pieces = this.#affectedRotationPieces(_piece, axis);
 				if (pieces.length < this.children.length) {
 					last = this.#settingVal.unitAngle * [1, 2, 3][arrRand]();
@@ -594,30 +592,30 @@ class cRubiksCube extends THREE.Object3D {
 		            +-[stop]--------+
 	*/
 	static #uiTransitions = {
-		[cRubiksCube.#uiStates.DISABLED]: {
-			enable : cRubiksCube.#uiStates.ENABLED
+		[cCylinderPuzzle.#uiStates.DISABLED]: {
+			enable : cCylinderPuzzle.#uiStates.ENABLED
 		},
-		[cRubiksCube.#uiStates.ENABLED]: {
-			disable : cRubiksCube.#uiStates.DISABLED,
-			drag : cRubiksCube.#uiStates.DRAGGING
+		[cCylinderPuzzle.#uiStates.ENABLED]: {
+			disable : cCylinderPuzzle.#uiStates.DISABLED,
+			drag : cCylinderPuzzle.#uiStates.DRAGGING
 		},
-		[cRubiksCube.#uiStates.DRAGGING]: {
-			release : cRubiksCube.#uiStates.ENABLED,
-			movable : cRubiksCube.#uiStates.MOVING
+		[cCylinderPuzzle.#uiStates.DRAGGING]: {
+			release : cCylinderPuzzle.#uiStates.ENABLED,
+			movable : cCylinderPuzzle.#uiStates.MOVING
 		},
-		[cRubiksCube.#uiStates.MOVING]: {
-			release : cRubiksCube.#uiStates.MOMENTUM
+		[cCylinderPuzzle.#uiStates.MOVING]: {
+			release : cCylinderPuzzle.#uiStates.MOMENTUM
 		},
-		[cRubiksCube.#uiStates.MOMENTUM]: {
-			stop : cRubiksCube.#uiStates.ENABLED
+		[cCylinderPuzzle.#uiStates.MOMENTUM]: {
+			stop : cCylinderPuzzle.#uiStates.ENABLED
 		}
 	};
 	#uiSession = {
-		state : cRubiksCube.#uiStates.ENABLED,
+		state : cCylinderPuzzle.#uiStates.ENABLED,
 		ctx : {}
 	};
 	#transition(in_action) {
-		const newState = cRubiksCube.#uiTransitions[this.#uiSession.state]?.[in_action];
+		const newState = cCylinderPuzzle.#uiTransitions[this.#uiSession.state]?.[in_action];
 		if (newState) {
 			this.#uiSession.state = newState;
 		} else {
@@ -625,14 +623,14 @@ class cRubiksCube extends THREE.Object3D {
 		}
 	}
 	uiEnable() {
-		if (this.#uiSession.state !== cRubiksCube.#uiStates.DISABLED) {
+		if (this.#uiSession.state !== cCylinderPuzzle.#uiStates.DISABLED) {
 			console.log('state is not DISABLED');
 			return;
 		}
 		this.#transition('enable');
 	}
 	uiDisable() {
-		if (this.#uiSession.state !== cRubiksCube.#uiStates.ENABLED) {
+		if (this.#uiSession.state !== cCylinderPuzzle.#uiStates.ENABLED) {
 			console.log('state is not ENABLED');
 			return;
 		}
@@ -645,7 +643,7 @@ class cRubiksCube extends THREE.Object3D {
 		this.#uiSession.ctx = {};
 	}
 	uiSetInitPosition(in_posV3, in_posV2) {
-		if (this.#uiSession.state !== cRubiksCube.#uiStates.ENABLED) {
+		if (this.#uiSession.state !== cCylinderPuzzle.#uiStates.ENABLED) {
 			console.log('state is not ENABLED');
 			return;
 		}
@@ -670,10 +668,10 @@ class cRubiksCube extends THREE.Object3D {
 		this.#transition('drag');
 	}
 	uiIsDragging() {
-		return (this.#uiSession.state === cRubiksCube.#uiStates.DRAGGING);
+		return (this.#uiSession.state === cCylinderPuzzle.#uiStates.DRAGGING);
 	}
 	uiIsMoving() {
-		return (this.#uiSession.state === cRubiksCube.#uiStates.MOVING);
+		return (this.#uiSession.state === cCylinderPuzzle.#uiStates.MOVING);
 	}
 	static uiSetDeltaPositionRC = {
 		NOOP : Symbol(),
@@ -685,8 +683,8 @@ class cRubiksCube extends THREE.Object3D {
 		MOVABLE : Symbol()
 	};
 	uiNotifyDeltaPosition(in_piece, in_posV3, in_posV2) {
-		const RC = cRubiksCube.uiSetDeltaPositionRC;
-		if (this.#uiSession.state !== cRubiksCube.#uiStates.DRAGGING) {
+		const RC = cCylinderPuzzle.uiSetDeltaPositionRC;
+		if (this.#uiSession.state !== cCylinderPuzzle.#uiStates.DRAGGING) {
 			console.log('state is not DRAGGING');
 			return RC.NOOP;
 		}
@@ -705,10 +703,10 @@ class cRubiksCube extends THREE.Object3D {
 		}
 		let pieces, direction, axis, range;
 		if (rotateDelta > movingDelta) {
-			pieces = this.#affectedRotationPieces(in_piece, cRubiksCube.#axes.x);
+			pieces = this.#affectedRotationPieces(in_piece, cCylinderPuzzle.#axes.x);
 			if (pieces.length < this.children.length) {
 				direction = srcYZ.cross(dstYZ) > 0 ? 1 : -1;
-				axis = cRubiksCube.#axes.x;
+				axis = cCylinderPuzzle.#axes.x;
 				range = null;
 			} else {
 				return RC.UNMOVABLE;
@@ -733,7 +731,7 @@ class cRubiksCube extends THREE.Object3D {
 		return RC.MOVABLE;
 	}
 	uiUpdatePosition(in_posV2) {
-		if (this.#uiSession.state !== cRubiksCube.#uiStates.MOVING) {
+		if (this.#uiSession.state !== cCylinderPuzzle.#uiStates.MOVING) {
 			return;
 		}
 		const ctx = this.#uiSession.ctx;
@@ -772,12 +770,12 @@ class cRubiksCube extends THREE.Object3D {
 		return (prev !== next);
 	}
 	uiRelease(in_ending_callback) {
-		if (this.#uiSession.state === cRubiksCube.#uiStates.DRAGGING) {
+		if (this.#uiSession.state === cCylinderPuzzle.#uiStates.DRAGGING) {
 			this.#uiInitSession();
 			this.#transition('release');
 			return null;
 		}
-		if (this.#uiSession.state !== cRubiksCube.#uiStates.MOVING) {
+		if (this.#uiSession.state !== cCylinderPuzzle.#uiStates.MOVING) {
 			return null;
 		}
 		this.#transition('release');
@@ -813,7 +811,7 @@ class cRubiksCube extends THREE.Object3D {
 
 	gWorld (cSphericalWorld)
 	|
-	+-- gCube (cRubiksCube)
+	+-- gCube (cCylinderPuzzle)
 		|
 		+-- meshes <--- gMeshLevelMap
 */
@@ -823,7 +821,7 @@ const WORLD_INIT_ZOOM = WORLD_RADIUS / 3;
 
 const gWorld = new cSphericalWorld(WORLD_RADIUS);
 
-const gCube = new cRubiksCube();
+const gCube = new cCylinderPuzzle();
 
 gWorld.add(gCube);
 
@@ -1269,7 +1267,7 @@ const knock = nonReentrantAsync(async () => {
 });
 
 const notifyDelta = (() => {
-	const RC = cRubiksCube.uiSetDeltaPositionRC;
+	const RC = cCylinderPuzzle.uiSetDeltaPositionRC;
 	return in_ndc => {
 		const intersects = gWorld.intersectPositive(in_ndc);
 		if (intersects.length === 0) {
