@@ -161,6 +161,7 @@ const shellGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thicknes
 
 const DARKGRAY1 = 0x222222;
 const DARKGRAY2 = 0x252525;
+const LIGHTGRAY = 0x555555;
 
 const ORANGE = 0xFFAA00;
 const RED = 0xFF0000;
@@ -198,35 +199,35 @@ const gMeshLevelMap = ((in_diameter) => {
 			dim : 5,
 			dmz : [
 				[0, 0], [0, 1], [0, 2], [0, 3], [0, 4],
-				[1, 4],
+				[1, 0],
 				[4, 0], [4, 1], [4, 2], [4, 3], [4, 4]
 			]
 		},
 		{
 			dim : 5,
 			dmz : [
-				[0, 4]
+				[0, 0]
 			]
 		},
 		{
 			dim : 6,
 			dmz : [
 				[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5],
-				[1, 5],
+				[1, 0],
 				[5, 0], [5, 1], [5, 2], [5, 3], [5, 4], [5, 5]
 			]
 		},
 		{
 			dim : 6,
 			dmz : [
-				[0, 5]
+				[0, 0]
 			]
 		},
 		{
 			dim : 7,
 			dmz : [
 				[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6],
-				[1, 6],
+				[1, 0],
 				[6, 0], [6, 1], [6, 2], [6, 3], [6, 4], [6, 5], [6, 6]
 			]
 		},
@@ -234,10 +235,10 @@ const gMeshLevelMap = ((in_diameter) => {
 			dim : 8,
 			dmz : [
 				[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6], [0, 7],
-				[1, 7],
+				[1, 0],
 				[7, 0], [7, 1], [7, 2], [7, 3], [7, 4], [7, 5], [7, 6], [7, 7]
 			]
-		},
+		}
 	];
 	shellInfo.forEach(in_shell => {
 		const radius = in_diameter / 2;
@@ -250,7 +251,6 @@ const gMeshLevelMap = ((in_diameter) => {
 		for (let i = 0; i < in_shell.dim; i++) {
 			let x = unitSize * i - circumf / 2 + unitSize / 2;
 			let y = (in_diameter / 2 - unitThick) * 1.2;
-			const pivot = new THREE.Object3D();
 			for (let j = 0; j < in_shell.dim; j++) {
 				if (in_shell.dmz) {
 					if (in_shell.dmz.some(in_el => in_el[0] === i && in_el[1] === j)) {
@@ -260,9 +260,10 @@ const gMeshLevelMap = ((in_diameter) => {
 				const materials = shellMaterials(unitSize, colors[j], DARKGRAY2);
 				materials.push(edgeMaterial);
 				const piece = new THREE.Mesh(geometry, materials);
+				const pivot = new THREE.Object3D();
 				pivot.add(piece);
 				piece.position.copy(VEC3(x, y, 0));
-				pivot.rotateX(unitAngle);
+				pivot.rotateX(unitAngle * j);
 				/*
 					*** NOTE ***
 					you can use matrix,
@@ -373,8 +374,10 @@ class cCylinderPuzzle extends THREE.Object3D {
 		const results = [];
 		evaluators.forEach(in_evaluator => {
 			const arr = this.#approximateArr(in_evaluator);
+			// for all variations
 			results.push(arr.every(in_e => {
 				let firstColor;
+				// for all pieces
 				return this.children.every(in_child => {
 					const currentColor = getShellColor(in_child);
 					if (Math.abs(in_e - in_evaluator(in_child)) < cCylinderPuzzle.error) {
