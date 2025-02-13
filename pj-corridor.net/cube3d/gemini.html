@@ -593,36 +593,35 @@ const ID_NEXT_LEVEL = randomString();
 	}
 })(getParam('level'));
 
-function updateLevelText() {
+async function updateLevel() {
+	const color = 0x000000;
+	await gWorld.motionFog(color, 0, 100);
+	gCube.removePieces();
+	const current = gMeshLevelMap.currItemByOrder();
+	gCube.addPieces(current.v);
+	await gWorld.motionFog(color, 100, 0);
 	const prev = gMeshLevelMap.prevItemByOrder();
 	const next = gMeshLevelMap.nextItemByOrder();
 	document.getElementById(ID_PREV_LEVEL).innerText = prev.k;
 	document.getElementById(ID_NEXT_LEVEL).innerText = next.k;
 }
 
-async function changeLevel(in_delta) {
-	const color = 0x000000;
-	await gWorld.motionFog(color, 0, 100);
-	gMeshLevelMap.shiftOrder(in_delta);
-	gCube.removePieces();
-	const current = gMeshLevelMap.currItemByOrder();
-	gCube.addPieces(current.v);
-	await gWorld.motionFog(color, 100, 0);
-	updateLevelText();
-}
+updateLevel();
 
 function prevLevel(in_sound = true) {
 	if (in_sound) {
 		SE_BEEP.play();
 	}
-	changeLevel(-1);
+	gMeshLevelMap.shiftOrder(-1);
+	updateLevel();
 }
 
 function nextLevel(in_sound = true) {
 	if (in_sound) {
 		SE_BEEP.play();
 	}
-	changeLevel(+1);
+	gMeshLevelMap.shiftOrder(+1);
+	updateLevel();
 }
 
 (in_settings => {
@@ -677,8 +676,6 @@ function nextLevel(in_sound = true) {
 		func : uiRights
 	}
 ]);
-
-changeLevel(0);
 
 function hex2rgb(in_hex) {
 	const mask = 0xFF;
