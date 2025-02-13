@@ -534,40 +534,36 @@ export class cApproximateSet extends Set {
 }
 
 export class cCyclicMap extends Map {
+	#currOrder = 0;
 	get #keysArray() {
 		return Array.from(this.keys());
 	}
-	#deltaItemByOrder(in_order, in_delta) {
+	#deltaOrder(in_delta) {
 		const length = this.#keysArray.length;
-		const deltaIndex = (in_order + in_delta + length) % length;
-		const deltaKey = this.#keysArray[deltaIndex];
+		return (this.#currOrder + in_delta + length) % length;
+	}
+	#itemByOrder(in_delta) {
+		const order = this.#deltaOrder(in_delta);
+		const key = this.#keysArray[order];
 		return {
-			k : deltaKey,
-			v : this.get(deltaKey)
+			k : key,
+			v : this.get(key)
 		};
 	}
-	nextItemByOrder(in_order) {
-		return this.#deltaItemByOrder(in_order, +1);
+	setOrder(in_order) {
+		this.#currOrder = in_order;
 	}
-	currItemByOrder(in_order) {
-		return this.#deltaItemByOrder(in_order, 0);
+	shiftOrder(in_delta) {
+		this.#currOrder = this.#deltaOrder(in_delta);
 	}
-	prevItemByOrder(in_order) {
-		return this.#deltaItemByOrder(in_order, -1);
+	nextItemByOrder() {
+		return this.#itemByOrder(+1);
 	}
-	#deltaItemByKey(in_key, in_delta) {
-		const index = this.#keysArray.indexOf(in_key);
-		if (index === -1) {
-			return null;
-		} else {
-			return this.#deltaItemByOrder(index, in_delta);
-		}
+	currItemByOrder() {
+		return this.#itemByOrder(0);
 	}
-	nextItemByKey(in_key) {
-		return this.#deltaItemByKey(in_key, +1);
-	}
-	prevItemByKey(in_key) {
-		return this.#deltaItemByKey(in_key, -1);
+	prevItemByOrder() {
+		return this.#itemByOrder(-1);
 	}
 }
 
