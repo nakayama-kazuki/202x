@@ -291,12 +291,6 @@ const gMeshLevelMap = ((in_cubeSize) => {
 	return map;
 })(CUBE_SIZE);
 
-let gMeshCurrentLevel = getParam('level');
-
-if (gMeshCurrentLevel === false) {
-	gMeshCurrentLevel = 1;
-}
-
 /*
 	(3) ui & dom setting
 
@@ -591,9 +585,17 @@ function uiRights() {
 const ID_PREV_LEVEL = randomString();
 const ID_NEXT_LEVEL = randomString();
 
+(in_level => {
+	if (in_level === false) {
+		gMeshLevelMap.setOrder(1);
+	} else {
+		gMeshLevelMap.setOrder(in_level);
+	}
+})(getParam('level'));
+
 function updateLevelText() {
-	const prev = gMeshLevelMap.prevItemByOrder(gMeshCurrentLevel);
-	const next = gMeshLevelMap.nextItemByOrder(gMeshCurrentLevel);
+	const prev = gMeshLevelMap.prevItemByOrder();
+	const next = gMeshLevelMap.nextItemByOrder();
 	document.getElementById(ID_PREV_LEVEL).innerText = prev.k;
 	document.getElementById(ID_NEXT_LEVEL).innerText = next.k;
 }
@@ -601,9 +603,9 @@ function updateLevelText() {
 async function changeLevel(in_delta) {
 	const color = 0x000000;
 	await gWorld.motionFog(color, 0, 100);
-	gMeshCurrentLevel = (gMeshCurrentLevel + in_delta + gMeshLevelMap.size) % gMeshLevelMap.size;
+	gMeshLevelMap.shiftOrder(in_delta);
 	gCube.removePieces();
-	const current = gMeshLevelMap.currItemByOrder(gMeshCurrentLevel);
+	const current = gMeshLevelMap.currItemByOrder();
 	gCube.addPieces(current.v);
 	await gWorld.motionFog(color, 100, 0);
 	updateLevelText();
