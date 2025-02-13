@@ -163,7 +163,9 @@ const GRAY1 = 0x222222;
 const GRAY2 = 0x444444;
 const GRAY3 = 0x666666;
 
+const BGCOLOR = GRAY1;
 const DMZCOLOR = GRAY2;
+const EMPTYCOLOR = GRAY3;
 
 const ORANGE = 0xFFAA00;
 const RED = 0xFF0000;
@@ -174,13 +176,14 @@ const GREEN = 0x118811;
 const LIGHTBLUE = 0x5588FF;
 const LIGHTGREEN = 0x55CC55;
 
-const edgeMaterial = new THREE.MeshLambertMaterial({color : GRAY1});
+const edgeMaterial = new THREE.MeshLambertMaterial({color : BGCOLOR});
 
 /*
 	(2) dimension of Cube and Meshes of them
 */
 
 const CUBE_SIZE = 400;
+const LABEL_LV = 'lv.';
 
 const gMeshLevelMap = ((in_diameter) => {
 	const map = new cCyclicMap();
@@ -225,11 +228,11 @@ const gMeshLevelMap = ((in_diameter) => {
 				let materials = null;
 				if (in_shell.dmzArr.length > 0) {
 					if (in_shell.dmzArr.some(in_dmz => in_dmz[0] === row && in_dmz[1] === col)) {
-						materials = shellMaterials(unitSize, DMZCOLOR, GRAY1);
+						materials = shellMaterials(unitSize, DMZCOLOR, BGCOLOR);
 					}
 				}
 				if (!materials) {
-					materials = shellMaterials(unitSize, GRAY3, GRAY1);
+					materials = shellMaterials(unitSize, EMPTYCOLOR, BGCOLOR);
 				}
 				materials.push(edgeMaterial);
 				const piece = new THREE.Mesh(geometry, materials);
@@ -248,7 +251,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				pieces.push(piece);
 			}
 		}
-		let stage = 'lv.' + in_shell.colsForLength;
+		let stage = LABEL_LV + in_shell.colsForLength;
 		if (in_shell.rowsForCircle === in_shell.colsForLength) {
 			stage += '-loop'
 		}
@@ -1843,37 +1846,36 @@ const ID_NEXT_LEVEL = randomString();
 	}
 })(getParam('level'));
 
-function updateLevelText() {
-	const prev = gMeshLevelMap.prevItemByOrder();
-	const next = gMeshLevelMap.nextItemByOrder();
-	document.getElementById(ID_PREV_LEVEL).innerText = prev.k;
-	document.getElementById(ID_NEXT_LEVEL).innerText = next.k;
-}
-
-async function changeLevel(in_delta) {
+async function updateLevel() {
 	const color = 0x000000;
 	await gWorld.motionFog(color, 0, 100);
-	gMeshLevelMap.shiftOrder(in_delta);
 	gCube.removePieces();
 	const current = gMeshLevelMap.currItemByOrder();
 	gCube.addPieces(current.v);
 	await gWorld.motionFog(color, 100, 0);
-	updateLevelText();
-	//★ココにゲームの初期化をいれる？
+	const prev = gMeshLevelMap.prevItemByOrder();
+	const next = gMeshLevelMap.nextItemByOrder();
+	document.getElementById(ID_PREV_LEVEL).innerText = prev.k;
+	document.getElementById(ID_NEXT_LEVEL).innerText = next.k;
+	initializeByLevel();
 }
+
+updateLevel();
 
 function prevLevel(in_sound = true) {
 	if (in_sound) {
 		SE_BEEP.play();
 	}
-	changeLevel(-1);
+	gMeshLevelMap.shiftOrder(-1);
+	updateLevel();
 }
 
 function nextLevel(in_sound = true) {
 	if (in_sound) {
 		SE_BEEP.play();
 	}
-	changeLevel(+1);
+	gMeshLevelMap.shiftOrder(+1);
+	updateLevel();
 }
 
 (in_settings => {
@@ -1928,8 +1930,6 @@ function nextLevel(in_sound = true) {
 		func : uiRights
 	}
 ]);
-
-changeLevel(0);
 
 function hex2rgb(in_hex) {
 	const mask = 0xFF;
@@ -2073,7 +2073,7 @@ function choose(in_ev) {
 		return;
 	}
 	//★
-	console.log(gCube.pieceToIndex(intersects[0].object));
+	//console.log(gCube.pieceToIndex(intersects[0].object));
 
 	knock();
 }
@@ -2143,7 +2143,7 @@ const gHandlers = (() => {
 	};
 })();
 
-let gEnableHandlers = true;
+let gEnableHandlers = false;
 
 for (let [name, func] of Object.entries(gHandlers)) {
 	gWorld.canvas.addEventListener(name, in_ev => {
@@ -2153,12 +2153,85 @@ for (let [name, func] of Object.entries(gHandlers)) {
 	});
 }
 
+function initializeByLevel() {
+	/*
+		1. cReversi settings
+	*/
+	const players = (in_players => {
+		const default_players = 2;
+		if (in_players === false) {
+			return default_players;
+		} else {
+			if ((in_players === 2) || (in_players === 4)) {
+				return in_players;
+			} else {
+				return default_players;
+			}
+		}
+	})(getParam('players'));
+	const curr = gMeshLevelMap.currItemByOrder();
+	const match = curr.k.match(new RegExp(LABEL_LV + '(\\d+)'));
+	const mode = players + 'x' + parseInt(match[1], 10);
+	const game = new cReversi(mode);
+	/*
+		2. cTurnController settings
+	*/
+	const mapper = [
+		BLUE,
+		RED,
+		YELLOW,
+		GREEN,
+		-1,
+		-1,
+		-1,
+		-1,
+		DMZCOLOR,
+		EMPTYCOLOR
+	];
+	const ctrl = new cTurnController();
+	ctrl.registerPlayer(() => {
+		// PC
+		gEnableHandlers = true;
+	});
+	ctrl.registerPlayer(() => {
+		// NPC
+		// ctrl.turnEnd();
+		// ctrl.gameEnd();
+	});
+	const indexTable = game.getArea();
+	const colorTable = indexTable.map(in_row => in_row.map(in_cell => mapper[in_cell]));
+	gCube.setColorTable(colorTable);
+	ctrl.gameStart();
+	// 例の回転のも
+}
+
 /*
+	pc(in_no, in_row, in_col) {
+		this.#choose(this.#players[in_no], this.#posToIndex(in_row, in_col));
+	}
+	npc(in_no, in_argo = 'mixed') {
+		return (this.#npcSet[in_argo].bind(this))(this.#players[in_no]);
+	}
+	getHistory() {
+		return this.#history;
+	}
+	getArea() {
+		const table = [];
+		for (let ix = 0; ix < this.#area.latest.length; ix++) {
+			const pos = this.#indexToPos(ix);
+			if (!table[pos.row]) {
+				table[pos.row] = [];
+			}
+			table[pos.row][pos.col] = parseInt(this.#area.latest[ix].description);
+		}
+		return table;
+	}
 
-//★
-const game = new cReversi('2x8');
-
-gMeshLevelMap のキーも一緒に返しているか
+function increment2DArray(arr) {
+    return arr.map(innerArray => 
+        innerArray.map(element => element + 1)
+    );
+}
 
 
 */
@@ -2174,20 +2247,8 @@ gMeshLevelMap のキーも一緒に返しているか
 
 */
 
-const colors = [
-	ORANGE,
-	RED,
-	GRAY3
-/*
-	WHITE,
-	YELLOW,
-	BLUE,
-	GREEN,
-	LIGHTBLUE,
-	LIGHTGREEN
-*/
-];
 
+/*
 window.setTimeout(() => {
 	//console.log(gCube.getColorTable());
 	const table = [];
@@ -2216,23 +2277,7 @@ window.setTimeout(() => {
 	};
 	gWorld.addAnimationHook(hook);
 }, 2000);
-
-
-
-const gController = new cTurnController();
-
-gController.registerPlayer(() => {
-	// PC
-	gEnableHandlers = true;
-});
-
-gController.registerPlayer(() => {
-	// NPC
-	// gController.turnEnd();
-	// gController.gameEnd();
-});
-
-gController.gameStart();
+*/
 
 </script>
 </body>
