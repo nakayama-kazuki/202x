@@ -1391,8 +1391,10 @@ export class cSphericalWorld {
 		const currentDistance = this.#camera.position.length();
 		return this.motionZoom1(currentDistance * 1.1, currentDistance, in_duration);
 	}
-	motionDefaultView(in_duration = 2000) {
-		const targetQuat = new THREE.Quaternion();
+	motionViewFrom(in_vec3, in_duration = 2000) {
+		const up = new THREE.Vector3(0, 1, 0);
+		const matrix = (new THREE.Matrix4()).lookAt(VEC3(), in_vec3.negate(), up);
+		const targetQuat = (new THREE.Quaternion()).setFromRotationMatrix(matrix);
 		const targetRad = this.#centerBall.quaternion.angleTo(targetQuat);
 		return this.easeIn(0, targetRad, in_duration, in_currRad => {
 			this.#centerBall.quaternion.rotateTowards(targetQuat, in_currRad);
