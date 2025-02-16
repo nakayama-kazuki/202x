@@ -33,7 +33,6 @@ audioUtil.compressFromBase64 = (() => {
 			const foo = new Audio('data:audio/mpeg;base64,' + decompressed);
 			foo.play();
 		});
-
 */
 
 audioUtil.decompressToBase64 = (() => {
