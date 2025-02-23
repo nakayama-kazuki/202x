@@ -1294,7 +1294,7 @@ export class cSphericalWorld {
 		return this.#centerBall.children.find(in_child => in_child instanceof THREE.Camera);
 	}
 	getLookAt() {
-		return this.#camera.position.clone().negate();
+		return this.#camera.getWorldPosition(VEC3()).negate();
 	}
 	moveView(in_world_dx, in_world_dy) {
 		// event-x ++ : world-x ++ : camera-rotate-y ++ : object-rotate-y -- : object-view-x ++
