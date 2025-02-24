@@ -182,7 +182,7 @@ const edgeMaterial = new THREE.MeshLambertMaterial({color : BGCOLOR});
 	(2) dimension of Cube and Meshes of them
 */
 
-const CUBE_SIZE = 400;
+const PUZZLE_SIZE = 400;
 const LABEL_LV = 'lv.';
 
 const gMeshLevelMap = ((in_diameter) => {
@@ -258,7 +258,7 @@ const gMeshLevelMap = ((in_diameter) => {
 		map.set(stage, pieces);
 	});
 	return map;
-})(CUBE_SIZE);
+})(PUZZLE_SIZE);
 
 /*
 	(3) Puzzle related functions
@@ -1554,7 +1554,7 @@ class cTurnController {
 		+-- meshes <--- gMeshLevelMap
 */
 
-const WORLD_RADIUS = CUBE_SIZE * 10;
+const WORLD_RADIUS = PUZZLE_SIZE * 10;
 const WORLD_INIT_ZOOM = WORLD_RADIUS / 2;
 
 const gWorld = new cSphericalWorld(WORLD_RADIUS);

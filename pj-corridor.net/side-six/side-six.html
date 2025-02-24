@@ -80,7 +80,7 @@ const textureFactory = factoryBuilder((in_w, in_h) => {
 	let maxDepth = 255;
 	let styles = [];
 	for (let i = 0; i < gradation; i++) {
-		let depth = Math.ceil(maxDepth / (gradation - 1) * i);
+		let depth = Math.ceil(maxDepth / gradation * (i + 1));
 		styles[i] = 'rgb(' + depth + ',' + depth + ',' + depth + ')';
 	}
 	// draw and convert using toDataUR
@@ -159,9 +159,11 @@ const shellGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thicknes
 	return geometry;
 });
 
-const DARKGRAY1 = 0x222222;
-const DARKGRAY2 = 0x252525;
-const LIGHTGRAY = 0x555555;
+const GRAY1 = 0x222222;
+const GRAY2 = 0x444444;
+const GRAY3 = 0x666666;
+
+const BGCOLOR = GRAY1;
 
 const ORANGE = 0xFFAA00;
 const RED = 0xFF0000;
@@ -172,15 +174,14 @@ const GREEN = 0x118811;
 const LIGHTBLUE = 0x5588FF;
 const LIGHTGREEN = 0x55CC55;
 
-const EDGECOLOR = DARKGRAY1;
-
-const edgeMaterial = new THREE.MeshLambertMaterial({color : EDGECOLOR});
+const edgeMaterial = new THREE.MeshLambertMaterial({color : BGCOLOR});
 
 /*
 	(2) dimension of Cube and Meshes of them
 */
 
-const CUBE_SIZE = 400;
+const PUZZLE_SIZE = 400;
+const LABEL_LV = 'lv.';
 
 const gMeshLevelMap = ((in_diameter) => {
 	const map = new cCyclicMap();
@@ -196,74 +197,54 @@ const gMeshLevelMap = ((in_diameter) => {
 	];
 	const shellInfo = [
 		{
-			dim : 5,
-			dmz : [
-				[0, 0], [0, 1], [0, 2], [0, 3], [0, 4],
-				[1, 0],
-				[4, 0], [4, 1], [4, 2], [4, 3], [4, 4]
-			]
+			rowsForCircle : 6,
+			colsForLength : 2
 		},
 		{
-			dim : 5,
-			dmz : [
-				[0, 0]
-			]
+			rowsForCircle : 6,
+			colsForLength : 3
 		},
 		{
-			dim : 6,
-			dmz : [
-				[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5],
-				[1, 0],
-				[5, 0], [5, 1], [5, 2], [5, 3], [5, 4], [5, 5]
-			]
+			rowsForCircle : 7,
+			colsForLength : 3
 		},
 		{
-			dim : 6,
-			dmz : [
-				[0, 0]
-			]
+			rowsForCircle : 7,
+			colsForLength : 4
 		},
 		{
-			dim : 7,
-			dmz : [
-				[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6],
-				[1, 0],
-				[6, 0], [6, 1], [6, 2], [6, 3], [6, 4], [6, 5], [6, 6]
-			]
+			rowsForCircle : 8,
+			colsForLength : 4
 		},
 		{
-			dim : 8,
-			dmz : [
-				[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6], [0, 7],
-				[1, 0],
-				[7, 0], [7, 1], [7, 2], [7, 3], [7, 4], [7, 5], [7, 6], [7, 7]
-			]
+			rowsForCircle : 8,
+			colsForLength : 5
 		}
 	];
 	shellInfo.forEach(in_shell => {
 		const radius = in_diameter / 2;
 		const circumf = in_diameter * Math.PI;
-		const unitSize = circumf / in_shell.dim;
+		const unitSize = circumf / in_shell.rowsForCircle;
 		const unitThick = unitSize * 0.3;
-		const unitAngle = Math.PI * 2 / in_shell.dim;
+		const unitAngle = Math.PI * 2 / in_shell.rowsForCircle;
 		const geometry = shellGeometryFactory.create(unitSize, ((radius - unitThick) / radius), unitThick);
 		const pieces = [];
-		for (let i = 0; i < in_shell.dim; i++) {
-			let x = unitSize * i - circumf / 2 + unitSize / 2;
+		let empty = false;
+		for (let col = 0; col < in_shell.colsForLength; col++) {
+			let x = unitSize * col - unitSize * (in_shell.colsForLength - 1) / 2;
 			let y = (in_diameter / 2 - unitThick) * 1.2;
-			for (let j = 0; j < in_shell.dim; j++) {
-				if (in_shell.dmz) {
-					if (in_shell.dmz.some(in_el => in_el[0] === i && in_el[1] === j)) {
-						continue;
-					}
+			for (let row = 0; row < in_shell.rowsForCircle; row++) {
+				if (!empty) {
+					empty = true;
+					continue;
 				}
-				const materials = shellMaterials(unitSize, colors[j], DARKGRAY2);
+				const materials = shellMaterials(unitSize, colors[row], BGCOLOR);
 				materials.push(edgeMaterial);
 				const piece = new THREE.Mesh(geometry, materials);
 				const pivot = new THREE.Object3D();
 				pivot.add(piece);
 				piece.position.copy(VEC3(x, y, 0));
-				pivot.rotateX(unitAngle * j);
+				pivot.rotateX(unitAngle * row);
 				/*
 					*** NOTE ***
 					you can use matrix,
@@ -275,10 +256,12 @@ const gMeshLevelMap = ((in_diameter) => {
 				pieces.push(piece);
 			}
 		}
-		map.set('lv ' + in_shell.dim + '-' + pieces.length, pieces);
+		const stage = LABEL_LV + in_shell.rowsForCircle + 'x' + in_shell.colsForLength;
+		map.set(stage, pieces);
+
 	});
 	return map;
-})(CUBE_SIZE);
+})(PUZZLE_SIZE);
 
 /*
 	(3) Puzzle related functions
@@ -342,7 +325,8 @@ class cCylinderPuzzle extends THREE.Object3D {
 		});
 		this.#settingKey = pseudoMessageDigest1(uuids);
 		if (!this.#settingVal.initialized) {
-			this.#settingVal.unitAngle = Math.PI * 2 / Math.max(...Array.from(axisx.values()));
+			this.#settingVal.rowsForCircle = Math.max(...Array.from(axisx.values()));
+			this.#settingVal.unitAngle = Math.PI * 2 / this.#settingVal.rowsForCircle;
 			this.#settingVal.completeCallback = null;
 			this.#settingVal.shuffleCount = 0;
 			this.#settingVal.shuffled = false;
@@ -813,8 +797,8 @@ class cCylinderPuzzle extends THREE.Object3D {
 		+-- meshes <--- gMeshLevelMap
 */
 
-const WORLD_RADIUS = CUBE_SIZE * 10;
-const WORLD_INIT_ZOOM = WORLD_RADIUS / 3;
+const WORLD_RADIUS = PUZZLE_SIZE * 10;
+const WORLD_INIT_ZOOM = WORLD_RADIUS / 2;
 
 const gWorld = new cSphericalWorld(WORLD_RADIUS);
 
@@ -822,7 +806,7 @@ const gCube = new cCylinderPuzzle();
 
 gWorld.add(gCube);
 
-gWorld.moveView(2.5, 0.5);
+gWorld.moveView(0.5, 0.5);
 gWorld.motionZoom2(WORLD_INIT_ZOOM, 1000);
 
 /*
@@ -1282,7 +1266,7 @@ const notifyDelta = (() => {
 	}
 })();
 
-const setFocus = (() => {
+const focusHere = (() => {
 	let prev = null;
 	return in_ndc => {
 		let intersects = gWorld.intersectPositive(in_ndc);
@@ -1309,19 +1293,14 @@ const setFocus = (() => {
 			}
 		}
 		prev = curr;
-		prev.userData.original = getShellColor(curr);
+		curr.userData.original = getShellColor(curr);
 		const color = new THREE.Color(prev.userData.original);
 		const highlight = 0.3;
 		setShellColor(curr, color.lerp(new THREE.Color(0xFFFFFF), highlight).getHex());
 	}
 })();
 
-function resetFocus() {
-	const outOfRange = new THREE.Vector2(Infinity, Infinity);
-	setFocus(outOfRange);
-}
-
-function choose(in_ev) {
+function chooseHere(in_ev) {
 	const ndc = ndcFromEvent(in_ev);
 	let intersects = gWorld.intersectPositive(ndc);
 	if (intersects.length === 0) {
@@ -1330,34 +1309,34 @@ function choose(in_ev) {
 	knock();
 }
 
-const gHandlers = (() => {
-	const c = {
+(() => {
+	const closure = {
 		x : -1,
 		y : -1,
 		once : false
 	};
 	const start = in_ev => {
-		if (!c.once) {
+		if (!closure.once) {
 			/*
 				*** NOTE ***
 				Safari may restrict sound without user interaction.
 				because of this, the sound does not work without this code.
 			*/
 			SE_DUMMY.play();
-			c.once = true;
+			closure.once = true;
 		}
 		const ndc = ndcFromEvent(in_ev);
 		const intersects = gWorld.intersectPositive(ndc);
 		if (intersects.length === 0) {
 			return;
 		}
-		c.x = in_ev.clientX;
-		c.y = in_ev.clientY;
+		closure.x = in_ev.clientX;
+		closure.y = in_ev.clientY;
 		gCube.uiSetInitPosition(intersects[0].point, ndcToAbs(ndc));
 	};
 	const move = thresholding(in_ev => {
-		c.x = -1;
-		c.y = -1;
+		closure.x = -1;
+		closure.y = -1;
 		const ndc = ndcFromEvent(in_ev);
 		if (gCube.uiIsMoving()) {
 			if (gCube.uiUpdatePosition(ndcToAbs(ndc))) {
@@ -1368,7 +1347,7 @@ const gHandlers = (() => {
 				notifyDelta(ndc);
 			} else {
 				if (!in_ev[isEmulated]) {
-					// setFocus(ndc);
+					focusHere(ndc);
 				}
 			}
 		}
@@ -1380,30 +1359,25 @@ const gHandlers = (() => {
 		if (releaseProgress) {
 			gWorld.addAnimationHook(releaseProgress);
 		} else {
-			if ((c.x !== in_ev.clientX) || (c.y !== in_ev.clientY)) {
+			if ((closure.x !== in_ev.clientX) || (closure.y !== in_ev.clientY)) {
 				return;
 			}
-			choose(in_ev);
+			chooseHere(in_ev);
 		}
 	};
-	return {
+	let handlers = {
 		'mousedown' : start,
 		'mousemove' : move,
 		'mouseleave' : stop,
 		'mouseout' : stop,
 		'mouseup' : stop
 	};
+	for (let [name, func] of Object.entries(handlers)) {
+		gWorld.canvas.addEventListener(name, in_ev => {
+			(func.bind(this))(in_ev);
+		});
+	}
 })();
-
-let gEnableHandlers = true;
-
-for (let [name, func] of Object.entries(gHandlers)) {
-	gWorld.canvas.addEventListener(name, in_ev => {
-		if (gEnableHandlers) {
-			(func.bind(this))(in_ev)
-		}
-	});
-}
 
 </script>
 </body>
