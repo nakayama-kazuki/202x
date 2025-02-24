@@ -189,10 +189,16 @@ const gMeshLevelMap = ((in_diameter) => {
 	const map = new cCyclicMap();
 	const shellInfo = [
 		{
-			rowsForCircle : 8,
+			rowsForCircle : 14,
 			colsForLength : 7,
 			dmzArr : [
-				[7, 0], [7, 1], [7, 2], [7, 3], [7, 4], [7, 5], [7, 6], [7, 7]
+				[ 7, 0], [ 7, 1], [ 7, 2], [ 7, 3], [ 7, 4], [ 7, 5], [ 7, 6],
+				[ 8, 0], [ 8, 1], [ 8, 2], [ 8, 3], [ 8, 4], [ 8, 5], [ 8, 6],
+				[ 9, 0], [ 9, 1], [ 9, 2], [ 9, 3], [ 9, 4], [ 9, 5], [ 9, 6],
+				[10, 0], [10, 1], [10, 2], [10, 3], [10, 4], [10, 5], [10, 6],
+				[11, 0], [11, 1], [11, 2], [11, 3], [11, 4], [11, 5], [11, 6],
+				[12, 0], [12, 1], [12, 2], [12, 3], [12, 4], [12, 5], [12, 6],
+				[13, 0], [13, 1], [13, 2], [13, 3], [13, 4], [13, 5], [13, 6]
 			]
 		},
 		{
@@ -201,10 +207,17 @@ const gMeshLevelMap = ((in_diameter) => {
 			dmzArr : []
 		},
 		{
-			rowsForCircle : 9,
+			rowsForCircle : 16,
 			colsForLength : 8,
 			dmzArr : [
-				[8, 0], [8, 1], [8, 2], [8, 3], [8, 4], [8, 5], [8, 6], [8, 7], [8, 8]
+				[ 8, 0], [ 8, 1], [ 8, 2], [ 8, 3], [ 8, 4], [ 8, 5], [ 8, 6], [ 8, 7],
+				[ 9, 0], [ 9, 1], [ 9, 2], [ 9, 3], [ 9, 4], [ 9, 5], [ 9, 6], [ 9, 7],
+				[10, 0], [10, 1], [10, 2], [10, 3], [10, 4], [10, 5], [10, 6], [10, 7],
+				[11, 0], [11, 1], [11, 2], [11, 3], [11, 4], [11, 5], [11, 6], [11, 7],
+				[12, 0], [12, 1], [12, 2], [12, 3], [12, 4], [12, 5], [12, 6], [12, 7],
+				[13, 0], [13, 1], [13, 2], [13, 3], [13, 4], [13, 5], [13, 6], [13, 7],
+				[14, 0], [14, 1], [14, 2], [14, 3], [14, 4], [14, 5], [14, 6], [14, 7],
+				[15, 0], [15, 1], [15, 2], [15, 3], [15, 4], [15, 5], [15, 6], [15, 7]
 			]
 		},
 		{
@@ -264,25 +277,8 @@ const gMeshLevelMap = ((in_diameter) => {
 	(3) Puzzle related functions
 */
 
-class cCylinderPuzzle extends THREE.Object3D {
-	static error = 0.01;
-	static #axes = {
-		x : VEC3(1, 0, 0),
-		y : VEC3(0, 1, 0),
-		z : VEC3(0, 0, 1)
-	};
-	static axisComponent(in_axis, in_match = true) {
-		const props = Object.keys(cCylinderPuzzle.#axes).filter(in_key => {
-			const equal = cCylinderPuzzle.#axes[in_key].equals(in_axis);
-			return in_match ? equal : !equal;
-		});
-		if (props.length > 1) {
-			return props;
-		} else {
-			return props[0];
-		}
-	}
-	get #settingVal() {
+class cCylinder extends THREE.Object3D {
+	get settingVal() {
 		if (this.userData.currentSettingKey) {
 			return this.userData.settingPerPieces[this.userData.currentSettingKey];
 		} else {
@@ -322,23 +318,43 @@ class cCylinderPuzzle extends THREE.Object3D {
 		});
 		this.#settingKey = pseudoMessageDigest1(uuids);
 		const sorted = [...axisx.keys()].sort((in_e1, in_e2) => in_e1 - in_e2);
-		if (!this.#settingVal.initialized) {
-			this.#settingVal.rowsForCircle = Math.max(...Array.from(axisx.values()));
-			this.#settingVal.colsForLength = Array.from(axisx.keys()).length;
-			this.#settingVal.origin = in_pieces[0].position.clone();
-			this.#settingVal.unitDelta = sorted[1] - sorted[0];
-			this.#settingVal.unitAngle = Math.PI * 2 / this.#settingVal.rowsForCircle;
-			this.#settingVal.completeCallback = null;
-			this.#settingVal.shuffleCount = 0;
-			this.#settingVal.shuffled = false;
-			this.#settingVal.initialized = true;
+		if (!this.settingVal.initialized) {
+			this.settingVal.rowsForCircle = Math.max(...Array.from(axisx.values()));
+			this.settingVal.colsForLength = Array.from(axisx.keys()).length;
+			this.settingVal.origin = in_pieces[0].position.clone();
+			this.settingVal.unitDelta = sorted[1] - sorted[0];
+			this.settingVal.unitAngle = Math.PI * 2 / this.settingVal.rowsForCircle;
+			this.settingVal.completeCallback = null;
+			this.settingVal.shuffleCount = 0;
+			this.settingVal.shuffled = false;
+			this.settingVal.initialized = true;
+		}
+	}
+}
+
+class cCylinderPuzzle extends cCylinder {
+	static error = 0.01;
+	static #axes = {
+		x : VEC3(1, 0, 0),
+		y : VEC3(0, 1, 0),
+		z : VEC3(0, 0, 1)
+	};
+	static axisComponent(in_axis, in_match = true) {
+		const props = Object.keys(cCylinderPuzzle.#axes).filter(in_key => {
+			const equal = cCylinderPuzzle.#axes[in_key].equals(in_axis);
+			return in_match ? equal : !equal;
+		});
+		if (props.length > 1) {
+			return props;
+		} else {
+			return props[0];
 		}
 	}
 	indexToPiece(in_row, in_col) {
-		const org = this.#settingVal.origin;
-		const angle = this.#settingVal.unitAngle * in_row;
+		const org = this.settingVal.origin;
+		const angle = this.settingVal.unitAngle * in_row;
 		const target = VEC3(
-			org.x + this.#settingVal.unitDelta * in_col,
+			org.x + this.settingVal.unitDelta * in_col,
 			org.y * Math.cos(angle),
 			org.y * Math.sin(angle)
 		);
@@ -346,10 +362,10 @@ class cCylinderPuzzle extends THREE.Object3D {
 	}
 	pieceToIndex(in_piece) {
 		const pos = in_piece.position;
-		const org = this.#settingVal.origin;
+		const org = this.settingVal.origin;
 		let row;
-		for (row = 0; row < this.#settingVal.rowsForCircle; row++) {
-			const angle = this.#settingVal.unitAngle * row;
+		for (row = 0; row < this.settingVal.rowsForCircle; row++) {
+			const angle = this.settingVal.unitAngle * row;
 			if (Math.abs(org.y * Math.cos(angle) - pos.y) > cCylinderPuzzle.error) {
 				continue;
 			}
@@ -360,14 +376,14 @@ class cCylinderPuzzle extends THREE.Object3D {
 		}
 		return {
 			row : row,
-			col : Math.round((pos.x - org.x) / this.#settingVal.unitDelta)
+			col : Math.round((pos.x - org.x) / this.settingVal.unitDelta)
 		};
 	}
 	getColorTable() {
 		const table = [];
-		for (let row = 0; row < this.#settingVal.rowsForCircle; row++) {
+		for (let row = 0; row < this.settingVal.rowsForCircle; row++) {
 			const rows = [];
-			for (let col = 0; col < this.#settingVal.colsForLength; col++) {
+			for (let col = 0; col < this.settingVal.colsForLength; col++) {
 				const piece = this.indexToPiece(row, col);
 				rows.push(getShellColor(piece));
 			}
@@ -402,7 +418,7 @@ class cCylinderPuzzle extends THREE.Object3D {
 	}
 	getScore() {
 		const max = 100;
-		return Math.max(Math.ceil((max - this.#settingVal.shuffleCount) / 10) * 10, 0);
+		return Math.max(Math.ceil((max - this.settingVal.shuffleCount) / 10) * 10, 0);
 	}
 	#isComplete() {
 		const evaluators = [
@@ -548,7 +564,7 @@ class cCylinderPuzzle extends THREE.Object3D {
 			let ratio = Math.abs(currAmount - in_startAmount) / amount;
 			if (currAmount === in_finalAmount) {
 				this.#releaseGroup(in_group);
-				this.#settingVal.shuffled = true;
+				this.settingVal.shuffled = true;
 				// in this case, progress function should be stopped (in in_callback)
 				ratio = 1.0;
 			}
@@ -587,7 +603,7 @@ class cCylinderPuzzle extends THREE.Object3D {
 				axis = cCylinderPuzzle.#axes.x;
 				pieces = this.#affectedRotationPieces(_piece, axis);
 				if (pieces.length < this.children.length) {
-					last = this.#settingVal.unitAngle * [1, 2, 3][arrRand]();
+					last = this.settingVal.unitAngle * [1, 2, 3][arrRand]();
 					break;
 				}
 			}
@@ -597,10 +613,10 @@ class cCylinderPuzzle extends THREE.Object3D {
 		return this.#makeAnimationProgress(group, axis, 0, last, in_callback);
 	}
 	registerCompleteCallback(in_callback) {
-		this.#settingVal.completeCallback = in_callback;
+		this.settingVal.completeCallback = in_callback;
 	}
 	removeCompleteCallback() {
-		this.#settingVal.completeCallback = null;
+		this.settingVal.completeCallback = null;
 	}
 	static #uiStates  = {
 		DISABLED : Symbol(),
@@ -794,9 +810,9 @@ class cCylinderPuzzle extends THREE.Object3D {
 				}
 			}
 			this.rotate(ctx.group, ctx.rotationAxis, amount);
-			notch = this.#settingVal.unitAngle;
+			notch = this.settingVal.unitAngle;
 		} else {
-			amount = in_posV2.distanceTo(ctx.initPosV2) * ctx.direction * 100;
+			amount = in_posV2.distanceTo(ctx.initPosV2) * ctx.direction * 250;
 			if (amount < ctx.movableRange.min) {
 				amount = ctx.movableRange.min;
 			}
@@ -825,7 +841,7 @@ class cCylinderPuzzle extends THREE.Object3D {
 		const ctx = this.#uiSession.ctx;
 		let notch;
 		if (ctx.rotationAxis) {
-			notch = this.#settingVal.unitAngle;
+			notch = this.settingVal.unitAngle;
 		} else {
 			notch = Math.abs(ctx.movableRange.min + ctx.movableRange.max);
 		}
@@ -837,13 +853,13 @@ class cCylinderPuzzle extends THREE.Object3D {
 			this.#uiInitSession();
 			this.#transition('stop');
 			(in_ending_callback)();
-			if (!this.#settingVal.shuffled) {
+			if (!this.settingVal.shuffled) {
 				// when without shuffled, do nothing
 				return;
 			}
-			this.#settingVal.shuffleCount++;
-			if (this.#settingVal.completeCallback && this.#isComplete()) {
-				(this.#settingVal.completeCallback)(this.#settingVal.shuffleCount);
+			this.settingVal.shuffleCount++;
+			if (this.settingVal.completeCallback && this.#isComplete()) {
+				(this.settingVal.completeCallback)(this.settingVal.shuffleCount);
 			}
 		});
 	}
@@ -1549,7 +1565,7 @@ class cTurnController {
 
 	gWorld (cSphericalWorld)
 	|
-	+-- gCube (cCylinderPuzzle)
+	+-- gCylinder (cCylinderPuzzle)
 		|
 		+-- meshes <--- gMeshLevelMap
 */
@@ -1559,9 +1575,9 @@ const WORLD_INIT_ZOOM = WORLD_RADIUS / 2;
 
 const gWorld = new cSphericalWorld(WORLD_RADIUS);
 
-const gCube = new cCylinderPuzzle();
+const gCylinder = new cCylinderPuzzle();
 
-gWorld.add(gCube);
+gWorld.add(gCylinder);
 
 gWorld.moveView(0.5, 0.5);
 gWorld.motionZoom2(WORLD_INIT_ZOOM, 1000);
@@ -1572,106 +1588,6 @@ gWorld.motionZoom2(WORLD_INIT_ZOOM, 1000);
 	// gWorld.add(new THREE.AxesHelper(WORLD_RADIUS));
 	gWorld.setZoom() can not work well.
 */
-
-class cWarpLine {
-	static #speed = 10;
-	static #gradation = 10;
-	constructor(in_canvas) {
-		const w = in_canvas.width;
-		const h = in_canvas.height;
-		this.ctx = in_canvas.getContext('2d');
-		this.box = new THREE.Box2(
-			new THREE.Vector2(0, 0),
-			new THREE.Vector2(w, h)
-		);
-		this.from = new THREE.Vector2(w / 2, h / 2);
-		this.#reset();
-	}
-	#reset() {
-		const angle = Math.random() * Math.PI * 2;
-		this.direction = new THREE.Vector2(Math.cos(angle), Math.sin(angle));
-		this.speed = Math.random() * cWarpLine.#speed + 5;
-		this.length = 0;
-	}
-	#curVec(in_scalar) {
-		return this.from.clone().add(this.direction.clone().multiplyScalar(in_scalar));
-	}
-	#drawGrayLine(in_from, in_to, in_grayScale) {
-		const gray = (in_grayScale << 16) | (in_grayScale << 8) | in_grayScale;
-		this.ctx.strokeStyle = '#' + gray.toString(16).padStart(6, '0');
-		this.ctx.beginPath();
-		this.ctx.moveTo(in_from.x, in_from.y);
-		this.ctx.lineTo(in_to.x, in_to.y);
-		this.ctx.stroke();
-	}
-	update() {
-		this.length += this.speed;
-		const to = this.#curVec(this.length);
-		if (this.box.containsPoint(to)) {
-			const notch = this.length / cWarpLine.#gradation;
-			for (let i = 0; i < cWarpLine.#gradation; i++) {
-				this.#drawGrayLine(
-					this.#curVec(notch * i),
-					this.#curVec(notch * (i + 1)),
-					255 / cWarpLine.#gradation * (i + 1)
-				);
-			}
-		} else {
-			/*
-				*** NOTE ***
-				even if overwritung using black,
-				this.#drawGrayLine(this.from, to, 0x00);
-				smudge of white line will remain.
-			*/
-			this.#reset();
-		}
-	}
-}
-
-function warpViewProgress(in_canvas, in_lineCount) {
-	const warpLines = [];
-	for (let i = 0; i < in_lineCount; i++) {
-		warpLines.push(new cWarpLine(in_canvas));
-	}
-	return () => {
-		warpLines.forEach(in_line => {
-			in_line.update();
-		});
-	}
-}
-
-function complete() {
-	const progress = warpViewProgress(gBackgroundCanvas, 50);
-	gWorld.addAnimationHook(progress);
-	const duration = 2000;
-	gWorld.motionZoom2(WORLD_RADIUS * 1.5, duration * 0.9);
-	window.setTimeout(() => {
-		gWorld.removeAnimationHook(progress);
-		gCube.removeCompleteCallback();
-		const dialog = document.createElement('div');
-		Object.assign(dialog.style, {
-			width : 'auto',
-			height : 'auto',
-			background : 'black',
-			borderRadius : '1em',
-			padding : '1.5em'
-		});
-		([
-			'<div>Congratulation !!</div>',
-			'<div>( Your score is : ' + gCube.getScore() + ' )</div>',
-			'<div>Thanks to your wisdom, peace in the universe has been preserved.</div>',
-			'<div>Click to go next stage.</div>',
-		]).forEach(in_fragment => {
-			dialog.innerHTML += in_fragment;
-		});
-		setTransition(dialog, 'color 0.5s ease-out', 'gray', 'white');
-		startDialog(dialog, () => {
-			drawCosmicView(gBackgroundCanvas, 400, 50);
-			gWorld.motionZoom2(WORLD_INIT_ZOOM, 1000);
-		});
-		nextLevel(false);
-	}, duration);
-}
 
 /*
 	*** NOTE ***
@@ -1692,34 +1608,6 @@ SOUND.MOVED.then(in_decompress => {
 SOUND.ERROR.then(in_decompress => {
 	SE_ERROR = new Audio('data:audio/mpeg;base64,' + in_decompress);
 });
-
-function shuffle(in_count) {
-	const randomAnimation = (in_remaining_count) => {
-		let overTheTop = false;
-		const callback = (in_ratio) => {
-			if ((in_ratio > 0.4) && !overTheTop) {
-				SE_MOVED.play();
-				overTheTop = true;
-			}
-			if (in_ratio < 1) {
-				return;
-			}
-			gWorld.removeAnimationHook(progress);
-			if (in_remaining_count > 1) {
-				(randomAnimation)(in_remaining_count - 1);
-			} else {
-				gWorld.stopRotation();
-				gCube.uiEnable();
-			}
-		};
-		const progress = gCube.makeRandomAnimationProgress(callback);
-		gWorld.addAnimationHook(progress);
-	};
-	gCube.registerCompleteCallback(complete);
-	gCube.uiDisable();
-	gWorld.startRotation(VEC3().random().multiplyScalar(0.05));
-	(randomAnimation)(in_count);
-}
 
 function setTransition(in_elem, in_shorthand, in_val1, in_val2) {
 	const components = in_shorthand.split(/\s+/);
@@ -1762,14 +1650,6 @@ function startDialog(in_element, in_callback = null) {
 	};
 	background.addEventListener('mousedown', closeDialog);
 	background.addEventListener('touchstart', closeDialog);
-}
-
-function shuffle3() {
-	shuffle(3);
-}
-
-function shuffle10() {
-	shuffle(10);
 }
 
 function uiHelp() {
@@ -1849,9 +1729,9 @@ const ID_NEXT_LEVEL = randomString();
 async function updateLevel() {
 	const color = 0x000000;
 	await gWorld.motionFog(color, 0, 100);
-	gCube.removePieces();
+	gCylinder.removePieces();
 	const current = gMeshLevelMap.currItemByOrder();
-	gCube.addPieces(current.v);
+	gCylinder.addPieces(current.v);
 	await gWorld.motionFog(color, 100, 0);
 	const prev = gMeshLevelMap.prevItemByOrder();
 	const next = gMeshLevelMap.nextItemByOrder();
@@ -1912,14 +1792,6 @@ function nextLevel(in_sound = true) {
 		id : ID_NEXT_LEVEL,
 		text : '(Next)',
 		func : nextLevel
-	},
-	{
-		text : 'shuffle x3',
-		func : shuffle3
-	},
-	{
-		text : 'shuffle x10',
-		func : shuffle10
 	},
 	{
 		text : 'help',
@@ -2017,7 +1889,7 @@ const notifyDelta = (() => {
 		if (intersects.length === 0) {
 			return;
 		}
-		const result = gCube.uiNotifyDeltaPosition(intersects[0].object, intersects[0].point, ndcToAbs(in_ndc));
+		const result = gCylinder.uiNotifyDeltaPosition(intersects[0].object, intersects[0].point, ndcToAbs(in_ndc));
 		if (result === RC.UNMOVABLE) {
 			knock();
 		}
@@ -2095,7 +1967,7 @@ async function choosePiece(in_no, in_piece) {
 	}
 	const indexTable = gContext.riversi.getArea();
 	const colorTable = indexTable.map(in_row => in_row.map(in_cell => gContext.mapping[in_cell]));
-	const targets = gCube.setColorTable(colorTable, true);
+	const targets = gCylinder.setColorTable(colorTable, true);
 	targets.forEach(in_target => in_target.initRotationX = in_target.piece.rotation.x);
 	const ease = new cEase(0, Math.PI * 2, 500);
 	const hook = () => {
@@ -2122,7 +1994,7 @@ function chooseHere(in_ev) {
 	}
 	const curr = intersects[0].object;
 	if (curr.userData.original === EMPTYCOLOR) {
-		const pos = gCube.pieceToIndex(intersects[0].object);
+		const pos = gCylinder.pieceToIndex(intersects[0].object);
 		const result = gContext.riversi.pc(PLAYERS.PC, pos.row, pos.col);
 		if (result) {
 			gContext.enableHandlers = false;
@@ -2157,18 +2029,18 @@ function chooseHere(in_ev) {
 		}
 		closure.x = in_ev.clientX;
 		closure.y = in_ev.clientY;
-		gCube.uiSetInitPosition(intersects[0].point, ndcToAbs(ndc));
+		gCylinder.uiSetInitPosition(intersects[0].point, ndcToAbs(ndc));
 	};
 	const move = thresholding(in_ev => {
 		closure.x = -1;
 		closure.y = -1;
 		const ndc = ndcFromEvent(in_ev);
-		if (gCube.uiIsMoving()) {
-			if (gCube.uiUpdatePosition(ndcToAbs(ndc))) {
+		if (gCylinder.uiIsMoving()) {
+			if (gCylinder.uiUpdatePosition(ndcToAbs(ndc))) {
 				SE_MOVED.play();
 			}
 		} else {
-			if (gCube.uiIsDragging()) {
+			if (gCylinder.uiIsDragging()) {
 				notifyDelta(ndc);
 			} else {
 				if (!in_ev[isEmulated]) {
@@ -2178,7 +2050,7 @@ function chooseHere(in_ev) {
 		}
 	});
 	const stop = in_ev => {
-		const releaseProgress = gCube.uiRelease(() => {
+		const releaseProgress = gCylinder.uiRelease(() => {
 			gWorld.removeAnimationHook(releaseProgress);
 		});
 		if (releaseProgress) {
@@ -2240,7 +2112,7 @@ function initializeByLevel() {
 		if (result) {
 			const history = gContext.riversi.getHistory();
 			const pos = history[history.length - 1];
-			const piece = gCube.indexToPiece(pos.row, pos.col);
+			const piece = gCylinder.indexToPiece(pos.row, pos.col);
 			choosePiece(PLAYERS.NPC1, piece);
 			gContext.controller.turnEnd();
 			return;
@@ -2249,7 +2121,7 @@ function initializeByLevel() {
 	});
 	const indexTable = gContext.riversi.getArea();
 	const colorTable = indexTable.map(in_row => in_row.map(in_cell => gContext.mapping[in_cell]));
-	gCube.setColorTable(colorTable);
+	gCylinder.setColorTable(colorTable);
 	gContext.controller.gameStart();
 }
 

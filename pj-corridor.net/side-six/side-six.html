@@ -229,15 +229,10 @@ const gMeshLevelMap = ((in_diameter) => {
 		const unitAngle = Math.PI * 2 / in_shell.rowsForCircle;
 		const geometry = shellGeometryFactory.create(unitSize, ((radius - unitThick) / radius), unitThick);
 		const pieces = [];
-		let empty = false;
 		for (let col = 0; col < in_shell.colsForLength; col++) {
 			let x = unitSize * col - unitSize * (in_shell.colsForLength - 1) / 2;
 			let y = (in_diameter / 2 - unitThick) * 1.2;
 			for (let row = 0; row < in_shell.rowsForCircle; row++) {
-				if (!empty) {
-					empty = true;
-					continue;
-				}
 				const materials = shellMaterials(unitSize, colors[row], BGCOLOR);
 				materials.push(edgeMaterial);
 				const piece = new THREE.Mesh(geometry, materials);
@@ -256,6 +251,8 @@ const gMeshLevelMap = ((in_diameter) => {
 				pieces.push(piece);
 			}
 		}
+		// the last piece is removed to allow sliding
+		pieces.pop();
 		const stage = LABEL_LV + in_shell.rowsForCircle + 'x' + in_shell.colsForLength;
 		map.set(stage, pieces);
 
@@ -267,25 +264,8 @@ const gMeshLevelMap = ((in_diameter) => {
 	(3) Puzzle related functions
 */
 
-class cCylinderPuzzle extends THREE.Object3D {
-	static error = 0.01;
-	static #axes = {
-		x : VEC3(1, 0, 0),
-		y : VEC3(0, 1, 0),
-		z : VEC3(0, 0, 1)
-	};
-	static axisComponent(in_axis, in_match = true) {
-		const props = Object.keys(cCylinderPuzzle.#axes).filter(in_key => {
-			const equal = cCylinderPuzzle.#axes[in_key].equals(in_axis);
-			return in_match ? equal : !equal;
-		});
-		if (props.length > 1) {
-			return props;
-		} else {
-			return props[0];
-		}
-	}
-	get #settingVal() {
+class cCylinder extends THREE.Object3D {
+	get settingVal() {
 		if (this.userData.currentSettingKey) {
 			return this.userData.settingPerPieces[this.userData.currentSettingKey];
 		} else {
@@ -324,13 +304,37 @@ class cCylinderPuzzle extends THREE.Object3D {
 			}
 		});
 		this.#settingKey = pseudoMessageDigest1(uuids);
-		if (!this.#settingVal.initialized) {
-			this.#settingVal.rowsForCircle = Math.max(...Array.from(axisx.values()));
-			this.#settingVal.unitAngle = Math.PI * 2 / this.#settingVal.rowsForCircle;
-			this.#settingVal.completeCallback = null;
-			this.#settingVal.shuffleCount = 0;
-			this.#settingVal.shuffled = false;
-			this.#settingVal.initialized = true;
+		const sorted = [...axisx.keys()].sort((in_e1, in_e2) => in_e1 - in_e2);
+		if (!this.settingVal.initialized) {
+			this.settingVal.rowsForCircle = Math.max(...Array.from(axisx.values()));
+			this.settingVal.colsForLength = Array.from(axisx.keys()).length;
+			this.settingVal.origin = in_pieces[0].position.clone();
+			this.settingVal.unitDelta = sorted[1] - sorted[0];
+			this.settingVal.unitAngle = Math.PI * 2 / this.settingVal.rowsForCircle;
+			this.settingVal.completeCallback = null;
+			this.settingVal.shuffleCount = 0;
+			this.settingVal.shuffled = false;
+			this.settingVal.initialized = true;
+		}
+	}
+}
+
+class cCylinderPuzzle extends cCylinder {
+	static error = 0.01;
+	static #axes = {
+		x : VEC3(1, 0, 0),
+		y : VEC3(0, 1, 0),
+		z : VEC3(0, 0, 1)
+	};
+	static axisComponent(in_axis, in_match = true) {
+		const props = Object.keys(cCylinderPuzzle.#axes).filter(in_key => {
+			const equal = cCylinderPuzzle.#axes[in_key].equals(in_axis);
+			return in_match ? equal : !equal;
+		});
+		if (props.length > 1) {
+			return props;
+		} else {
+			return props[0];
 		}
 	}
 	#approximateArr(in_callback, in_order = 1) {
@@ -340,7 +344,7 @@ class cCylinderPuzzle extends THREE.Object3D {
 	}
 	getScore() {
 		const max = 100;
-		return Math.max(Math.ceil((max - this.#settingVal.shuffleCount) / 10) * 10, 0);
+		return Math.max(Math.ceil((max - this.settingVal.shuffleCount) / 10) * 10, 0);
 	}
 	#isComplete() {
 		const evaluators = [
@@ -486,7 +490,7 @@ class cCylinderPuzzle extends THREE.Object3D {
 			let ratio = Math.abs(currAmount - in_startAmount) / amount;
 			if (currAmount === in_finalAmount) {
 				this.#releaseGroup(in_group);
-				this.#settingVal.shuffled = true;
+				this.settingVal.shuffled = true;
 				// in this case, progress function should be stopped (in in_callback)
 				ratio = 1.0;
 			}
@@ -525,7 +529,7 @@ class cCylinderPuzzle extends THREE.Object3D {
 				axis = cCylinderPuzzle.#axes.x;
 				pieces = this.#affectedRotationPieces(_piece, axis);
 				if (pieces.length < this.children.length) {
-					last = this.#settingVal.unitAngle * [1, 2, 3][arrRand]();
+					last = this.settingVal.unitAngle * [1, 2, 3][arrRand]();
 					break;
 				}
 			}
@@ -535,10 +539,10 @@ class cCylinderPuzzle extends THREE.Object3D {
 		return this.#makeAnimationProgress(group, axis, 0, last, in_callback);
 	}
 	registerCompleteCallback(in_callback) {
-		this.#settingVal.completeCallback = in_callback;
+		this.settingVal.completeCallback = in_callback;
 	}
 	removeCompleteCallback() {
-		this.#settingVal.completeCallback = null;
+		this.settingVal.completeCallback = null;
 	}
 	static #uiStates  = {
 		DISABLED : Symbol(),
@@ -732,9 +736,9 @@ class cCylinderPuzzle extends THREE.Object3D {
 				}
 			}
 			this.rotate(ctx.group, ctx.rotationAxis, amount);
-			notch = this.#settingVal.unitAngle;
+			notch = this.settingVal.unitAngle;
 		} else {
-			amount = in_posV2.distanceTo(ctx.initPosV2) * ctx.direction * 100;
+			amount = in_posV2.distanceTo(ctx.initPosV2) * ctx.direction * 250;
 			if (amount < ctx.movableRange.min) {
 				amount = ctx.movableRange.min;
 			}
@@ -763,7 +767,7 @@ class cCylinderPuzzle extends THREE.Object3D {
 		const ctx = this.#uiSession.ctx;
 		let notch;
 		if (ctx.rotationAxis) {
-			notch = this.#settingVal.unitAngle;
+			notch = this.settingVal.unitAngle;
 		} else {
 			notch = Math.abs(ctx.movableRange.min + ctx.movableRange.max);
 		}
@@ -775,13 +779,13 @@ class cCylinderPuzzle extends THREE.Object3D {
 			this.#uiInitSession();
 			this.#transition('stop');
 			(in_ending_callback)();
-			if (!this.#settingVal.shuffled) {
+			if (!this.settingVal.shuffled) {
 				// when without shuffled, do nothing
 				return;
 			}
-			this.#settingVal.shuffleCount++;
-			if (this.#settingVal.completeCallback && this.#isComplete()) {
-				(this.#settingVal.completeCallback)(this.#settingVal.shuffleCount);
+			this.settingVal.shuffleCount++;
+			if (this.settingVal.completeCallback && this.#isComplete()) {
+				(this.settingVal.completeCallback)(this.settingVal.shuffleCount);
 			}
 		});
 	}
@@ -792,7 +796,7 @@ class cCylinderPuzzle extends THREE.Object3D {
 
 	gWorld (cSphericalWorld)
 	|
-	+-- gCube (cCylinderPuzzle)
+	+-- gCylinder (cCylinderPuzzle)
 		|
 		+-- meshes <--- gMeshLevelMap
 */
@@ -802,9 +806,9 @@ const WORLD_INIT_ZOOM = WORLD_RADIUS / 2;
 
 const gWorld = new cSphericalWorld(WORLD_RADIUS);
 
-const gCube = new cCylinderPuzzle();
+const gCylinder = new cCylinderPuzzle();
 
-gWorld.add(gCube);
+gWorld.add(gCylinder);
 
 gWorld.moveView(0.5, 0.5);
 gWorld.motionZoom2(WORLD_INIT_ZOOM, 1000);
@@ -890,7 +894,7 @@ function complete() {
 	gWorld.motionZoom2(WORLD_RADIUS * 1.5, duration * 0.9);
 	window.setTimeout(() => {
 		gWorld.removeAnimationHook(progress);
-		gCube.removeCompleteCallback();
+		gCylinder.removeCompleteCallback();
 		const dialog = document.createElement('div');
 		Object.assign(dialog.style, {
 			width : 'auto',
@@ -901,7 +905,7 @@ function complete() {
 		});
 		([
 			'<div>Congratulation !!</div>',
-			'<div>( Your score is : ' + gCube.getScore() + ' )</div>',
+			'<div>( Your score is : ' + gCylinder.getScore() + ' )</div>',
 			'<div>Thanks to your wisdom, peace in the universe has been preserved.</div>',
 			'<div>Click to go next stage.</div>',
 		]).forEach(in_fragment => {
@@ -935,34 +939,6 @@ SOUND.MOVED.then(in_decompress => {
 SOUND.ERROR.then(in_decompress => {
 	SE_ERROR = new Audio('data:audio/mpeg;base64,' + in_decompress);
 });
-
-function shuffle(in_count) {
-	const randomAnimation = (in_remaining_count) => {
-		let overTheTop = false;
-		const callback = (in_ratio) => {
-			if ((in_ratio > 0.4) && !overTheTop) {
-				SE_MOVED.play();
-				overTheTop = true;
-			}
-			if (in_ratio < 1) {
-				return;
-			}
-			gWorld.removeAnimationHook(progress);
-			if (in_remaining_count > 1) {
-				(randomAnimation)(in_remaining_count - 1);
-			} else {
-				gWorld.stopRotation();
-				gCube.uiEnable();
-			}
-		};
-		const progress = gCube.makeRandomAnimationProgress(callback);
-		gWorld.addAnimationHook(progress);
-	};
-	gCube.registerCompleteCallback(complete);
-	gCube.uiDisable();
-	gWorld.startRotation(VEC3().random().multiplyScalar(0.05));
-	(randomAnimation)(in_count);
-}
 
 function setTransition(in_elem, in_shorthand, in_val1, in_val2) {
 	const components = in_shorthand.split(/\s+/);
@@ -1005,6 +981,34 @@ function startDialog(in_element, in_callback = null) {
 	};
 	background.addEventListener('mousedown', closeDialog);
 	background.addEventListener('touchstart', closeDialog);
+}
+
+function shuffle(in_count) {
+	const randomAnimation = (in_remaining_count) => {
+		let overTheTop = false;
+		const callback = (in_ratio) => {
+			if ((in_ratio > 0.4) && !overTheTop) {
+				SE_MOVED.play();
+				overTheTop = true;
+			}
+			if (in_ratio < 1) {
+				return;
+			}
+			gWorld.removeAnimationHook(progress);
+			if (in_remaining_count > 1) {
+				(randomAnimation)(in_remaining_count - 1);
+			} else {
+				gWorld.stopRotation();
+				gCylinder.uiEnable();
+			}
+		};
+		const progress = gCylinder.makeRandomAnimationProgress(callback);
+		gWorld.addAnimationHook(progress);
+	};
+	gCylinder.registerCompleteCallback(complete);
+	gCylinder.uiDisable();
+	gWorld.startRotation(VEC3().random().multiplyScalar(0.05));
+	(randomAnimation)(in_count);
 }
 
 function shuffle3() {
@@ -1092,9 +1096,9 @@ const ID_NEXT_LEVEL = randomString();
 async function updateLevel() {
 	const color = 0x000000;
 	await gWorld.motionFog(color, 0, 100);
-	gCube.removePieces();
+	gCylinder.removePieces();
 	const current = gMeshLevelMap.currItemByOrder();
-	gCube.addPieces(current.v);
+	gCylinder.addPieces(current.v);
 	await gWorld.motionFog(color, 100, 0);
 	const prev = gMeshLevelMap.prevItemByOrder();
 	const next = gMeshLevelMap.nextItemByOrder();
@@ -1259,7 +1263,7 @@ const notifyDelta = (() => {
 		if (intersects.length === 0) {
 			return;
 		}
-		const result = gCube.uiNotifyDeltaPosition(intersects[0].object, intersects[0].point, ndcToAbs(in_ndc));
+		const result = gCylinder.uiNotifyDeltaPosition(intersects[0].object, intersects[0].point, ndcToAbs(in_ndc));
 		if (result === RC.UNMOVABLE) {
 			knock();
 		}
@@ -1332,18 +1336,18 @@ function chooseHere(in_ev) {
 		}
 		closure.x = in_ev.clientX;
 		closure.y = in_ev.clientY;
-		gCube.uiSetInitPosition(intersects[0].point, ndcToAbs(ndc));
+		gCylinder.uiSetInitPosition(intersects[0].point, ndcToAbs(ndc));
 	};
 	const move = thresholding(in_ev => {
 		closure.x = -1;
 		closure.y = -1;
 		const ndc = ndcFromEvent(in_ev);
-		if (gCube.uiIsMoving()) {
-			if (gCube.uiUpdatePosition(ndcToAbs(ndc))) {
+		if (gCylinder.uiIsMoving()) {
+			if (gCylinder.uiUpdatePosition(ndcToAbs(ndc))) {
 				SE_MOVED.play();
 			}
 		} else {
-			if (gCube.uiIsDragging()) {
+			if (gCylinder.uiIsDragging()) {
 				notifyDelta(ndc);
 			} else {
 				if (!in_ev[isEmulated]) {
@@ -1353,7 +1357,7 @@ function chooseHere(in_ev) {
 		}
 	});
 	const stop = in_ev => {
-		const releaseProgress = gCube.uiRelease(() => {
+		const releaseProgress = gCylinder.uiRelease(() => {
 			gWorld.removeAnimationHook(releaseProgress);
 		});
 		if (releaseProgress) {
