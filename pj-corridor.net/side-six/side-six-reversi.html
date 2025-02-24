@@ -334,7 +334,7 @@ class cCylinderPuzzle extends THREE.Object3D {
 			this.#settingVal.initialized = true;
 		}
 	}
-	#indexToPiece(in_row, in_col) {
+	indexToPiece(in_row, in_col) {
 		const org = this.#settingVal.origin;
 		const angle = this.#settingVal.unitAngle * in_row;
 		const target = VEC3(
@@ -368,7 +368,7 @@ class cCylinderPuzzle extends THREE.Object3D {
 		for (let row = 0; row < this.#settingVal.rowsForCircle; row++) {
 			const rows = [];
 			for (let col = 0; col < this.#settingVal.colsForLength; col++) {
-				const piece = this.#indexToPiece(row, col);
+				const piece = this.indexToPiece(row, col);
 				rows.push(getShellColor(piece));
 			}
 			table.push(rows);
@@ -379,7 +379,7 @@ class cCylinderPuzzle extends THREE.Object3D {
 		const target = [];
 		for (let row = 0; row < in_table.length; row++) {
 			for (let col = 0; col < in_table[row].length; col++) {
-				const piece = this.#indexToPiece(row, col);
+				const piece = this.indexToPiece(row, col);
 				if (getShellColor(piece) === in_table[row][col]) {
 					continue;
 				}
@@ -1153,7 +1153,7 @@ class cReversi {
 		}
 		this.#chooseTentative(in_player, in_ix);
 		this.#areaCommit();
-		this.#history.push(in_ix);
+		this.#history.push(this.#indexToPos(in_ix));
 		return true;
 	}
 	#phase() {
@@ -1488,7 +1488,7 @@ class cReversi {
 		}
 	}
 	pc(in_no, in_row, in_col) {
-		this.#choose(this.#players[in_no], this.#posToIndex(in_row, in_col));
+		return this.#choose(this.#players[in_no], this.#posToIndex(in_row, in_col));
 	}
 	npc(in_no, in_argo = 'mixed') {
 		return (this.#npcSet[in_argo].bind(this))(this.#players[in_no]);
@@ -1555,7 +1555,7 @@ class cTurnController {
 */
 
 const WORLD_RADIUS = CUBE_SIZE * 10;
-const WORLD_INIT_ZOOM = WORLD_RADIUS / 3;
+const WORLD_INIT_ZOOM = WORLD_RADIUS / 2;
 
 const gWorld = new cSphericalWorld(WORLD_RADIUS);
 
@@ -1563,7 +1563,7 @@ const gCube = new cCylinderPuzzle();
 
 gWorld.add(gCube);
 
-gWorld.moveView(2.5, 0.5);
+gWorld.moveView(0.5, 0.5);
 gWorld.motionZoom2(WORLD_INIT_ZOOM, 1000);
 
 /*
@@ -2024,7 +2024,7 @@ const notifyDelta = (() => {
 	}
 })();
 
-const setFocus = (() => {
+const focusHere = (() => {
 	let prev = null;
 	return in_ndc => {
 		let intersects = gWorld.intersectPositive(in_ndc);
@@ -2051,8 +2051,8 @@ const setFocus = (() => {
 			}
 		}
 		prev = curr;
-		prev.userData.original = getShellColor(curr);
-		if (prev.userData.original === DMZCOLOR) {
+		curr.userData.original = getShellColor(curr);
+		if (curr.userData.original !== EMPTYCOLOR) {
 			return;
 		}
 		const color = new THREE.Color(prev.userData.original);
@@ -2061,51 +2061,107 @@ const setFocus = (() => {
 	}
 })();
 
-function resetFocus() {
+const PLAYERS = {
+	PC : 0,
+	NPC1 : 1,
+	NPC2 : 2,
+	NPC3 : 3
+};
+
+const gContext = {
+	riversi : null,
+	mapping : (() => {
+		const arr = new Array(10).fill(-1);
+		arr[PLAYERS.PC] = BLUE;
+		arr[PLAYERS.NPC1] = RED;
+		arr[PLAYERS.NPC2] = YELLOW;
+		arr[PLAYERS.NPC3] = GREEN;
+		arr[8] = DMZCOLOR;
+		arr[9] = EMPTYCOLOR;
+		return arr;
+	})(),
+	controller : null,
+	enableHandlers : false
+};
+
+async function choosePiece(in_no, in_piece) {
 	const outOfRange = new THREE.Vector2(Infinity, Infinity);
-	setFocus(outOfRange);
+	focusHere(outOfRange);
+	setShellColor(in_piece, gContext.mapping[in_no]);
+	if (in_no !== PLAYERS.PC) {
+		const dst = in_piece.position.clone();
+		dst.x *= 0.5;
+		await gWorld.motionViewFrom(dst, 500);
+	}
+	const indexTable = gContext.riversi.getArea();
+	const colorTable = indexTable.map(in_row => in_row.map(in_cell => gContext.mapping[in_cell]));
+	const targets = gCube.setColorTable(colorTable, true);
+	targets.forEach(in_target => in_target.initRotationX = in_target.piece.rotation.x);
+	const ease = new cEase(0, Math.PI * 2, 500);
+	const hook = () => {
+		const angle = ease.currentEasingOut();
+		if (angle > Math.PI) {
+			if (angle === Math.PI * 2) {
+				gWorld.removeAnimationHook(hook);
+				targets.forEach(in_target => in_target.piece.rotation.x = in_target.initRotationX);
+				return;
+			} else {
+				targets.forEach(({piece, color}) => setShellColor(piece, color));
+			}
+		}
+		targets.forEach(in_target => in_target.piece.rotation.x = in_target.initRotationX + angle);
+	};
+	gWorld.addAnimationHook(hook);
 }
 
-function choose(in_ev) {
+function chooseHere(in_ev) {
 	const ndc = ndcFromEvent(in_ev);
 	let intersects = gWorld.intersectPositive(ndc);
 	if (intersects.length === 0) {
 		return;
 	}
-	//★
-	//console.log(gCube.pieceToIndex(intersects[0].object));
-
+	const curr = intersects[0].object;
+	if (curr.userData.original === EMPTYCOLOR) {
+		const pos = gCube.pieceToIndex(intersects[0].object);
+		const result = gContext.riversi.pc(PLAYERS.PC, pos.row, pos.col);
+		if (result) {
+			gContext.enableHandlers = false;
+			choosePiece(PLAYERS.PC, intersects[0].object);
+			gContext.controller.turnEnd();
+			return;
+		}
+	}
 	knock();
 }
 
-const gHandlers = (() => {
-	const c = {
+(() => {
+	const closure = {
 		x : -1,
 		y : -1,
 		once : false
 	};
 	const start = in_ev => {
-		if (!c.once) {
+		if (!closure.once) {
 			/*
 				*** NOTE ***
 				Safari may restrict sound without user interaction.
 				because of this, the sound does not work without this code.
 			*/
 			SE_DUMMY.play();
-			c.once = true;
+			closure.once = true;
 		}
 		const ndc = ndcFromEvent(in_ev);
 		const intersects = gWorld.intersectPositive(ndc);
 		if (intersects.length === 0) {
 			return;
 		}
-		c.x = in_ev.clientX;
-		c.y = in_ev.clientY;
+		closure.x = in_ev.clientX;
+		closure.y = in_ev.clientY;
 		gCube.uiSetInitPosition(intersects[0].point, ndcToAbs(ndc));
 	};
 	const move = thresholding(in_ev => {
-		c.x = -1;
-		c.y = -1;
+		closure.x = -1;
+		closure.y = -1;
 		const ndc = ndcFromEvent(in_ev);
 		if (gCube.uiIsMoving()) {
 			if (gCube.uiUpdatePosition(ndcToAbs(ndc))) {
@@ -2116,7 +2172,7 @@ const gHandlers = (() => {
 				notifyDelta(ndc);
 			} else {
 				if (!in_ev[isEmulated]) {
-					setFocus(ndc);
+					focusHere(ndc);
 				}
 			}
 		}
@@ -2128,30 +2184,27 @@ const gHandlers = (() => {
 		if (releaseProgress) {
 			gWorld.addAnimationHook(releaseProgress);
 		} else {
-			if ((c.x !== in_ev.clientX) || (c.y !== in_ev.clientY)) {
+			if ((closure.x !== in_ev.clientX) || (closure.y !== in_ev.clientY)) {
 				return;
 			}
-			choose(in_ev);
+			chooseHere(in_ev);
 		}
 	};
-	return {
+	let handlers = {
 		'mousedown' : start,
 		'mousemove' : move,
 		'mouseleave' : stop,
 		'mouseout' : stop,
 		'mouseup' : stop
 	};
+	for (let [name, func] of Object.entries(handlers)) {
+		gWorld.canvas.addEventListener(name, in_ev => {
+			if (gContext.enableHandlers) {
+				(func.bind(this))(in_ev);
+			}
+		});
+	}
 })();
-
-let gEnableHandlers = false;
-
-for (let [name, func] of Object.entries(gHandlers)) {
-	gWorld.canvas.addEventListener(name, in_ev => {
-		if (gEnableHandlers) {
-			(func.bind(this))(in_ev)
-		}
-	});
-}
 
 function initializeByLevel() {
 	/*
@@ -2172,112 +2225,33 @@ function initializeByLevel() {
 	const curr = gMeshLevelMap.currItemByOrder();
 	const match = curr.k.match(new RegExp(LABEL_LV + '(\\d+)'));
 	const mode = players + 'x' + parseInt(match[1], 10);
-	const game = new cReversi(mode);
+	gContext.riversi = new cReversi(mode);
 	/*
 		2. cTurnController settings
 	*/
-	const mapper = [
-		BLUE,
-		RED,
-		YELLOW,
-		GREEN,
-		-1,
-		-1,
-		-1,
-		-1,
-		DMZCOLOR,
-		EMPTYCOLOR
-	];
-	const ctrl = new cTurnController();
-	ctrl.registerPlayer(() => {
-		// PC
-		gEnableHandlers = true;
+	gContext.controller = new cTurnController();
+	gContext.controller.registerPlayer(() => {
+		// PLAYERS.PC
+		gContext.enableHandlers = true;
 	});
-	ctrl.registerPlayer(() => {
-		// NPC
-		// ctrl.turnEnd();
-		// ctrl.gameEnd();
+	gContext.controller.registerPlayer(() => {
+		// PLAYERS.NPC1
+		const result = gContext.riversi.npc(PLAYERS.NPC1);
+		if (result) {
+			const history = gContext.riversi.getHistory();
+			const pos = history[history.length - 1];
+			const piece = gCube.indexToPiece(pos.row, pos.col);
+			choosePiece(PLAYERS.NPC1, piece);
+			gContext.controller.turnEnd();
+			return;
+		}
+		// gContext.controller.gameEnd();
 	});
-	const indexTable = game.getArea();
-	const colorTable = indexTable.map(in_row => in_row.map(in_cell => mapper[in_cell]));
+	const indexTable = gContext.riversi.getArea();
+	const colorTable = indexTable.map(in_row => in_row.map(in_cell => gContext.mapping[in_cell]));
 	gCube.setColorTable(colorTable);
-	ctrl.gameStart();
-	// 例の回転のも
+	gContext.controller.gameStart();
 }
-
-/*
-	pc(in_no, in_row, in_col) {
-		this.#choose(this.#players[in_no], this.#posToIndex(in_row, in_col));
-	}
-	npc(in_no, in_argo = 'mixed') {
-		return (this.#npcSet[in_argo].bind(this))(this.#players[in_no]);
-	}
-	getHistory() {
-		return this.#history;
-	}
-	getArea() {
-		const table = [];
-		for (let ix = 0; ix < this.#area.latest.length; ix++) {
-			const pos = this.#indexToPos(ix);
-			if (!table[pos.row]) {
-				table[pos.row] = [];
-			}
-			table[pos.row][pos.col] = parseInt(this.#area.latest[ix].description);
-		}
-		return table;
-	}
-
-function increment2DArray(arr) {
-    return arr.map(innerArray => 
-        innerArray.map(element => element + 1)
-    );
-}
-
-
-*/
-
-
-/*
-★★★
-
-1. パラメータで 2, 4 を決める
-2. レベル変更でゲームの初期化 ※ 変更がなくてもゲームの初期化
-	リバーシを init して表示に settabale する
-3. コントローラーで処理
-
-*/
-
-
-/*
-window.setTimeout(() => {
-	//console.log(gCube.getColorTable());
-	const table = [];
-	for (let row = 0; row < 8; row++) {
-		const rows = [];
-		for (let col = 0; col < 7; col++) {
-			rows.push(colors[arrRand]());
-		}
-		table.push(rows);
-	}
-	const targets = gCube.setColorTable(table, true);
-	targets.forEach(in_target => in_target.initRotationX = in_target.piece.rotation.x);
-	const ease = new cEase(0, Math.PI * 2, 500);
-	const hook = () => {
-		const angle = ease.currentEasingOut();
-		if (angle > Math.PI) {
-			if (angle === Math.PI * 2) {
-				gWorld.removeAnimationHook(hook);
-				targets.forEach(in_target => in_target.piece.rotation.x = in_target.initRotationX);
-				return;
-			} else {
-				targets.forEach(({piece, color}) => setShellColor(piece, color));
-			}
-		}
-		targets.forEach(in_target => in_target.piece.rotation.x = in_target.initRotationX + angle);
-	};
-	gWorld.addAnimationHook(hook);
-}, 2000);
-*/
 
 </script>
 </body>
