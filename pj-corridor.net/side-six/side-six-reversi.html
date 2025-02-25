@@ -10,6 +10,7 @@
 		"three" : "https://cdn.jsdelivr.net/npm/three@0.172.0/build/three.module.min.js",
 		"utils" : "https://cdn.jsdelivr.net/npm/three@0.172.0/examples/jsm/utils/BufferGeometryUtils.js",
 		"basic" : "./basic-functions.js",
+		"side6" : "./side-six.js",
 		"sound" : "./sound-effect.js"
 	}
 }
@@ -68,805 +69,13 @@ import {
 	customCapsuleGeometry,
 	cSphericalWorld
 } from 'basic';
+import {
+	cExColony
+} from 'side6';
 import * as SOUND from 'sound';
 
 /*
-	(1) Texture, MeshLambertMaterial, and BoxGeometry using cCache, which returns the same object in cache without creating.
-*/
-
-const textureFactory = factoryBuilder((in_w, in_h) => {
-	const gradation = 4
-	// gradation (from black to white)
-	let maxDepth = 255;
-	let styles = [];
-	for (let i = 0; i < gradation; i++) {
-		let depth = Math.ceil(maxDepth / gradation * (i + 1));
-		styles[i] = 'rgb(' + depth + ',' + depth + ',' + depth + ')';
-	}
-	// draw and convert using toDataUR
-	let canvas = document.createElement('CANVAS');
-	canvas.width = in_w;
-	canvas.height = in_h;
-	const ctx = canvas.getContext('2d');
-	let radius = gradation + 2;
-	/*
-		Rect           RoundRect      RoundRect
-
-		##########     ##########     ##########
-		##########     ##******##     ##******##
-		##########     #********#     #**++++**#
-		##########     #********#     #*++++++*#
-		########## --> #********# --> #*++++++*# --> ...
-		##########     #********#     #*++++++*#
-		##########     #********#     #**++++**#
-		##########     ##******##     ##******##
-		##########     ##########     ##########
-	*/
-	for (let i = 0; i < gradation; i++) {
-		ctx.fillStyle = styles[i];
-		if (i > 0) {
-			ctx[fillRoundRect](i, i, in_w - i * 2, in_h - i * 2, radius - i);
-		} else {
-			ctx.fillRect(i, i, in_w - i * 2, in_h - i * 2);
-		}
-	}
-	return (new THREE.TextureLoader()).load(canvas.toDataURL());
-});
-
-const surfaceFactory = factoryBuilder((in_color, in_size = -1) => {
-	const material = new THREE.MeshLambertMaterial();
-	material.color = new THREE.Color(in_color);
-	if (in_size > 0) {
-		material.map = textureFactory.create(in_size, in_size);
-	}
-	return material;
-});
-
-const SHELL_COLOR_INDEX = 2;
-
-function shellMaterials(in_size, in_color_main, in_color_back) {
-	const materials = [];
-	for (let i = 0; i < Object.keys(DIRECTION).length; i++) {
-		if (i === SHELL_COLOR_INDEX) {
-			materials.push(surfaceFactory.create(in_color_main, in_size));
-		} else {
-			materials.push(surfaceFactory.create(in_color_back));
-		}
-	}
-	return materials;
-}
-
-function getShellColor(in_object) {
-	return in_object.material[SHELL_COLOR_INDEX].color.getHex();
-}
-
-function setShellColor(in_object, in_color) {
-	const setting = in_object.geometry.parameters;
-	return in_object.material[SHELL_COLOR_INDEX] = surfaceFactory.create(in_color, setting.size);
-}
-
-const shellGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickness) => {
-	const radian = 6;
-	const outerLen = in_size - radian * 2;
-	const innerLen = outerLen * in_innerRatio;
-	const thickness = in_thickness - radian * 2;
-	const geometry = trapezoidGeometryUtil(outerLen, outerLen, outerLen, innerLen, thickness, radian);
-	geometry.parameters = {
-		size : in_size,
-		innerRatio : in_innerRatio,
-		thickness : in_thickness
-	};
-	return geometry;
-});
-
-const GRAY1 = 0x222222;
-const GRAY2 = 0x444444;
-const GRAY3 = 0x666666;
-
-const BGCOLOR = GRAY1;
-const DMZCOLOR = GRAY2;
-const EMPTYCOLOR = GRAY3;
-
-const ORANGE = 0xFFAA00;
-const RED = 0xFF0000;
-const WHITE = 0xFFFFFF;
-const YELLOW = 0xFFFF00;
-const BLUE = 0x3333FF;
-const GREEN = 0x118811;
-const LIGHTBLUE = 0x5588FF;
-const LIGHTGREEN = 0x55CC55;
-
-const edgeMaterial = new THREE.MeshLambertMaterial({color : BGCOLOR});
-
-/*
-	(2) dimension of Cube and Meshes of them
-*/
-
-const PUZZLE_SIZE = 400;
-const LABEL_LV = 'lv.';
-
-const gMeshLevelMap = ((in_diameter) => {
-	const map = new cCyclicMap();
-	const shellInfo = [
-		{
-			rowsForCircle : 14,
-			colsForLength : 7,
-			dmzArr : [
-				[ 7, 0], [ 7, 1], [ 7, 2], [ 7, 3], [ 7, 4], [ 7, 5], [ 7, 6],
-				[ 8, 0], [ 8, 1], [ 8, 2], [ 8, 3], [ 8, 4], [ 8, 5], [ 8, 6],
-				[ 9, 0], [ 9, 1], [ 9, 2], [ 9, 3], [ 9, 4], [ 9, 5], [ 9, 6],
-				[10, 0], [10, 1], [10, 2], [10, 3], [10, 4], [10, 5], [10, 6],
-				[11, 0], [11, 1], [11, 2], [11, 3], [11, 4], [11, 5], [11, 6],
-				[12, 0], [12, 1], [12, 2], [12, 3], [12, 4], [12, 5], [12, 6],
-				[13, 0], [13, 1], [13, 2], [13, 3], [13, 4], [13, 5], [13, 6]
-			]
-		},
-		{
-			rowsForCircle : 7,
-			colsForLength : 7,
-			dmzArr : []
-		},
-		{
-			rowsForCircle : 16,
-			colsForLength : 8,
-			dmzArr : [
-				[ 8, 0], [ 8, 1], [ 8, 2], [ 8, 3], [ 8, 4], [ 8, 5], [ 8, 6], [ 8, 7],
-				[ 9, 0], [ 9, 1], [ 9, 2], [ 9, 3], [ 9, 4], [ 9, 5], [ 9, 6], [ 9, 7],
-				[10, 0], [10, 1], [10, 2], [10, 3], [10, 4], [10, 5], [10, 6], [10, 7],
-				[11, 0], [11, 1], [11, 2], [11, 3], [11, 4], [11, 5], [11, 6], [11, 7],
-				[12, 0], [12, 1], [12, 2], [12, 3], [12, 4], [12, 5], [12, 6], [12, 7],
-				[13, 0], [13, 1], [13, 2], [13, 3], [13, 4], [13, 5], [13, 6], [13, 7],
-				[14, 0], [14, 1], [14, 2], [14, 3], [14, 4], [14, 5], [14, 6], [14, 7],
-				[15, 0], [15, 1], [15, 2], [15, 3], [15, 4], [15, 5], [15, 6], [15, 7]
-			]
-		},
-		{
-			rowsForCircle : 8,
-			colsForLength : 8,
-			dmzArr : []
-		}
-	];
-	shellInfo.forEach(in_shell => {
-		const radius = in_diameter / 2;
-		const circumf = in_diameter * Math.PI;
-		const unitSize = circumf / in_shell.rowsForCircle;
-		const unitThick = unitSize * 0.3;
-		const unitAngle = Math.PI * 2 / in_shell.rowsForCircle;
-		const geometry = shellGeometryFactory.create(unitSize, ((radius - unitThick) / radius), unitThick);
-		const pieces = [];
-		for (let col = 0; col < in_shell.colsForLength; col++) {
-			let x = unitSize * col - unitSize * (in_shell.colsForLength - 1) / 2;
-			let y = (in_diameter / 2 - unitThick) * 1.2;
-			for (let row = 0; row < in_shell.rowsForCircle; row++) {
-				let materials = null;
-				if (in_shell.dmzArr.length > 0) {
-					if (in_shell.dmzArr.some(in_dmz => in_dmz[0] === row && in_dmz[1] === col)) {
-						materials = shellMaterials(unitSize, DMZCOLOR, BGCOLOR);
-					}
-				}
-				if (!materials) {
-					materials = shellMaterials(unitSize, EMPTYCOLOR, BGCOLOR);
-				}
-				materials.push(edgeMaterial);
-				const piece = new THREE.Mesh(geometry, materials);
-				const pivot = new THREE.Object3D();
-				pivot.add(piece);
-				piece.position.copy(VEC3(x, y, 0));
-				pivot.rotateX(unitAngle * row);
-				/*
-					*** NOTE ***
-					you can use matrix,
-					to apply rotated position before adding to scene
-				*/
-				pivot.updateMatrixWorld();
-				piece.applyMatrix4(pivot.matrix);
-				pivot.remove(piece);
-				pieces.push(piece);
-			}
-		}
-		let stage = LABEL_LV + in_shell.colsForLength;
-		if (in_shell.rowsForCircle === in_shell.colsForLength) {
-			stage += '-loop'
-		}
-		map.set(stage, pieces);
-	});
-	return map;
-})(PUZZLE_SIZE);
-
-/*
-	(3) Puzzle related functions
-*/
-
-class cCylinder extends THREE.Object3D {
-	get settingVal() {
-		if (this.userData.currentSettingKey) {
-			return this.userData.settingPerPieces[this.userData.currentSettingKey];
-		} else {
-			throw new Error('no currentSettingKey');
-		}
-	}
-	set #settingKey(in_value) {
-		if (!this.userData.settingPerPieces) {
-			this.userData.settingPerPieces = {};
-		}
-		if (!this.userData.settingPerPieces[in_value]) {
-			this.userData.settingPerPieces[in_value] = {};
-		}
-		this.userData.currentSettingKey = in_value;
-	}
-	removePieces() {
-		const pieces = this.children.slice();
-		pieces.forEach(in_piece => {
-			this.remove(in_piece);
-		});
-		this.userData.currentSettingKey = null;
-	}
-	addPieces(in_pieces) {
-		this.removePieces();
-		const uuids = [];
-		const axisx = new Map();
-		in_pieces.forEach(in_piece => {
-			uuids.push(in_piece.uuid);
-			this.add(in_piece);
-			// how many pieces are at position x ?
-			const x = in_piece.position.x;
-			if (axisx.has(x)) {
-				axisx.set(x, axisx.get(x) + 1);
-			} else {
-				axisx.set(x, 1);
-			}
-		});
-		this.#settingKey = pseudoMessageDigest1(uuids);
-		const sorted = [...axisx.keys()].sort((in_e1, in_e2) => in_e1 - in_e2);
-		if (!this.settingVal.initialized) {
-			this.settingVal.rowsForCircle = Math.max(...Array.from(axisx.values()));
-			this.settingVal.colsForLength = Array.from(axisx.keys()).length;
-			this.settingVal.origin = in_pieces[0].position.clone();
-			this.settingVal.unitDelta = sorted[1] - sorted[0];
-			this.settingVal.unitAngle = Math.PI * 2 / this.settingVal.rowsForCircle;
-			this.settingVal.completeCallback = null;
-			this.settingVal.shuffleCount = 0;
-			this.settingVal.shuffled = false;
-			this.settingVal.initialized = true;
-		}
-	}
-}
-
-class cCylinderPuzzle extends cCylinder {
-	static error = 0.01;
-	static #axes = {
-		x : VEC3(1, 0, 0),
-		y : VEC3(0, 1, 0),
-		z : VEC3(0, 0, 1)
-	};
-	static axisComponent(in_axis, in_match = true) {
-		const props = Object.keys(cCylinderPuzzle.#axes).filter(in_key => {
-			const equal = cCylinderPuzzle.#axes[in_key].equals(in_axis);
-			return in_match ? equal : !equal;
-		});
-		if (props.length > 1) {
-			return props;
-		} else {
-			return props[0];
-		}
-	}
-	indexToPiece(in_row, in_col) {
-		const org = this.settingVal.origin;
-		const angle = this.settingVal.unitAngle * in_row;
-		const target = VEC3(
-			org.x + this.settingVal.unitDelta * in_col,
-			org.y * Math.cos(angle),
-			org.y * Math.sin(angle)
-		);
-		return this.children.find(in_child => XYZ.every(in_xyz => Math.abs(in_child.position[in_xyz] - target[in_xyz]) < cCylinderPuzzle.error));
-	}
-	pieceToIndex(in_piece) {
-		const pos = in_piece.position;
-		const org = this.settingVal.origin;
-		let row;
-		for (row = 0; row < this.settingVal.rowsForCircle; row++) {
-			const angle = this.settingVal.unitAngle * row;
-			if (Math.abs(org.y * Math.cos(angle) - pos.y) > cCylinderPuzzle.error) {
-				continue;
-			}
-			if (Math.abs(org.y * Math.sin(angle) - pos.z) > cCylinderPuzzle.error) {
-				continue;
-			}
-			break;
-		}
-		return {
-			row : row,
-			col : Math.round((pos.x - org.x) / this.settingVal.unitDelta)
-		};
-	}
-	getColorTable() {
-		const table = [];
-		for (let row = 0; row < this.settingVal.rowsForCircle; row++) {
-			const rows = [];
-			for (let col = 0; col < this.settingVal.colsForLength; col++) {
-				const piece = this.indexToPiece(row, col);
-				rows.push(getShellColor(piece));
-			}
-			table.push(rows);
-		}
-		return table;
-	}
-	setColorTable(in_table, in_delay = false) {
-		const target = [];
-		for (let row = 0; row < in_table.length; row++) {
-			for (let col = 0; col < in_table[row].length; col++) {
-				const piece = this.indexToPiece(row, col);
-				if (getShellColor(piece) === in_table[row][col]) {
-					continue;
-				}
-				if (in_delay) {
-					target.push({
-						piece : piece,
-						color : in_table[row][col]
-					});
-				} else {
-					setShellColor(piece, in_table[row][col]);
-				}
-			}
-		}
-		return target;
-	}
-	#approximateArr(in_callback, in_order = 1) {
-		const xSet = new cApproximateSet(cCylinderPuzzle.error);
-		this.children.forEach(in_child => xSet.add(in_callback(in_child)));
-		return Array.from(xSet).sort((in_e1, in_e2) => (in_e1 - in_e2) * in_order);
-	}
-	getScore() {
-		const max = 100;
-		return Math.max(Math.ceil((max - this.settingVal.shuffleCount) / 10) * 10, 0);
-	}
-	#isComplete() {
-		const evaluators = [
-			// the same color appears at the same angle
-			in_obj => Math.atan2(in_obj.position.z, in_obj.position.y),
-			// the same color appears at the same position-x
-			in_obj => in_obj.position.x
-		];
-		const results = [];
-		evaluators.forEach(in_evaluator => {
-			const arr = this.#approximateArr(in_evaluator);
-			// for all variations
-			results.push(arr.every(in_e => {
-				let firstColor;
-				// for all pieces
-				return this.children.every(in_child => {
-					const currentColor = getShellColor(in_child);
-					if (Math.abs(in_e - in_evaluator(in_child)) < cCylinderPuzzle.error) {
-						if (typeof firstColor === 'undefined') {
-							firstColor = currentColor;
-						} else {
-							if (firstColor === currentColor) {
-								return true;
-							} else {
-								return false;
-							}
-						}
-					}
-					return true;
-				});
-			}));
-		});
-		return results.some(in_result => in_result);
-	}
-	#setupGroup(in_pieces) {
-		const group = new THREE.Object3D();
-		this.add(group);
-		in_pieces.forEach(in_piece => {
-			group.attach(in_piece);
-			// tmpCache may be used for customizing animations
-			in_piece.userData.tmpCache = {
-				position : in_piece.position.clone(),
-				rotation : in_piece.rotation.clone()
-			};
-		});
-		// group position is (0, 0, 0)
-		return group;
-	}
-	#releaseGroup(in_group) {
-		const copiedPieces = [...in_group.children];
-		copiedPieces.forEach(in_piece => {
-			/*
-				*** NOTE ***
-				"add" follows parent position.
-				"attach" keeps world position.
-				in addition, both of them internally call "remove" from other object.
-			*/
-			this.attach(in_piece);
-			delete in_piece.userData.tmpCache;
-		});
-		this.remove(in_group);
-	}
-	// public because of customizing
-	affectedPieces(in_piece, in_axis) {
-		const pieces = [];
-		const component = in_piece.position.dot(in_axis);
-		this.children.forEach(in_child => {
-			if (Math.abs(component - in_child.position.dot(in_axis)) < cCylinderPuzzle.error) {
-				pieces.push(in_child);
-			}
-		});
-		return pieces;
-	}
-	#affectedRotationPieces(in_piece, in_axis) {
-		return this.affectedPieces(in_piece, in_axis);
-	}
-	#affectedSlidePieces(in_piece, in_sign) {
-		const pieces = [];
-		const y = in_piece.position.dot(cCylinderPuzzle.#axes.y);
-		const z = in_piece.position.dot(cCylinderPuzzle.#axes.z);
-		this.children.forEach(in_child => {
-			const pos = in_child.position;
-			if ((Math.abs(y - pos.y) < cCylinderPuzzle.error) && (Math.abs(z - pos.z) < cCylinderPuzzle.error)) {
-				pieces.push(in_child);
-			}
-		});
-		const currSide = (in_sign > 0) ? 'max' : 'min';
-		const nextSide = (in_sign > 0) ? 'min' : 'max';
-		pieces.sort((in_e1, in_e2) => (in_e1.position.x - in_e2.position.x) * in_sign);
-		const getEdgeX = (in_object, in_edge) => {
-			const box = new THREE.Box3();
-			box.setFromObject(in_object);
-			return box[in_edge].x;
-		};
-		let started = false;
-		let edge = getEdgeX(in_piece, currSide);
-		const affected = [in_piece];
-		pieces.forEach(in_sorted => {
-			if (started) {
-				// find the adjacent piece
-				if (Math.abs(edge - getEdgeX(in_sorted, nextSide)) < cCylinderPuzzle.error) {
-					affected.push(in_sorted);
-					edge = getEdgeX(in_sorted, currSide);
-				}
-			} else {
-				if (in_sorted === in_piece) {
-					started = true;
-				}
-			}
-		});
-		// for in_sign direction, there is not piece next to the last element
-		return affected;
-	}
-	#slidableDistance(in_piece, in_sign) {
-		const xArr = this.#approximateArr(in_obj => in_obj.position.x, in_sign);
-		for (let i = 0; i < xArr.length - 1; i++) {
-			if (Math.abs(xArr[i] - in_piece.position.x) < cCylinderPuzzle.error) {
-				return xArr[i + 1] - in_piece.position.x;
-			}
-		}
-		return 0;
-	}
-	// public because of customizing
-	rotate(in_group, in_axis, in_rad) {
-		in_group.rotation[cCylinderPuzzle.axisComponent(in_axis)] = in_rad;
-	}
-	#makeAnimationProgress(in_group, in_axis, in_startAmount, in_finalAmount, in_callback) {
-		const amount = Math.abs(in_finalAmount - in_startAmount);
-		let duration;
-		if (in_axis) {
-			duration = amount / (Math.PI / 2) * 500;
-		} else {
-			duration = 100;
-		}
-		const ease = new cEase(in_startAmount, in_finalAmount, duration);
-		const progress = () => {
-			const currAmount = ease.currentEasingIn();
-			if (in_axis) {
-				this.rotate(in_group, in_axis, currAmount);
-			} else {
-				in_group.position.x = currAmount;
-			}
-			let ratio = Math.abs(currAmount - in_startAmount) / amount;
-			if (currAmount === in_finalAmount) {
-				this.#releaseGroup(in_group);
-				this.settingVal.shuffled = true;
-				// in this case, progress function should be stopped (in in_callback)
-				ratio = 1.0;
-			}
-			(in_callback)(ratio);
-		};
-		return progress;
-	}
-	makeRandomAnimationProgress(in_callback) {
-		let axis, pieces, last;
-		let maxLoopCount = 100;
-		const order = Symbol.for('makeRandomAnimationProgress');
-		if (!this.hasOwnProperty(order)) {
-			this[order] = true;
-		}
-		while (true) {
-			if (--maxLoopCount === 0) {
-				throw new Error('maxLoopCount'); 
-			}
-			const _piece = (this.children)[arrRand]();
-			if (this[order]) {
-				axis = null;
-				let _amount = 0;
-				pieces = this.#affectedSlidePieces(_piece, +1);
-				_amount = this.#slidableDistance(pieces[pieces.length - 1], +1);
-				if (_amount !== 0) {
-					last = _amount;
-					break;
-				}
-				pieces = this.#affectedSlidePieces(_piece, -1);
-				_amount = this.#slidableDistance(pieces[pieces.length - 1], -1);
-				if (_amount !== 0) {
-					last = _amount;
-					break;
-				}
-			} else {
-				axis = cCylinderPuzzle.#axes.x;
-				pieces = this.#affectedRotationPieces(_piece, axis);
-				if (pieces.length < this.children.length) {
-					last = this.settingVal.unitAngle * [1, 2, 3][arrRand]();
-					break;
-				}
-			}
-		}
-		this[order] = !this[order];
-		const group = this.#setupGroup(pieces);
-		return this.#makeAnimationProgress(group, axis, 0, last, in_callback);
-	}
-	registerCompleteCallback(in_callback) {
-		this.settingVal.completeCallback = in_callback;
-	}
-	removeCompleteCallback() {
-		this.settingVal.completeCallback = null;
-	}
-	static #uiStates  = {
-		DISABLED : Symbol(),
-		ENABLED : Symbol(),
-		DRAGGING : Symbol(),
-		MOVING : Symbol(),
-		MOMENTUM : Symbol()
-	}
-	/*
-		ENABLED <-------------------+
-		|                           |
-		+-[disable]-----+           |
-		|               |           |
-		|   DISABLED <--+           |
-		|   |                       |
-		|   +-[enable]--------------+
-		|                           |
-		+-[drag]--------+           |
-		                |           |
-		    DRAGGING <--+           |
-		    |                       |
-		    +-[release]-------------+
-		    |                       |
-		    +-[movable]-----+       |
-		                    |       |
-		        MOVING <----+       |
-		        |                   |
-		        +-[release]-----+   |
-		                        |   |
-		            MOMENTUM <--+   |
-		            |               |
-		            +-[stop]--------+
-	*/
-	static #uiTransitions = {
-		[cCylinderPuzzle.#uiStates.DISABLED]: {
-			enable : cCylinderPuzzle.#uiStates.ENABLED
-		},
-		[cCylinderPuzzle.#uiStates.ENABLED]: {
-			disable : cCylinderPuzzle.#uiStates.DISABLED,
-			drag : cCylinderPuzzle.#uiStates.DRAGGING
-		},
-		[cCylinderPuzzle.#uiStates.DRAGGING]: {
-			release : cCylinderPuzzle.#uiStates.ENABLED,
-			movable : cCylinderPuzzle.#uiStates.MOVING
-		},
-		[cCylinderPuzzle.#uiStates.MOVING]: {
-			release : cCylinderPuzzle.#uiStates.MOMENTUM
-		},
-		[cCylinderPuzzle.#uiStates.MOMENTUM]: {
-			stop : cCylinderPuzzle.#uiStates.ENABLED
-		}
-	};
-	#uiSession = {
-		state : cCylinderPuzzle.#uiStates.ENABLED,
-		ctx : {}
-	};
-	#transition(in_action) {
-		const newState = cCylinderPuzzle.#uiTransitions[this.#uiSession.state]?.[in_action];
-		if (newState) {
-			this.#uiSession.state = newState;
-		} else {
-			throw new Error('invalid transition : ' + in_action);
-		}
-	}
-	uiEnable() {
-		if (this.#uiSession.state !== cCylinderPuzzle.#uiStates.DISABLED) {
-			console.log('state is not DISABLED');
-			return;
-		}
-		this.#transition('enable');
-	}
-	uiDisable() {
-		if (this.#uiSession.state !== cCylinderPuzzle.#uiStates.ENABLED) {
-			console.log('state is not ENABLED');
-			return;
-		}
-		this.#transition('disable');
-	}
-	#uiInitSession() {
-		if (this.#uiSession.ctx.group) {
-			this.#releaseGroup(this.#uiSession.ctx.group);
-		}
-		this.#uiSession.ctx = {};
-	}
-	uiSetInitPosition(in_posV3, in_posV2) {
-		if (this.#uiSession.state !== cCylinderPuzzle.#uiStates.ENABLED) {
-			console.log('state is not ENABLED');
-			return;
-		}
-		this.#uiSession.ctx = {
-			// intersection with a object
-			initPosV3 : in_posV3,
-			// abs value generated from NDC (Normalized Device Coordinates)
-			initPosV2 : in_posV2,
-			// vector from initPosV2
-			initDirV2 : null,
-			// target objects for animation
-			group : null,
-			// current value which will be updated during animation
-			currAmount : 0,
-			// sign which show the direction for animation
-			direction : 0,
-			// rotating animation uses this axis
-			rotationAxis : null,
-			// array of [min, max]
-			movableRange : null,
-		};
-		this.#transition('drag');
-	}
-	uiIsDragging() {
-		return (this.#uiSession.state === cCylinderPuzzle.#uiStates.DRAGGING);
-	}
-	uiIsMoving() {
-		return (this.#uiSession.state === cCylinderPuzzle.#uiStates.MOVING);
-	}
-	static uiSetDeltaPositionRC = {
-		NOOP : Symbol(),
-		// as delta is not enough, need to call uiNotifyDeltaPosition again
-		NOTENOUGH : Symbol(),
-		// though delta is enough, can't make group
-		UNMOVABLE : Symbol(),
-		// as delta is enough, can call uiUpdatePosition
-		MOVABLE : Symbol()
-	};
-	uiNotifyDeltaPosition(in_piece, in_posV3, in_posV2) {
-		const RC = cCylinderPuzzle.uiSetDeltaPositionRC;
-		if (this.#uiSession.state !== cCylinderPuzzle.#uiStates.DRAGGING) {
-			console.log('state is not DRAGGING');
-			return RC.NOOP;
-		}
-		const ctx = this.#uiSession.ctx;
-		const srcYZ = new THREE.Vector2(ctx.initPosV3.y, ctx.initPosV3.z);
-		const dstYZ = new THREE.Vector2(in_posV3.y, in_posV3.z);
-		const rotateDelta = srcYZ.distanceTo(dstYZ);
-		const movingDelta = Math.abs(in_posV3.x - ctx.initPosV3.x);
-		const notEnough = (in_threshold => {
-			return (in_a, in_b) => {
-				return (in_a < in_threshold * in_b) && (in_b < in_threshold * in_a);
-			};
-		})(1.5);
-		if (notEnough(rotateDelta, movingDelta)) {
-			return RC.NOTENOUGH;
-		}
-		let pieces, direction, axis, range;
-		if (rotateDelta > movingDelta) {
-			pieces = this.#affectedRotationPieces(in_piece, cCylinderPuzzle.#axes.x);
-			if (pieces.length < this.children.length) {
-				direction = srcYZ.cross(dstYZ) > 0 ? 1 : -1;
-				axis = cCylinderPuzzle.#axes.x;
-				range = null;
-			} else {
-				return RC.UNMOVABLE;
-			}
-		} else {
-			direction = Math.sign(in_posV3.x - ctx.initPosV3.x);
-			pieces = this.#affectedSlidePieces(in_piece, direction);
-			const amount = this.#slidableDistance(pieces[pieces.length - 1], direction);
-			if (amount !== 0) {
-				axis = null;
-				range = {min : Math.min(0, amount), max : Math.max(0, amount)};
-			} else {
-				return RC.UNMOVABLE;
-			}
-		}
-		this.#transition('movable');
-		ctx.initDirV2 = in_posV2.clone().sub(ctx.initPosV2);
-		ctx.group = this.#setupGroup(pieces);
-		ctx.direction = direction;
-		ctx.rotationAxis = axis;
-		ctx.movableRange = range;
-		return RC.MOVABLE;
-	}
-	uiUpdatePosition(in_posV2) {
-		if (this.#uiSession.state !== cCylinderPuzzle.#uiStates.MOVING) {
-			return;
-		}
-		const ctx = this.#uiSession.ctx;
-		const currentDirV2 = in_posV2.clone().sub(ctx.initPosV2);
-		let prev, next;
-		let amount, notch;
-		if (ctx.rotationAxis) {
-			amount = in_posV2.distanceTo(ctx.initPosV2) * ctx.direction;
-			if (ctx.initDirV2.dot(currentDirV2) > 0) {
-				// currentDirV2 & initDirV2 --> SAME direction
-				amount *= +1;
-			} else {
-				// currentDirV2 & initDirV2 --> OPPOSITE direction
-				const thresholdToStopWarp = Math.PI / 8;
-				if (Math.abs(ctx.currAmount + amount) < thresholdToStopWarp) {
-					amount *= -1;
-				}
-			}
-			this.rotate(ctx.group, ctx.rotationAxis, amount);
-			notch = this.settingVal.unitAngle;
-		} else {
-			amount = in_posV2.distanceTo(ctx.initPosV2) * ctx.direction * 250;
-			if (amount < ctx.movableRange.min) {
-				amount = ctx.movableRange.min;
-			}
-			if (amount > ctx.movableRange.max) {
-				amount = ctx.movableRange.max;
-			}
-			ctx.group.position.x = amount;
-			notch = Math.abs(ctx.movableRange.min + ctx.movableRange.max);
-		}
-		prev = snapToNotch(ctx.currAmount, notch);
-		next = snapToNotch(amount, notch);
-		ctx.currAmount = amount;
-		// over the top
-		return (prev !== next);
-	}
-	uiRelease(in_ending_callback) {
-		if (this.#uiSession.state === cCylinderPuzzle.#uiStates.DRAGGING) {
-			this.#uiInitSession();
-			this.#transition('release');
-			return null;
-		}
-		if (this.#uiSession.state !== cCylinderPuzzle.#uiStates.MOVING) {
-			return null;
-		}
-		this.#transition('release');
-		const ctx = this.#uiSession.ctx;
-		let notch;
-		if (ctx.rotationAxis) {
-			notch = this.settingVal.unitAngle;
-		} else {
-			notch = Math.abs(ctx.movableRange.min + ctx.movableRange.max);
-		}
-		const last = snapToNotch(ctx.currAmount, notch);
-		return this.#makeAnimationProgress(ctx.group, ctx.rotationAxis, ctx.currAmount, last, in_ratio => {
-			if (in_ratio < 1) {
-				return;
-			}
-			this.#uiInitSession();
-			this.#transition('stop');
-			(in_ending_callback)();
-			if (!this.settingVal.shuffled) {
-				// when without shuffled, do nothing
-				return;
-			}
-			this.settingVal.shuffleCount++;
-			if (this.settingVal.completeCallback && this.#isComplete()) {
-				(this.settingVal.completeCallback)(this.settingVal.shuffleCount);
-			}
-		});
-	}
-}
-
-/*
-	(4) algorithm + controller
+	the cReversi class is designed to implement NPC algorithms for the game of reversi.
 */
 
 class cReversi {
@@ -1527,6 +736,10 @@ class cReversi {
 	}
 }
 
+/*
+	the cTurnController class is designed to manage turns in turn-based games like reversi.
+*/
+
 class cTurnController {
 	#players = new cCyclicValues();
 	#active = false;
@@ -1561,23 +774,290 @@ class cTurnController {
 }
 
 /*
+	the cExColony class related functions provide the ability to create cylinder-shaped threejs objects.
+*/
+
+const textureFactory = factoryBuilder((in_w, in_h) => {
+	const gradation = 4
+	// gradation (from black to white)
+	let maxDepth = 255;
+	let styles = [];
+	for (let i = 0; i < gradation; i++) {
+		let depth = Math.ceil(maxDepth / gradation * (i + 1));
+		styles[i] = 'rgb(' + depth + ',' + depth + ',' + depth + ')';
+	}
+	// draw and convert using toDataUR
+	let canvas = document.createElement('CANVAS');
+	canvas.width = in_w;
+	canvas.height = in_h;
+	const ctx = canvas.getContext('2d');
+	let radius = gradation + 2;
+	/*
+		Rect           RoundRect      RoundRect
+
+		##########     ##########     ##########
+		##########     ##******##     ##******##
+		##########     #********#     #**++++**#
+		##########     #********#     #*++++++*#
+		########## --> #********# --> #*++++++*# --> ...
+		##########     #********#     #*++++++*#
+		##########     #********#     #**++++**#
+		##########     ##******##     ##******##
+		##########     ##########     ##########
+	*/
+	for (let i = 0; i < gradation; i++) {
+		ctx.fillStyle = styles[i];
+		if (i > 0) {
+			ctx[fillRoundRect](i, i, in_w - i * 2, in_h - i * 2, radius - i);
+		} else {
+			ctx.fillRect(i, i, in_w - i * 2, in_h - i * 2);
+		}
+	}
+	return (new THREE.TextureLoader()).load(canvas.toDataURL());
+});
+
+const surfaceFactory = factoryBuilder((in_color, in_size = -1) => {
+	const material = new THREE.MeshLambertMaterial();
+	material.color = new THREE.Color(in_color);
+	if (in_size > 0) {
+		material.map = textureFactory.create(in_size, in_size);
+	}
+	return material;
+});
+
+const SHELL_COLOR_INDEX = 2;
+
+function shellMaterials(in_size, in_color_main, in_color_back) {
+	const materials = [];
+	for (let i = 0; i < Object.keys(DIRECTION).length; i++) {
+		if (i === SHELL_COLOR_INDEX) {
+			materials.push(surfaceFactory.create(in_color_main, in_size));
+		} else {
+			materials.push(surfaceFactory.create(in_color_back));
+		}
+	}
+	return materials;
+}
+
+function getShellColor(in_object) {
+	return in_object.material[SHELL_COLOR_INDEX].color.getHex();
+}
+
+function setShellColor(in_object, in_color) {
+	const setting = in_object.geometry.parameters;
+	return in_object.material[SHELL_COLOR_INDEX] = surfaceFactory.create(in_color, setting.size);
+}
+
+const shellGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickness) => {
+	const radian = 6;
+	const outerLen = in_size - radian * 2;
+	const innerLen = outerLen * in_innerRatio;
+	const thickness = in_thickness - radian * 2;
+	const geometry = trapezoidGeometryUtil(outerLen, outerLen, outerLen, innerLen, thickness, radian);
+	geometry.parameters = {
+		size : in_size,
+		innerRatio : in_innerRatio,
+		thickness : in_thickness
+	};
+	return geometry;
+});
+
+const GRAY1 = 0x222222;
+const GRAY2 = 0x444444;
+const GRAY3 = 0x666666;
+
+const BGCOLOR = GRAY1;
+const DMZCOLOR = GRAY2;
+const EMPTYCOLOR = GRAY3;
+
+const ORANGE = 0xFFAA00;
+const RED = 0xFF0000;
+const WHITE = 0xFFFFFF;
+const YELLOW = 0xFFFF00;
+const BLUE = 0x3333FF;
+const GREEN = 0x118811;
+const LIGHTBLUE = 0x5588FF;
+const LIGHTGREEN = 0x55CC55;
+
+const edgeMaterial = new THREE.MeshLambertMaterial({color : BGCOLOR});
+
+const COLONY_SIZE = 400;
+const LABEL_LV = 'lv.';
+
+const gMeshLevelMap = ((in_diameter) => {
+	const map = new cCyclicMap();
+	const shellInfo = [
+		{
+			rowsForCircle : 14,
+			colsForLength : 7,
+			dmzArr : [
+				[ 7, 0], [ 7, 1], [ 7, 2], [ 7, 3], [ 7, 4], [ 7, 5], [ 7, 6],
+				[ 8, 0], [ 8, 1], [ 8, 2], [ 8, 3], [ 8, 4], [ 8, 5], [ 8, 6],
+				[ 9, 0], [ 9, 1], [ 9, 2], [ 9, 3], [ 9, 4], [ 9, 5], [ 9, 6],
+				[10, 0], [10, 1], [10, 2], [10, 3], [10, 4], [10, 5], [10, 6],
+				[11, 0], [11, 1], [11, 2], [11, 3], [11, 4], [11, 5], [11, 6],
+				[12, 0], [12, 1], [12, 2], [12, 3], [12, 4], [12, 5], [12, 6],
+				[13, 0], [13, 1], [13, 2], [13, 3], [13, 4], [13, 5], [13, 6]
+			]
+		},
+		{
+			rowsForCircle : 7,
+			colsForLength : 7,
+			dmzArr : []
+		},
+		{
+			rowsForCircle : 16,
+			colsForLength : 8,
+			dmzArr : [
+				[ 8, 0], [ 8, 1], [ 8, 2], [ 8, 3], [ 8, 4], [ 8, 5], [ 8, 6], [ 8, 7],
+				[ 9, 0], [ 9, 1], [ 9, 2], [ 9, 3], [ 9, 4], [ 9, 5], [ 9, 6], [ 9, 7],
+				[10, 0], [10, 1], [10, 2], [10, 3], [10, 4], [10, 5], [10, 6], [10, 7],
+				[11, 0], [11, 1], [11, 2], [11, 3], [11, 4], [11, 5], [11, 6], [11, 7],
+				[12, 0], [12, 1], [12, 2], [12, 3], [12, 4], [12, 5], [12, 6], [12, 7],
+				[13, 0], [13, 1], [13, 2], [13, 3], [13, 4], [13, 5], [13, 6], [13, 7],
+				[14, 0], [14, 1], [14, 2], [14, 3], [14, 4], [14, 5], [14, 6], [14, 7],
+				[15, 0], [15, 1], [15, 2], [15, 3], [15, 4], [15, 5], [15, 6], [15, 7]
+			]
+		},
+		{
+			rowsForCircle : 8,
+			colsForLength : 8,
+			dmzArr : []
+		}
+	];
+	shellInfo.forEach(in_shell => {
+		const radius = in_diameter / 2;
+		const circumf = in_diameter * Math.PI;
+		const unitSize = circumf / in_shell.rowsForCircle;
+		const unitThick = unitSize * 0.3;
+		const unitAngle = Math.PI * 2 / in_shell.rowsForCircle;
+		const geometry = shellGeometryFactory.create(unitSize, ((radius - unitThick) / radius), unitThick);
+		const pieces = [];
+		for (let col = 0; col < in_shell.colsForLength; col++) {
+			let x = unitSize * col - unitSize * (in_shell.colsForLength - 1) / 2;
+			let y = (in_diameter / 2 - unitThick) * 1.2;
+			for (let row = 0; row < in_shell.rowsForCircle; row++) {
+				let materials = null;
+				if (in_shell.dmzArr.length > 0) {
+					if (in_shell.dmzArr.some(in_dmz => in_dmz[0] === row && in_dmz[1] === col)) {
+						materials = shellMaterials(unitSize, DMZCOLOR, BGCOLOR);
+					}
+				}
+				if (!materials) {
+					materials = shellMaterials(unitSize, EMPTYCOLOR, BGCOLOR);
+				}
+				materials.push(edgeMaterial);
+				const piece = new THREE.Mesh(geometry, materials);
+				const pivot = new THREE.Object3D();
+				pivot.add(piece);
+				piece.position.copy(VEC3(x, y, 0));
+				pivot.rotateX(unitAngle * row);
+				/*
+					*** NOTE ***
+					you can use matrix,
+					to apply rotated position before adding to scene
+				*/
+				pivot.updateMatrixWorld();
+				piece.applyMatrix4(pivot.matrix);
+				pivot.remove(piece);
+				pieces.push(piece);
+			}
+		}
+		let stage = LABEL_LV + in_shell.colsForLength;
+		if (in_shell.rowsForCircle === in_shell.colsForLength) {
+			stage += '-loop'
+		}
+		map.set(stage, pieces);
+	});
+	return map;
+})(COLONY_SIZE);
+
+/*
+	the cExColonyBoard is designed to represent a reversi board.
+*/
+
+class cExColonyBoard extends cExColony {
+	indexToPiece(in_row, in_col) {
+		const org = this.settingVal.origin;
+		const angle = this.settingVal.unitAngle * in_row;
+		const target = VEC3(
+			org.x + this.settingVal.unitDelta * in_col,
+			org.y * Math.cos(angle),
+			org.y * Math.sin(angle)
+		);
+		return this.children.find(in_child => XYZ.every(in_xyz => Math.abs(in_child.position[in_xyz] - target[in_xyz]) < cExColony.error));
+	}
+	pieceToIndex(in_piece) {
+		const pos = in_piece.position;
+		const org = this.settingVal.origin;
+		let row;
+		for (row = 0; row < this.settingVal.rowsForCircle; row++) {
+			const angle = this.settingVal.unitAngle * row;
+			if (Math.abs(org.y * Math.cos(angle) - pos.y) > cExColony.error) {
+				continue;
+			}
+			if (Math.abs(org.y * Math.sin(angle) - pos.z) > cExColony.error) {
+				continue;
+			}
+			break;
+		}
+		return {
+			row : row,
+			col : Math.round((pos.x - org.x) / this.settingVal.unitDelta)
+		};
+	}
+	getColorTable() {
+		const table = [];
+		for (let row = 0; row < this.settingVal.rowsForCircle; row++) {
+			const rows = [];
+			for (let col = 0; col < this.settingVal.colsForLength; col++) {
+				const piece = this.indexToPiece(row, col);
+				rows.push(getShellColor(piece));
+			}
+			table.push(rows);
+		}
+		return table;
+	}
+	setColorTable(in_table, in_delay = false) {
+		const target = [];
+		for (let row = 0; row < in_table.length; row++) {
+			for (let col = 0; col < in_table[row].length; col++) {
+				const piece = this.indexToPiece(row, col);
+				if (getShellColor(piece) === in_table[row][col]) {
+					continue;
+				}
+				if (in_delay) {
+					target.push({
+						piece : piece,
+						color : in_table[row][col]
+					});
+				} else {
+					setShellColor(piece, in_table[row][col]);
+				}
+			}
+		}
+		return target;
+	}
+}
+
+/*
 	(5) ui & dom setting
 
 	gWorld (cSphericalWorld)
 	|
-	+-- gCylinder (cCylinderPuzzle)
+	+-- gColony (cExColony)
 		|
 		+-- meshes <--- gMeshLevelMap
 */
 
-const WORLD_RADIUS = PUZZLE_SIZE * 10;
+const WORLD_RADIUS = COLONY_SIZE * 10;
 const WORLD_INIT_ZOOM = WORLD_RADIUS / 2;
 
 const gWorld = new cSphericalWorld(WORLD_RADIUS);
 
-const gCylinder = new cCylinderPuzzle();
+const gColony = new cExColonyBoard();
 
-gWorld.add(gCylinder);
+gWorld.add(gColony);
 
 gWorld.moveView(0.5, 0.5);
 gWorld.motionZoom2(WORLD_INIT_ZOOM, 1000);
@@ -1729,9 +1209,9 @@ const ID_NEXT_LEVEL = randomString();
 async function updateLevel() {
 	const color = 0x000000;
 	await gWorld.motionFog(color, 0, 100);
-	gCylinder.removePieces();
+	gColony.removePieces();
 	const current = gMeshLevelMap.currItemByOrder();
-	gCylinder.addPieces(current.v);
+	gColony.addPieces(current.v);
 	await gWorld.motionFog(color, 100, 0);
 	const prev = gMeshLevelMap.prevItemByOrder();
 	const next = gMeshLevelMap.nextItemByOrder();
@@ -1883,13 +1363,13 @@ const knock = nonReentrantAsync(async () => {
 });
 
 const notifyDelta = (() => {
-	const RC = cCylinderPuzzle.uiSetDeltaPositionRC;
+	const RC = cExColony.uiSetDeltaPositionRC;
 	return in_ndc => {
 		const intersects = gWorld.intersectPositive(in_ndc);
 		if (intersects.length === 0) {
 			return;
 		}
-		const result = gCylinder.uiNotifyDeltaPosition(intersects[0].object, intersects[0].point, ndcToAbs(in_ndc));
+		const result = gColony.uiNotifyDeltaPosition(intersects[0].object, intersects[0].point, ndcToAbs(in_ndc));
 		if (result === RC.UNMOVABLE) {
 			knock();
 		}
@@ -1967,7 +1447,7 @@ async function choosePiece(in_no, in_piece) {
 	}
 	const indexTable = gContext.riversi.getArea();
 	const colorTable = indexTable.map(in_row => in_row.map(in_cell => gContext.mapping[in_cell]));
-	const targets = gCylinder.setColorTable(colorTable, true);
+	const targets = gColony.setColorTable(colorTable, true);
 	targets.forEach(in_target => in_target.initRotationX = in_target.piece.rotation.x);
 	const ease = new cEase(0, Math.PI * 2, 500);
 	const hook = () => {
@@ -1994,7 +1474,7 @@ function chooseHere(in_ev) {
 	}
 	const curr = intersects[0].object;
 	if (curr.userData.original === EMPTYCOLOR) {
-		const pos = gCylinder.pieceToIndex(intersects[0].object);
+		const pos = gColony.pieceToIndex(intersects[0].object);
 		const result = gContext.riversi.pc(PLAYERS.PC, pos.row, pos.col);
 		if (result) {
 			gContext.enableHandlers = false;
@@ -2029,18 +1509,18 @@ function chooseHere(in_ev) {
 		}
 		closure.x = in_ev.clientX;
 		closure.y = in_ev.clientY;
-		gCylinder.uiSetInitPosition(intersects[0].point, ndcToAbs(ndc));
+		gColony.uiSetInitPosition(intersects[0].point, ndcToAbs(ndc));
 	};
 	const move = thresholding(in_ev => {
 		closure.x = -1;
 		closure.y = -1;
 		const ndc = ndcFromEvent(in_ev);
-		if (gCylinder.uiIsMoving()) {
-			if (gCylinder.uiUpdatePosition(ndcToAbs(ndc))) {
+		if (gColony.uiIsMoving()) {
+			if (gColony.uiUpdatePosition(ndcToAbs(ndc))) {
 				SE_MOVED.play();
 			}
 		} else {
-			if (gCylinder.uiIsDragging()) {
+			if (gColony.uiIsDragging()) {
 				notifyDelta(ndc);
 			} else {
 				if (!in_ev[isEmulated]) {
@@ -2050,7 +1530,7 @@ function chooseHere(in_ev) {
 		}
 	});
 	const stop = in_ev => {
-		const releaseProgress = gCylinder.uiRelease(() => {
+		const releaseProgress = gColony.uiRelease(() => {
 			gWorld.removeAnimationHook(releaseProgress);
 		});
 		if (releaseProgress) {
@@ -2112,7 +1592,7 @@ function initializeByLevel() {
 		if (result) {
 			const history = gContext.riversi.getHistory();
 			const pos = history[history.length - 1];
-			const piece = gCylinder.indexToPiece(pos.row, pos.col);
+			const piece = gColony.indexToPiece(pos.row, pos.col);
 			choosePiece(PLAYERS.NPC1, piece);
 			gContext.controller.turnEnd();
 			return;
@@ -2121,7 +1601,7 @@ function initializeByLevel() {
 	});
 	const indexTable = gContext.riversi.getArea();
 	const colorTable = indexTable.map(in_row => in_row.map(in_cell => gContext.mapping[in_cell]));
-	gCylinder.setColorTable(colorTable);
+	gColony.setColorTable(colorTable);
 	gContext.controller.gameStart();
 }
 
