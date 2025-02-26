@@ -49,7 +49,7 @@ import {
 	cSphericalWorld
 } from 'basic';
 
-class cColony extends THREE.Object3D {
+class cColonyCore extends THREE.Object3D {
 	set #settingKey(in_value) {
 		if (!this.userData.settingPerPieces) {
 			this.userData.settingPerPieces = {};
@@ -99,7 +99,7 @@ class cColony extends THREE.Object3D {
 	}
 }
 
-export class cExColony extends cColony {
+export class cColony extends cColonyCore {
 	static error = 0.01;
 	static axes = {
 		x : VEC3(1, 0, 0),
@@ -107,8 +107,8 @@ export class cExColony extends cColony {
 		z : VEC3(0, 0, 1)
 	};
 	static #axisComponent(in_axis, in_match = true) {
-		const props = Object.keys(cExColony.axes).filter(in_key => {
-			const equal = cExColony.axes[in_key].equals(in_axis);
+		const props = Object.keys(cColony.axes).filter(in_key => {
+			const equal = cColony.axes[in_key].equals(in_axis);
 			return in_match ? equal : !equal;
 		});
 		if (props.length > 1) {
@@ -118,7 +118,7 @@ export class cExColony extends cColony {
 		}
 	}
 	approximateChildren(in_callback, in_order = 1) {
-		const xSet = new cApproximateSet(cExColony.error);
+		const xSet = new cApproximateSet(cColony.error);
 		this.children.forEach(in_child => xSet.add(in_callback(in_child)));
 		return Array.from(xSet).sort((in_e1, in_e2) => (in_e1 - in_e2) * in_order);
 	}
@@ -155,7 +155,7 @@ export class cExColony extends cColony {
 		const pieces = [];
 		const component = in_piece.position.dot(in_axis);
 		this.children.forEach(in_child => {
-			if (Math.abs(component - in_child.position.dot(in_axis)) < cExColony.error) {
+			if (Math.abs(component - in_child.position.dot(in_axis)) < cColony.error) {
 				pieces.push(in_child);
 			}
 		});
@@ -163,11 +163,11 @@ export class cExColony extends cColony {
 	}
 	affectedSlidePieces(in_piece, in_sign) {
 		const pieces = [];
-		const y = in_piece.position.dot(cExColony.axes.y);
-		const z = in_piece.position.dot(cExColony.axes.z);
+		const y = in_piece.position.dot(cColony.axes.y);
+		const z = in_piece.position.dot(cColony.axes.z);
 		this.children.forEach(in_child => {
 			const pos = in_child.position;
-			if ((Math.abs(y - pos.y) < cExColony.error) && (Math.abs(z - pos.z) < cExColony.error)) {
+			if ((Math.abs(y - pos.y) < cColony.error) && (Math.abs(z - pos.z) < cColony.error)) {
 				pieces.push(in_child);
 			}
 		});
@@ -185,7 +185,7 @@ export class cExColony extends cColony {
 		pieces.forEach(in_sorted => {
 			if (started) {
 				// find the adjacent piece
-				if (Math.abs(edge - getEdgeX(in_sorted, nextSide)) < cExColony.error) {
+				if (Math.abs(edge - getEdgeX(in_sorted, nextSide)) < cColony.error) {
 					affected.push(in_sorted);
 					edge = getEdgeX(in_sorted, currSide);
 				}
@@ -201,7 +201,7 @@ export class cExColony extends cColony {
 	slidableDistance(in_piece, in_sign) {
 		const xArr = this.approximateChildren(in_obj => in_obj.position.x, in_sign);
 		for (let i = 0; i < xArr.length - 1; i++) {
-			if (Math.abs(xArr[i] - in_piece.position.x) < cExColony.error) {
+			if (Math.abs(xArr[i] - in_piece.position.x) < cColony.error) {
 				return xArr[i + 1] - in_piece.position.x;
 			}
 		}
@@ -209,7 +209,7 @@ export class cExColony extends cColony {
 	}
 	// public because of customizing
 	rotate(in_group, in_axis, in_rad) {
-		in_group.rotation[cExColony.#axisComponent(in_axis)] = in_rad;
+		in_group.rotation[cColony.#axisComponent(in_axis)] = in_rad;
 	}
 	makeAnimationProgress(in_group, in_axis, in_startAmount, in_finalAmount, in_callback) {
 		const amount = Math.abs(in_finalAmount - in_startAmount);
@@ -270,30 +270,30 @@ export class cExColony extends cColony {
 		            +-[stop]--------+
 	*/
 	static #uiTransitions = {
-		[cExColony.#uiStates.DISABLED]: {
-			enable : cExColony.#uiStates.ENABLED
+		[cColony.#uiStates.DISABLED]: {
+			enable : cColony.#uiStates.ENABLED
 		},
-		[cExColony.#uiStates.ENABLED]: {
-			disable : cExColony.#uiStates.DISABLED,
-			drag : cExColony.#uiStates.DRAGGING
+		[cColony.#uiStates.ENABLED]: {
+			disable : cColony.#uiStates.DISABLED,
+			drag : cColony.#uiStates.DRAGGING
 		},
-		[cExColony.#uiStates.DRAGGING]: {
-			release : cExColony.#uiStates.ENABLED,
-			movable : cExColony.#uiStates.MOVING
+		[cColony.#uiStates.DRAGGING]: {
+			release : cColony.#uiStates.ENABLED,
+			movable : cColony.#uiStates.MOVING
 		},
-		[cExColony.#uiStates.MOVING]: {
-			release : cExColony.#uiStates.MOMENTUM
+		[cColony.#uiStates.MOVING]: {
+			release : cColony.#uiStates.MOMENTUM
 		},
-		[cExColony.#uiStates.MOMENTUM]: {
-			stop : cExColony.#uiStates.ENABLED
+		[cColony.#uiStates.MOMENTUM]: {
+			stop : cColony.#uiStates.ENABLED
 		}
 	};
 	#uiSession = {
-		state : cExColony.#uiStates.ENABLED,
+		state : cColony.#uiStates.ENABLED,
 		ctx : {}
 	};
 	#transition(in_action) {
-		const newState = cExColony.#uiTransitions[this.#uiSession.state]?.[in_action];
+		const newState = cColony.#uiTransitions[this.#uiSession.state]?.[in_action];
 		if (newState) {
 			this.#uiSession.state = newState;
 		} else {
@@ -301,14 +301,14 @@ export class cExColony extends cColony {
 		}
 	}
 	uiEnable() {
-		if (this.#uiSession.state !== cExColony.#uiStates.DISABLED) {
+		if (this.#uiSession.state !== cColony.#uiStates.DISABLED) {
 			console.log('state is not DISABLED');
 			return;
 		}
 		this.#transition('enable');
 	}
 	uiDisable() {
-		if (this.#uiSession.state !== cExColony.#uiStates.ENABLED) {
+		if (this.#uiSession.state !== cColony.#uiStates.ENABLED) {
 			console.log('state is not ENABLED');
 			return;
 		}
@@ -321,7 +321,7 @@ export class cExColony extends cColony {
 		this.#uiSession.ctx = {};
 	}
 	uiSetInitPosition(in_posV3, in_posV2) {
-		if (this.#uiSession.state !== cExColony.#uiStates.ENABLED) {
+		if (this.#uiSession.state !== cColony.#uiStates.ENABLED) {
 			console.log('state is not ENABLED');
 			return;
 		}
@@ -346,10 +346,10 @@ export class cExColony extends cColony {
 		this.#transition('drag');
 	}
 	uiIsDragging() {
-		return (this.#uiSession.state === cExColony.#uiStates.DRAGGING);
+		return (this.#uiSession.state === cColony.#uiStates.DRAGGING);
 	}
 	uiIsMoving() {
-		return (this.#uiSession.state === cExColony.#uiStates.MOVING);
+		return (this.#uiSession.state === cColony.#uiStates.MOVING);
 	}
 	static uiSetDeltaPositionRC = {
 		NOOP : Symbol(),
@@ -361,8 +361,8 @@ export class cExColony extends cColony {
 		MOVABLE : Symbol()
 	};
 	uiNotifyDeltaPosition(in_piece, in_posV3, in_posV2) {
-		const RC = cExColony.uiSetDeltaPositionRC;
-		if (this.#uiSession.state !== cExColony.#uiStates.DRAGGING) {
+		const RC = cColony.uiSetDeltaPositionRC;
+		if (this.#uiSession.state !== cColony.#uiStates.DRAGGING) {
 			console.log('state is not DRAGGING');
 			return RC.NOOP;
 		}
@@ -381,10 +381,10 @@ export class cExColony extends cColony {
 		}
 		let pieces, direction, axis, range;
 		if (rotateDelta > movingDelta) {
-			pieces = this.affectedRotatePieces(in_piece, cExColony.axes.x);
+			pieces = this.affectedRotatePieces(in_piece, cColony.axes.x);
 			if (pieces.length < this.children.length) {
 				direction = srcYZ.cross(dstYZ) > 0 ? 1 : -1;
-				axis = cExColony.axes.x;
+				axis = cColony.axes.x;
 				range = null;
 			} else {
 				return RC.UNMOVABLE;
@@ -409,7 +409,7 @@ export class cExColony extends cColony {
 		return RC.MOVABLE;
 	}
 	uiUpdatePosition(in_posV2) {
-		if (this.#uiSession.state !== cExColony.#uiStates.MOVING) {
+		if (this.#uiSession.state !== cColony.#uiStates.MOVING) {
 			return;
 		}
 		const ctx = this.#uiSession.ctx;
@@ -448,12 +448,12 @@ export class cExColony extends cColony {
 		return (prev !== next);
 	}
 	uiRelease(in_ending_callback) {
-		if (this.#uiSession.state === cExColony.#uiStates.DRAGGING) {
+		if (this.#uiSession.state === cColony.#uiStates.DRAGGING) {
 			this.#uiInitSession();
 			this.#transition('release');
 			return null;
 		}
-		if (this.#uiSession.state !== cExColony.#uiStates.MOVING) {
+		if (this.#uiSession.state !== cColony.#uiStates.MOVING) {
 			return null;
 		}
 		this.#transition('release');

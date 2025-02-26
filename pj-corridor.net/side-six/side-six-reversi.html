@@ -70,7 +70,7 @@ import {
 	cSphericalWorld
 } from 'basic';
 import {
-	cExColony
+	cColony
 } from 'side6';
 import * as SOUND from 'sound';
 
@@ -774,7 +774,7 @@ class cTurnController {
 }
 
 /*
-	the cExColony class related functions provide the ability to create cylinder-shaped threejs objects.
+	the cColony class related functions provide the ability to create cylinder-shaped threejs objects.
 */
 
 const textureFactory = factoryBuilder((in_w, in_h) => {
@@ -973,10 +973,10 @@ const gMeshLevelMap = ((in_diameter) => {
 })(COLONY_SIZE);
 
 /*
-	the cExColonyBoard is designed to represent a reversi board.
+	the cBoard is designed to represent a reversi board.
 */
 
-class cExColonyBoard extends cExColony {
+class cColonyBoard extends cColony {
 	indexToPiece(in_row, in_col) {
 		const org = this.settingVal.origin;
 		const angle = this.settingVal.unitAngle * in_row;
@@ -985,7 +985,7 @@ class cExColonyBoard extends cExColony {
 			org.y * Math.cos(angle),
 			org.y * Math.sin(angle)
 		);
-		return this.children.find(in_child => XYZ.every(in_xyz => Math.abs(in_child.position[in_xyz] - target[in_xyz]) < cExColony.error));
+		return this.children.find(in_child => XYZ.every(in_xyz => Math.abs(in_child.position[in_xyz] - target[in_xyz]) < cColony.error));
 	}
 	pieceToIndex(in_piece) {
 		const pos = in_piece.position;
@@ -993,10 +993,10 @@ class cExColonyBoard extends cExColony {
 		let row;
 		for (row = 0; row < this.settingVal.rowsForCircle; row++) {
 			const angle = this.settingVal.unitAngle * row;
-			if (Math.abs(org.y * Math.cos(angle) - pos.y) > cExColony.error) {
+			if (Math.abs(org.y * Math.cos(angle) - pos.y) > cColony.error) {
 				continue;
 			}
-			if (Math.abs(org.y * Math.sin(angle) - pos.z) > cExColony.error) {
+			if (Math.abs(org.y * Math.sin(angle) - pos.z) > cColony.error) {
 				continue;
 			}
 			break;
@@ -1018,25 +1018,29 @@ class cExColonyBoard extends cExColony {
 		}
 		return table;
 	}
-	setColorTable(in_table, in_delay = false) {
-		const target = [];
+	changedPieces(in_table) {
+		const changedArr = [];
 		for (let row = 0; row < in_table.length; row++) {
 			for (let col = 0; col < in_table[row].length; col++) {
 				const piece = this.indexToPiece(row, col);
-				if (getShellColor(piece) === in_table[row][col]) {
-					continue;
-				}
-				if (in_delay) {
-					target.push({
+				const currColor = getShellColor(piece);
+				const nextColor = in_table[row][col];
+				if (currColor !== nextColor) {
+					changedArr.push({
 						piece : piece,
-						color : in_table[row][col]
+						curr : currColor,
+						next : nextColor
 					});
-				} else {
-					setShellColor(piece, in_table[row][col]);
 				}
 			}
 		}
-		return target;
+		return changedArr;
+	}
+	setColorTable(in_table) {
+		const changedArr = this.changedPieces(in_table);
+		changedArr.forEach(in_changed => {
+			setShellColor(in_changed.piece, in_changed.next);
+		});
 	}
 }
 
@@ -1045,7 +1049,7 @@ class cExColonyBoard extends cExColony {
 
 	gWorld (cSphericalWorld)
 	|
-	+-- gColony (cExColony)
+	+-- gColony (cColony)
 		|
 		+-- meshes <--- gMeshLevelMap
 */
@@ -1055,7 +1059,7 @@ const WORLD_INIT_ZOOM = WORLD_RADIUS / 2;
 
 const gWorld = new cSphericalWorld(WORLD_RADIUS);
 
-const gColony = new cExColonyBoard();
+const gColony = new cColonyBoard();
 
 gWorld.add(gColony);
 
@@ -1363,7 +1367,7 @@ const knock = nonReentrantAsync(async () => {
 });
 
 const notifyDelta = (() => {
-	const RC = cExColony.uiSetDeltaPositionRC;
+	const RC = cColony.uiSetDeltaPositionRC;
 	return in_ndc => {
 		const intersects = gWorld.intersectPositive(in_ndc);
 		if (intersects.length === 0) {
@@ -1447,21 +1451,22 @@ async function choosePiece(in_no, in_piece) {
 	}
 	const indexTable = gContext.riversi.getArea();
 	const colorTable = indexTable.map(in_row => in_row.map(in_cell => gContext.mapping[in_cell]));
-	const targets = gColony.setColorTable(colorTable, true);
-	targets.forEach(in_target => in_target.initRotationX = in_target.piece.rotation.x);
+	//★riversi -> colony
+	const changedArr = gColony.changedPieces(colorTable);
+	changedArr.forEach(in_target => in_target.initRotationX = in_target.piece.rotation.x);
 	const ease = new cEase(0, Math.PI * 2, 500);
 	const hook = () => {
 		const angle = ease.currentEasingOut();
 		if (angle > Math.PI) {
 			if (angle === Math.PI * 2) {
 				gWorld.removeAnimationHook(hook);
-				targets.forEach(in_target => in_target.piece.rotation.x = in_target.initRotationX);
+				changedArr.forEach(in_changed => in_changed.piece.rotation.x = in_changed.initRotationX);
 				return;
 			} else {
-				targets.forEach(({piece, color}) => setShellColor(piece, color));
+				changedArr.forEach(({piece, curr, next}) => setShellColor(piece, next));
 			}
 		}
-		targets.forEach(in_target => in_target.piece.rotation.x = in_target.initRotationX + angle);
+		changedArr.forEach(in_changed => in_changed.piece.rotation.x = in_changed.initRotationX + angle);
 	};
 	gWorld.addAnimationHook(hook);
 }
@@ -1473,7 +1478,9 @@ function chooseHere(in_ev) {
 		return;
 	}
 	const curr = intersects[0].object;
-	if (curr.userData.original === EMPTYCOLOR) {
+	const color = curr.userData.original || getShellColor(curr);
+	if (color === EMPTYCOLOR) {
+		//★colony -> riversi
 		const pos = gColony.pieceToIndex(intersects[0].object);
 		const result = gContext.riversi.pc(PLAYERS.PC, pos.row, pos.col);
 		if (result) {
@@ -1592,6 +1599,7 @@ function initializeByLevel() {
 		if (result) {
 			const history = gContext.riversi.getHistory();
 			const pos = history[history.length - 1];
+			//★riversi -> colony
 			const piece = gColony.indexToPiece(pos.row, pos.col);
 			choosePiece(PLAYERS.NPC1, piece);
 			gContext.controller.turnEnd();
@@ -1601,9 +1609,69 @@ function initializeByLevel() {
 	});
 	const indexTable = gContext.riversi.getArea();
 	const colorTable = indexTable.map(in_row => in_row.map(in_cell => gContext.mapping[in_cell]));
+	//★riversi -> colony
 	gColony.setColorTable(colorTable);
 	gContext.controller.gameStart();
 }
+
+
+/*
+
+class cGameManager {
+	#controller = null;
+	#enableHandler = false;
+	#reversiToColony = new Array(10).fill(-1);
+	static #pc = BLUE;
+	static #npcArr = [
+		RED,
+		YELLOW,
+		GREEN,
+		ORANGE,
+		LIGHTBLUE,
+		LIGHTGREEN
+	];
+	// this class knows the internal structure of cColonyBoard and cReversi
+	constructor(in_playerCnt, in_npc_callback, in_pc = 0) {
+		this.#controller = new cTurnController();
+		const colors = Array.from(cGameManager.#npcArr);
+		for (let i = 0; i < in_playerCnt; i++) {
+			if (i === in_pc) {
+				this.#reversiToColony[i] = cGameManager.#pc;
+				this.#controller.registerPlayer(() => {
+					this.#enableHandler = true;
+				});
+			} else {
+				this.#reversiToColony[i] = colors.shift();
+				this.#controller.registerPlayer(() => {
+					(in_npc_callback)(i);
+				});
+			}
+		}
+		// 8, 9 are used in cReversi
+		this.#reversiToColony[8] = DMZCOLOR;
+		this.#reversiToColony[9] = EMPTYCOLOR;
+		this.#controller.gameStart();
+	}
+	popReversiToColony(in_reversi, in_colony, in_animation = true) {
+		const history = in_reversi.getHistory();
+		const pos = history[history.length - 1];
+		const piece = in_colony.indexToPiece(pos.row, pos.col);
+
+		choosePiece(PLAYERS.NPC1, piece);
+		gContext.controller.turnEnd();
+	}
+	allReversiToColony(in_reversi, in_colony, in_animation = true) {
+		const indexTable = in_reversi.getArea();
+		const colorTable = indexTable.map(in_row => in_row.map(in_cell => this.#reversiToColony[in_cell]));
+		in_colony.setColorTable(colorTable);
+	}
+	pieceColonyToReversi(in_piece, in_colony, in_reversi) {
+	}
+	allColonyToReversi(in_colony, in_reversi) {
+	}
+}
+
+*/
 
 </script>
 </body>

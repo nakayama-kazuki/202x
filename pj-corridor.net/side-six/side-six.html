@@ -70,12 +70,12 @@ import {
 	cSphericalWorld
 } from 'basic';
 import {
-	cExColony
+	cColony
 } from 'side6';
 import * as SOUND from 'sound';
 
 /*
-	the cExColony class related functions provide the ability to create cylinder-shaped threejs objects.
+	the cColony class related functions provide the ability to create cylinder-shaped threejs objects.
 */
 
 const textureFactory = factoryBuilder((in_w, in_h) => {
@@ -262,17 +262,17 @@ const gMeshLevelMap = ((in_diameter) => {
 })(COLONY_SIZE);
 
 /*
-	the cExColonyPuzzle is designed to check if the puzzle is complete,
+	the cPuzzle is designed to check if the puzzle is complete,
 	meaning it returns to its starting configuration after shuffling.
 */
 
-class cExColonyPuzzle extends cExColony {
+class cColonyPuzzle extends cColony {
 	addPieces(in_pieces) {
 		super.addPieces(in_pieces);
 		if (this.settingVal.initialized) {
 			return;
 		}
-		// extended for cExColonyPuzzle
+		// extended for cColonyPuzzle
 		this.settingVal.completeCallback = null;
 		this.settingVal.shuffleCount = 0;
 		this.settingVal.shuffled = false;
@@ -304,7 +304,7 @@ class cExColonyPuzzle extends cExColony {
 				// for all pieces
 				return this.children.every(in_child => {
 					const currentColor = getShellColor(in_child);
-					if (Math.abs(in_e - in_evaluator(in_child)) < cExColony.error) {
+					if (Math.abs(in_e - in_evaluator(in_child)) < cColony.error) {
 						if (typeof firstColor === 'undefined') {
 							firstColor = currentColor;
 						} else {
@@ -325,16 +325,16 @@ class cExColonyPuzzle extends cExColony {
 	makeRandomAnimationProgress(in_callback) {
 		let axis, pieces, last;
 		let maxLoopCount = 100;
-		if (!this.hasOwnProperty(cExColonyPuzzle.#oneByOne)) {
+		if (!this.hasOwnProperty(cColonyPuzzle.#oneByOne)) {
 			// to repeatedly rotate and slide one by one
-			this[cExColonyPuzzle.#oneByOne] = true;
+			this[cColonyPuzzle.#oneByOne] = true;
 		}
 		while (true) {
 			if (--maxLoopCount === 0) {
 				throw new Error('maxLoopCount'); 
 			}
 			const _piece = (this.children)[arrRand]();
-			if (this[cExColonyPuzzle.#oneByOne]) {
+			if (this[cColonyPuzzle.#oneByOne]) {
 				axis = null;
 				let _amount = 0;
 				pieces = this.affectedSlidePieces(_piece, +1);
@@ -350,7 +350,7 @@ class cExColonyPuzzle extends cExColony {
 					break;
 				}
 			} else {
-				axis = cExColony.axes.x;
+				axis = cColony.axes.x;
 				pieces = this.affectedRotatePieces(_piece, axis);
 				if (pieces.length < this.children.length) {
 					last = this.settingVal.unitAngle * [1, 2, 3][arrRand]();
@@ -358,7 +358,7 @@ class cExColonyPuzzle extends cExColony {
 				}
 			}
 		}
-		this[cExColonyPuzzle.#oneByOne] = !this[cExColonyPuzzle.#oneByOne];
+		this[cColonyPuzzle.#oneByOne] = !this[cColonyPuzzle.#oneByOne];
 		const group = this.setupGroup(pieces);
 		// calling this method means shuffling
 		this.settingVal.shuffled = true;
@@ -383,7 +383,7 @@ class cExColonyPuzzle extends cExColony {
 
 	gWorld (cSphericalWorld)
 	|
-	+-- gColony (cExColony)
+	+-- gColony (cColony)
 		|
 		+-- meshes <--- gMeshLevelMap
 */
@@ -393,7 +393,7 @@ const WORLD_INIT_ZOOM = WORLD_RADIUS / 2;
 
 const gWorld = new cSphericalWorld(WORLD_RADIUS);
 
-const gColony = new cExColonyPuzzle();
+const gColony = new cColonyPuzzle();
 
 gWorld.add(gColony);
 
@@ -844,7 +844,7 @@ const knock = nonReentrantAsync(async () => {
 });
 
 const notifyDelta = (() => {
-	const RC = cExColony.uiSetDeltaPositionRC;
+	const RC = cColony.uiSetDeltaPositionRC;
 	return in_ndc => {
 		const intersects = gWorld.intersectPositive(in_ndc);
 		if (intersects.length === 0) {
