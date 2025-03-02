@@ -7,8 +7,8 @@
 <script type='importmap'>
 {
 	"imports" : {
-		"three" : "https://cdn.jsdelivr.net/npm/three@0.172.0/build/three.module.min.js",
-		"utils" : "https://cdn.jsdelivr.net/npm/three@0.172.0/examples/jsm/utils/BufferGeometryUtils.js",
+		"three" : "https://cdn.jsdelivr.net/npm/three@0.174.0/build/three.module.min.js",
+		"utils" : "https://cdn.jsdelivr.net/npm/three@0.174.0/examples/jsm/utils/BufferGeometryUtils.js",
 		"basic" : "./basic-functions.js",
 		"sound" : "./sound-effect.js"
 	}
@@ -1329,7 +1329,7 @@ async function uiShowDouble(in_distance) {
 	gDoubleFigure.raycast = () => {};
 	gWorld.add(gDoubleFigure);
 	gWorld.startRotation(VEC3().random().multiplyScalar(0.005));
-	const vec3 = gWorld.getLookAt().normalize();
+	const vec3 = gWorld.getCameraPos().negate().normalize();
 	await gWorld.easeOut(0, in_distance, 500, (in_currDistance) => {
 		gDoubleFigure.position.copy(vec3.clone().multiplyScalar(in_currDistance));
 	});
