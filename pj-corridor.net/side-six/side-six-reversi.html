@@ -11,6 +11,7 @@
 		"utils" : "https://cdn.jsdelivr.net/npm/three@0.174.0/examples/jsm/utils/BufferGeometryUtils.js",
 		"basic" : "./basic-functions.js",
 		"side6" : "./side-six.js",
+		"s6res" : "./side-six-reversi-res.js",
 		"sound" : "./sound-effect.js"
 	}
 }
@@ -72,6 +73,9 @@ import {
 import {
 	cColony
 } from 'side6';
+import {
+	RES
+} from 's6res';
 import * as SOUND from 'sound';
 
 /*
@@ -1107,13 +1111,8 @@ class cGameController {
 		if (this.#mapping[this.#curIndex] === cGameController.#UNUSED) {
 			this.#curIndex = 0;
 		}
-		const pc = (this.#mapping[this.#curIndex] === cGameController.#PC);
-		if (pc) {
-			this.enableHandler = true;
-		} else {
-			this.enableHandler = false;
-		}
-		(this.#turnHook)(this.#curIndex, pc);
+		this.enableHandler = (this.#mapping[this.#curIndex] === cGameController.#PC);
+		(this.#turnHook)(this.#curIndex, this.#mapping[this.#curIndex], this.enableHandler);
 	}
 	start() {
 		// for increment
@@ -1150,6 +1149,7 @@ class cGameController {
 					return;
 				}
 				if ((angle > Math.PI) && (!updated)) {
+					SE_MOVED.play();
 					cGameController.#update(in_changedArr);
 					updated = true;
 				}
@@ -1197,6 +1197,7 @@ class cGameController {
 	async pc(in_piece, in_reversi, in_colony, in_world) {
 		const pos = in_colony.pieceToIndex(in_piece);
 		if (in_reversi.pc(this.#curIndex, pos.row, pos.col)) {
+			SE_BEEP.play();
 			await this.#chosePiece(in_reversi, in_colony, in_world);
 			return true;
 		} else {
@@ -1205,6 +1206,21 @@ class cGameController {
 		}
 	}
 }
+
+const gOrderChar = (() => {
+	const elem = document.createElement('IMG');
+	const maxInt = 2 ** 31 - 1;
+	Object.assign(elem.style, {
+		position : 'absolute',
+		bottom : '20px',
+		right : '20px',
+		width : '100px',
+		height : 'auto',
+		zIndex : maxInt
+	});
+	document.body.appendChild(elem);
+	return elem;
+})();
 
 function initializeByLevel() {
 	// parameter
@@ -1226,17 +1242,16 @@ function initializeByLevel() {
 	// update instance
 	gReversi = new cReversi(mode);
 	gController = new cGameController(players);
-	gController.setTurnHook(async (in_player, in_pc) => {
+	gController.setTurnHook(async (in_player, in_color, in_pc) => {
+		gOrderChar.src = RES.get(in_color);
 		if (in_pc) {
-			// 自番表示
+			return;
+		}
+		const piece = await gController.npc(gReversi, gColony, gWorld);
+		if (piece) {
+			gController.endTurn();
 		} else {
-			// NPC 番表示
-			const piece = await gController.npc(gReversi, gColony, gWorld);
-			if (piece) {
-				gController.endTurn();
-			} else {
-				// 勝敗判定
-			}
+			// 勝敗判定
 		}
 	});
 	gController.reversiToColony(gReversi, gColony);
@@ -1587,6 +1602,11 @@ const focusHere = (() => {
 	}
 })();
 
+function resetFocus() {
+	const outOfRange = new THREE.Vector2(Infinity, Infinity);
+	focusHere(outOfRange);
+}
+
 async function chooseHere(in_ev) {
 	const ndc = ndcFromEvent(in_ev);
 	let intersects = gWorld.intersectPositive(ndc);
@@ -1596,10 +1616,13 @@ async function chooseHere(in_ev) {
 	const curr = intersects[0].object;
 	const color = curr.userData.original || getShellColor(curr);
 	if (color === EMPTYCOLOR) {
+		resetFocus();
+		gController.enableHandler = false;
 		if (await gController.pc(curr, gReversi, gColony, gWorld)) {
 			gController.endTurn();
 			return;
 		}
+		gController.enableHandler = true;
 	}
 	knock();
 }
