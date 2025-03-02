@@ -7,8 +7,8 @@
 <script type='importmap'>
 {
 	"imports" : {
-		"three" : "https://cdn.jsdelivr.net/npm/three@0.172.0/build/three.module.min.js",
-		"utils" : "https://cdn.jsdelivr.net/npm/three@0.172.0/examples/jsm/utils/BufferGeometryUtils.js",
+		"three" : "https://cdn.jsdelivr.net/npm/three@0.174.0/build/three.module.min.js",
+		"utils" : "https://cdn.jsdelivr.net/npm/three@0.174.0/examples/jsm/utils/BufferGeometryUtils.js",
 		"basic" : "./basic-functions.js",
 		"side6" : "./side-six.js",
 		"sound" : "./sound-effect.js"
@@ -379,33 +379,22 @@ class cColonyPuzzle extends cColony {
 }
 
 /*
-	(4) ui & dom setting
-
 	gWorld (cSphericalWorld)
-	|
-	+-- gColony (cColony)
 		|
-		+-- meshes <--- gMeshLevelMap
+		+-- gColony (cColonyPuzzle)
+			|
+			+-- gColony.children <--- gMeshLevelMap
 */
+
+const gColony = new cColonyPuzzle();
 
 const WORLD_RADIUS = COLONY_SIZE * 10;
 const WORLD_INIT_ZOOM = WORLD_RADIUS / 2;
 
 const gWorld = new cSphericalWorld(WORLD_RADIUS);
-
-const gColony = new cColonyPuzzle();
-
 gWorld.add(gColony);
-
 gWorld.moveView(0.5, 0.5);
 gWorld.motionZoom2(WORLD_INIT_ZOOM, 1000);
-
-/*
-	*** NOTE ***
-	when you use AxesHelper,
-	// gWorld.add(new THREE.AxesHelper(WORLD_RADIUS));
-	gWorld.setZoom() can not work well.
-*/
 
 class cWarpLine {
 	static #speed = 10;
@@ -506,6 +495,36 @@ function complete() {
 		nextLevel(false);
 	}, duration);
 }
+
+function initializeByLevel() {
+}
+
+(in_level => {
+	if (in_level === false) {
+		gMeshLevelMap.setOrder(0);
+	} else {
+		gMeshLevelMap.setOrder(in_level);
+	}
+})(getParam('level'));
+
+const ID_PREV_LEVEL = randomString();
+const ID_NEXT_LEVEL = randomString();
+
+async function updateLevel() {
+	const color = 0x000000;
+	await gWorld.motionFog(color, 0, 100);
+	gColony.removePieces();
+	const current = gMeshLevelMap.currItemByOrder();
+	gColony.addPieces(current.v);
+	await gWorld.motionFog(color, 100, 0);
+	const prev = gMeshLevelMap.prevItemByOrder();
+	const next = gMeshLevelMap.nextItemByOrder();
+	document.getElementById(ID_PREV_LEVEL).innerText = prev.k;
+	document.getElementById(ID_NEXT_LEVEL).innerText = next.k;
+	initializeByLevel();
+}
+
+updateLevel();
 
 /*
 	*** NOTE ***
@@ -669,32 +688,6 @@ function uiRights() {
 	startDialog(dialog);
 }
 
-const ID_PREV_LEVEL = randomString();
-const ID_NEXT_LEVEL = randomString();
-
-(in_level => {
-	if (in_level === false) {
-		gMeshLevelMap.setOrder(0);
-	} else {
-		gMeshLevelMap.setOrder(in_level);
-	}
-})(getParam('level'));
-
-async function updateLevel() {
-	const color = 0x000000;
-	await gWorld.motionFog(color, 0, 100);
-	gColony.removePieces();
-	const current = gMeshLevelMap.currItemByOrder();
-	gColony.addPieces(current.v);
-	await gWorld.motionFog(color, 100, 0);
-	const prev = gMeshLevelMap.prevItemByOrder();
-	const next = gMeshLevelMap.nextItemByOrder();
-	document.getElementById(ID_PREV_LEVEL).innerText = prev.k;
-	document.getElementById(ID_NEXT_LEVEL).innerText = next.k;
-}
-
-updateLevel();
-
 function prevLevel(in_sound = true) {
 	if (in_sound) {
 		SE_BEEP.play();
@@ -802,6 +795,10 @@ function drawCosmicView(in_canvas, in_stars, in_nebulae_patterns, in_color = 0x0
 	}
 }
 
+/*
+	event handlers
+*/
+
 const gBackgroundCanvas = document.createElement('CANVAS');
 
 Object.assign(gBackgroundCanvas.style, {
@@ -833,10 +830,6 @@ document.addEventListener('DOMContentLoaded', (() => {
 	document.body.appendChild(gBackgroundCanvas);
 	gWorld.start();
 }));
-
-/*
-	(5) event handlers
-*/
 
 const knock = nonReentrantAsync(async () => {
 	SE_ERROR.play();

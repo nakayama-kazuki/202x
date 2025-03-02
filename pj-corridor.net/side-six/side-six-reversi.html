@@ -7,8 +7,8 @@
 <script type='importmap'>
 {
 	"imports" : {
-		"three" : "https://cdn.jsdelivr.net/npm/three@0.172.0/build/three.module.min.js",
-		"utils" : "https://cdn.jsdelivr.net/npm/three@0.172.0/examples/jsm/utils/BufferGeometryUtils.js",
+		"three" : "https://cdn.jsdelivr.net/npm/three@0.174.0/build/three.module.min.js",
+		"utils" : "https://cdn.jsdelivr.net/npm/three@0.174.0/examples/jsm/utils/BufferGeometryUtils.js",
 		"basic" : "./basic-functions.js",
 		"side6" : "./side-six.js",
 		"sound" : "./sound-effect.js"
@@ -378,7 +378,12 @@ class cReversi {
 		}
 		this.#chooseTentative(in_player, in_ix);
 		this.#areaCommit();
-		this.#history.push(this.#indexToPos(in_ix));
+		const pos = this.#indexToPos(in_ix);
+		this.#history.push({
+			who : in_player,
+			row : pos.row,
+			col : pos.col
+		});
 		return true;
 	}
 	#phase() {
@@ -718,8 +723,8 @@ class cReversi {
 	npc(in_no, in_argo = 'mixed') {
 		return (this.#npcSet[in_argo].bind(this))(this.#players[in_no]);
 	}
-	getHistory() {
-		return this.#history;
+	getLast() {
+		return this.#history[this.#history.length - 1];
 	}
 	getArea() {
 		const table = [];
@@ -744,9 +749,6 @@ class cTurnController {
 	#players = new cCyclicValues();
 	#active = false;
 	#turns = 0;
-	get cycle() {
-		return Math.floor(this.#turns / this.#players.length);
-	}
 	registerPlayer(in_turnHook, in_playerId = randomString()) {
 		this.#players.push({
 			turnHook : in_turnHook,
@@ -977,46 +979,45 @@ const gMeshLevelMap = ((in_diameter) => {
 */
 
 class cColonyBoard extends cColony {
+	#makeRotationX(in_rad) {
+		return this.settingVal.origin.clone().applyMatrix4((new THREE.Matrix4()).makeRotationX(in_rad));
+	}
 	indexToPiece(in_row, in_col) {
-		const org = this.settingVal.origin;
-		const angle = this.settingVal.unitAngle * in_row;
-		const target = VEC3(
-			org.x + this.settingVal.unitDelta * in_col,
-			org.y * Math.cos(angle),
-			org.y * Math.sin(angle)
-		);
-		return this.children.find(in_child => XYZ.every(in_xyz => Math.abs(in_child.position[in_xyz] - target[in_xyz]) < cColony.error));
+		const vec3 = this.#makeRotationX(this.settingVal.unitAngle * in_row);
+		vec3.x += this.settingVal.unitDelta * in_col;
+		const piece = this.children.find(in_child => XYZ.every(in_xyz => Math.abs(in_child.position[in_xyz] - vec3[in_xyz]) < cColony.error));
+		if (!piece) {
+			console.log('indexToPiece failed : ', in_row, in_col);
+			throw new Error('');
+		}
+		return piece;
 	}
 	pieceToIndex(in_piece) {
 		const pos = in_piece.position;
-		const org = this.settingVal.origin;
-		let row;
-		for (row = 0; row < this.settingVal.rowsForCircle; row++) {
-			const angle = this.settingVal.unitAngle * row;
-			if (Math.abs(org.y * Math.cos(angle) - pos.y) > cColony.error) {
+		const ret = {
+			row : -1,
+			col : -1
+		};
+		for (ret.row = 0; ret.row < this.settingVal.rowsForCircle; ret.row++) {
+			const vec3 = this.#makeRotationX(this.settingVal.unitAngle * ret.row);
+			if (Math.abs(vec3.y - pos.y) > cColony.error) {
 				continue;
 			}
-			if (Math.abs(org.y * Math.sin(angle) - pos.z) > cColony.error) {
+			if (Math.abs(vec3.z - pos.z) > cColony.error) {
 				continue;
 			}
+			ret.col = Math.round((pos.x - vec3.x) / this.settingVal.unitDelta);
 			break;
 		}
-		return {
-			row : row,
-			col : Math.round((pos.x - org.x) / this.settingVal.unitDelta)
+		const max = {
+			row : this.settingVal.rowsForCircle - 1,
+			col : this.settingVal.colsForLength - 1
 		};
-	}
-	getColorTable() {
-		const table = [];
-		for (let row = 0; row < this.settingVal.rowsForCircle; row++) {
-			const rows = [];
-			for (let col = 0; col < this.settingVal.colsForLength; col++) {
-				const piece = this.indexToPiece(row, col);
-				rows.push(getShellColor(piece));
-			}
-			table.push(rows);
+		if ((ret.row < 0) || (max.row < ret.row) || (ret.col < 0) || (max.col < ret.col)) {
+			console.log('pieceToIndex failed : ', in_piece, ret);
+			throw new Error('');
 		}
-		return table;
+		return ret;
 	}
 	changedPieces(in_table) {
 		const changedArr = [];
@@ -1036,42 +1037,238 @@ class cColonyBoard extends cColony {
 		}
 		return changedArr;
 	}
-	setColorTable(in_table) {
-		const changedArr = this.changedPieces(in_table);
-		changedArr.forEach(in_changed => {
-			setShellColor(in_changed.piece, in_changed.next);
-		});
-	}
 }
 
 /*
-	(5) ui & dom setting
-
 	gWorld (cSphericalWorld)
-	|
-	+-- gColony (cColony)
 		|
-		+-- meshes <--- gMeshLevelMap
+		+-- gColony (cColonyBoard)
+			|
+			+-- gColony.children <--- gMeshLevelMap
+
+	gController (cGameController) : knows the internal structure of the following instances
+		|
+		+-- gReversi (cReversi) : used for npc algorithm
+		|
+		+-- gColony : used for user interface
+		|
+		+-- gWorld : used for animation
 */
+
+const gColony = new cColonyBoard();
 
 const WORLD_RADIUS = COLONY_SIZE * 10;
 const WORLD_INIT_ZOOM = WORLD_RADIUS / 2;
 
 const gWorld = new cSphericalWorld(WORLD_RADIUS);
-
-const gColony = new cColonyBoard();
-
 gWorld.add(gColony);
-
 gWorld.moveView(0.5, 0.5);
 gWorld.motionZoom2(WORLD_INIT_ZOOM, 1000);
 
-/*
-	*** NOTE ***
-	when you use AxesHelper,
-	// gWorld.add(new THREE.AxesHelper(WORLD_RADIUS));
-	gWorld.setZoom() can not work well.
-*/
+let gController = null;
+let gReversi = null;
+
+class cGameController {
+	static #UNUSED = -1;
+	static #PC = BLUE;
+	static #NPC = [
+		RED,
+		YELLOW,
+		GREEN,
+		ORANGE,
+		LIGHTBLUE,
+		LIGHTGREEN
+	];
+	#mapping = new Array(10).fill(cGameController.#UNUSED);
+	#turnHook = () => {};
+	#curIndex;
+	enableHandler = false;
+	// cGameController knows the internal structure of cColonyBoard, cReversi and cSphericalWorld
+	constructor(in_playerCnt, in_pc = 0) {
+		const colors = Array.from(cGameController.#NPC);
+		for (let i = 0; i < in_playerCnt; i++) {
+			let color;
+			if (i === in_pc) {
+				color = cGameController.#PC;
+			} else {
+				color = colors.shift();
+			}
+			this.#mapping[i] = color;
+		}
+		// 8, 9 are used in cReversi
+		this.#mapping[8] = DMZCOLOR;
+		this.#mapping[9] = EMPTYCOLOR;
+	}
+	setTurnHook(in_hook) {
+		this.#turnHook = in_hook;
+	}
+	endTurn() {
+		this.#curIndex++;
+		if (this.#mapping[this.#curIndex] === cGameController.#UNUSED) {
+			this.#curIndex = 0;
+		}
+		const pc = (this.#mapping[this.#curIndex] === cGameController.#PC);
+		if (pc) {
+			this.enableHandler = true;
+		} else {
+			this.enableHandler = false;
+		}
+		(this.#turnHook)(this.#curIndex, pc);
+	}
+	start() {
+		// for increment
+		this.#curIndex = -1;
+		this.endTurn();
+	}
+	static #update(in_changedArr) {
+		in_changedArr.forEach(in_changed => {
+			setShellColor(in_changed.piece, in_changed.next);
+		});
+	}
+	static #updateDynamic(in_changedArr, in_world) {
+		// in_changedArr : see cColonyBoard.changedPieces()
+		in_changedArr.forEach(in_changed => {
+			// backup initial value
+			in_changed.initRotationX = in_changed.piece.rotation.x;
+		});
+		const ease = new cEase(0, Math.PI * 2, 500);
+		return new Promise(in_resolved => {
+			let updated = false;
+			const hook = () => {
+				const angle = ease.currentEasingOut();
+				if (angle === Math.PI * 2) {
+					in_world.removeAnimationHook(hook);
+					in_changedArr.forEach(in_changed => {
+						// restore initial value
+						in_changed.piece.rotation.x = in_changed.initRotationX;
+					});
+					/*
+						execute the process that follows the await (or callback defined in then),
+						which corresponds to the then block of a promise
+					*/
+					(in_resolved)();
+					return;
+				}
+				if ((angle > Math.PI) && (!updated)) {
+					cGameController.#update(in_changedArr);
+					updated = true;
+				}
+				in_changedArr.forEach(in_changed => {
+					in_changed.piece.rotation.x = in_changed.initRotationX + angle;
+				});
+			};
+			in_world.addAnimationHook(hook);
+		});
+	}
+	#makeChangedArr(in_reversi, in_colony) {
+		const indexTable = in_reversi.getArea();
+		const colorTable = indexTable.map(in_row => in_row.map(in_cell => this.#mapping[in_cell]));
+		return in_colony.changedPieces(colorTable);
+	}
+	reversiToColony(in_reversi, in_colony) {
+		const changedArr = this.#makeChangedArr(in_reversi, in_colony);
+		cGameController.#update(changedArr);
+	}
+	async reversiToColonyDynamic(in_reversi, in_colony, in_world) {
+		const changedArr = this.#makeChangedArr(in_reversi, in_colony);
+		await cGameController.#updateDynamic(changedArr, in_world);
+	}
+	async #chosePiece(in_reversi, in_colony, in_world) {
+		const last = in_reversi.getLast();
+		const piece = in_colony.indexToPiece(last.row, last.col);
+		// move view
+		const cameraPos = in_world.getCameraPos();
+		const angleX = Math.atan2(cameraPos.y, cameraPos.z) - Math.atan2(piece.position.y, piece.position.z);
+		const vec3 = cameraPos.applyMatrix4((new THREE.Matrix4()).makeRotationX(angleX));
+		await in_world.motionViewFrom(vec3, 500);
+		// choose
+		setShellColor(piece, this.#mapping[last.who]);
+		await this.reversiToColonyDynamic(in_reversi, in_colony, in_world);
+	}
+	async npc(in_reversi, in_colony, in_world) {
+		if (in_reversi.npc(this.#curIndex)) {
+			await this.#chosePiece(in_reversi, in_colony, in_world);
+			return true;
+		} else {
+			// can't do anything
+			return false;
+		}
+	}
+	async pc(in_piece, in_reversi, in_colony, in_world) {
+		const pos = in_colony.pieceToIndex(in_piece);
+		if (in_reversi.pc(this.#curIndex, pos.row, pos.col)) {
+			await this.#chosePiece(in_reversi, in_colony, in_world);
+			return true;
+		} else {
+			// can't do anything
+			return false;
+		}
+	}
+}
+
+function initializeByLevel() {
+	// parameter
+	const players = (in_players => {
+		const default_players = 2;
+		if (in_players === false) {
+			return default_players;
+		} else {
+			if ((in_players === 2) || (in_players === 4)) {
+				return in_players;
+			} else {
+				return default_players;
+			}
+		}
+	})(getParam('players'));
+	const curr = gMeshLevelMap.currItemByOrder();
+	const match = curr.k.match(new RegExp(LABEL_LV + '(\\d+)'));
+	const mode = players + 'x' + parseInt(match[1], 10);
+	// update instance
+	gReversi = new cReversi(mode);
+	gController = new cGameController(players);
+	gController.setTurnHook(async (in_player, in_pc) => {
+		if (in_pc) {
+			// 自番表示
+		} else {
+			// NPC 番表示
+			const piece = await gController.npc(gReversi, gColony, gWorld);
+			if (piece) {
+				gController.endTurn();
+			} else {
+				// 勝敗判定
+			}
+		}
+	});
+	gController.reversiToColony(gReversi, gColony);
+	gController.start();
+}
+
+(in_level => {
+	if (in_level === false) {
+		gMeshLevelMap.setOrder(2);
+	} else {
+		gMeshLevelMap.setOrder(in_level);
+	}
+})(getParam('level'));
+
+const ID_PREV_LEVEL = randomString();
+const ID_NEXT_LEVEL = randomString();
+
+async function updateLevel() {
+	const color = 0x000000;
+	await gWorld.motionFog(color, 0, 100);
+	gColony.removePieces();
+	const current = gMeshLevelMap.currItemByOrder();
+	gColony.addPieces(current.v);
+	await gWorld.motionFog(color, 100, 0);
+	const prev = gMeshLevelMap.prevItemByOrder();
+	const next = gMeshLevelMap.nextItemByOrder();
+	document.getElementById(ID_PREV_LEVEL).innerText = prev.k;
+	document.getElementById(ID_NEXT_LEVEL).innerText = next.k;
+	initializeByLevel();
+}
+
+updateLevel();
 
 /*
 	*** NOTE ***
@@ -1199,33 +1396,6 @@ function uiRights() {
 	startDialog(dialog);
 }
 
-const ID_PREV_LEVEL = randomString();
-const ID_NEXT_LEVEL = randomString();
-
-(in_level => {
-	if (in_level === false) {
-		gMeshLevelMap.setOrder(0);
-	} else {
-		gMeshLevelMap.setOrder(in_level);
-	}
-})(getParam('level'));
-
-async function updateLevel() {
-	const color = 0x000000;
-	await gWorld.motionFog(color, 0, 100);
-	gColony.removePieces();
-	const current = gMeshLevelMap.currItemByOrder();
-	gColony.addPieces(current.v);
-	await gWorld.motionFog(color, 100, 0);
-	const prev = gMeshLevelMap.prevItemByOrder();
-	const next = gMeshLevelMap.nextItemByOrder();
-	document.getElementById(ID_PREV_LEVEL).innerText = prev.k;
-	document.getElementById(ID_NEXT_LEVEL).innerText = next.k;
-	initializeByLevel();
-}
-
-updateLevel();
-
 function prevLevel(in_sound = true) {
 	if (in_sound) {
 		SE_BEEP.play();
@@ -1325,6 +1495,10 @@ function drawCosmicView(in_canvas, in_stars, in_nebulae_patterns, in_color = 0x0
 	}
 }
 
+/*
+	event handlers
+*/
+
 const gBackgroundCanvas = document.createElement('CANVAS');
 
 Object.assign(gBackgroundCanvas.style, {
@@ -1356,10 +1530,6 @@ document.addEventListener('DOMContentLoaded', (() => {
 	document.body.appendChild(gBackgroundCanvas);
 	gWorld.start();
 }));
-
-/*
-	(6) event handlers
-*/
 
 const knock = nonReentrantAsync(async () => {
 	SE_ERROR.play();
@@ -1417,61 +1587,7 @@ const focusHere = (() => {
 	}
 })();
 
-const PLAYERS = {
-	PC : 0,
-	NPC1 : 1,
-	NPC2 : 2,
-	NPC3 : 3
-};
-
-const gContext = {
-	riversi : null,
-	mapping : (() => {
-		const arr = new Array(10).fill(-1);
-		arr[PLAYERS.PC] = BLUE;
-		arr[PLAYERS.NPC1] = RED;
-		arr[PLAYERS.NPC2] = YELLOW;
-		arr[PLAYERS.NPC3] = GREEN;
-		arr[8] = DMZCOLOR;
-		arr[9] = EMPTYCOLOR;
-		return arr;
-	})(),
-	controller : null,
-	enableHandlers : false
-};
-
-async function choosePiece(in_no, in_piece) {
-	const outOfRange = new THREE.Vector2(Infinity, Infinity);
-	focusHere(outOfRange);
-	setShellColor(in_piece, gContext.mapping[in_no]);
-	if (in_no !== PLAYERS.PC) {
-		const dst = in_piece.position.clone();
-		dst.x *= 0.5;
-		await gWorld.motionViewFrom(dst, 500);
-	}
-	const indexTable = gContext.riversi.getArea();
-	const colorTable = indexTable.map(in_row => in_row.map(in_cell => gContext.mapping[in_cell]));
-	//★riversi -> colony
-	const changedArr = gColony.changedPieces(colorTable);
-	changedArr.forEach(in_target => in_target.initRotationX = in_target.piece.rotation.x);
-	const ease = new cEase(0, Math.PI * 2, 500);
-	const hook = () => {
-		const angle = ease.currentEasingOut();
-		if (angle > Math.PI) {
-			if (angle === Math.PI * 2) {
-				gWorld.removeAnimationHook(hook);
-				changedArr.forEach(in_changed => in_changed.piece.rotation.x = in_changed.initRotationX);
-				return;
-			} else {
-				changedArr.forEach(({piece, curr, next}) => setShellColor(piece, next));
-			}
-		}
-		changedArr.forEach(in_changed => in_changed.piece.rotation.x = in_changed.initRotationX + angle);
-	};
-	gWorld.addAnimationHook(hook);
-}
-
-function chooseHere(in_ev) {
+async function chooseHere(in_ev) {
 	const ndc = ndcFromEvent(in_ev);
 	let intersects = gWorld.intersectPositive(ndc);
 	if (intersects.length === 0) {
@@ -1480,13 +1596,8 @@ function chooseHere(in_ev) {
 	const curr = intersects[0].object;
 	const color = curr.userData.original || getShellColor(curr);
 	if (color === EMPTYCOLOR) {
-		//★colony -> riversi
-		const pos = gColony.pieceToIndex(intersects[0].object);
-		const result = gContext.riversi.pc(PLAYERS.PC, pos.row, pos.col);
-		if (result) {
-			gContext.enableHandlers = false;
-			choosePiece(PLAYERS.PC, intersects[0].object);
-			gContext.controller.turnEnd();
+		if (await gController.pc(curr, gReversi, gColony, gWorld)) {
+			gController.endTurn();
 			return;
 		}
 	}
@@ -1516,7 +1627,7 @@ function chooseHere(in_ev) {
 		}
 		closure.x = in_ev.clientX;
 		closure.y = in_ev.clientY;
-		gColony.uiSetInitPosition(intersects[0].point, ndcToAbs(ndc));
+		// gColony.uiSetInitPosition(intersects[0].point, ndcToAbs(ndc));
 	};
 	const move = thresholding(in_ev => {
 		closure.x = -1;
@@ -1558,120 +1669,12 @@ function chooseHere(in_ev) {
 	};
 	for (let [name, func] of Object.entries(handlers)) {
 		gWorld.canvas.addEventListener(name, in_ev => {
-			if (gContext.enableHandlers) {
+			if (gController && gController.enableHandler) {
 				(func.bind(this))(in_ev);
 			}
 		});
 	}
 })();
-
-function initializeByLevel() {
-	/*
-		1. cReversi settings
-	*/
-	const players = (in_players => {
-		const default_players = 2;
-		if (in_players === false) {
-			return default_players;
-		} else {
-			if ((in_players === 2) || (in_players === 4)) {
-				return in_players;
-			} else {
-				return default_players;
-			}
-		}
-	})(getParam('players'));
-	const curr = gMeshLevelMap.currItemByOrder();
-	const match = curr.k.match(new RegExp(LABEL_LV + '(\\d+)'));
-	const mode = players + 'x' + parseInt(match[1], 10);
-	gContext.riversi = new cReversi(mode);
-	/*
-		2. cTurnController settings
-	*/
-	gContext.controller = new cTurnController();
-	gContext.controller.registerPlayer(() => {
-		// PLAYERS.PC
-		gContext.enableHandlers = true;
-	});
-	gContext.controller.registerPlayer(() => {
-		// PLAYERS.NPC1
-		const result = gContext.riversi.npc(PLAYERS.NPC1);
-		if (result) {
-			const history = gContext.riversi.getHistory();
-			const pos = history[history.length - 1];
-			//★riversi -> colony
-			const piece = gColony.indexToPiece(pos.row, pos.col);
-			choosePiece(PLAYERS.NPC1, piece);
-			gContext.controller.turnEnd();
-			return;
-		}
-		// gContext.controller.gameEnd();
-	});
-	const indexTable = gContext.riversi.getArea();
-	const colorTable = indexTable.map(in_row => in_row.map(in_cell => gContext.mapping[in_cell]));
-	//★riversi -> colony
-	gColony.setColorTable(colorTable);
-	gContext.controller.gameStart();
-}
-
-
-/*
-
-class cGameManager {
-	#controller = null;
-	#enableHandler = false;
-	#reversiToColony = new Array(10).fill(-1);
-	static #pc = BLUE;
-	static #npcArr = [
-		RED,
-		YELLOW,
-		GREEN,
-		ORANGE,
-		LIGHTBLUE,
-		LIGHTGREEN
-	];
-	// this class knows the internal structure of cColonyBoard and cReversi
-	constructor(in_playerCnt, in_npc_callback, in_pc = 0) {
-		this.#controller = new cTurnController();
-		const colors = Array.from(cGameManager.#npcArr);
-		for (let i = 0; i < in_playerCnt; i++) {
-			if (i === in_pc) {
-				this.#reversiToColony[i] = cGameManager.#pc;
-				this.#controller.registerPlayer(() => {
-					this.#enableHandler = true;
-				});
-			} else {
-				this.#reversiToColony[i] = colors.shift();
-				this.#controller.registerPlayer(() => {
-					(in_npc_callback)(i);
-				});
-			}
-		}
-		// 8, 9 are used in cReversi
-		this.#reversiToColony[8] = DMZCOLOR;
-		this.#reversiToColony[9] = EMPTYCOLOR;
-		this.#controller.gameStart();
-	}
-	popReversiToColony(in_reversi, in_colony, in_animation = true) {
-		const history = in_reversi.getHistory();
-		const pos = history[history.length - 1];
-		const piece = in_colony.indexToPiece(pos.row, pos.col);
-
-		choosePiece(PLAYERS.NPC1, piece);
-		gContext.controller.turnEnd();
-	}
-	allReversiToColony(in_reversi, in_colony, in_animation = true) {
-		const indexTable = in_reversi.getArea();
-		const colorTable = indexTable.map(in_row => in_row.map(in_cell => this.#reversiToColony[in_cell]));
-		in_colony.setColorTable(colorTable);
-	}
-	pieceColonyToReversi(in_piece, in_colony, in_reversi) {
-	}
-	allColonyToReversi(in_colony, in_reversi) {
-	}
-}
-
-*/
 
 </script>
 </body>
