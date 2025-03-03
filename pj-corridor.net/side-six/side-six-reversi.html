@@ -743,6 +743,17 @@ class cReversi {
 	}
 	setArea(in_table) {
 	}
+	getCurrentCondition() {
+		const ret = [];
+		for (let i = 0; i < this.#players.length; i++) {
+			const player = this.#players[i];
+			ret.push({
+				dead : ((this.#searchCandidates(player)).length === 0),
+				score : (this.#area.latest.filter(in_el => in_el === player)).length
+			});
+		}
+		return ret;
+	}
 }
 
 /*
@@ -893,6 +904,23 @@ const LABEL_LV = 'lv.';
 const gMeshLevelMap = ((in_diameter) => {
 	const map = new cCyclicMap();
 	const shellInfo = [
+		{
+			rowsForCircle : 12,
+			colsForLength : 6,
+			dmzArr : [
+				[ 6, 0], [ 6, 1], [ 6, 2], [ 6, 3], [ 6, 4], [ 6, 5],
+				[ 7, 0], [ 7, 1], [ 7, 2], [ 7, 3], [ 7, 4], [ 7, 5],
+				[ 8, 0], [ 8, 1], [ 8, 2], [ 8, 3], [ 8, 4], [ 8, 5],
+				[ 9, 0], [ 9, 1], [ 9, 2], [ 9, 3], [ 9, 4], [ 9, 5],
+				[10, 0], [10, 1], [10, 2], [10, 3], [10, 4], [10, 5],
+				[11, 0], [11, 1], [11, 2], [11, 3], [11, 4], [11, 5]
+			]
+		},
+		{
+			rowsForCircle : 6,
+			colsForLength : 6,
+			dmzArr : []
+		},
 		{
 			rowsForCircle : 14,
 			colsForLength : 7,
@@ -1106,18 +1134,44 @@ class cGameController {
 	setTurnHook(in_hook) {
 		this.#turnHook = in_hook;
 	}
-	endTurn() {
+	#execTurnHook() {
+		const color = this.#mapping[this.#curIndex];
+		this.enableHandler = (color === cGameController.#PC);
+		(this.#turnHook)(this.#curIndex, color, this.enableHandler);
+	}
+	endTurn(in_reversi = null) {
 		this.#curIndex++;
 		if (this.#mapping[this.#curIndex] === cGameController.#UNUSED) {
 			this.#curIndex = 0;
 		}
-		this.enableHandler = (this.#mapping[this.#curIndex] === cGameController.#PC);
-		(this.#turnHook)(this.#curIndex, this.#mapping[this.#curIndex], this.enableHandler);
+		if (in_reversi) {
+			const cond = in_reversi.getCurrentCondition();
+			if (cond[this.#curIndex].dead) {
+				if (cond.every(in_elem => in_elem.dead)) {
+					// none of the players can do anything
+					const winner = cond.reduce((in_accum, in_curVal, in_curIndex, in_arr) => {
+						return in_curVal.score > in_arr[in_accum].score ? in_curIndex : in_accum;
+					}, 0);
+					return this.#mapping[winner];
+				} else {
+					return this.endTurn(in_reversi);
+				}
+			} else {
+				this.#execTurnHook();
+			}
+		} else {
+			this.#execTurnHook();
+		}
+		return -1;
 	}
 	start() {
 		// for increment
 		this.#curIndex = -1;
 		this.endTurn();
+	}
+	end() {
+		this.setTurnHook(() => {});
+		this.#mapping.fill(cGameController.#UNUSED);
 	}
 	static #update(in_changedArr) {
 		in_changedArr.forEach(in_changed => {
@@ -1195,16 +1249,119 @@ class cGameController {
 		}
 	}
 	async pc(in_piece, in_reversi, in_colony, in_world) {
+		this.enableHandler = false;
 		const pos = in_colony.pieceToIndex(in_piece);
-		if (in_reversi.pc(this.#curIndex, pos.row, pos.col)) {
+		const result = in_reversi.pc(this.#curIndex, pos.row, pos.col);
+		if (result) {
 			SE_BEEP.play();
 			await this.#chosePiece(in_reversi, in_colony, in_world);
-			return true;
+		}
+		this.enableHandler = true;
+		return result;
+	}
+}
+
+class cWarpLine {
+	static #speed = 10;
+	static #gradation = 10;
+	constructor(in_canvas) {
+		const w = in_canvas.width;
+		const h = in_canvas.height;
+		this.ctx = in_canvas.getContext('2d');
+		this.box = new THREE.Box2(
+			new THREE.Vector2(0, 0),
+			new THREE.Vector2(w, h)
+		);
+		this.from = new THREE.Vector2(w / 2, h / 2);
+		this.#reset();
+	}
+	#reset() {
+		const angle = Math.random() * Math.PI * 2;
+		this.direction = new THREE.Vector2(Math.cos(angle), Math.sin(angle));
+		this.speed = Math.random() * cWarpLine.#speed + 5;
+		this.length = 0;
+	}
+	#curVec(in_scalar) {
+		return this.from.clone().add(this.direction.clone().multiplyScalar(in_scalar));
+	}
+	#drawGrayLine(in_from, in_to, in_grayScale) {
+		const gray = (in_grayScale << 16) | (in_grayScale << 8) | in_grayScale;
+		this.ctx.strokeStyle = '#' + gray.toString(16).padStart(6, '0');
+		this.ctx.beginPath();
+		this.ctx.moveTo(in_from.x, in_from.y);
+		this.ctx.lineTo(in_to.x, in_to.y);
+		this.ctx.stroke();
+	}
+	update() {
+		this.length += this.speed;
+		const to = this.#curVec(this.length);
+		if (this.box.containsPoint(to)) {
+			const notch = this.length / cWarpLine.#gradation;
+			for (let i = 0; i < cWarpLine.#gradation; i++) {
+				this.#drawGrayLine(
+					this.#curVec(notch * i),
+					this.#curVec(notch * (i + 1)),
+					255 / cWarpLine.#gradation * (i + 1)
+				);
+			}
 		} else {
-			// can't do anything
-			return false;
+			/*
+				*** NOTE ***
+				even if overwritung using black,
+				this.#drawGrayLine(this.from, to, 0x00);
+				smudge of white line will remain.
+			*/
+			this.#reset();
 		}
 	}
+}
+
+function warpViewProgress(in_canvas, in_lineCount) {
+	const warpLines = [];
+	for (let i = 0; i < in_lineCount; i++) {
+		warpLines.push(new cWarpLine(in_canvas));
+	}
+	return () => {
+		warpLines.forEach(in_line => {
+			in_line.update();
+		});
+	}
+}
+
+function complete(in_player) {
+	gController.end();
+	gOrderChar.style.visibility = 'hidden';
+	const progress = warpViewProgress(gBackgroundCanvas, 50);
+	gWorld.addAnimationHook(progress);
+	const duration = 2000;
+	gWorld.motionZoom2(WORLD_RADIUS * 1.5, duration * 0.9);
+	window.setTimeout(() => {
+		gWorld.removeAnimationHook(progress);
+		const dialog = document.createElement('div');
+		Object.assign(dialog.style, {
+			width : 'auto',
+			height : 'auto',
+			background : 'black',
+			borderRadius : '1em',
+			padding : '1.5em'
+		});
+		([
+			'<div>Winner is ...</div>',
+			'<div style="text-align:center"><img src="' + RES.get(in_player) + '" /></div>',
+			'<div>Thanks to your wisdom, peace in the universe has been preserved.</div>',
+			'<div>Click to go next stage.</div>',
+		]).forEach(in_fragment => {
+			dialog.innerHTML += in_fragment;
+		});
+		setTransition(dialog, 'color 0.5s ease-out', 'gray', 'white');
+		startDialog(dialog, () => {
+			nextLevel(false);
+			window.setTimeout(() => {
+				drawCosmicView(gBackgroundCanvas, 400, 50);
+				gWorld.motionZoom2(WORLD_INIT_ZOOM, 1000);
+			}, 0);
+		});
+	}, duration);
 }
 
 const gOrderChar = (() => {
@@ -1243,16 +1400,17 @@ function initializeByLevel() {
 	gReversi = new cReversi(mode);
 	gController = new cGameController(players);
 	gController.setTurnHook(async (in_player, in_color, in_pc) => {
+		gOrderChar.style.visibility = 'visible';
 		gOrderChar.src = RES.get(in_color);
 		if (in_pc) {
 			return;
 		}
-		const piece = await gController.npc(gReversi, gColony, gWorld);
-		if (piece) {
-			gController.endTurn();
-		} else {
-			// 勝敗判定
+		await gController.npc(gReversi, gColony, gWorld);
+		const winner = gController.endTurn(gReversi);
+		if (winner < 0) {
+			return;
 		}
+		complete(winner);
 	});
 	gController.reversiToColony(gReversi, gColony);
 	gController.start();
@@ -1260,7 +1418,7 @@ function initializeByLevel() {
 
 (in_level => {
 	if (in_level === false) {
-		gMeshLevelMap.setOrder(2);
+		gMeshLevelMap.setOrder(0);
 	} else {
 		gMeshLevelMap.setOrder(in_level);
 	}
@@ -1615,16 +1773,20 @@ async function chooseHere(in_ev) {
 	}
 	const curr = intersects[0].object;
 	const color = curr.userData.original || getShellColor(curr);
-	if (color === EMPTYCOLOR) {
+	if (color !== EMPTYCOLOR) {
+		knock();
+	} else {
 		resetFocus();
-		gController.enableHandler = false;
 		if (await gController.pc(curr, gReversi, gColony, gWorld)) {
-			gController.endTurn();
-			return;
+			const winner = gController.endTurn(gReversi);
+			if (winner < 0) {
+				return;
+			}
+			complete(winner);
+		} else {
+			knock();
 		}
-		gController.enableHandler = true;
 	}
-	knock();
 }
 
 (() => {
