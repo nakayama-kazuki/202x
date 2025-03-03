@@ -1354,12 +1354,10 @@ function complete(in_player) {
 			dialog.innerHTML += in_fragment;
 		});
 		setTransition(dialog, 'color 0.5s ease-out', 'gray', 'white');
-		startDialog(dialog, () => {
-			nextLevel(false);
-			window.setTimeout(() => {
-				drawCosmicView(gBackgroundCanvas, 400, 50);
-				gWorld.motionZoom2(WORLD_INIT_ZOOM, 1000);
-			}, 0);
+		startDialog(dialog, async () => {
+			drawCosmicView(gBackgroundCanvas, 400, 50);
+			await nextLevel(false);
+			gWorld.motionZoom2(WORLD_INIT_ZOOM, 1000);
 		});
 	}, duration);
 }
@@ -1418,7 +1416,7 @@ function initializeByLevel() {
 
 (in_level => {
 	if (in_level === false) {
-		gMeshLevelMap.setOrder(0);
+		gMeshLevelMap.setOrder(4);
 	} else {
 		gMeshLevelMap.setOrder(in_level);
 	}
@@ -1569,20 +1567,20 @@ function uiRights() {
 	startDialog(dialog);
 }
 
-function prevLevel(in_sound = true) {
+async function prevLevel(in_sound = true) {
 	if (in_sound) {
 		SE_BEEP.play();
 	}
 	gMeshLevelMap.shiftOrder(-1);
-	updateLevel();
+	await updateLevel();
 }
 
-function nextLevel(in_sound = true) {
+async function nextLevel(in_sound = true) {
 	if (in_sound) {
 		SE_BEEP.play();
 	}
 	gMeshLevelMap.shiftOrder(+1);
-	updateLevel();
+	await updateLevel();
 }
 
 (in_settings => {
