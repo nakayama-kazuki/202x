@@ -308,51 +308,58 @@ class cReversi {
 	#isLabel(in_ix, in_label) {
 		return this.#labels[in_label].includes(in_ix);
 	}
-	#inArea(in_row, in_col) {
-		if ((in_row < 0) || (this.#style.size - 1 < in_row)) {
-			return false;
+	#nextPos(in_current, in_delta, in_size, in_start) {
+		const next = {};
+		const attrArr = ['row', 'col'];
+		for (let i = 0; i < attrArr.length; i++) {
+			const attr = attrArr[i];
+			next[attr] = in_current[attr] + in_delta[attr];
+			if (this.#edge[attr]) {
+				if ((next[attr] < 0) || (in_size[attr] - 1 < next[attr])) {
+					// out of range
+					return null;
+				}
+			} else {
+				next[attr] = (next[attr] + in_size[attr]) % in_size[attr];
+				if ((in_delta[attr] !== 0) && (next[attr] === in_start[attr])) {
+					// cyclic
+					return null;
+				}
+			}
 		}
-		if ((in_col < 0) || (this.#style.size - 1 < in_col)) {
-			return false;
-		}
-		return true;
+		return next;
 	}
-	#checkCyclic(in_value, in_edge) {
-		if (in_edge) {
-			return in_value;
-		} else {
-			return (in_value + this.#style.size) % this.#style.size;
-		}
-	}
-	#canFlipTowards(in_player, in_ix, in_dr, in_dc, in_flip = false) {
-		const pos = this.#indexToPos(in_ix);
-		let row = this.#checkCyclic(pos.row + in_dr, this.#edge.row);
-		let col = this.#checkCyclic(pos.col + in_dc, this.#edge.col);
-		let enemy = false;
-		const indexes = [in_ix];
-		while (this.#inArea(row, col)) {
-			const data = this.#getAreaByPos(row, col);
-			if (data === in_player) {
-				if (enemy) {
+	#canFlipTowards(in_player, in_start_ix, in_dr, in_dc, in_flip = false) {
+		const start = this.#indexToPos(in_start_ix);
+		const size = {
+			row : this.#style.size,
+			col : this.#style.size
+		};
+		const delta = {
+			row : in_dr,
+			col : in_dc
+		};
+		const indexes = [in_start_ix];
+		let pos = start;
+		let enemyAppears = false;
+		while (pos = this.#nextPos(pos, delta, size, start)) {
+			const who = this.#getAreaByPos(pos.row, pos.col);
+			if (who === in_player) {
+				if (enemyAppears) {
 					if (in_flip) {
-						indexes.forEach(in_target_ix => this.#setAreaByIndex(in_target_ix, in_player));
+						indexes.forEach(in_ix => this.#setAreaByIndex(in_ix, in_player));
 					}
 					return true;
 				} else {
 					break;
 				}
 			} else {
-				if (data === cReversi.#empty) {
+				if (who === cReversi.#empty) {
 					break;
 				} else {
-					indexes.push(this.#posToIndex(row, col));
-					enemy = true;
+					indexes.push(this.#posToIndex(pos.row, pos.col));
+					enemyAppears = true;
 				}
-			}
-			row = this.#checkCyclic(row + in_dr, this.#edge.row);
-			col = this.#checkCyclic(col + in_dc, this.#edge.col);
-			if ((row === pos.row) && (col === pos.col)) {
-				break;
 			}
 		}
 		return false;
@@ -900,6 +907,7 @@ const edgeMaterial = new THREE.MeshLambertMaterial({color : BGCOLOR});
 
 const COLONY_SIZE = 400;
 const LABEL_LV = 'lv.';
+const LABEL_LOOP = '-loop';
 
 const gMeshLevelMap = ((in_diameter) => {
 	const map = new cCyclicMap();
@@ -999,7 +1007,7 @@ const gMeshLevelMap = ((in_diameter) => {
 		}
 		let stage = LABEL_LV + in_shell.colsForLength;
 		if (in_shell.rowsForCircle === in_shell.colsForLength) {
-			stage += '-loop'
+			stage += LABEL_LOOP;
 		}
 		map.set(stage, pieces);
 	});
@@ -1249,6 +1257,7 @@ class cGameController {
 		}
 	}
 	async pc(in_piece, in_reversi, in_colony, in_world) {
+		const resume = this.enableHandler;
 		this.enableHandler = false;
 		const pos = in_colony.pieceToIndex(in_piece);
 		const result = in_reversi.pc(this.#curIndex, pos.row, pos.col);
@@ -1256,7 +1265,7 @@ class cGameController {
 			SE_BEEP.play();
 			await this.#chosePiece(in_reversi, in_colony, in_world);
 		}
-		this.enableHandler = true;
+		this.enableHandler = resume;
 		return result;
 	}
 }
@@ -1392,10 +1401,10 @@ function initializeByLevel() {
 		}
 	})(getParam('players'));
 	const curr = gMeshLevelMap.currItemByOrder();
-	const match = curr.k.match(new RegExp(LABEL_LV + '(\\d+)'));
+	const match = curr.k.match(new RegExp(LABEL_LV + '(\\d+)(.*)'));
 	const mode = players + 'x' + parseInt(match[1], 10);
 	// update instance
-	gReversi = new cReversi(mode);
+	gReversi = new cReversi(mode, (match[2] !== LABEL_LOOP), true);
 	gController = new cGameController(players);
 	gController.setTurnHook(async (in_player, in_color, in_pc) => {
 		gOrderChar.style.visibility = 'visible';
