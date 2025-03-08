@@ -83,47 +83,6 @@ import * as SOUND from 'sound';
 */
 
 class cReversi {
-	static #styles = {
-		'2x6' : {
-			size : 6,
-			init : [
-				0, 1,
-				1, 0
-			]
-		},
-		'2x7' : {
-			size : 7,
-			init : [
-				0, 0, 1,
-				1, 9, 1,
-				1, 0, 0
-			]
-		},
-		'2x8' : {
-			size : 8,
-			init : [
-				0, 1,
-				1, 0
-			]
-		},
-		'4x7' : {
-			size : 7,
-			init : [
-				0, 2, 1,
-				1, 9, 3,
-				3, 0, 2
-			]
-		},
-		'4x8' : {
-			size : 8,
-			init : [
-				9, 1, 9, 9,
-				9, 3, 0, 2,
-				0, 2, 1, 9,
-				9, 9, 3, 9
-			]
-		}
-	};
 	static #positive = +1;
 	static #negative = -1;
 	static #maximize(in_evaluator, in_player, in_candidates) {
@@ -151,94 +110,44 @@ class cReversi {
 		};
 		return this.#maximize(evaluator, in_player, in_candidates);
 	}
-	static #dmz = Symbol(8);
-	static #empty = Symbol(9);
-	static #directions = (() => {
-		const arr = [];
-		[-1, 0, +1].forEach(in_row => {
-			[-1, 0, +1].forEach(in_col => {
-				if ((in_row === 0) && (in_col === 0)) {
-					return;
-				}
-				arr.push({
-					dr : in_row,
-					dc : in_col
-				});
-			});
-		});
-		return arr;
-	})();
-	#style = null;
-	#players = [];
-	#edge = {
-		row : true,
-		col : true
-	};
+	static #dmz = 8;
+	static #empty = 9;
+	static #directions = [
+		[-1, -1],
+		[-1,  0],
+		[-1, +1],
+		[ 0, -1],
+		[ 0, +1],
+		[+1, -1],
+		[+1,  0],
+		[+1, +1]
+	];
+	static #maxPlayers = 4;
 	#area = {
 		latest : [],
 		backup : null
 	};
 	#labels = null;
 	#history = [];
-	constructor(in_style = '2x8', in_rEdge = true, in_cEdge = true) {
-		this.#style = cReversi.#styles[in_style];
-		this.#edge = {
-			row : in_rEdge,
-			col : in_cEdge
-		};
-		const playerCnt = parseInt(in_style.split('x')[0]);
-		for (let i = 0; i < playerCnt; i++) {
-			this.#players[i] = Symbol(i);
-		}
-		this.#areaInitialize();
-		this.#labels = this.#aroundSquareCornerLabels();
-	}
-	#areaInitialize() {
-		this.#area.latest = new Array(this.#style.size ** 2).fill(cReversi.#empty);
-		const centerSize = this.#style.init.length ** 0.5;
-		const centerStart = (this.#style.size - centerSize) / 2;
-		for (let row = 0; row < centerSize; row++) {
-			for (let col = 0; col < centerSize; col++) {
-				const init = this.#style.init[row * centerSize + col];
-				if (init < this.#players.length) {
-					this.#setAreaByPos(row + centerStart, col + centerStart, this.#players[init]);
-				}
+	#conf = null;
+	constructor(in_table, in_rowEdge, in_colEdge) {
+		const cols = in_table.reduce((in_maxLen, in_row) => {
+			return Math.max(in_maxLen, in_row.length);
+		}, 0);
+		this.#conf = {
+			row : {
+				size : in_table.length,
+				edge : in_rowEdge
+			},
+			col : {
+				size : cols,
+				edge : in_colEdge
 			}
-		}
-		this.#areaCommit();
-	}
-	#areaCommit() {
-		this.#area.backup = null;
-	}
-	#areaRestore() {
-		this.#area.latest = [...this.#area.backup];
-		this.#area.backup = null;
-	}
-	#setAreaByIndex(in_ix, in_data) {
-		if (!this.#area.backup) {
-			this.#area.backup = [...this.#area.latest];
-		}
-		this.#area.latest[in_ix] = in_data;
-	}
-	#setAreaByPos(in_row, in_col, in_data) {
-		this.#setAreaByIndex(in_row * this.#style.size + in_col, in_data);
-	}
-	#getAreaByIndex(in_ix) {
-		return this.#area.latest[in_ix];
-	}
-	#getAreaByPos(in_row, in_col) {
-		return this.#getAreaByIndex(in_row * this.#style.size + in_col);
-	}
-	#indexToPos(in_ix) {
-		return {
-			row : Math.floor(in_ix / this.#style.size),
-			col : in_ix % this.#style.size
 		};
+		this.setArea(in_table);
+		this.#labels = this.#aroundCornerLabels(this.#conf.row.size, this.#conf.col.size);
 	}
-	#posToIndex(in_row, in_col) {
-		return in_row * this.#style.size + in_col;
-	}
-	#aroundCornerLabels(in_rLen, in_cLen) {
+	#aroundCornerLabels(in_rows, in_cols) {
 		const cornerArr = [
 			{
 				pos : {
@@ -251,14 +160,14 @@ class cReversi {
 			{
 				pos : {
 					row : 0,
-					col : in_cLen - 1
+					col : in_cols - 1
 				},
 				dirRow : +1,
 				dirCol : -1
 			},
 			{
 				pos : {
-					row : in_rLen - 1,
+					row : in_rows - 1,
 					col : 0
 				},
 				dirRow : -1,
@@ -266,8 +175,8 @@ class cReversi {
 			},
 			{
 				pos : {
-					row : in_rLen - 1,
-					col : in_cLen - 1
+					row : in_rows - 1,
+					col : in_cols - 1
 				},
 				dirRow : -1,
 				dirCol : -1
@@ -302,26 +211,57 @@ class cReversi {
 		});
 		return labels;
 	}
-	#aroundSquareCornerLabels() {
-		return this.#aroundCornerLabels(this.#style.size, this.#style.size);
+	#areaCommit() {
+		this.#area.backup = null;
+	}
+	#areaRollback() {
+		this.#area.latest = [...this.#area.backup];
+		this.#area.backup = null;
+	}
+	#indexToPos(in_ix) {
+		return {
+			row : Math.floor(in_ix / this.#conf.col.size),
+			col : in_ix % this.#conf.col.size
+		};
+	}
+	#posToIndex(in_row, in_col) {
+		return in_row * this.#conf.col.size + in_col;
+	}
+	#setAreaByIndex(in_ix, in_data) {
+		if (!this.#area.backup) {
+			this.#area.backup = [...this.#area.latest];
+		}
+		this.#area.latest[in_ix] = in_data;
+	}
+	#setAreaByPos(in_row, in_col, in_data) {
+		this.#setAreaByIndex(this.#posToIndex(in_row, in_col), in_data);
+	}
+	#getAreaByIndex(in_ix) {
+		return this.#area.latest[in_ix];
+	}
+	#getAreaByPos(in_row, in_col) {
+		return this.#getAreaByIndex(this.#posToIndex(in_row, in_col));
 	}
 	#isLabel(in_ix, in_label) {
 		return this.#labels[in_label].includes(in_ix);
 	}
-	#nextPos(in_current, in_delta, in_size, in_start) {
+	#find(in_current, in_dir, in_size, in_start) {
 		const next = {};
 		const attrArr = ['row', 'col'];
 		for (let i = 0; i < attrArr.length; i++) {
 			const attr = attrArr[i];
-			next[attr] = in_current[attr] + in_delta[attr];
-			if (this.#edge[attr]) {
+			next[attr] = in_current[attr] + in_dir[attr];
+			if (in_dir[attr] === 0) {
+				continue;
+			}
+			if (this.#conf[attr].edge) {
 				if ((next[attr] < 0) || (in_size[attr] - 1 < next[attr])) {
 					// out of range
 					return null;
 				}
 			} else {
 				next[attr] = (next[attr] + in_size[attr]) % in_size[attr];
-				if ((in_delta[attr] !== 0) && (next[attr] === in_start[attr])) {
+				if ((in_dir[attr] !== 0) && (next[attr] === in_start[attr])) {
 					// cyclic
 					return null;
 				}
@@ -332,29 +272,28 @@ class cReversi {
 	#canFlipTowards(in_player, in_start_ix, in_dr, in_dc, in_flip = false) {
 		const start = this.#indexToPos(in_start_ix);
 		const size = {
-			row : this.#style.size,
-			col : this.#style.size
+			row : this.#conf.row.size,
+			col : this.#conf.col.size
 		};
-		const delta = {
+		const dir = {
 			row : in_dr,
 			col : in_dc
 		};
 		const indexes = [in_start_ix];
 		let pos = start;
 		let enemyAppears = false;
-		while (pos = this.#nextPos(pos, delta, size, start)) {
+		while (pos = this.#find(pos, dir, size, start)) {
 			const who = this.#getAreaByPos(pos.row, pos.col);
 			if (who === in_player) {
-				if (enemyAppears) {
-					if (in_flip) {
-						indexes.forEach(in_ix => this.#setAreaByIndex(in_ix, in_player));
-					}
-					return true;
-				} else {
+				if (!enemyAppears) {
 					break;
 				}
+				if (in_flip) {
+					indexes.forEach(in_ix => this.#setAreaByIndex(in_ix, in_player));
+				}
+				return true;
 			} else {
-				if (who === cReversi.#empty) {
+				if ((who === cReversi.#dmz) || (who === cReversi.#empty)) {
 					break;
 				} else {
 					indexes.push(this.#posToIndex(pos.row, pos.col));
@@ -371,7 +310,7 @@ class cReversi {
 		if (this.#getAreaByIndex(in_ix) !== cReversi.#empty) {
 			return false;
 		}
-		for (const {dr, dc} of cReversi.#directions) {
+		for (const [dr, dc] of cReversi.#directions) {
 			if (this.#canFlipTowards(in_player, in_ix, dr, dc)) {
 				return true;
 			}
@@ -379,7 +318,7 @@ class cReversi {
 		return false;
 	}
 	#chooseTentative(in_player, in_ix) {
-		for (const {dr, dc} of cReversi.#directions) {
+		for (const [dr, dc] of cReversi.#directions) {
 			this.#flipTowards(in_player, in_ix, dr, dc);
 		}
 	}
@@ -398,15 +337,17 @@ class cReversi {
 		return true;
 	}
 	#phase() {
-		const initEmpties = (this.#style.size ** 2) - this.#style.init.filter(in_el => in_el > 0).length;
-		const currEmpties = this.#area.latest.filter(in_el => in_el === cReversi.#empty).length;
-		return 1 - currEmpties / initEmpties;
+		const total = this.#conf.row.size * this.#conf.col.size;
+		const remaining = this.#area.latest.filter(in_el => in_el === cReversi.#empty).length;
+		return 1 - remaining / total;
 	}
 	#searchCandidates(in_player) {
 		const candidates = [];
-		for (let ix = 0; ix < this.#area.latest.length; ix++) {
-			if (this.#canChoose(in_player, ix)) {
-				candidates.push(ix);
+		if (this.#area.latest.indexOf(in_player) >= 0) {
+			for (let ix = 0; ix < this.#area.latest.length; ix++) {
+				if (this.#canChoose(in_player, ix)) {
+					candidates.push(ix);
+				}
 			}
 		}
 		return candidates;
@@ -422,14 +363,17 @@ class cReversi {
 				}
 			}
 		}
-		this.#areaRestore();
+		this.#areaRollback();
 		return count;
 	}
 	#countEnemyOption(in_player, in_ix) {
 		this.#chooseTentative(in_player, in_ix);
-		const next = (this.#players.indexOf(in_player) + 1) % this.#players.length;
-		const candidates = this.#searchCandidates(this.#players[next]);
-		this.#areaRestore();
+		let nextPlayer = in_player + 1;
+		if (nextPlayer === cReversi.#maxPlayers) {
+			nextPlayer = 0;
+		}
+		const candidates = this.#searchCandidates(nextPlayer);
+		this.#areaRollback();
 		return candidates.length;
 	}
 	#nearestCornerIsOwned(in_player, in_ix) {
@@ -457,7 +401,8 @@ class cReversi {
 			'N1' : -10,
 			'N2' : -5
 		};
-		if (this.#edge.row && this.#edge.col) {
+		if (this.#conf.row.edge && this.#conf.col.edge) {
+			// non-loop
 			for (let label in modifier4) {
 				if (this.#isLabel(in_ix, label)) {
 					if (this.#nearestCornerIsOwned(in_player, in_ix)) {
@@ -469,16 +414,20 @@ class cReversi {
 			}
 		} else {
 			const pos = this.#indexToPos(in_ix);
-			let line = -1;
-			if (this.#edge.row) {
-				line = pos.row;
+			if (this.#conf.row.edge) {
+				// col-loop
+				for (let i = 0; i < modifier2.length; i++) {
+					if ((pos.row === i) || (pos.row === this.#conf.row.size - 1 - i)) {
+						return modifier2[i];
+					}
+				}
 			}
-			if (this.#edge.col) {
-				line = pos.col;
-			}
-			for (let i = 0; i < modifier2.length; i++) {
-				if ((line === i) || (line === this.#style.size - 1 - i)) {
-					return modifier2[i];
+			if (this.#conf.col.edge) {
+				// row-loop
+				for (let i = 0; i < modifier2.length; i++) {
+					if ((pos.col === i) || (pos.col === this.#conf.col.size - 1 - i)) {
+						return modifier2[i];
+					}
 				}
 			}
 		}
@@ -622,21 +571,11 @@ class cReversi {
 		random : this.#npc_random
 	};
 	_simulation() {
-		const npcs = {
-			mixed : this.#npc_mixed,
-			area1 : this.#npc_area_ex,
-			option1 : this.#npc_option_ex,
-			greed1 : this.#npc_greed_ex,
-			area2 : this.#npc_area,
-			option2 : this.#npc_option,
-			greed2 : this.#npc_greed,
-			random : this.#npc_random
-		};
 		const test = (in_p1, in_p2) => {
 			let cnt = 100;
 			while (true) {
-				const enable1 = (this.#npcSet[in_p1].bind(this))(this.#players[0]);
-				const enable2 = (this.#npcSet[in_p2].bind(this))(this.#players[1]);
+				const enable1 = (this.#npcSet[in_p1].bind(this))(0);
+				const enable2 = (this.#npcSet[in_p2].bind(this))(1);
 				if (enable1 || enable2) {
 					if (cnt-- === 0) {
 						break;
@@ -646,10 +585,14 @@ class cReversi {
 				}
 				// this.dp();
 			}
-			const point1 = this.#area.latest.filter(in_el => in_el === this.#players[0]).length;
-			const point2 = this.#area.latest.filter(in_el => in_el === this.#players[1]).length;
+			const point1 = this.#area.latest.filter(in_el => in_el === 0).length;
+			const point2 = this.#area.latest.filter(in_el => in_el === 1).length;
 			return (point1 > point2);
 		};
+		// save area when starting
+		const saved = [...this.#area.latest];
+		this.#area.backup = null;
+		// start simulation
 		const table = [];
 		table.push(['(vs)', ...Object.keys(this.#npcSet)]);
 		Object.keys(this.#npcSet).forEach(p1 => {
@@ -667,7 +610,9 @@ class cReversi {
 								if (test(p1, p2)) {
 									win++;
 								}
-								this.#areaInitialize();
+								// restore area
+								this.#area.latest = [...saved];
+								this.#area.backup = null;
 							} else {
 								break;
 							}
@@ -677,7 +622,9 @@ class cReversi {
 						row.push(test(p1, p2));
 					}
 				}
-				this.#areaInitialize();
+				// restore area
+				this.#area.latest = [...saved];
+				this.#area.backup = null;
 			});
 			table.push(row);
 		});
@@ -720,19 +667,19 @@ class cReversi {
 		script.parentNode.insertBefore(elem, script.nextSibling);
 	}
 	_debug() {
-		for (let row = 0; row < this.#style.size; row++) {
+		for (let row = 0; row < this.#conf.row.size; row++) {
 			const arr = [];
-			for (let col = 0; col < this.#style.size; col++) {
+			for (let col = 0; col < this.#conf.col.size; col++) {
 				arr.push(this.#getAreaByPos(row, col));
 			}
 			console.log(arr);
 		}
 	}
-	pc(in_no, in_row, in_col) {
-		return this.#choose(this.#players[in_no], this.#posToIndex(in_row, in_col));
+	pc(in_player, in_row, in_col) {
+		return this.#choose(in_player, this.#posToIndex(in_row, in_col));
 	}
-	npc(in_no, in_argo = 'mixed') {
-		return (this.#npcSet[in_argo].bind(this))(this.#players[in_no]);
+	npc(in_player, in_argo = 'mixed') {
+		return (this.#npcSet[in_argo].bind(this))(in_player);
 	}
 	getLast() {
 		return this.#history[this.#history.length - 1];
@@ -744,16 +691,31 @@ class cReversi {
 			if (!table[pos.row]) {
 				table[pos.row] = [];
 			}
-			table[pos.row][pos.col] = parseInt(this.#area.latest[ix].description);
+			table[pos.row][pos.col] = parseInt(this.#area.latest[ix]);
 		}
 		return table;
 	}
 	setArea(in_table) {
+		// 0, 1, 2, ..., cReversi.#maxPlayers - 1, cReversi.#dmz, cReversi.#empty
+		const acceptable = [cReversi.#dmz, cReversi.#empty];
+		for (let player = 0; player < cReversi.#maxPlayers; player++) {
+			acceptable.push(player);
+		}
+		for (let row = 0; row < in_table.length; row++) {
+			for (let col = 0; col < in_table[row].length; col++) {
+				const data = in_table[row][col];
+				if (acceptable.indexOf(data) < 0) {
+					throw new Error('invalid input');
+				} else {
+					this.#setAreaByPos(row, col, data);
+				}
+			}
+		}
+		this.#areaCommit();
 	}
 	getCurrentCondition() {
 		const ret = [];
-		for (let i = 0; i < this.#players.length; i++) {
-			const player = this.#players[i];
+		for (let player = 0; player < cReversi.#maxPlayers; player++) {
 			ret.push({
 				dead : ((this.#searchCandidates(player)).length === 0),
 				score : (this.#area.latest.filter(in_el => in_el === player)).length
@@ -906,88 +868,262 @@ const LIGHTGREEN = 0x55CC55;
 const edgeMaterial = new THREE.MeshLambertMaterial({color : BGCOLOR});
 
 const COLONY_SIZE = 400;
-const LABEL_LV = 'lv.';
-const LABEL_LOOP = '-loop';
 
 const gMeshLevelMap = ((in_diameter) => {
 	const map = new cCyclicMap();
+	const B = BLUE;
+	const R = RED;
+	const Y = YELLOW;
+	const G = GREEN;
+	const D = DMZCOLOR;
+	const E = EMPTYCOLOR;
 	const shellInfo = [
 		{
-			rowsForCircle : 12,
-			colsForLength : 6,
-			dmzArr : [
-				[ 6, 0], [ 6, 1], [ 6, 2], [ 6, 3], [ 6, 4], [ 6, 5],
-				[ 7, 0], [ 7, 1], [ 7, 2], [ 7, 3], [ 7, 4], [ 7, 5],
-				[ 8, 0], [ 8, 1], [ 8, 2], [ 8, 3], [ 8, 4], [ 8, 5],
-				[ 9, 0], [ 9, 1], [ 9, 2], [ 9, 3], [ 9, 4], [ 9, 5],
-				[10, 0], [10, 1], [10, 2], [10, 3], [10, 4], [10, 5],
-				[11, 0], [11, 1], [11, 2], [11, 3], [11, 4], [11, 5]
+			name : '6x6x2',
+			table : [
+				[E,E,E,E,E,E],
+				[E,E,E,E,E,E],
+				[E,E,B,R,E,E],
+				[E,E,R,B,E,E],
+				[E,E,E,E,E,E],
+				[E,E,E,E,E,E],
+				[D,D,D,D,D,D],
+				[D,D,D,D,D,D],
+				[D,D,D,D,D,D],
+				[D,D,D,D,D,D],
+				[D,D,D,D,D,D],
+				[D,D,D,D,D,D]
 			]
 		},
 		{
-			rowsForCircle : 6,
-			colsForLength : 6,
-			dmzArr : []
-		},
-		{
-			rowsForCircle : 14,
-			colsForLength : 7,
-			dmzArr : [
-				[ 7, 0], [ 7, 1], [ 7, 2], [ 7, 3], [ 7, 4], [ 7, 5], [ 7, 6],
-				[ 8, 0], [ 8, 1], [ 8, 2], [ 8, 3], [ 8, 4], [ 8, 5], [ 8, 6],
-				[ 9, 0], [ 9, 1], [ 9, 2], [ 9, 3], [ 9, 4], [ 9, 5], [ 9, 6],
-				[10, 0], [10, 1], [10, 2], [10, 3], [10, 4], [10, 5], [10, 6],
-				[11, 0], [11, 1], [11, 2], [11, 3], [11, 4], [11, 5], [11, 6],
-				[12, 0], [12, 1], [12, 2], [12, 3], [12, 4], [12, 5], [12, 6],
-				[13, 0], [13, 1], [13, 2], [13, 3], [13, 4], [13, 5], [13, 6]
+			name : '6x6x4',
+			table : [
+				[E,E,E,E,E,E],
+				[E,E,E,G,E,E],
+				[E,Y,B,R,E,E],
+				[E,E,G,Y,B,E],
+				[E,E,R,E,E,E],
+				[E,E,E,E,E,E],
+				[D,D,D,D,D,D],
+				[D,D,D,D,D,D],
+				[D,D,D,D,D,D],
+				[D,D,D,D,D,D],
+				[D,D,D,D,D,D],
+				[D,D,D,D,D,D]
 			]
 		},
 		{
-			rowsForCircle : 7,
-			colsForLength : 7,
-			dmzArr : []
-		},
-		{
-			rowsForCircle : 16,
-			colsForLength : 8,
-			dmzArr : [
-				[ 8, 0], [ 8, 1], [ 8, 2], [ 8, 3], [ 8, 4], [ 8, 5], [ 8, 6], [ 8, 7],
-				[ 9, 0], [ 9, 1], [ 9, 2], [ 9, 3], [ 9, 4], [ 9, 5], [ 9, 6], [ 9, 7],
-				[10, 0], [10, 1], [10, 2], [10, 3], [10, 4], [10, 5], [10, 6], [10, 7],
-				[11, 0], [11, 1], [11, 2], [11, 3], [11, 4], [11, 5], [11, 6], [11, 7],
-				[12, 0], [12, 1], [12, 2], [12, 3], [12, 4], [12, 5], [12, 6], [12, 7],
-				[13, 0], [13, 1], [13, 2], [13, 3], [13, 4], [13, 5], [13, 6], [13, 7],
-				[14, 0], [14, 1], [14, 2], [14, 3], [14, 4], [14, 5], [14, 6], [14, 7],
-				[15, 0], [15, 1], [15, 2], [15, 3], [15, 4], [15, 5], [15, 6], [15, 7]
+			name : '12x6x2-loop',
+			table : [
+				[E,E,E,E,E,E],
+				[E,E,E,E,E,E],
+				[E,E,B,R,E,E],
+				[E,E,R,B,E,E],
+				[E,E,E,E,E,E],
+				[E,E,E,E,E,E],
+				[E,E,E,E,E,E],
+				[E,E,E,E,E,E],
+				[E,E,B,R,E,E],
+				[E,E,R,B,E,E],
+				[E,E,E,E,E,E],
+				[E,E,E,E,E,E]
 			]
 		},
 		{
-			rowsForCircle : 8,
-			colsForLength : 8,
-			dmzArr : []
+			name : '12x6x4-loop',
+			table : [
+				[E,E,E,E,E,E],
+				[E,E,E,E,E,E],
+				[E,E,B,R,E,E],
+				[E,E,R,B,E,E],
+				[E,E,E,E,E,E],
+				[E,E,E,E,E,E],
+				[E,E,E,E,E,E],
+				[E,E,E,E,E,E],
+				[E,E,Y,G,E,E],
+				[E,E,G,Y,E,E],
+				[E,E,E,E,E,E],
+				[E,E,E,E,E,E]
+			]
+		},
+		{
+			name : '7x7x2',
+			table : [
+				[E,E,E,E,E,E,E],
+				[E,E,E,E,E,E,E],
+				[E,E,R,B,B,E,E],
+				[E,E,R,D,B,E,E],
+				[E,E,R,R,B,E,E],
+				[E,E,E,E,E,E,E],
+				[E,E,E,E,E,E,E],
+				[D,D,D,D,D,D,D],
+				[D,D,D,D,D,D,D],
+				[D,D,D,D,D,D,D],
+				[D,D,D,D,D,D,D],
+				[D,D,D,D,D,D,D],
+				[D,D,D,D,D,D,D],
+				[D,D,D,D,D,D,D]
+			]
+		},
+		{
+			name : '7x7x4',
+			table : [
+				[E,E,E,E,E,E,E],
+				[E,E,E,Y,E,E,E],
+				[E,E,B,G,R,E,E],
+				[E,R,Y,D,B,E,E],
+				[E,E,G,R,Y,G,E],
+				[E,E,E,B,E,E,E],
+				[E,E,E,E,E,E,E],
+				[D,D,D,D,D,D,D],
+				[D,D,D,D,D,D,D],
+				[D,D,D,D,D,D,D],
+				[D,D,D,D,D,D,D],
+				[D,D,D,D,D,D,D],
+				[D,D,D,D,D,D,D],
+				[D,D,D,D,D,D,D]
+			]
+		},
+		{
+			name : '14x7x2-loop',
+			table : [
+				[E,E,E,E,E,E,E],
+				[E,E,E,E,E,E,E],
+				[E,E,R,B,B,E,E],
+				[E,E,R,D,B,E,E],
+				[E,E,R,R,B,E,E],
+				[E,E,E,E,E,E,E],
+				[E,E,E,E,E,E,E],
+				[E,E,E,E,E,E,E],
+				[E,E,E,E,E,E,E],
+				[E,E,B,R,R,E,E],
+				[E,E,B,D,R,E,E],
+				[E,E,B,B,R,E,E],
+				[E,E,E,E,E,E,E],
+				[E,E,E,E,E,E,E]
+			]
+		},
+		{
+			name : '14x7x4-loop',
+			table : [
+				[E,E,E,E,E,E,E],
+				[E,E,E,E,E,E,E],
+				[E,E,R,B,B,E,E],
+				[E,E,R,D,B,E,E],
+				[E,E,R,R,B,E,E],
+				[E,E,E,E,E,E,E],
+				[E,E,E,E,E,E,E],
+				[E,E,E,E,E,E,E],
+				[E,E,E,E,E,E,E],
+				[E,E,Y,G,G,E,E],
+				[E,E,Y,D,G,E,E],
+				[E,E,Y,Y,G,E,E],
+				[E,E,E,E,E,E,E],
+				[E,E,E,E,E,E,E]
+			]
+		},
+		{
+			name : '8x8x2',
+			table : [
+				[E,E,E,E,E,E,E,E],
+				[E,E,E,E,E,E,E,E],
+				[E,E,E,E,E,E,E,E],
+				[E,E,E,B,R,E,E,E],
+				[E,E,E,R,B,E,E,E],
+				[E,E,E,E,E,E,E,E],
+				[E,E,E,E,E,E,E,E],
+				[E,E,E,E,E,E,E,E],
+				[D,D,D,D,D,D,D,D],
+				[D,D,D,D,D,D,D,D],
+				[D,D,D,D,D,D,D,D],
+				[D,D,D,D,D,D,D,D],
+				[D,D,D,D,D,D,D,D],
+				[D,D,D,D,D,D,D,D],
+				[D,D,D,D,D,D,D,D],
+				[D,D,D,D,D,D,D,D]
+			]
+		},
+		{
+			name : '8x8x4',
+			table : [
+				[E,E,E,E,E,E,E,E],
+				[E,E,E,E,E,E,E,E],
+				[E,E,E,E,G,E,E,E],
+				[E,E,Y,B,R,E,E,E],
+				[E,E,E,G,Y,B,E,E],
+				[E,E,E,R,E,E,E,E],
+				[E,E,E,E,E,E,E,E],
+				[E,E,E,E,E,E,E,E],
+				[D,D,D,D,D,D,D,D],
+				[D,D,D,D,D,D,D,D],
+				[D,D,D,D,D,D,D,D],
+				[D,D,D,D,D,D,D,D],
+				[D,D,D,D,D,D,D,D],
+				[D,D,D,D,D,D,D,D],
+				[D,D,D,D,D,D,D,D],
+				[D,D,D,D,D,D,D,D]
+			]
+		},
+		{
+			name : '16x8x2-loop',
+			table : [
+				[E,E,E,E,D,D,E,E],
+				[E,E,E,E,E,E,E,E],
+				[E,E,E,E,E,E,E,E],
+				[E,E,E,B,R,E,E,E],
+				[E,E,E,R,B,E,E,E],
+				[E,E,E,E,E,E,E,E],
+				[E,E,E,E,E,E,E,E],
+				[E,E,D,D,E,E,E,E],
+				[E,E,D,D,E,E,E,E],
+				[E,E,E,E,E,E,E,E],
+				[E,E,E,E,E,E,E,E],
+				[E,E,E,B,R,E,E,E],
+				[E,E,E,R,B,E,E,E],
+				[E,E,E,E,E,E,E,E],
+				[E,E,E,E,E,E,E,E],
+				[E,E,E,E,D,D,E,E]
+			]
+		},
+		{
+			name : '16x8x4-loop',
+			table : [
+				[E,E,E,E,E,E,E,E],
+				[E,E,E,E,E,E,E,E],
+				[E,E,E,E,E,E,E,E],
+				[E,E,E,B,R,E,E,E],
+				[E,E,E,R,B,E,E,E],
+				[E,E,E,E,E,E,E,E],
+				[E,E,E,E,E,E,E,E],
+				[E,E,E,E,E,E,E,E],
+				[E,E,E,E,E,E,E,E],
+				[E,E,E,E,E,E,E,E],
+				[E,E,E,E,E,E,E,E],
+				[E,E,E,G,Y,E,E,E],
+				[E,E,E,Y,G,E,E,E],
+				[E,E,E,E,E,E,E,E],
+				[E,E,E,E,E,E,E,E],
+				[E,E,E,E,E,E,E,E]
+			]
 		}
+
 	];
 	shellInfo.forEach(in_shell => {
 		const radius = in_diameter / 2;
 		const circumf = in_diameter * Math.PI;
-		const unitSize = circumf / in_shell.rowsForCircle;
+		const unitSize = circumf / in_shell.table.length;
 		const unitThick = unitSize * 0.3;
-		const unitAngle = Math.PI * 2 / in_shell.rowsForCircle;
+		const unitAngle = Math.PI * 2 / in_shell.table.length;
 		const geometry = shellGeometryFactory.create(unitSize, ((radius - unitThick) / radius), unitThick);
 		const pieces = [];
-		for (let col = 0; col < in_shell.colsForLength; col++) {
-			let x = unitSize * col - unitSize * (in_shell.colsForLength - 1) / 2;
+		const cols = in_shell.table.reduce((in_maxLen, in_row) => {
+			return Math.max(in_maxLen, in_row.length);
+		}, 0);
+		for (let col = 0; col < cols; col++) {
+			let x = unitSize * col - unitSize * (cols - 1) / 2;
 			let y = (in_diameter / 2 - unitThick) * 1.2;
-			for (let row = 0; row < in_shell.rowsForCircle; row++) {
-				let materials = null;
-				if (in_shell.dmzArr.length > 0) {
-					if (in_shell.dmzArr.some(in_dmz => in_dmz[0] === row && in_dmz[1] === col)) {
-						materials = shellMaterials(unitSize, DMZCOLOR, BGCOLOR);
-					}
-				}
-				if (!materials) {
-					materials = shellMaterials(unitSize, EMPTYCOLOR, BGCOLOR);
-				}
+			for (let row = 0; row < in_shell.table.length; row++) {
+				const materials = shellMaterials(unitSize, in_shell.table[row][col], BGCOLOR);
 				materials.push(edgeMaterial);
 				const piece = new THREE.Mesh(geometry, materials);
 				const pivot = new THREE.Object3D();
@@ -1005,11 +1141,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				pieces.push(piece);
 			}
 		}
-		let stage = LABEL_LV + in_shell.colsForLength;
-		if (in_shell.rowsForCircle === in_shell.colsForLength) {
-			stage += LABEL_LOOP;
-		}
-		map.set(stage, pieces);
+		map.set(in_shell.name, pieces);
 	});
 	return map;
 })(COLONY_SIZE);
@@ -1058,6 +1190,17 @@ class cColonyBoard extends cColony {
 			throw new Error('');
 		}
 		return ret;
+	}
+	getColorTable() {
+		const table = [];
+		for (let row = 0; row <  this.settingVal.rowsForCircle; row++) {
+			table[row] = [];
+			for (let col = 0; col < this.settingVal.colsForLength; col++) {
+				const piece = this.indexToPiece(row, col);
+				table[row].push(getShellColor(piece));
+			}
+		}
+		return table;
 	}
 	changedPieces(in_table) {
 		const changedArr = [];
@@ -1135,7 +1278,7 @@ class cGameController {
 			}
 			this.#mapping[i] = color;
 		}
-		// 8, 9 are used in cReversi
+		// 8, 9 are declared as follows in cReversi
 		this.#mapping[8] = DMZCOLOR;
 		this.#mapping[9] = EMPTYCOLOR;
 	}
@@ -1234,6 +1377,14 @@ class cGameController {
 	async reversiToColonyDynamic(in_reversi, in_colony, in_world) {
 		const changedArr = this.#makeChangedArr(in_reversi, in_colony);
 		await cGameController.#updateDynamic(changedArr, in_world);
+	}
+	convertColonyTable(in_colony) {
+		const reverse = {};
+		this.#mapping.forEach((in_value, in_ix) => {
+			reverse[in_value] = in_ix;
+		});
+		const table = in_colony.getColorTable();
+		return table.map(in_row => in_row.map(in_cell => reverse[in_cell]));
 	}
 	async #chosePiece(in_reversi, in_colony, in_world) {
 		const last = in_reversi.getLast();
@@ -1387,25 +1538,12 @@ const gOrderChar = (() => {
 })();
 
 function initializeByLevel() {
-	// parameter
-	const players = (in_players => {
-		const default_players = 2;
-		if (in_players === false) {
-			return default_players;
-		} else {
-			if ((in_players === 2) || (in_players === 4)) {
-				return in_players;
-			} else {
-				return default_players;
-			}
-		}
-	})(getParam('players'));
 	const curr = gMeshLevelMap.currItemByOrder();
-	const match = curr.k.match(new RegExp(LABEL_LV + '(\\d+)(.*)'));
-	const mode = players + 'x' + parseInt(match[1], 10);
-	// update instance
-	gReversi = new cReversi(mode, (match[2] !== LABEL_LOOP), true);
+	const [level, loop] = curr.k.split('-');
+	const [rows, cols, players] = level.split('x');
 	gController = new cGameController(players);
+	const table = gController.convertColonyTable(gColony);
+	gReversi = new cReversi(table, !loop, true);
 	gController.setTurnHook(async (in_player, in_color, in_pc) => {
 		gOrderChar.style.visibility = 'visible';
 		gOrderChar.src = RES.get(in_color);
@@ -1425,7 +1563,7 @@ function initializeByLevel() {
 
 (in_level => {
 	if (in_level === false) {
-		gMeshLevelMap.setOrder(4);
+		gMeshLevelMap.setOrder(11);
 	} else {
 		gMeshLevelMap.setOrder(in_level);
 	}
