@@ -678,8 +678,23 @@ class cReversi {
 	pc(in_player, in_row, in_col) {
 		return this.#choose(in_player, this.#posToIndex(in_row, in_col));
 	}
-	npc(in_player, in_argo = 'mixed') {
-		return (this.#npcSet[in_argo].bind(this))(in_player);
+	npc(in_player, in_argo) {
+		let argo = in_argo;
+		if (!argo) {
+			let cnt = 0;
+			for (let player = 0; player < cReversi.#maxPlayers; player++) {
+				if (this.#area.latest.indexOf(player) >= 0) {
+					cnt++;
+				}
+			}
+			if (cnt > 2) {
+				argo = ['mixed', 'option1', 'greed1'][arrRand]();
+			} else {
+				argo = 'mixed';
+			}
+		}
+		// console.log(in_player, argo);
+		return (this.#npcSet[argo].bind(this))(in_player);
 	}
 	getLast() {
 		return this.#history[this.#history.length - 1];
