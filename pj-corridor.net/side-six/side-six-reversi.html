@@ -245,48 +245,51 @@ class cReversi {
 	#isLabel(in_ix, in_label) {
 		return this.#labels[in_label].includes(in_ix);
 	}
-	#find(in_current, in_dir, in_size, in_start) {
-		const next = {};
-		const attrArr = ['row', 'col'];
-		for (let i = 0; i < attrArr.length; i++) {
-			const attr = attrArr[i];
-			next[attr] = in_current[attr] + in_dir[attr];
-			if (in_dir[attr] === 0) {
-				continue;
-			}
-			if (this.#conf[attr].edge) {
-				if ((next[attr] < 0) || (in_size[attr] - 1 < next[attr])) {
-					// out of range
-					return null;
-				}
-			} else {
-				next[attr] = (next[attr] + in_size[attr]) % in_size[attr];
-				if ((in_dir[attr] !== 0) && (next[attr] === in_start[attr])) {
-					// cyclic
-					return null;
-				}
-			}
-		}
-		return next;
-	}
 	#canFlipTowards(in_player, in_start_ix, in_dr, in_dc, in_flip = false) {
-		const start = this.#indexToPos(in_start_ix);
-		const size = {
-			row : this.#conf.row.size,
-			col : this.#conf.col.size
-		};
-		const dir = {
-			row : in_dr,
-			col : in_dc
-		};
+		const {row : initRow, col : initCol} = this.#indexToPos(in_start_ix);
+		const sizeRow = this.#conf.row.size;
+		const sizeCol = this.#conf.col.size;
+		const edgeRow = this.#conf.row.edge;
+		const edgeCow = this.#conf.col.edge;
 		const indexes = [in_start_ix];
-		let pos = start;
+		let currRow = initRow;
+		let currCol = initCol;
 		let enemyAppears = false;
-		while (pos = this.#find(pos, dir, size, start)) {
-			const who = this.#getAreaByPos(pos.row, pos.col);
+		while (true) {
+			if (in_dr !== 0) {
+				currRow += in_dr;
+				if (edgeRow) {
+					if ((currRow < 0) || (sizeRow - 1 < currRow)) {
+						// out of range
+						return false;
+					}
+				} else {
+					currRow = (currRow + sizeRow) % sizeRow;
+					if ((in_dr !== 0) && (currRow === initRow)) {
+						// cyclic
+						return false;
+					}
+				}
+			}
+			if (in_dc !== 0) {
+				currCol += in_dc;
+				if (edgeCow) {
+					if ((currCol < 0) || (sizeCol - 1 < currCol)) {
+						// out of range
+						return false;
+					}
+				} else {
+					currCol = (currCol + sizeCol) % sizeCol;
+					if ((in_dc !== 0) && (currCol === initCol)) {
+						// cyclic
+						return false;
+					}
+				}
+			}
+			const who = this.#getAreaByPos(currRow, currCol);
 			if (who === in_player) {
 				if (!enemyAppears) {
-					break;
+					return false;
 				}
 				if (in_flip) {
 					indexes.forEach(in_ix => this.#setAreaByIndex(in_ix, in_player));
@@ -294,13 +297,14 @@ class cReversi {
 				return true;
 			} else {
 				if ((who === cReversi.#dmz) || (who === cReversi.#empty)) {
-					break;
+					return false;
 				} else {
-					indexes.push(this.#posToIndex(pos.row, pos.col));
+					indexes.push(this.#posToIndex(currRow, currCol));
 					enemyAppears = true;
 				}
 			}
 		}
+		// this should not be executed
 		return false;
 	}
 	#flipTowards(in_player, in_ix, in_dr, in_dc) {
