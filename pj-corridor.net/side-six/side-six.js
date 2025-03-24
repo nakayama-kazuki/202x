@@ -471,7 +471,7 @@ export class cColony extends cColonyCore {
 			}
 			this.#uiInitSession();
 			this.#transition('stop');
-			(in_ending_callback)();
+			(in_ending_callback)(!!last);
 		});
 	}
 }

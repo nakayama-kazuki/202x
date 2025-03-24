@@ -110,6 +110,11 @@ class cReversi {
 		};
 		return this.#maximize(evaluator, in_player, in_candidates);
 	}
+	static #rotateArray(in_array, in_delta) {
+		const len = in_array.length;
+		const delta = ((in_delta % len) + len) % len;
+		return in_array.slice(delta * -1).concat(in_array.slice(0, delta * -1));
+	}
 	static #dmz = 8;
 	static #empty = 9;
 	static #directions = [
@@ -123,10 +128,7 @@ class cReversi {
 		[+1, +1]
 	];
 	static #maxPlayers = 4;
-	#area = {
-		latest : [],
-		backup : null
-	};
+	#areaData = [];
 	#labels = null;
 	#history = [];
 	#conf = null;
@@ -211,13 +213,6 @@ class cReversi {
 		});
 		return labels;
 	}
-	#areaCommit() {
-		this.#area.backup = null;
-	}
-	#areaRollback() {
-		this.#area.latest = [...this.#area.backup];
-		this.#area.backup = null;
-	}
 	#indexToPos(in_ix) {
 		return {
 			row : Math.floor(in_ix / this.#conf.col.size),
@@ -227,30 +222,81 @@ class cReversi {
 	#posToIndex(in_row, in_col) {
 		return in_row * this.#conf.col.size + in_col;
 	}
-	#setAreaByIndex(in_ix, in_data) {
-		if (!this.#area.backup) {
-			this.#area.backup = [...this.#area.latest];
+	#areaBackup() {
+		return [...this.#areaData];
+	}
+	#areaRestore(in_array) {
+		this.#areaData = [...in_array];
+	}
+	#setItemByIndex(in_ix, in_item) {
+		this.#areaData[in_ix] = in_item;
+	}
+	#setItemByPos(in_row, in_col, in_item) {
+		this.#setItemByIndex(this.#posToIndex(in_row, in_col), in_item);
+	}
+	#getItemByIndex(in_ix) {
+		return this.#areaData[in_ix];
+	}
+	#getItemByPos(in_row, in_col) {
+		return this.#getItemByIndex(this.#posToIndex(in_row, in_col));
+	}
+	#sameRowIndexes(in_targetRow) {
+		const indexes = [];
+		let index = in_targetRow * this.#conf.col.size;
+		for (let i = 0; i < this.#conf.col.size; i++) {
+			indexes.push(index);
+			index += 1;
 		}
-		this.#area.latest[in_ix] = in_data;
+		return indexes;
 	}
-	#setAreaByPos(in_row, in_col, in_data) {
-		this.#setAreaByIndex(this.#posToIndex(in_row, in_col), in_data);
+	#sameColIndexes(in_targetCol) {
+		const indexes = [];
+		let index = in_targetCol;
+		for (let i = 0; i < this.#conf.row.size; i++) {
+			indexes.push(index);
+			index += this.#conf.col.size;
+		}
+		return indexes;
 	}
-	#getAreaByIndex(in_ix) {
-		return this.#area.latest[in_ix];
+	#items(in_indexes) {
+		const items = [];
+		in_indexes.forEach(in_ix => {
+			items.push(this.#getItemByIndex(in_ix));
+		});
+		return items;
 	}
-	#getAreaByPos(in_row, in_col) {
-		return this.#getAreaByIndex(this.#posToIndex(in_row, in_col));
+	#rowItems(in_targetRow) {
+		return this.#items(this.#sameRowIndexes(in_targetRow));
+	}
+	#colItems(in_targetCol) {
+		return this.#items(this.#sameColIndexes(in_targetCol));
+	}
+	#rotateItems(in_indexes, in_delta) {
+		const shifted = cReversi.#rotateArray(in_indexes, in_delta);
+		const copy = this.#areaBackup();
+		for (let i = 0; i < in_indexes.length; i++) {
+			/*
+				src = 5, 6, 7, 8
+				dst = 8, 5, 6, 7
+			*/
+			this.#setItemByIndex(in_indexes[i], copy[shifted[i]]);
+		}
+	}
+	#rotateSameRowItems(in_targetRow, in_deltaCol) {
+		this.#rotateItems(this.#sameRowIndexes(in_targetRow), in_deltaCol);
+	}
+	#rotateSameColItems(in_targetCol, in_deltaRow) {
+		this.#rotateItems(this.#sameColIndexes(in_targetCol), in_deltaRow);
 	}
 	#isLabel(in_ix, in_label) {
 		return this.#labels[in_label].includes(in_ix);
 	}
-	#canFlipTowards(in_player, in_start_ix, in_dr, in_dc, in_flip = false) {
+	#flipTowards(in_player, in_start_ix, in_dr, in_dc, in_flip = true) {
 		const {row : initRow, col : initCol} = this.#indexToPos(in_start_ix);
 		const sizeRow = this.#conf.row.size;
 		const sizeCol = this.#conf.col.size;
 		const edgeRow = this.#conf.row.edge;
-		const edgeCow = this.#conf.col.edge;
+		const edgeCol = this.#conf.col.edge;
 		const indexes = [in_start_ix];
 		let currRow = initRow;
 		let currCol = initCol;
@@ -265,7 +311,7 @@ class cReversi {
 					}
 				} else {
 					currRow = (currRow + sizeRow) % sizeRow;
-					if ((in_dr !== 0) && (currRow === initRow)) {
+					if (currRow === initRow) {
 						// cyclic
 						return false;
 					}
@@ -273,33 +319,34 @@ class cReversi {
 			}
 			if (in_dc !== 0) {
 				currCol += in_dc;
-				if (edgeCow) {
+				if (edgeCol) {
 					if ((currCol < 0) || (sizeCol - 1 < currCol)) {
 						// out of range
 						return false;
 					}
 				} else {
 					currCol = (currCol + sizeCol) % sizeCol;
-					if ((in_dc !== 0) && (currCol === initCol)) {
+					if (currCol === initCol) {
 						// cyclic
 						return false;
 					}
 				}
 			}
-			const who = this.#getAreaByPos(currRow, currCol);
-			if (who === in_player) {
+			const index = this.#posToIndex(currRow, currCol);
+			const item = this.#getItemByIndex(index);
+			if (item === in_player) {
 				if (!enemyAppears) {
 					return false;
 				}
 				if (in_flip) {
-					indexes.forEach(in_ix => this.#setAreaByIndex(in_ix, in_player));
+					indexes.forEach(in_ix => this.#setItemByIndex(in_ix, in_player));
 				}
 				return true;
 			} else {
-				if ((who === cReversi.#dmz) || (who === cReversi.#empty)) {
+				if ((item === cReversi.#dmz) || (item === cReversi.#empty)) {
 					return false;
 				} else {
-					indexes.push(this.#posToIndex(currRow, currCol));
+					indexes.push(index);
 					enemyAppears = true;
 				}
 			}
@@ -307,77 +354,128 @@ class cReversi {
 		// this should not be executed
 		return false;
 	}
-	#flipTowards(in_player, in_ix, in_dr, in_dc) {
-		this.#canFlipTowards(in_player, in_ix, in_dr, in_dc, true); 
-	}
 	#canChoose(in_player, in_ix) {
-		if (this.#getAreaByIndex(in_ix) !== cReversi.#empty) {
+		if (this.#getItemByIndex(in_ix) !== cReversi.#empty) {
 			return false;
 		}
 		for (const [dr, dc] of cReversi.#directions) {
-			if (this.#canFlipTowards(in_player, in_ix, dr, dc)) {
+			if (this.#flipTowards(in_player, in_ix, dr, dc, false)) {
 				return true;
 			}
 		}
 		return false;
 	}
-	#chooseTentative(in_player, in_ix) {
+	#choose(in_player, in_ix, in_commit = true) {
+		// in_ix must be choosable
 		for (const [dr, dc] of cReversi.#directions) {
-			this.#flipTowards(in_player, in_ix, dr, dc);
+			this.#flipTowards(in_player, in_ix, dr, dc, true);
+		}
+		if (in_commit) {
+			const pos = this.#indexToPos(in_ix);
+			this.#history.push({
+				who : in_player,
+				action : 'choose-item',
+				row : pos.row,
+				col : pos.col,
+				target : -1,
+				delta : -1
+			});
 		}
 	}
-	#choose(in_player, in_ix) {
-		if (!this.#canChoose(in_player, in_ix)) {
-			return false;
+	#npcTryRotate(in_player, in_dir) {
+		const rowSet = new Set();
+		const colSet = new Set();
+		for (let ix = 0; ix < this.#areaData.length; ix++) {
+			if (this.#areaData[ix] !== in_player) {
+				continue;
+			}
+			const col = ix % this.#conf.col.size;
+			const row = (ix - col) / this.#conf.col.size;
+			rowSet.add(row);
+			colSet.add(col);
 		}
-		this.#chooseTentative(in_player, in_ix);
-		this.#areaCommit();
-		const pos = this.#indexToPos(in_ix);
-		this.#history.push({
-			who : in_player,
-			row : pos.row,
-			col : pos.col
+		const items = this.#areaBackup();
+		const setting = {
+			row : {
+				action : 'npc-col-wise-rotate',
+				targetArr : Array.from(rowSet),
+				rotateFunc : this.#rotateSameRowItems.bind(this),
+				maxCnt : this.#conf.col.size
+			},
+			col : {
+				action : 'npc-row-wise-rotate',
+				targetArr : Array.from(colSet),
+				rotateFunc : this.#rotateSameColItems.bind(this),
+				maxCnt : this.#conf.row.size
+			}
+		}
+		const {action, targetArr, rotateFunc, maxCnt} = setting[in_dir];
+		let target, delta;
+		let rotated = targetArr.some(in_target => {
+			target = in_target;
+			let rest = maxCnt;
+			while (--rest > 0) {
+				// rotate +1 (maxCnt - 1) times
+				(rotateFunc)(in_target, 1);
+				const cand = this.#searchCandidates(in_player);
+				if (cand.length > 0) {
+					delta = maxCnt - rest;
+					return true;
+				}
+			}
+			this.#areaRestore(items);
+			return false;
 		});
-		return true;
+		if (rotated) {
+			this.#history.push({
+				who : in_player,
+				action : action,
+				row : -1,
+				col : -1,
+				target : target,
+				delta : delta
+			});
+		}
+		return rotated;
 	}
 	#phase() {
 		const total = this.#conf.row.size * this.#conf.col.size;
-		const remaining = this.#area.latest.filter(in_el => in_el === cReversi.#empty).length;
+		const remaining = this.#areaData.filter(in_el => in_el === cReversi.#empty).length;
 		return 1 - remaining / total;
 	}
 	#searchCandidates(in_player) {
 		const candidates = [];
-		if (this.#area.latest.indexOf(in_player) >= 0) {
-			for (let ix = 0; ix < this.#area.latest.length; ix++) {
-				if (this.#canChoose(in_player, ix)) {
-					candidates.push(ix);
-				}
+		for (let ix = 0; ix < this.#areaData.length; ix++) {
+			if (this.#canChoose(in_player, ix)) {
+				candidates.push(ix);
 			}
 		}
 		return candidates;
 	}
 	#countOwnedArea(in_player, in_ix, in_booster = null) {
-		this.#chooseTentative(in_player, in_ix);
+		const items = this.#areaBackup();
+		this.#choose(in_player, in_ix, false);
 		let count = 0;
-		for (let ix = 0; ix < this.#area.latest.length; ix++) {
-			if (this.#area.latest[ix] === in_player) {
+		for (let ix = 0; ix < this.#areaData.length; ix++) {
+			if (this.#areaData[ix] === in_player) {
 				count++;
 				if (in_booster) {
 					count = in_booster(in_player, in_ix);
 				}
 			}
 		}
-		this.#areaRollback();
+		this.#areaRestore(items);
 		return count;
 	}
 	#countEnemyOption(in_player, in_ix) {
-		this.#chooseTentative(in_player, in_ix);
+		const items = this.#areaBackup();
+		this.#choose(in_player, in_ix, false);
 		let nextPlayer = in_player + 1;
 		if (nextPlayer === cReversi.#maxPlayers) {
 			nextPlayer = 0;
 		}
 		const candidates = this.#searchCandidates(nextPlayer);
-		this.#areaRollback();
+		this.#areaRestore(items);
 		return candidates.length;
 	}
 	#nearestCornerIsOwned(in_player, in_ix) {
@@ -394,7 +492,7 @@ class cReversi {
 				min.index = in_corner_ix;
 			}
 		});
-		return (this.#getAreaByIndex(min.index) === in_player);
+		return (this.#getItemByIndex(min.index) === in_player);
 	}
 	#getModifier(in_player, in_ix) {
 		const modifier2 = [5, -4, 3];
@@ -575,12 +673,14 @@ class cReversi {
 		random : this.#npc_random
 	};
 	_simulation() {
-		const test = (in_p1, in_p2) => {
+		const test = (in_argoArr) => {
 			let cnt = 100;
 			while (true) {
-				const enable1 = (this.#npcSet[in_p1].bind(this))(0);
-				const enable2 = (this.#npcSet[in_p2].bind(this))(1);
-				if (enable1 || enable2) {
+				const resultArr = [];
+				for (let i = 0; i < in_argoArr.length; i++) {
+					resultArr[i] = this.npc(i, in_argoArr[i]);
+				}
+				if (resultArr.some(in_result => in_result)) {
 					if (cnt-- === 0) {
 						break;
 					}
@@ -589,46 +689,44 @@ class cReversi {
 				}
 				// this.dp();
 			}
-			const point1 = this.#area.latest.filter(in_el => in_el === 0).length;
-			const point2 = this.#area.latest.filter(in_el => in_el === 1).length;
-			return (point1 > point2);
+			let max = -Infinity;
+			let winner = -1;
+			const cond = this.getCurrentCondition();
+			for (let i = 0; i < cond.length; i++) {
+				if (cond[i].score > max) {
+					max = cond[i].score;
+					winner = i;
+				}
+			}
+			return winner;
 		};
-		// save area when starting
-		const saved = [...this.#area.latest];
-		this.#area.backup = null;
+		const items = this.#areaBackup();
 		// start simulation
 		const table = [];
 		table.push(['(vs)', ...Object.keys(this.#npcSet)]);
 		Object.keys(this.#npcSet).forEach(p1 => {
 			const row = [p1];
 			Object.keys(this.#npcSet).forEach(p2 => {
-				if (p1 === p2) {
-					row.push('-');
-				} else {
-					if ((p1 === 'random') || (p2 === 'random')) {
-						const repeat = 10;
-						let cnt = repeat;
-						let win = 0;
-						while (true) {
-							if (cnt-- > 0) {
-								if (test(p1, p2)) {
-									win++;
-								}
-								// restore area
-								this.#area.latest = [...saved];
-								this.#area.backup = null;
-							} else {
-								break;
+				const players = [p1, p2];
+				if (players.some(in_player => in_player === 'random')) {
+					const repeat = 10;
+					let cnt = repeat;
+					let win = 0;
+					while (true) {
+						if (cnt-- > 0) {
+							if (test(players) === 0) {
+								win++;
 							}
+							this.#areaRestore(items);
+						} else {
+							break;
 						}
-						row.push(win / repeat);
-					} else {
-						row.push(test(p1, p2));
 					}
+					row.push(win / repeat);
+				} else {
+					row.push(test(players) === 0);
 				}
-				// restore area
-				this.#area.latest = [...saved];
-				this.#area.backup = null;
+				this.#areaRestore(items);
 			});
 			table.push(row);
 		});
@@ -672,45 +770,92 @@ class cReversi {
 	}
 	_debug() {
 		for (let row = 0; row < this.#conf.row.size; row++) {
-			const arr = [];
+			const items = [];
 			for (let col = 0; col < this.#conf.col.size; col++) {
-				arr.push(this.#getAreaByPos(row, col));
+				items.push(this.#getItemByPos(row, col));
 			}
-			console.log(arr);
+			console.log(items);
 		}
 	}
 	pc(in_player, in_row, in_col) {
-		return this.#choose(in_player, this.#posToIndex(in_row, in_col));
+		const index = this.#posToIndex(in_row, in_col);
+		if (this.#canChoose(in_player, index)) {
+			this.#choose(in_player, index);
+			return true;
+		} else {
+			return false;
+		}
 	}
-	npc(in_player, in_argo) {
-		let argo = in_argo;
-		if (!argo) {
-			let cnt = 0;
-			for (let player = 0; player < cReversi.#maxPlayers; player++) {
-				if (this.#area.latest.indexOf(player) >= 0) {
-					cnt++;
+	npc(in_player, in_argo = null) {
+		let npcAlive = false;
+		let playerCnt = 0;
+		for (let player = 0; player < cReversi.#maxPlayers; player++) {
+			if (this.#areaData.indexOf(player) >= 0) {
+				playerCnt++;
+				if (player === in_player) {
+					npcAlive = true;
 				}
 			}
-			if (cnt > 2) {
-				argo = ['mixed', 'option1', 'greed1'][arrRand]();
+		}
+		if (npcAlive) {
+			if (playerCnt === 1) {
+				// only in_player
+				return false;
+			}
+		} else {
+			// in_player is died
+			return false;
+		}
+		if (this.#areaData.indexOf(cReversi.#empty) === -1) {
+			// fulfilled
+			return false;
+		}
+		let npcArgo;
+		if (in_argo) {
+			npcArgo = in_argo;
+		} else {
+			if (playerCnt > 2) {
+				npcArgo = ['mixed', 'option1', 'greed1'][arrRand]();
 			} else {
-				argo = 'mixed';
+				npcArgo = 'mixed';
 			}
 		}
-		// console.log(in_player, argo);
-		return (this.#npcSet[argo].bind(this))(in_player);
+		// console.log(in_player, npcAlive, playerCnt, npcArgo);
+		if ((this.#npcSet[npcArgo].bind(this))(in_player)) {
+			// chosen
+			return true;
+		} else {
+			if (this.#conf.row.edge) {
+				if (this.#conf.col.edge) {
+					// can not do anything
+					return false;
+				} else {
+					// try col-wise rotation
+					return this.#npcTryRotate(in_player, 'row');
+				}
+			} else {
+				// try row-wise rotation
+				return this.#npcTryRotate(in_player, 'col');
+			}
+		}
+	}
+	canRowWiseLoop() {
+		return !this.#conf.row.edge;
+	}
+	canColWiseLoop() {
+		return !this.#conf.col.edge;
 	}
 	getLast() {
 		return this.#history[this.#history.length - 1];
 	}
 	getArea() {
 		const table = [];
-		for (let ix = 0; ix < this.#area.latest.length; ix++) {
+		for (let ix = 0; ix < this.#areaData.length; ix++) {
 			const pos = this.#indexToPos(ix);
 			if (!table[pos.row]) {
 				table[pos.row] = [];
 			}
-			table[pos.row][pos.col] = parseInt(this.#area.latest[ix]);
+			table[pos.row][pos.col] = parseInt(this.#areaData[ix]);
 		}
 		return table;
 	}
@@ -722,22 +867,32 @@ class cReversi {
 		}
 		for (let row = 0; row < in_table.length; row++) {
 			for (let col = 0; col < in_table[row].length; col++) {
-				const data = in_table[row][col];
-				if (acceptable.indexOf(data) < 0) {
+				const item = in_table[row][col];
+				if (acceptable.indexOf(item) < 0) {
 					throw new Error('invalid input');
 				} else {
-					this.#setAreaByPos(row, col, data);
+					this.#setItemByPos(row, col, item);
 				}
 			}
 		}
-		this.#areaCommit();
+	}
+	setActionResult(in_player, in_action, in_table) {
+		this.setArea(in_table);
+		this.#history.push({
+			who : in_player,
+			action : in_action,
+			row : -1,
+			col : -1,
+			target : -1,
+			delta : -1
+		});
 	}
 	getCurrentCondition() {
 		const ret = [];
 		for (let player = 0; player < cReversi.#maxPlayers; player++) {
 			ret.push({
-				dead : ((this.#searchCandidates(player)).length === 0),
-				score : (this.#area.latest.filter(in_el => in_el === player)).length
+				dead : (this.#areaData.indexOf(player) === -1),
+				score : (this.#areaData.filter(in_el => in_el === player)).length
 			});
 		}
 		return ret;
@@ -1239,6 +1394,20 @@ class cColonyBoard extends cColony {
 		}
 		return changedArr;
 	}
+	makeRotateProgress(in_col, in_delta, in_ending_callback) {
+		this.uiDisable();
+		const last = this.settingVal.unitAngle * in_delta;
+		const x = this.settingVal.origin.x + this.settingVal.unitDelta * in_col;
+		const pieces = this.children.filter(in_child => Math.abs(in_child.position.x - x) < cColony.error);
+		const group = this.setupGroup(pieces);
+		return this.makeAnimationProgress(group, cColony.axes.x, 0, last, in_ratio => {
+			if (in_ratio < 1) {
+				return;
+			}
+			this.uiEnable();
+			(in_ending_callback)();
+		});
+	}
 }
 
 /*
@@ -1272,7 +1441,7 @@ let gReversi = null;
 
 class cGameController {
 	static #UNUSED = -1;
-	static #PC = BLUE;
+	static PC = BLUE;
 	static #NPC = [
 		RED,
 		YELLOW,
@@ -1291,7 +1460,7 @@ class cGameController {
 		for (let i = 0; i < in_playerCnt; i++) {
 			let color;
 			if (i === in_pc) {
-				color = cGameController.#PC;
+				color = cGameController.PC;
 			} else {
 				color = colors.shift();
 			}
@@ -1306,10 +1475,14 @@ class cGameController {
 	}
 	#execTurnHook() {
 		const color = this.#mapping[this.#curIndex];
-		this.enableHandler = (color === cGameController.#PC);
+		this.enableHandler = (color === cGameController.PC);
 		(this.#turnHook)(this.#curIndex, color, this.enableHandler);
 	}
 	endTurn(in_reversi = null) {
+		/*
+			with in_reversi : check winner before next turn
+			without in_reversi : next turn
+		*/
 		this.#curIndex++;
 		if (this.#mapping[this.#curIndex] === cGameController.#UNUSED) {
 			this.#curIndex = 0;
@@ -1405,21 +1578,39 @@ class cGameController {
 		const table = in_colony.getColorTable();
 		return table.map(in_row => in_row.map(in_cell => reverse[in_cell]));
 	}
-	async #chosePiece(in_reversi, in_colony, in_world) {
+	async #playLastAction(in_reversi, in_colony, in_world) {
 		const last = in_reversi.getLast();
-		const piece = in_colony.indexToPiece(last.row, last.col);
-		// move view
-		const cameraPos = in_world.getCameraPos();
-		const angleX = Math.atan2(cameraPos.y, cameraPos.z) - Math.atan2(piece.position.y, piece.position.z);
-		const vec3 = cameraPos.applyMatrix4((new THREE.Matrix4()).makeRotationX(angleX));
-		await in_world.motionViewFrom(vec3, 500);
-		// choose
-		setShellColor(piece, this.#mapping[last.who]);
-		await this.reversiToColonyDynamic(in_reversi, in_colony, in_world);
+		switch (last.action) {
+		case 'choose-item' :
+			const piece = in_colony.indexToPiece(last.row, last.col);
+			// move view
+			const cameraPos = in_world.getCameraPos();
+			const angleX = Math.atan2(cameraPos.y, cameraPos.z) - Math.atan2(piece.position.y, piece.position.z);
+			const vec3 = cameraPos.applyMatrix4((new THREE.Matrix4()).makeRotationX(angleX));
+			await in_world.motionViewFrom(vec3, 500);
+			// choose
+			setShellColor(piece, this.#mapping[last.who]);
+			await this.reversiToColonyDynamic(in_reversi, in_colony, in_world);
+			break;
+		case 'npc-row-wise-rotate' :
+			console.log('rotating', last);
+			await (async ()=> {
+				return new Promise(in_resolve => {
+					const hook = in_colony.makeRotateProgress(last.target, last.delta, () => {
+						in_world.removeAnimationHook(hook);
+						(in_resolve)();
+					});
+					in_world.addAnimationHook(hook);
+				});
+			})();
+			break;
+		default :
+			break;
+		}
 	}
 	async npc(in_reversi, in_colony, in_world) {
 		if (in_reversi.npc(this.#curIndex)) {
-			await this.#chosePiece(in_reversi, in_colony, in_world);
+			await this.#playLastAction(in_reversi, in_colony, in_world);
 			return true;
 		} else {
 			// can't do anything
@@ -1433,10 +1624,14 @@ class cGameController {
 		const result = in_reversi.pc(this.#curIndex, pos.row, pos.col);
 		if (result) {
 			SE_BEEP.play();
-			await this.#chosePiece(in_reversi, in_colony, in_world);
+			await this.#playLastAction(in_reversi, in_colony, in_world);
 		}
 		this.enableHandler = resume;
 		return result;
+	}
+	pcRotate(in_reversi, in_colony) {
+		const table = this.convertColonyTable(in_colony);
+		in_reversi.setActionResult(this.#curIndex, 'pc-row-wise-rotate', table);
 	}
 }
 
@@ -1559,10 +1754,11 @@ const gOrderChar = (() => {
 function initializeByLevel() {
 	const curr = gMeshLevelMap.currItemByOrder();
 	const [level, loop] = curr.k.split('-');
+	const rowEdge = !loop;
 	const [rows, cols, players] = level.split('x');
 	gController = new cGameController(players);
 	const table = gController.convertColonyTable(gColony);
-	gReversi = new cReversi(table, !loop, true);
+	gReversi = new cReversi(table, rowEdge, true);
 	gController.setTurnHook(async (in_player, in_color, in_pc) => {
 		gOrderChar.style.visibility = 'visible';
 		gOrderChar.src = RES.get(in_color);
@@ -1602,6 +1798,7 @@ async function updateLevel() {
 	const next = gMeshLevelMap.nextItemByOrder();
 	document.getElementById(ID_PREV_LEVEL).innerText = prev.k;
 	document.getElementById(ID_NEXT_LEVEL).innerText = next.k;
+	resetFocus();
 	initializeByLevel();
 }
 
@@ -1929,6 +2126,12 @@ function resetFocus() {
 	focusHere(outOfRange);
 }
 
+function rotateDone() {
+	resetFocus();
+	gController.pcRotate(gReversi, gColony);
+	gController.endTurn();
+}
+
 async function chooseHere(in_ev) {
 	const ndc = ndcFromEvent(in_ev);
 	let intersects = gWorld.intersectPositive(ndc);
@@ -1976,7 +2179,12 @@ async function chooseHere(in_ev) {
 		}
 		closure.x = in_ev.clientX;
 		closure.y = in_ev.clientY;
-		// gColony.uiSetInitPosition(intersects[0].point, ndcToAbs(ndc));
+		// can drag only cGameController.PC
+		const drag = intersects[0].object
+		const color = drag.userData.original || getShellColor(drag);
+		if (gReversi.canRowWiseLoop() && (color === cGameController.PC)) {
+			gColony.uiSetInitPosition(intersects[0].point, ndcToAbs(ndc));
+		}
 	};
 	const move = thresholding(in_ev => {
 		closure.x = -1;
@@ -1997,8 +2205,11 @@ async function chooseHere(in_ev) {
 		}
 	});
 	const stop = in_ev => {
-		const releaseProgress = gColony.uiRelease(() => {
+		const releaseProgress = gColony.uiRelease(in_changed => {
 			gWorld.removeAnimationHook(releaseProgress);
+			if (in_changed) {
+				rotateDone();
+			}
 		});
 		if (releaseProgress) {
 			gWorld.addAnimationHook(releaseProgress);

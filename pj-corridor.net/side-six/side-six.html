@@ -937,7 +937,7 @@ function chooseHere(in_ev) {
 		}
 	});
 	const stop = in_ev => {
-		const releaseProgress = gColony.uiRelease(() => {
+		const releaseProgress = gColony.uiRelease(in_changed => {
 			gWorld.removeAnimationHook(releaseProgress);
 		});
 		if (releaseProgress) {
