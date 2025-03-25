@@ -941,63 +941,90 @@ class cTurnController {
 	the cColony class related functions provide the ability to create cylinder-shaped threejs objects.
 */
 
-const textureFactory = factoryBuilder((in_w, in_h) => {
-	const gradation = 4
-	// gradation (from black to white)
-	let maxDepth = 255;
-	let styles = [];
-	for (let i = 0; i < gradation; i++) {
-		let depth = Math.ceil(maxDepth / gradation * (i + 1));
-		styles[i] = 'rgb(' + depth + ',' + depth + ',' + depth + ')';
+const textureFactory = factoryBuilder((in_w, in_h, in_dmz = false) => {
+	const gradationCnt = 4
+	// gradationCnt (from black to white)
+	const maxDepth = 255;
+	const rgbArr = [];
+	for (let i = 0; i < gradationCnt; i++) {
+		const depth = Math.ceil(maxDepth / gradationCnt * (i + 1));
+		rgbArr[i] = 'rgb(' + depth + ',' + depth + ',' + depth + ')';
 	}
 	// draw and convert using toDataUR
-	let canvas = document.createElement('CANVAS');
+	const canvas = document.createElement('CANVAS');
 	canvas.width = in_w;
 	canvas.height = in_h;
 	const ctx = canvas.getContext('2d');
-	let radius = gradation + 2;
-	/*
-		Rect           RoundRect      RoundRect
-
-		##########     ##########     ##########
-		##########     ##******##     ##******##
-		##########     #********#     #**++++**#
-		##########     #********#     #*++++++*#
-		########## --> #********# --> #*++++++*# --> ...
-		##########     #********#     #*++++++*#
-		##########     #********#     #**++++**#
-		##########     ##******##     ##******##
-		##########     ##########     ##########
-	*/
-	for (let i = 0; i < gradation; i++) {
-		ctx.fillStyle = styles[i];
-		if (i > 0) {
-			ctx[fillRoundRect](i, i, in_w - i * 2, in_h - i * 2, radius - i);
+	for (let i = 0; i < gradationCnt; i++) {
+		if (in_dmz) {
+			ctx.strokeStyle = rgbArr[gradationCnt - i - 1];
+			ctx.fillStyle = rgbArr[gradationCnt - i - 1];
+			if (i > 0) {
+				ctx.lineWidth = (gradationCnt - i) * 2 - 1;
+				ctx.beginPath();
+				ctx.moveTo(0, 0);
+				ctx.lineTo(in_w, in_h);
+				ctx.stroke();
+				ctx.beginPath();
+				ctx.moveTo(in_w, 0);
+				ctx.lineTo(0, in_h);
+				ctx.stroke();
+			} else {
+				ctx.fillRect(0, 0, in_w, in_h);
+			}
 		} else {
-			ctx.fillRect(i, i, in_w - i * 2, in_h - i * 2);
+			/*
+				Rect           RoundRect      RoundRect
+
+				##########     ##########     ##########
+				##########     ##******##     ##******##
+				##########     #********#     #**++++**#
+				##########     #********#     #*++++++*#
+				########## --> #********# --> #*++++++*# --> ...
+				##########     #********#     #*++++++*#
+				##########     #********#     #**++++**#
+				##########     ##******##     ##******##
+				##########     ##########     ##########
+			*/
+			const radius = gradationCnt + 2;
+			ctx.fillStyle = rgbArr[i];
+			if (i > 0) {
+				ctx[fillRoundRect](i, i, in_w - i * 2, in_h - i * 2, radius - i);
+			} else {
+				ctx.fillRect(i, i, in_w - i * 2, in_h - i * 2);
+			}
 		}
 	}
 	return (new THREE.TextureLoader()).load(canvas.toDataURL());
 });
 
-const surfaceFactory = factoryBuilder((in_color, in_size = -1) => {
+const surfaceFactory = factoryBuilder((in_color, in_size, in_type) => {
 	const material = new THREE.MeshLambertMaterial();
 	material.color = new THREE.Color(in_color);
-	if (in_size > 0) {
-		material.map = textureFactory.create(in_size, in_size);
+	switch (in_type) {
+	case 'normal-texture' :
+		material.map = textureFactory.create(in_size, in_size, false);
+		break;
+	case 'dmz-texture' :
+		material.map = textureFactory.create(in_size, in_size, true);
+		break;
+	case 'no-texture' :
+	default :
+		break;
 	}
 	return material;
 });
 
 const SHELL_COLOR_INDEX = 2;
 
-function shellMaterials(in_size, in_color_main, in_color_back) {
+function shellMaterials(in_size, in_color_main, in_color_back, in_dmz) {
 	const materials = [];
 	for (let i = 0; i < Object.keys(DIRECTION).length; i++) {
 		if (i === SHELL_COLOR_INDEX) {
-			materials.push(surfaceFactory.create(in_color_main, in_size));
+			const texture = in_dmz ? 'dmz-texture' : 'normal-texture';
+			materials.push(surfaceFactory.create(in_color_main, in_size, texture));
 		} else {
-			materials.push(surfaceFactory.create(in_color_back));
+			materials.push(surfaceFactory.create(in_color_back, in_size, 'no-texture'));
 		}
 	}
 	return materials;
@@ -1301,7 +1328,8 @@ const gMeshLevelMap = ((in_diameter) => {
 			let x = unitSize * col - unitSize * (cols - 1) / 2;
 			let y = (in_diameter / 2 - unitThick) * 1.2;
 			for (let row = 0; row < in_shell.table.length; row++) {
-				const materials = shellMaterials(unitSize, in_shell.table[row][col], BGCOLOR);
+				const color = in_shell.table[row][col];
+				const materials = shellMaterials(unitSize, color, BGCOLOR, (color === D));
 				materials.push(edgeMaterial);
 				const piece = new THREE.Mesh(geometry, materials);
 				const pivot = new THREE.Object3D();
@@ -2089,39 +2117,33 @@ const notifyDelta = (() => {
 })();
 
 const focusHere = (() => {
-	let prev = null;
+	let focusedEmpty = null;
+	const HIGHLIGHT = (new THREE.Color(EMPTYCOLOR)).lerp(new THREE.Color(0xFFFFFF), 0.3).getHex();
 	return in_ndc => {
+		let current, color;
 		let intersects = gWorld.intersectPositive(in_ndc);
-		if (intersects.length === 0) {
-			if (prev) {
-				setShellColor(prev, prev.userData.original);
-				/*
-					*** NOTE ***
-					as materials made by boxMaterials will be cached using cCache,
-					you don't need to call dispose() when mouseout.
-				*/
-				delete prev.userData.original;
-				prev = null;
-			}
-			return;
+		if (intersects.length > 0) {
+			current = intersects[0].object;
+			color = getShellColor(current);
+		} else {
+			current = null;
+			color = -1;
 		}
-		const curr = intersects[0].object;
-		// assume that each face is composed of two faces
-		if (prev) {
-			if (prev === curr) {
+		if ((color === EMPTYCOLOR) || (color === HIGHLIGHT)) {
+			if (current === focusedEmpty) {
 				return;
-			} else {
-				setShellColor(prev, prev.userData.original);
 			}
+			setShellColor(current, HIGHLIGHT);
+			if (focusedEmpty) {
+				setShellColor(focusedEmpty, EMPTYCOLOR);
+			}
+			focusedEmpty = current;
+		} else {
+			if (focusedEmpty) {
+				setShellColor(focusedEmpty, EMPTYCOLOR);
+			}
+			focusedEmpty = null;
 		}
-		prev = curr;
-		curr.userData.original = getShellColor(curr);
-		if (curr.userData.original !== EMPTYCOLOR) {
-			return;
-		}
-		const color = new THREE.Color(prev.userData.original);
-		const highlight = 0.3;
-		setShellColor(curr, color.lerp(new THREE.Color(0xFFFFFF), highlight).getHex());
 	}
 })();
 
@@ -2142,12 +2164,11 @@ async function chooseHere(in_ev) {
 	if (intersects.length === 0) {
 		return;
 	}
+	resetFocus();
 	const curr = intersects[0].object;
-	const color = curr.userData.original || getShellColor(curr);
-	if (color !== EMPTYCOLOR) {
+	if (getShellColor(curr) !== EMPTYCOLOR) {
 		knock();
 	} else {
-		resetFocus();
 		if (await gController.pc(curr, gReversi, gColony, gWorld)) {
 			const winner = gController.endTurn(gReversi);
 			if (winner < 0) {
@@ -2181,12 +2202,12 @@ async function chooseHere(in_ev) {
 		if (intersects.length === 0) {
 			return;
 		}
+		resetFocus();
 		closure.x = in_ev.clientX;
 		closure.y = in_ev.clientY;
 		// can drag only cGameController.PC
 		const drag = intersects[0].object
-		const color = drag.userData.original || getShellColor(drag);
-		if (gReversi.canRowWiseLoop() && (color === cGameController.PC)) {
+		if (gReversi.canRowWiseLoop() && (getShellColor(drag) === cGameController.PC)) {
 			gColony.uiSetInitPosition(intersects[0].point, ndcToAbs(ndc));
 		}
 	};
