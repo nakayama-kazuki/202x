@@ -889,15 +889,26 @@ class cReversi {
 	}
 	getCurrentCondition() {
 		const condition = {
-			fulfilled : false,
-			players : [],
+			finished : false,
+			players : []
 		};
-		condition.fulfilled = (this.#areaData.indexOf(cReversi.#empty) === -1);
+		condition.finished = true;
 		for (let player = 0; player < cReversi.#maxPlayers; player++) {
-			condition.players.push({
-				dead : (this.#areaData.indexOf(player) === -1),
-				score : (this.#areaData.filter(in_el => in_el === player)).length
-			});
+			let dead, frozen, score;
+			dead = (this.#areaData.indexOf(player) === -1);
+			if (dead) {
+				frozen = true;
+				score= 0;
+			} else {
+				if ((this.#searchCandidates(player)).length > 0) {
+					frozen = false;
+					condition.finished = false;
+				} else {
+					frozen = true;
+				}
+				score= (this.#areaData.filter(in_el => in_el === player)).length;
+			}
+			condition.players.push({dead : dead, frozen : frozen, score : score});
 		}
 		return condition;
 	}
@@ -1521,14 +1532,14 @@ class cGameController {
 		}
 		if (in_reversi) {
 			const cond = in_reversi.getCurrentCondition();
-			if (cond.fulfilled) {
+			if (cond.finished) {
 				// none of the players can do anything
 				const winner = cond.players.reduce((in_accum, in_curVal, in_curIndex, in_arr) => {
 					return in_curVal.score > in_arr[in_accum].score ? in_curIndex : in_accum;
 				}, 0);
 				return this.#mapping[winner];
 			} else {
-				if (cond.players[this.#curIndex].dead) {
+				if (cond.players[this.#curIndex].frozen) {
 					return this.endTurn(in_reversi);
 				} else {
 					this.#execTurnHook();
