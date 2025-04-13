@@ -7,8 +7,8 @@
 <script type='importmap'>
 {
 	"imports" : {
-		"three" : "https://cdn.jsdelivr.net/npm/three@0.174.0/build/three.module.min.js",
-		"utils" : "https://cdn.jsdelivr.net/npm/three@0.174.0/examples/jsm/utils/BufferGeometryUtils.js",
+		"three" : "https://cdn.jsdelivr.net/npm/three@0.175.0/build/three.module.min.js",
+		"utils" : "https://cdn.jsdelivr.net/npm/three@0.175.0/examples/jsm/utils/BufferGeometryUtils.js",
 		"basic" : "./basic-functions.js",
 		"sound" : "./sound-effect.js"
 	}
@@ -40,6 +40,7 @@ import {
 	nonReentrantAsync,
 	factoryBuilder,
 	arrRand,
+	arrTrim,
 	cEase,
 	cApproximateMap,
 	cApproximateSet,
@@ -974,6 +975,8 @@ class cFigure extends THREE.Object3D {
 */
 
 const gCyclicColors = new cCyclicValues(
+	// dodgerblue
+	0x1E90FF,
 	// gold
 	0xFFD700,
 	// orangered
@@ -982,8 +985,6 @@ const gCyclicColors = new cCyclicValues(
 	0xEEBEC9,
 	// green
 	0x008000,
-	// dodgerblue
-	0x1E90FF,
 	// royalblue
 	0x4169E1,
 	// darkgoldenrod

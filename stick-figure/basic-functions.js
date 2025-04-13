@@ -597,6 +597,28 @@ Array.prototype[arrRand] = function() {
 	return this[Math.floor(Math.random() * this.length)];
 };
 
+export const arrTrim = Symbol();
+
+Array.prototype[arrTrim] = function(in_value) {
+	let start = 0;
+	let end = this.length;
+	for (let i = 0; i < this.length; i++) {
+		if (this[i] === in_value) {
+			start++;
+		} else {
+			break;
+		}
+	}
+	for (let i = this.length - 1; i >= start; i--) {
+		if (this[i] === in_value) {
+			end--;
+		} else {
+			break;
+		}
+	}
+	return this.slice(start, end);
+};
+
 export const forEachCombination = Symbol();
 
 Array.prototype[forEachCombination] = function(in_n, in_callback) {
