@@ -567,8 +567,8 @@ class cReversi {
 			target : -1,
 			delta : -1
 		});
-		// in case edge x2
 		if (this.#conf.row.edge && this.#conf.col.edge) {
+			// in case edge x2
 			const angleKey = Object.keys(this.#rotations).find(in_key => {
 				const corner = this.#rotations[in_key].corner;
 				return ((corner.row === pos.row) && (corner.col === pos.col));
@@ -576,46 +576,43 @@ class cReversi {
 			if (angleKey) {
 				this.#updateCurrentScoresEdge2(in_player, angleKey);
 			}
-			return;
-		}
-		// in case edge x1
-		let edge, repl;
-		if (this.#conf.row.edge) {
-			if (pos.row === 0) {
-				edge = this.#sameRowIndexes(0);
-				repl = this.#sameRowIndexes(1);
-			} else if (pos.row === this.#conf.row.size - 1) {
-				edge = this.#sameRowIndexes(pos.row);
-				repl = this.#sameRowIndexes(pos.row - 1);
-			} else {
-				return;
-			}
-		} else if (this.#conf.col.edge) {
-			if (pos.col === 0) {
-				edge = this.#sameColIndexes(0);
-				repl = this.#sameColIndexes(1);
-			} else if (pos.col === this.#conf.col.size - 1) {
-				edge = this.#sameColIndexes(pos.col);
-				repl = this.#sameColIndexes(pos.col - 1);
-			} else {
-				return;
-			}
 		} else {
-			return;
-		}
-		for (let i = 0; i < edge.length; i++) {
-			const index = repl[i];
-			const newScore = +444;
-			const owner = this.#getItemByIndex(edge[i]);
-			// 1. rollback to default
-			for (let player = 0; player < cReversi.#maxPlayers; player++) {
-				this.#areaScores.current[player][index] = this.#areaScores.default[index];
+			// in case edge x1
+			let edge, repl;
+			if (this.#conf.row.edge) {
+				if (pos.row === 0) {
+					edge = this.#sameRowIndexes(0);
+					repl = this.#sameRowIndexes(1);
+				} else if (pos.row === this.#conf.row.size - 1) {
+					edge = this.#sameRowIndexes(pos.row);
+					repl = this.#sameRowIndexes(pos.row - 1);
+				}
+			} else if (this.#conf.col.edge) {
+				if (pos.col === 0) {
+					edge = this.#sameColIndexes(0);
+					repl = this.#sameColIndexes(1);
+				} else if (pos.col === this.#conf.col.size - 1) {
+					edge = this.#sameColIndexes(pos.col);
+					repl = this.#sameColIndexes(pos.col - 1);
+				}
 			}
-			// 2. update for owner
-			if (owner < cReversi.#maxPlayers) {
-				this.#areaScores.current[owner][index] = newScore;
+			if (edge && repl) {
+				for (let i = 0; i < edge.length; i++) {
+					const index = repl[i];
+					const newScore = +4;
+					const owner = this.#getItemByIndex(edge[i]);
+					// 1. rollback to default
+					for (let player = 0; player < cReversi.#maxPlayers; player++) {
+						this.#areaScores.current[player][index] = this.#areaScores.default[index];
+					}
+					// 2. update for owner
+					if (owner < cReversi.#maxPlayers) {
+						this.#areaScores.current[owner][index] = newScore;
+					}
+				}
 			}
 		}
+		// this._debug();
 	}
 	#npcTryRotate(in_player, in_dir) {
 		const rowSet = new Set();
@@ -1004,19 +1001,23 @@ class cReversi {
 		const script = document.currentScript;
 		script.parentNode.insertBefore(elem, script.nextSibling);
 	}
-	_debug(in_showData = true) {
-		for (let row = 0; row < this.#conf.row.size; row++) {
-			const items = [];
-			for (let col = 0; col < this.#conf.col.size; col++) {
-				const ix = this.#posToIndex(row, col);
-				if (in_showData) {
-					items.push(this.#areaData[ix]);
-				} else {
-					items.push(this.#areaScores.default[ix]);
-				}
-			}
-			console.log(items);
+	_debug() {
+		const sources = {area : this.#areaData};
+		for (let player = 0; player < cReversi.#maxPlayers; player++) {
+			sources['p-' + player] = this.#areaScores.current[player];
 		}
+		Object.keys(sources).forEach(in_key => {
+			console.log('*** ' + in_key + ' ***');
+			const data = sources[in_key];
+			for (let row = 0; row < this.#conf.row.size; row++) {
+				const items = [];
+				for (let col = 0; col < this.#conf.col.size; col++) {
+					const ix = this.#posToIndex(row, col);
+					items.push(data[ix]);
+				}
+				console.log(items);
+			}
+		});
 	}
 	pc(in_player, in_row, in_col) {
 		const index = this.#posToIndex(in_row, in_col);
