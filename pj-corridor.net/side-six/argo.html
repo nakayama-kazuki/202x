@@ -690,7 +690,7 @@ class cReversi {
 		});
 	}
 	#initDefaultAreaScoresEdge1() {
-		const format = [5, -4, 3];
+		const format = [10, -4, 2];
 		if (this.#conf.row.edge) {
 			for (let delta = 0; delta < format.length; delta++) {
 				const edge1 = delta;
@@ -1139,7 +1139,7 @@ const table3 = [
 	[9, 9, 9, 9, 9, 9, 9]
 ];
 
-const game = new cReversi(table2, true, true);
+const game = new cReversi(table2, false, true);
 console.time('_simulation');
 game._simulation();
 console.timeEnd('_simulation');
