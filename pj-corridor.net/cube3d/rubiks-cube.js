@@ -20,6 +20,7 @@ import {
 	nonReentrantAsync,
 	factoryBuilder,
 	arrRand,
+	arrTrim,
 	cEase,
 	cApproximateMap,
 	cApproximateSet,
