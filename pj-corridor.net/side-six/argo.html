@@ -680,10 +680,12 @@ class cReversi {
 			asume this.#conf.col.size >= 6
 		*/
 		const cornerScore = [];
+		const PT = cReversi.#priorityTop;
+		const PL = cReversi.#priorityLast;
 		const format = [
-			[+25,  -5,  +3],
-			[ -5, -15,  -2],
-			[ +3,  -2,  +1],
+			[ PT, -15, +3],
+			[-15,  PL, -2],
+			[ +3,  -2, +1],
 		];
 		const angles = ['angle000', 'angle090', 'angle180', 'angle270'];
 		angles.forEach(in_angleKey => {
