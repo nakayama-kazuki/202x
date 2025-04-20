@@ -28,7 +28,6 @@ Array.prototype[arrTrim] = function(in_value) {
 };
 
 class cLineEvaluater {
-	static #dmz = 8;
 	static #empty = 9;
 	static #positive = +1;
 	static #neutral = 0;
@@ -341,7 +340,7 @@ class cReversi {
 				dirCol : +1
 			}
 		};
-		this.setArea(in_table);
+		this.setTable(in_table);
 		this.#initAreaScores();
 	}
 	#indexToPos(in_ix) {
@@ -650,9 +649,15 @@ class cReversi {
 		const format = [];
 		const size = Math.min(this.#conf.row.size, this.#conf.col.size);
 		for (let row = 0; row < size; row++) {
-			format[row] = [];
+			format[row] = new Array(size).fill(cReversi.#ignore);
 			for (let col = 0; col < size; col++) {
-				format[row][col] = ((row === 0) || (col === 0)) ? newScore : cReversi.#ignore;
+				if ((row !== 0) && (col !== 0)) {
+					continue;
+				}
+				const score = this.#areaScores.current[in_player][this.#posToIndex(row, col)];
+				if (newScore > score) {
+					format[row][col] = newScore;
+				}
 			}
 		}
 		format[1][1] = newScore;
@@ -661,7 +666,7 @@ class cReversi {
 	#updateCurrentScoresEdge1(in_player, in_angleKey) {
 	}
 	#initAreaScores() {
-		this.#areaScores.default =  new Array(this.#conf.row.size * this.#conf.col.size).fill(-1);
+		this.#areaScores.default = new Array(this.#conf.row.size * this.#conf.col.size).fill(-1);
 		if (this.#conf.row.edge && this.#conf.col.edge) {
 			this.#initDefaultAreaScoresEdge2();
 		} else if (this.#conf.row.edge || this.#conf.col.edge) {
@@ -1032,10 +1037,19 @@ class cReversi {
 	canColWiseLoop() {
 		return !this.#conf.col.edge;
 	}
-	getLast() {
-		return this.#history[this.#history.length - 1];
+	getLast(in_player = -1) {
+		const lastIndex = this.#history.length - 1;
+		if (in_player < 0) {
+			return this.#history[lastIndex];
+		}
+		for (let i = lastIndex; i >= 0; i--) {
+			if (this.#history[i].who === in_player) {
+				return this.#history[i];
+			}
+		}
+		return null;
 	}
-	getArea() {
+	getTable() {
 		const table = [];
 		for (let ix = 0; ix < this.#areaData.length; ix++) {
 			const pos = this.#indexToPos(ix);
@@ -1046,7 +1060,7 @@ class cReversi {
 		}
 		return table;
 	}
-	setArea(in_table) {
+	setTable(in_table) {
 		// 0, 1, 2, ..., cReversi.#maxPlayers - 1, cReversi.#dmz, cReversi.#empty
 		const acceptable = [cReversi.#dmz, cReversi.#empty];
 		for (let player = 0; player < cReversi.#maxPlayers; player++) {
@@ -1064,7 +1078,7 @@ class cReversi {
 		}
 	}
 	setActionResult(in_player, in_action, in_table) {
-		this.setArea(in_table);
+		this.setTable(in_table);
 		this.#history.push({
 			who : in_player,
 			action : in_action,
@@ -1168,7 +1182,7 @@ game._debug();
 //game.npc(1);
 //game.npc(0);
 //game.npc(1);
-//console.log(game.getArea());
+//console.log(game.getTable());
 //console.log(game.getCurrentCondition());
 
 </script>

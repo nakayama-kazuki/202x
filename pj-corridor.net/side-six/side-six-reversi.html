@@ -84,7 +84,6 @@ import * as SOUND from 'sound';
 */
 
 class cLineEvaluater {
-	static #dmz = 8;
 	static #empty = 9;
 	static #positive = +1;
 	static #neutral = 0;
@@ -397,7 +396,7 @@ class cReversi {
 				dirCol : +1
 			}
 		};
-		this.setArea(in_table);
+		this.setTable(in_table);
 		this.#initAreaScores();
 	}
 	#indexToPos(in_ix) {
@@ -706,9 +705,15 @@ class cReversi {
 		const format = [];
 		const size = Math.min(this.#conf.row.size, this.#conf.col.size);
 		for (let row = 0; row < size; row++) {
-			format[row] = [];
+			format[row] = new Array(size).fill(cReversi.#ignore);
 			for (let col = 0; col < size; col++) {
-				format[row][col] = ((row === 0) || (col === 0)) ? newScore : cReversi.#ignore;
+				if ((row !== 0) && (col !== 0)) {
+					continue;
+				}
+				const score = this.#areaScores.current[in_player][this.#posToIndex(row, col)];
+				if (newScore > score) {
+					format[row][col] = newScore;
+				}
 			}
 		}
 		format[1][1] = newScore;
@@ -717,7 +722,7 @@ class cReversi {
 	#updateCurrentScoresEdge1(in_player, in_angleKey) {
 	}
 	#initAreaScores() {
-		this.#areaScores.default =  new Array(this.#conf.row.size * this.#conf.col.size).fill(-1);
+		this.#areaScores.default = new Array(this.#conf.row.size * this.#conf.col.size).fill(-1);
 		if (this.#conf.row.edge && this.#conf.col.edge) {
 			this.#initDefaultAreaScoresEdge2();
 		} else if (this.#conf.row.edge || this.#conf.col.edge) {
@@ -1088,10 +1093,19 @@ class cReversi {
 	canColWiseLoop() {
 		return !this.#conf.col.edge;
 	}
-	getLast() {
-		return this.#history[this.#history.length - 1];
+	getLast(in_player = -1) {
+		const lastIndex = this.#history.length - 1;
+		if (in_player < 0) {
+			return this.#history[lastIndex];
+		}
+		for (let i = lastIndex; i >= 0; i--) {
+			if (this.#history[i].who === in_player) {
+				return this.#history[i];
+			}
+		}
+		return null;
 	}
-	getArea() {
+	getTable() {
 		const table = [];
 		for (let ix = 0; ix < this.#areaData.length; ix++) {
 			const pos = this.#indexToPos(ix);
@@ -1102,7 +1116,7 @@ class cReversi {
 		}
 		return table;
 	}
-	setArea(in_table) {
+	setTable(in_table) {
 		// 0, 1, 2, ..., cReversi.#maxPlayers - 1, cReversi.#dmz, cReversi.#empty
 		const acceptable = [cReversi.#dmz, cReversi.#empty];
 		for (let player = 0; player < cReversi.#maxPlayers; player++) {
@@ -1120,7 +1134,7 @@ class cReversi {
 		}
 	}
 	setActionResult(in_player, in_action, in_table) {
-		this.setArea(in_table);
+		this.setTable(in_table);
 		this.#history.push({
 			who : in_player,
 			action : in_action,
@@ -1744,6 +1758,7 @@ class cGameController {
 	#mapping = new Array(10).fill(cGameController.#UNUSED);
 	#turnHook = () => {};
 	#curIndex;
+	#tableSize;
 	enableHandler = false;
 	// cGameController knows the internal structure of cColonyBoard, cReversi and cSphericalWorld
 	constructor(in_playerCnt, in_pc = 0) {
@@ -1760,6 +1775,14 @@ class cGameController {
 		// 8, 9 are declared as follows in cReversi
 		this.#mapping[8] = DMZCOLOR;
 		this.#mapping[9] = EMPTYCOLOR;
+		this.setTableSize(-1, -1);
+	}
+	setTableSize(in_rows, in_cols) {
+		// as cColonyBoard and cReversi may not have the same rows and cols, in_rows and in_cols are needed.
+		this.#tableSize = {
+			rows : in_rows,
+			cols : in_cols
+		};
 	}
 	setTurnHook(in_hook) {
 		this.#turnHook = in_hook;
@@ -1849,8 +1872,9 @@ class cGameController {
 		});
 	}
 	#makeChangedArr(in_reversi, in_colony) {
-		const indexTable = in_reversi.getArea();
+		const indexTable = in_reversi.getTable();
 		const colorTable = indexTable.map(in_row => in_row.map(in_cell => this.#mapping[in_cell]));
+		// this can handle smaller table than colony
 		return in_colony.changedPieces(colorTable);
 	}
 	reversiToColony(in_reversi, in_colony) {
@@ -1866,19 +1890,25 @@ class cGameController {
 		this.#mapping.forEach((in_value, in_ix) => {
 			reverse[in_value] = in_ix;
 		});
-		const table = in_colony.getColorTable();
+		let table = in_colony.getColorTable();
+		if ((this.#tableSize.rows > 0) && (this.#tableSize.cols > 0)) {
+			// resize to #tableSize
+			table = table.slice(0, this.#tableSize.rows).map(in_row => in_row.slice(0, this.#tableSize.cols));
+		}
 		return table.map(in_row => in_row.map(in_cell => reverse[in_cell]));
+	}
+	async moveViewTo(in_piece, in_world) {
+		const cameraPos = in_world.getCameraPos();
+		const angleX = Math.atan2(cameraPos.y, cameraPos.z) - Math.atan2(in_piece.position.y, in_piece.position.z);
+		const vec3 = cameraPos.applyMatrix4((new THREE.Matrix4()).makeRotationX(angleX));
+		await in_world.motionViewFrom(vec3, 500);
 	}
 	async #playLastAction(in_reversi, in_colony, in_world) {
 		const last = in_reversi.getLast();
 		switch (last.action) {
 		case 'choose-item' :
 			const piece = in_colony.indexToPiece(last.row, last.col);
-			// move view
-			const cameraPos = in_world.getCameraPos();
-			const angleX = Math.atan2(cameraPos.y, cameraPos.z) - Math.atan2(piece.position.y, piece.position.z);
-			const vec3 = cameraPos.applyMatrix4((new THREE.Matrix4()).makeRotationX(angleX));
-			await in_world.motionViewFrom(vec3, 500);
+			await this.moveViewTo(piece, in_world);
 			// choose
 			setShellColor(piece, this.#mapping[last.who]);
 			await this.reversiToColonyDynamic(in_reversi, in_colony, in_world);
@@ -2047,13 +2077,20 @@ function initializeByLevel() {
 	const [level, loop] = curr.k.split('-');
 	const rowEdge = !loop;
 	const [rows, cols, players] = level.split('x');
-	gController = new cGameController(players);
+	const pc = 0;
+	gController = new cGameController(players, pc);
+	gController.setTableSize(rows, cols);
 	const table = gController.convertColonyTable(gColony);
 	gReversi = new cReversi(table, rowEdge, true);
 	gController.setTurnHook(async (in_player, in_color, in_pc) => {
 		gOrderChar.style.visibility = 'visible';
 		gOrderChar.src = RES.get(in_color);
 		if (in_pc) {
+			const last = gReversi.getLast(pc);
+			if (last) {
+				const piece = gColony.indexToPiece(last.row, last.col);
+				await gController.moveViewTo(piece, gWorld);
+			}
 			return;
 		}
 		await gController.npc(gReversi, gColony, gWorld);
@@ -2069,7 +2106,7 @@ function initializeByLevel() {
 
 (in_level => {
 	if (in_level === false) {
-		gMeshLevelMap.setOrder(11);
+		gMeshLevelMap.setOrder(0);
 	} else {
 		gMeshLevelMap.setOrder(in_level);
 	}
