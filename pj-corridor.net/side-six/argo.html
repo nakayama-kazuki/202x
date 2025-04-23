@@ -269,6 +269,14 @@ class cReversi {
 	}
 	static #dmz = 8;
 	static #empty = 9;
+	static #maxPlayers = 4;
+	static #validData = (() => {
+		const arr = [cReversi.#dmz, cReversi.#empty];
+		for (let player = 0; player < cReversi.#maxPlayers; player++) {
+			arr.push(player);
+		}
+		return arr;
+	})();
 	static #directions = [
 		[-1, -1],
 		[-1,  0],
@@ -279,7 +287,6 @@ class cReversi {
 		[+1,  0],
 		[+1, +1]
 	];
-	static #maxPlayers = 4;
 	static #priorityTop = +99;
 	static #priorityLast = -99;
 	static #ignore = Symbol();
@@ -288,6 +295,7 @@ class cReversi {
 		default : [],
 		current : []
 	};
+	#npcArgoPriority = [];
 	#history = [];
 	#conf = null;
 	#rotations = null;
@@ -342,6 +350,10 @@ class cReversi {
 		};
 		this.setTable(in_table);
 		this.#initAreaScores();
+		const argoArr = ['balance', 'spiteful', 'greedy', 'classic', 'beginner', 'monkey'];
+		for (let i = 0; i < argoArr.length; i++) {
+			this.#npcArgoPriority.push((argoArr.slice(0, i + 1))[arrRand]());
+		}
 	}
 	#indexToPos(in_ix) {
 		return {
@@ -617,6 +629,7 @@ class cReversi {
 	#phase() {
 		const total = this.#conf.row.size * this.#conf.col.size;
 		const remaining = this.#areaData.filter(in_el => in_el === cReversi.#empty).length;
+		// from 0.0x (!= 0) to 1
 		return 1 - remaining / total;
 	}
 	#searchCandidates(in_player) {
@@ -768,6 +781,13 @@ class cReversi {
 		this.#areaRestore(items);
 		return score;
 	}
+	#npc_phased_tactics(in_player, in_candArr) {
+		if (this.#phase() < 0.7) {
+			this.#npc_min_enemy_option(in_player, in_candArr);
+		} else {
+			this.#npc_max_owned_area(in_player, in_candArr);
+		}
+	}
 	#npc_min_enemy_option(in_player, in_candArr) {
 		const eval1st = (in_player, in_ix) => {
 			switch (this.#evaluate(in_player, in_ix)) {
@@ -777,7 +797,8 @@ class cReversi {
 				return cReversi.#priorityLast;
 			case 0 :
 			default :
-				return this.#countNextEnemyOption(in_player, in_ix) * -1 + this.#getAreaScore(in_player, in_ix);
+				// return this.#countNextEnemyOption(in_player, in_ix) * -1 + this.#getAreaScore(in_player, in_ix);
+				return this.#countNextEnemyOption(in_player, in_ix) * -1 + this.#calculateNextScore(in_player, in_ix) / 10;
 			}
 		};
 		const candArr_2nd = cReversi.#maximize(eval1st, in_player, in_candArr);
@@ -800,7 +821,8 @@ class cReversi {
 				return cReversi.#priorityLast;
 			case 0 :
 			default :
-				return this.#countNextOwnedArea(in_player, in_ix) + this.#getAreaScore(in_player, in_ix);
+				// return this.#countNextOwnedArea(in_player, in_ix) + this.#getAreaScore(in_player, in_ix);
+				return this.#countNextOwnedArea(in_player, in_ix) + this.#calculateNextScore(in_player, in_ix) / 10;
 			}
 		};
 		const candArr_2nd = cReversi.#maximize(eval1st, in_player, in_candArr);
@@ -844,8 +866,9 @@ class cReversi {
 		this.#choose(in_player, candArr_2nd[arrRand]());
 	}
 	#npcSet = {
+		balance : this.#npc_phased_tactics,
 		spiteful : this.#npc_min_enemy_option,
-		greedily : this.#npc_max_owned_area,
+		greedy : this.#npc_max_owned_area,
 		classic : this.#npc_max_score,
 		beginner : this.#npc_strong_random,
 		monkey : this.#npc_weak_random
@@ -1005,11 +1028,7 @@ class cReversi {
 		if (in_argo) {
 			npcArgo = in_argo;
 		} else {
-			if (playerCnt > 2) {
-				npcArgo = ['spiteful', 'greedily', 'classic'][arrRand]();
-			} else {
-				npcArgo = 'spiteful';
-			}
+			npcArgo = this.#npcArgoPriority[in_player];
 		}
 		// console.log(in_player, npcAlive, playerCnt, npcArgo);
 		const candidates = this.#searchCandidates(in_player);
@@ -1037,14 +1056,14 @@ class cReversi {
 	canColWiseLoop() {
 		return !this.#conf.col.edge;
 	}
-	getLast(in_player = -1) {
-		const lastIndex = this.#history.length - 1;
-		if (in_player < 0) {
-			return this.#history[lastIndex];
-		}
-		for (let i = lastIndex; i >= 0; i--) {
-			if (this.#history[i].who === in_player) {
-				return this.#history[i];
+	getLast(in_conditions = {}) {
+		// in_conditions : {who, action, row, col, target, delta}
+		for (let i = this.#history.length - 1; i >= 0; i--) {
+			const last = this.#history[i];
+			if (Object.keys(in_conditions).some(in_key => in_conditions[in_key] !== last[in_key])) {
+				continue;
+			} else {
+				return last;
 			}
 		}
 		return null;
@@ -1061,15 +1080,10 @@ class cReversi {
 		return table;
 	}
 	setTable(in_table) {
-		// 0, 1, 2, ..., cReversi.#maxPlayers - 1, cReversi.#dmz, cReversi.#empty
-		const acceptable = [cReversi.#dmz, cReversi.#empty];
-		for (let player = 0; player < cReversi.#maxPlayers; player++) {
-			acceptable.push(player);
-		}
 		for (let row = 0; row < in_table.length; row++) {
 			for (let col = 0; col < in_table[row].length; col++) {
 				const item = in_table[row][col];
-				if (acceptable.indexOf(item) < 0) {
+				if (cReversi.#validData.indexOf(item) < 0) {
 					throw new Error('invalid input');
 				} else {
 					this.#setItemByPos(row, col, item);
@@ -1093,29 +1107,36 @@ class cReversi {
 			finished : false,
 			players : []
 		};
-		condition.finished = true;
-		let alive = 0;
+		const canRotate = !(this.#conf.row.edge && this.#conf.col.edge);
+		const cnt = {
+			activePlayer : 0,
+			frozenPlayer : 0
+		};
 		for (let player = 0; player < cReversi.#maxPlayers; player++) {
-			let dead, frozen, score;
-			dead = (this.#areaData.indexOf(player) === -1);
+			let score, dead, frozen;
+			score = (this.#areaData.filter(in_el => in_el === player)).length;
+			dead = (score === 0);
 			if (dead) {
 				frozen = true;
-				score= 0;
 			} else {
-				alive++;
-				if ((this.#searchCandidates(player)).length > 0) {
+				const candidates = (this.#searchCandidates(player)).length;
+				if ((candidates > 0) || canRotate) {
+					cnt.activePlayer++;
 					frozen = false;
-					condition.finished = false;
 				} else {
+					cnt.frozenPlayer++;
 					frozen = true;
 				}
-				score = (this.#areaData.filter(in_el => in_el === player)).length;
 			}
-			condition.players.push({dead : dead, frozen : frozen, score : score});
+			condition.players[player] = {score : score, dead : dead, frozen : frozen};
 		}
-		if ((alive > 1) && !(this.#conf.row.edge && this.#conf.col.edge)) {
-			condition.finished = false;
-		}
+		condition.finished =
+			// only 1 player is active
+			(cnt.activePlayer + cnt.frozenPlayer === 1) ||
+			// all players are frozen
+			(cnt.activePlayer === 0) ||
+			// there is no emply
+			(this.#phase() === 1);
 		return condition;
 	}
 }
@@ -1153,7 +1174,7 @@ const table3 = [
 	[9, 9, 9, 9, 9, 9, 9]
 ];
 
-const game = new cReversi(table2, false, true);
+const game = new cReversi(table2, true, true);
 console.time('_simulation');
 game._simulation();
 console.timeEnd('_simulation');
