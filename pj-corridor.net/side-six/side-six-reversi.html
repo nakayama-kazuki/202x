@@ -623,7 +623,7 @@ class cReversi {
 			if (edge && repl) {
 				for (let i = 0; i < edge.length; i++) {
 					const index = repl[i];
-					const newScore = +4;
+					const newScore = +2;
 					const owner = this.#getItemByIndex(edge[i]);
 					// 1. rollback to default
 					for (let player = 0; player < cReversi.#maxPlayers; player++) {
@@ -763,8 +763,8 @@ class cReversi {
 		*/
 		const cornerScore = [];
 		const format = [
-			[+36,  -9, +3],
-			[ -9, -18, -2],
+			[+35,  -9, +3],
+			[ -9, -15, -2],
 			[ +3,  -2, +1],
 		];
 		Object.keys(this.#conf.corners).forEach(in_angleKey => {
@@ -772,7 +772,7 @@ class cReversi {
 		});
 	}
 	#initDefaultAreaScoresEdge1() {
-		const format = [+5, -4, +2];
+		const format = [+4, -3, +2];
 		if (this.#conf.row.edge) {
 			for (let delta = 0; delta < format.length; delta++) {
 				const edge1 = delta;
@@ -1448,237 +1448,404 @@ const gMeshLevelMap = ((in_diameter) => {
 	const G = GREEN;
 	const D = DMZCOLOR;
 	const E = EMPTYCOLOR;
-	const shellInfo = [
-		{
-			name : '6x6x2',
-			table : [
-				[E,E,E,E,E,E],
-				[E,E,E,E,E,E],
-				[E,E,B,R,E,E],
-				[E,E,R,B,E,E],
-				[E,E,E,E,E,E],
-				[E,E,E,E,E,E],
-				[D,D,D,D,D,D],
-				[D,D,D,D,D,D],
-				[D,D,D,D,D,D],
-				[D,D,D,D,D,D],
-				[D,D,D,D,D,D],
-				[D,D,D,D,D,D]
-			]
-		},
-		{
-			name : '6x6x4',
-			table : [
-				[E,E,E,E,E,E],
-				[E,E,E,G,E,E],
-				[E,Y,B,R,E,E],
-				[E,E,G,Y,B,E],
-				[E,E,R,E,E,E],
-				[E,E,E,E,E,E],
-				[D,D,D,D,D,D],
-				[D,D,D,D,D,D],
-				[D,D,D,D,D,D],
-				[D,D,D,D,D,D],
-				[D,D,D,D,D,D],
-				[D,D,D,D,D,D]
-			]
-		},
-		{
-			name : '12x6x2-loop',
-			table : [
-				[E,E,E,E,E,E],
-				[E,E,E,E,E,E],
-				[E,E,B,R,E,E],
-				[E,E,R,B,E,E],
-				[E,E,E,E,E,E],
-				[E,E,E,E,E,E],
-				[E,E,E,E,E,E],
-				[E,E,E,E,E,E],
-				[E,E,B,R,E,E],
-				[E,E,R,B,E,E],
-				[E,E,E,E,E,E],
-				[E,E,E,E,E,E]
-			]
-		},
-		{
-			name : '12x6x4-loop',
-			table : [
-				[E,E,E,E,E,E],
-				[E,E,E,E,E,E],
-				[E,E,B,R,E,E],
-				[E,E,R,B,E,E],
-				[E,E,E,E,E,E],
-				[E,E,E,E,E,E],
-				[E,E,E,E,E,E],
-				[E,E,E,E,E,E],
-				[E,E,Y,G,E,E],
-				[E,E,G,Y,E,E],
-				[E,E,E,E,E,E],
-				[E,E,E,E,E,E]
-			]
-		},
-		{
-			name : '7x7x2',
-			table : [
-				[E,E,E,E,E,E,E],
-				[E,E,E,E,E,E,E],
-				[E,E,R,B,B,E,E],
-				[E,E,R,D,B,E,E],
-				[E,E,R,R,B,E,E],
-				[E,E,E,E,E,E,E],
-				[E,E,E,E,E,E,E],
-				[D,D,D,D,D,D,D],
-				[D,D,D,D,D,D,D],
-				[D,D,D,D,D,D,D],
-				[D,D,D,D,D,D,D],
-				[D,D,D,D,D,D,D],
-				[D,D,D,D,D,D,D],
-				[D,D,D,D,D,D,D]
-			]
-		},
-		{
-			name : '7x7x4',
-			table : [
-				[E,E,E,E,E,E,E],
-				[E,E,E,Y,E,E,E],
-				[E,E,B,G,R,E,E],
-				[E,R,Y,D,B,E,E],
-				[E,E,G,R,Y,G,E],
-				[E,E,E,B,E,E,E],
-				[E,E,E,E,E,E,E],
-				[D,D,D,D,D,D,D],
-				[D,D,D,D,D,D,D],
-				[D,D,D,D,D,D,D],
-				[D,D,D,D,D,D,D],
-				[D,D,D,D,D,D,D],
-				[D,D,D,D,D,D,D],
-				[D,D,D,D,D,D,D]
-			]
-		},
-		{
-			name : '14x7x2-loop',
-			table : [
-				[E,E,E,E,E,E,E],
-				[E,E,E,E,E,E,E],
-				[E,E,R,B,B,E,E],
-				[E,E,R,D,B,E,E],
-				[E,E,R,R,B,E,E],
-				[E,E,E,E,E,E,E],
-				[E,E,E,E,E,E,E],
-				[E,E,E,E,E,E,E],
-				[E,E,E,E,E,E,E],
-				[E,E,B,R,R,E,E],
-				[E,E,B,D,R,E,E],
-				[E,E,B,B,R,E,E],
-				[E,E,E,E,E,E,E],
-				[E,E,E,E,E,E,E]
-			]
-		},
-		{
-			name : '14x7x4-loop',
-			table : [
-				[E,E,E,E,E,E,E],
-				[E,E,E,E,E,E,E],
-				[E,E,R,B,B,E,E],
-				[E,E,R,D,B,E,E],
-				[E,E,R,R,B,E,E],
-				[E,E,E,E,E,E,E],
-				[E,E,E,E,E,E,E],
-				[E,E,E,E,E,E,E],
-				[E,E,E,E,E,E,E],
-				[E,E,Y,G,G,E,E],
-				[E,E,Y,D,G,E,E],
-				[E,E,Y,Y,G,E,E],
-				[E,E,E,E,E,E,E],
-				[E,E,E,E,E,E,E]
-			]
-		},
-		{
-			name : '8x8x2',
-			table : [
-				[E,E,E,E,E,E,E,E],
-				[E,E,E,E,E,E,E,E],
-				[E,E,E,E,E,E,E,E],
-				[E,E,E,B,R,E,E,E],
-				[E,E,E,R,B,E,E,E],
-				[E,E,E,E,E,E,E,E],
-				[E,E,E,E,E,E,E,E],
-				[E,E,E,E,E,E,E,E],
-				[D,D,D,D,D,D,D,D],
-				[D,D,D,D,D,D,D,D],
-				[D,D,D,D,D,D,D,D],
-				[D,D,D,D,D,D,D,D],
-				[D,D,D,D,D,D,D,D],
-				[D,D,D,D,D,D,D,D],
-				[D,D,D,D,D,D,D,D],
-				[D,D,D,D,D,D,D,D]
-			]
-		},
-		{
-			name : '8x8x4',
-			table : [
-				[E,E,E,E,E,E,E,E],
-				[E,E,E,E,E,E,E,E],
-				[E,E,E,E,G,E,E,E],
-				[E,E,Y,B,R,E,E,E],
-				[E,E,E,G,Y,B,E,E],
-				[E,E,E,R,E,E,E,E],
-				[E,E,E,E,E,E,E,E],
-				[E,E,E,E,E,E,E,E],
-				[D,D,D,D,D,D,D,D],
-				[D,D,D,D,D,D,D,D],
-				[D,D,D,D,D,D,D,D],
-				[D,D,D,D,D,D,D,D],
-				[D,D,D,D,D,D,D,D],
-				[D,D,D,D,D,D,D,D],
-				[D,D,D,D,D,D,D,D],
-				[D,D,D,D,D,D,D,D]
-			]
-		},
-		{
-			name : '16x8x2-loop',
-			table : [
-				[E,E,E,E,D,D,E,E],
-				[E,E,E,E,E,E,E,E],
-				[E,E,E,E,E,E,E,E],
-				[E,E,E,B,R,E,E,E],
-				[E,E,E,R,B,E,E,E],
-				[E,E,E,E,E,E,E,E],
-				[E,E,E,E,E,E,E,E],
-				[E,E,D,D,E,E,E,E],
-				[E,E,D,D,E,E,E,E],
-				[E,E,E,E,E,E,E,E],
-				[E,E,E,E,E,E,E,E],
-				[E,E,E,B,R,E,E,E],
-				[E,E,E,R,B,E,E,E],
-				[E,E,E,E,E,E,E,E],
-				[E,E,E,E,E,E,E,E],
-				[E,E,E,E,D,D,E,E]
-			]
-		},
-		{
-			name : '16x8x4-loop',
-			table : [
-				[E,E,E,E,E,E,E,E],
-				[E,E,E,E,E,E,E,E],
-				[E,E,E,E,E,E,E,E],
-				[E,E,E,B,R,E,E,E],
-				[E,E,E,R,B,E,E,E],
-				[E,E,E,E,E,E,E,E],
-				[E,E,E,E,E,E,E,E],
-				[E,E,E,E,E,E,E,E],
-				[E,E,E,E,E,E,E,E],
-				[E,E,E,E,E,E,E,E],
-				[E,E,E,E,E,E,E,E],
-				[E,E,E,G,Y,E,E,E],
-				[E,E,E,Y,G,E,E,E],
-				[E,E,E,E,E,E,E,E],
-				[E,E,E,E,E,E,E,E],
-				[E,E,E,E,E,E,E,E]
-			]
-		}
+	let shellInfo;
+	switch (getParam('type')) {
+	case '4-loop' :
+		shellInfo = [
+			{
+				name : '12x6x4-loop',
+				table : [
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E],
+					[E,E,B,R,E,E],
+					[E,E,R,B,E,E],
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E],
 
-	];
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E],
+					[E,E,Y,G,E,E],
+					[E,E,G,Y,E,E],
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E]
+				]
+			},
+			{
+				name : '18x6x4-loop',
+				table : [
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E],
+					[E,E,E,G,E,E],
+					[E,Y,B,R,E,E],
+					[E,E,G,Y,B,E],
+
+					[E,E,R,E,E,E],
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E],
+					[E,E,E,Y,E,E],
+
+					[E,R,G,B,E,E],
+					[E,E,Y,R,G,E],
+					[E,E,B,E,E,E],
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E]
+				]
+			},
+			{
+				name : '16x8x4-loop',
+				table : [
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,B,R,E,E,E],
+					[E,E,E,R,B,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,Y,G,E,E,E],
+					[E,E,E,G,Y,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E]
+				]
+			},
+			{
+				name : '20x10x4-loop',
+				table : [
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,B,E,E,R,E,E,E],
+					[E,E,E,E,B,R,E,E,E,E],
+					[E,E,E,E,G,Y,E,E,E,E],
+					[E,E,E,G,E,E,Y,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,B,E,E,R,E,E,E],
+					[E,E,E,E,B,R,E,E,E,E],
+					[E,E,E,E,G,Y,E,E,E,E],
+					[E,E,E,G,E,E,Y,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E]
+				]
+			}
+		];
+		break;
+	case '2-loop' :
+		shellInfo = [
+			{
+				name : '12x6x2-loop',
+				table : [
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E],
+					[E,E,B,R,E,E],
+					[E,E,R,B,E,E],
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E],
+
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E],
+					[E,E,R,B,E,E],
+					[E,E,B,R,E,E],
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E]
+				]
+			},
+			{
+				name : '18x6x2-loop',
+				table : [
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E],
+					[E,E,B,D,E,E],
+					[E,E,B,B,E,E],
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E],
+
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E],
+					[E,E,B,R,E,E],
+					[E,E,R,B,E,E],
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E],
+
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E],
+					[E,E,R,R,E,E],
+					[E,E,D,R,E,E],
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E]
+				]
+			},
+			{
+				name : '16x8x2-loop',
+				table : [
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,B,R,E,E,E],
+					[E,E,E,R,B,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,R,B,E,E,E],
+					[E,E,E,B,R,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E]
+				]
+			},
+			{
+				name : '20x10x2-loop',
+				table : [
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,B,E,E,R,E,E,E],
+					[E,E,E,E,B,R,E,E,E,E],
+					[E,E,E,E,R,B,E,E,E,E],
+					[E,E,E,R,E,E,B,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,R,E,E,B,E,E,E],
+					[E,E,E,E,R,B,E,E,E,E],
+					[E,E,E,E,B,R,E,E,E,E],
+					[E,E,E,B,E,E,R,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E]
+				]
+			}
+		];
+		break;
+	case '4-non-loop' :
+		shellInfo = [
+			{
+				name : '6x6x4',
+				table : [
+					[E,E,E,E,E,E],
+					[E,E,E,G,E,E],
+					[E,Y,B,R,E,E],
+					[E,E,G,Y,B,E],
+					[E,E,R,E,E,E],
+					[E,E,E,E,E,E],
+
+					[D,D,D,D,D,D],
+					[D,D,D,D,D,D],
+					[D,D,D,D,D,D],
+					[D,D,D,D,D,D],
+					[D,D,D,D,D,D],
+					[D,D,D,D,D,D],
+
+					[D,D,D,D,D,D],
+					[D,D,D,D,D,D],
+					[D,D,D,D,D,D],
+					[D,D,D,D,D,D],
+					[D,D,D,D,D,D],
+					[D,D,D,D,D,D]
+				]
+			},
+			{
+				name : '12x6x4',
+				table : [
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E],
+					[E,E,B,R,E,E],
+					[E,E,G,Y,E,E],
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E],
+
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E],
+					[E,E,B,R,E,E],
+					[E,E,G,Y,E,E],
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E],
+
+					[D,D,D,D,D,D],
+					[D,D,D,D,D,D],
+					[D,D,D,D,D,D],
+					[D,D,D,D,D,D],
+					[D,D,D,D,D,D],
+					[D,D,D,D,D,D]
+				]
+			},
+			{
+				name : '8x8x4',
+				table : [
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,R,E,G,Y,E,E],
+					[E,E,Y,B,R,E,E,E],
+					[E,E,E,G,Y,B,E,E],
+					[E,E,B,R,E,G,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D]
+				]
+			},
+			{
+				name : '10x10x4',
+				table : [
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,G,E,E,E,E],
+					[E,E,E,Y,B,R,E,E,E,E],
+					[E,E,E,E,G,Y,B,E,E,E],
+					[E,E,E,E,R,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+
+					[D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D]
+				]
+			}
+		];
+		break;
+	case '2-non-loop' :
+	default :
+		shellInfo = [
+			{
+				name : '6x6x2',
+				table : [
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E],
+					[E,E,B,R,E,E],
+					[E,E,R,B,E,E],
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E],
+
+					[D,D,D,D,D,D],
+					[D,D,D,D,D,D],
+					[D,D,D,D,D,D],
+					[D,D,D,D,D,D],
+					[D,D,D,D,D,D],
+					[D,D,D,D,D,D],
+
+					[D,D,D,D,D,D],
+					[D,D,D,D,D,D],
+					[D,D,D,D,D,D],
+					[D,D,D,D,D,D],
+					[D,D,D,D,D,D],
+					[D,D,D,D,D,D]
+				]
+			},
+			{
+				name : '12x6x2',
+				table : [
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E],
+					[E,E,R,B,E,E],
+					[E,E,B,R,E,E],
+
+					[E,E,R,B,E,E],
+					[E,E,B,R,E,E],
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E],
+					[E,E,E,E,E,E],
+
+					[D,D,D,D,D,D],
+					[D,D,D,D,D,D],
+					[D,D,D,D,D,D],
+					[D,D,D,D,D,D],
+					[D,D,D,D,D,D],
+					[D,D,D,D,D,D]
+				]
+			},
+			{
+				name : '8x8x2',
+				table : [
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,B,R,E,E,E],
+					[E,E,E,R,B,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D]
+				]
+			},
+			{
+				name : '10x10x2',
+				table : [
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,B,E,D,R,E,E,E],
+					[E,E,E,D,B,R,E,E,E,E],
+					[E,E,E,E,R,B,D,E,E,E],
+					[E,E,E,R,D,E,B,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+
+					[D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D]
+				]
+			}
+		];
+		break;
+	}
 	shellInfo.forEach(in_shell => {
 		const radius = in_diameter / 2;
 		const circumf = in_diameter * Math.PI;
@@ -2201,7 +2368,7 @@ function initializeByLevel() {
 
 (in_level => {
 	if (in_level === false) {
-		gMeshLevelMap.setOrder(11);
+		gMeshLevelMap.setOrder(2);
 	} else {
 		gMeshLevelMap.setOrder(in_level);
 	}

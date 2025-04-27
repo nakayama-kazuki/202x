@@ -567,7 +567,7 @@ class cReversi {
 			if (edge && repl) {
 				for (let i = 0; i < edge.length; i++) {
 					const index = repl[i];
-					const newScore = +4;
+					const newScore = +2;
 					const owner = this.#getItemByIndex(edge[i]);
 					// 1. rollback to default
 					for (let player = 0; player < cReversi.#maxPlayers; player++) {
@@ -707,8 +707,8 @@ class cReversi {
 		*/
 		const cornerScore = [];
 		const format = [
-			[+36,  -9, +3],
-			[ -9, -18, -2],
+			[+35,  -9, +3],
+			[ -9, -15, -2],
 			[ +3,  -2, +1],
 		];
 		Object.keys(this.#conf.corners).forEach(in_angleKey => {
@@ -716,7 +716,7 @@ class cReversi {
 		});
 	}
 	#initDefaultAreaScoresEdge1() {
-		const format = [+5, -4, +2];
+		const format = [+4, -3, +2];
 		if (this.#conf.row.edge) {
 			for (let delta = 0; delta < format.length; delta++) {
 				const edge1 = delta;
