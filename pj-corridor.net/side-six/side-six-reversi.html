@@ -178,52 +178,14 @@ class cLineEvaluater {
 	static #evaluateLoop(in_items, in_player) {
 		return cLineEvaluater.#checkSafe(in_items, in_player, false);
 	}
-	static evaluate(in_items, in_player, in_ix, in_edge) {
-		const items = [...in_items];
-		items[in_ix] = in_player;
-		// flip if needed
-		([-1, +1]).forEach(in_direction => {
-			let ix = in_ix;
-			let enemyAppears = false;
-			let canFlip = false;
-			const indexes = [];
-			while (true) {
-				ix += in_direction;
-				if (in_edge) {
-					if ((ix < 0) || (items.length - 1 < ix)) {
-						break;
-					}
-				} else {
-					ix = (ix + items.length) % items.length;
-					if (ix === in_ix) {
-						break;
-					}
-				}
-				if (items[ix] === in_player) {
-					if (enemyAppears) {
-						canFlip = true;
-					}
-					break;
-				} else {
-					if (items[ix] === cLineEvaluater.#empty) {
-						break;
-					} else {
-						indexes.push(ix);
-						enemyAppears = true;
-					}
-				}
-			}
-			if (canFlip) {
-				indexes.forEach(in_filp_ix => items[in_filp_ix] = in_player);
-			}
-		});
+	static evaluate1(in_items1st, in_items2nd, in_player, in_noLoop) {
 		let eval1st, eval2nd;
-		if (in_edge) {
-			eval1st = in_items.indexOf(in_player) < 0 ? true : cLineEvaluater.#evaluatePath(in_items, in_player);
-			eval2nd = cLineEvaluater.#evaluatePath(items, in_player);
+		if (in_noLoop) {
+			eval1st = in_items1st.indexOf(in_player) < 0 ? true : cLineEvaluater.#evaluatePath(in_items1st, in_player);
+			eval2nd = in_items2nd.indexOf(in_player) < 0 ? true : cLineEvaluater.#evaluatePath(in_items2nd, in_player);
 		} else {
-			eval1st = in_items.indexOf(in_player) < 0 ? true : cLineEvaluater.#evaluateLoop(in_items, in_player);
-			eval2nd = cLineEvaluater.#evaluateLoop(items, in_player);
+			eval1st = in_items1st.indexOf(in_player) < 0 ? true : cLineEvaluater.#evaluateLoop(in_items1st, in_player);
+			eval2nd = in_items2nd.indexOf(in_player) < 0 ? true : cLineEvaluater.#evaluateLoop(in_items2nd, in_player);
 		}
 		if (eval1st) {
 			if (eval2nd) {
@@ -242,6 +204,48 @@ class cLineEvaluater {
 				return 0;
 			}
 		}
+
+	}
+	static evaluate2(in_items1st, in_ix, in_player, in_noLoop) {
+		const items2nd = [...in_items1st];
+		items2nd[in_ix] = in_player;
+		// flip if needed
+		([-1, +1]).forEach(in_direction => {
+			let ix = in_ix;
+			let enemyAppears = false;
+			let canFlip = false;
+			const indexes = [];
+			while (true) {
+				ix += in_direction;
+				if (in_noLoop) {
+					if ((ix < 0) || (items2nd.length - 1 < ix)) {
+						break;
+					}
+				} else {
+					ix = (ix + items2nd.length) % items2nd.length;
+					if (ix === in_ix) {
+						break;
+					}
+				}
+				if (items2nd[ix] === in_player) {
+					if (enemyAppears) {
+						canFlip = true;
+					}
+					break;
+				} else {
+					if (items2nd[ix] === cLineEvaluater.#empty) {
+						break;
+					} else {
+						indexes.push(ix);
+						enemyAppears = true;
+					}
+				}
+			}
+			if (canFlip) {
+				indexes.forEach(in_filp_ix => items2nd[in_filp_ix] = in_player);
+			}
+		});
+		return this.evaluate1(in_items1st, items2nd, in_player, in_noLoop);
 	}
 	static test() {
 		const p = 0;
@@ -288,7 +292,7 @@ class cLineEvaluater {
 			const ix = in_case.line.indexOf(x);
 			const text = in_case.line.toString() + (in_case.edge ? ' |' : ' -') + ' : ';
 			const line = in_case.line.map(in_item => in_item === x ? 9 : in_item);
-			const evaluated = cLineEvaluater.evaluate(line, p, ix, in_case.edge);
+			const evaluated = cLineEvaluater.evaluate2(line, ix, p, in_case.edge);
 			console.log(text, (evaluated === in_case.expected));
 		});
 	}
@@ -368,45 +372,75 @@ class cReversi {
 			col : {
 				size : colSize,
 				edge : in_colEdge
-			}
-		};
-		this.#rotations = {
-			angle000 : {
-				corner : {
-					row : 0,
-					col : 0
-				},
-				dirRow : +1,
-				dirCol : +1
 			},
-			angle090 : {
-				corner : {
-					row : 0,
-					col : colSize - 1
+			corners : {
+				angle000 : {
+					pos : {
+						row : 0,
+						col : 0
+					},
+					dirRow : +1,
+					dirCol : +1
 				},
-				dirRow : +1,
-				dirCol : -1
+				angle090 : {
+					pos : {
+						row : 0,
+						col : colSize - 1
+					},
+					dirRow : +1,
+					dirCol : -1
+				},
+				angle180 : {
+					pos : {
+						row : rowSize - 1,
+						col : colSize - 1
+					},
+					dirRow : -1,
+					dirCol : -1
+				},
+				angle270 : {
+					pos : {
+						row : rowSize - 1,
+						col : 0
+					},
+					dirRow : -1,
+					dirCol : +1
+				}
 			},
-			angle180 : {
-				corner : {
-					row : rowSize - 1,
-					col : colSize - 1
-				},
-				dirRow : -1,
-				dirCol : -1
-			},
-			angle270 : {
-				corner : {
-					row : rowSize - 1,
-					col : 0
-				},
-				dirRow : -1,
-				dirCol : +1
+			indexes : {
+				corner : [],
+				xSquare : [],
+				sameRow : [],
+				sameCol : []
 			}
 		};
 		this.setTable(in_table);
 		this.#initAreaScores();
-		const argoArr = ['balance', 'spiteful', 'greedy', 'classic', 'beginner', 'monkey'];
+		Object.keys(this.#conf.corners).forEach(in_angleKey => {
+			const angle = this.#conf.corners[in_angleKey];
+			this.#conf.indexes.corner.push(this.#posToIndex(
+				angle.pos.row,
+				angle.pos.col
+			));
+			// xSquare is neighbor to the corner on the diagonal
+			this.#conf.indexes.xSquare.push(this.#posToIndex(
+				angle.pos.row + angle.dirRow,
+				angle.pos.col + angle.dirCol
+			));
+		});
+		for (let row = 0; row < rowSize; row++) {
+			this.#conf.indexes.sameRow[row] = [];
+			for (let col = 0; col < colSize; col++) {
+				this.#conf.indexes.sameRow[row].push(this.#posToIndex(row, col));
+			}
+		}
+		for (let col = 0; col < colSize; col++) {
+			this.#conf.indexes.sameCol[col] = [];
+			for (let row = 0; row < rowSize; row++) {
+				this.#conf.indexes.sameCol[col].push(this.#posToIndex(row, col));
+			}
+		}
+		const argoArr = ['balance', 'spiteful', 'greedy', 'learner', 'classic', 'beginner', 'monkey'];
 		for (let i = 0; i < argoArr.length; i++) {
 			this.#npcArgoPriority.push((argoArr.slice(0, i + 1))[arrRand]());
 		}
@@ -420,10 +454,10 @@ class cReversi {
 	#posToIndex(in_row, in_col) {
 		return in_row * this.#conf.col.size + in_col;
 	}
-	#areaBackup() {
+	#copyAreaData() {
 		return [...this.#areaData];
 	}
-	#areaRestore(in_array) {
+	#restoreAreaData(in_array) {
 		this.#areaData = [...in_array];
 	}
 	#setItemByIndex(in_ix, in_item) {
@@ -438,24 +472,6 @@ class cReversi {
 	#getItemByPos(in_row, in_col) {
 		return this.#getItemByIndex(this.#posToIndex(in_row, in_col));
 	}
-	#sameRowIndexes(in_targetRow) {
-		const indexes = [];
-		let index = in_targetRow * this.#conf.col.size;
-		for (let i = 0; i < this.#conf.col.size; i++) {
-			indexes.push(index);
-			index += 1;
-		}
-		return indexes;
-	}
-	#sameColIndexes(in_targetCol) {
-		const indexes = [];
-		let index = in_targetCol;
-		for (let i = 0; i < this.#conf.row.size; i++) {
-			indexes.push(index);
-			index += this.#conf.col.size;
-		}
-		return indexes;
-	}
 	#items(in_indexes) {
 		const items = [];
 		in_indexes.forEach(in_ix => {
@@ -463,15 +479,9 @@ class cReversi {
 		});
 		return items;
 	}
-	#rowItems(in_targetRow) {
-		return this.#items(this.#sameRowIndexes(in_targetRow));
-	}
-	#colItems(in_targetCol) {
-		return this.#items(this.#sameColIndexes(in_targetCol));
-	}
 	#rotateItems(in_indexes, in_delta) {
 		const shifted = cReversi.#rotateArray(in_indexes, in_delta);
-		const copy = this.#areaBackup();
+		const copy = this.#copyAreaData();
 		for (let i = 0; i < in_indexes.length; i++) {
 			/*
 				for example ...
@@ -482,10 +492,12 @@ class cReversi {
 		}
 	}
 	#rotateSameRowItems(in_targetRow, in_deltaCol) {
-		this.#rotateItems(this.#sameRowIndexes(in_targetRow), in_deltaCol);
+		const sameRowIndexes = this.#conf.indexes.sameRow[in_targetRow];
+		this.#rotateItems(sameRowIndexes, in_deltaCol);
 	}
 	#rotateSameColItems(in_targetCol, in_deltaRow) {
-		this.#rotateItems(this.#sameColIndexes(in_targetCol), in_deltaRow);
+		const sameColIndexes = this.#conf.indexes.sameCol[in_targetCol];
+		this.#rotateItems(sameColIndexes, in_deltaRow);
 	}
 	#flipTowards(in_player, in_start_ix, in_dr, in_dc, in_flip = true) {
 		const {row : initRow, col : initCol} = this.#indexToPos(in_start_ix);
@@ -580,8 +592,8 @@ class cReversi {
 		});
 		if (this.#conf.row.edge && this.#conf.col.edge) {
 			// in case edge x2
-			const angleKey = Object.keys(this.#rotations).find(in_key => {
-				const corner = this.#rotations[in_key].corner;
+			const angleKey = Object.keys(this.#conf.corners).find(in_angleKey => {
+				const corner = this.#conf.corners[in_angleKey].pos;
 				return ((corner.row === pos.row) && (corner.col === pos.col));
 			});
 			if (angleKey) {
@@ -590,21 +602,22 @@ class cReversi {
 		} else {
 			// in case edge x1
 			let edge, repl;
+			const indexes = this.#conf.indexes;
 			if (this.#conf.row.edge) {
 				if (pos.row === 0) {
-					edge = this.#sameRowIndexes(0);
-					repl = this.#sameRowIndexes(1);
+					edge = indexes.sameRow[0];
+					repl = indexes.sameRow[1];
 				} else if (pos.row === this.#conf.row.size - 1) {
-					edge = this.#sameRowIndexes(pos.row);
-					repl = this.#sameRowIndexes(pos.row - 1);
+					edge = indexes.sameRow[pos.row];
+					repl = indexes.sameRow[pos.row - 1];
 				}
 			} else if (this.#conf.col.edge) {
 				if (pos.col === 0) {
-					edge = this.#sameColIndexes(0);
-					repl = this.#sameColIndexes(1);
+					edge = indexes.sameCol[0];
+					repl = indexes.sameCol[1];
 				} else if (pos.col === this.#conf.col.size - 1) {
-					edge = this.#sameColIndexes(pos.col);
-					repl = this.#sameColIndexes(pos.col - 1);
+					edge = indexes.sameCol[pos.col];
+					repl = indexes.sameCol[pos.col - 1];
 				}
 			}
 			if (edge && repl) {
@@ -637,7 +650,7 @@ class cReversi {
 			rowSet.add(row);
 			colSet.add(col);
 		}
-		const items = this.#areaBackup();
+		const backup = this.#copyAreaData();
 		const setting = {
 			row : {
 				action : 'npc-col-wise-rotate',
@@ -667,7 +680,7 @@ class cReversi {
 					return true;
 				}
 			}
-			this.#areaRestore(items);
+			this.#restoreAreaData(backup);
 			return false;
 		});
 		if (rotated) {
@@ -701,14 +714,14 @@ class cReversi {
 		return this.#areaScores.current[in_player][in_ix];
 	}
 	#updateScoresByAngle(io_areaScores, in_format, in_angleKey) {
-		const angle = this.#rotations[in_angleKey];
+		const angle = this.#conf.corners[in_angleKey];
 		for (let i = 0; i < in_format.length; i++) {
 			for (let j = 0; j < in_format[i].length; j++) {
 				if (in_format[i][j] === cReversi.#ignore) {
 					continue;
 				}
-				const row = angle.corner.row + i * angle.dirRow;
-				const col = angle.corner.col + j * angle.dirCol;
+				const row = angle.pos.row + i * angle.dirRow;
+				const col = angle.pos.col + j * angle.dirCol;
 				io_areaScores[this.#posToIndex(row, col)] = in_format[i][j];
 			}
 		}
@@ -732,8 +745,6 @@ class cReversi {
 		format[1][1] = newScore;
 		this.#updateScoresByAngle(this.#areaScores.current[in_player], format, in_angleKey);
 	}
-	#updateCurrentScoresEdge1(in_player, in_angleKey) {
-	}
 	#initAreaScores() {
 		this.#areaScores.default = new Array(this.#conf.row.size * this.#conf.col.size).fill(-1);
 		if (this.#conf.row.edge && this.#conf.col.edge) {
@@ -751,20 +762,17 @@ class cReversi {
 			asume this.#conf.col.size >= 6
 		*/
 		const cornerScore = [];
-		const PT = cReversi.#priorityTop;
-		const PL = cReversi.#priorityLast;
 		const format = [
-			[ PT, -15, +3],
-			[-15,  PL, -2],
+			[+36,  -9, +3],
+			[ -9, -18, -2],
 			[ +3,  -2, +1],
 		];
-		const angles = ['angle000', 'angle090', 'angle180', 'angle270'];
-		angles.forEach(in_angleKey => {
+		Object.keys(this.#conf.corners).forEach(in_angleKey => {
 			this.#updateScoresByAngle(this.#areaScores.default, format, in_angleKey);
 		});
 	}
 	#initDefaultAreaScoresEdge1() {
-		const format = [10, -4, 2];
+		const format = [+5, -4, +2];
 		if (this.#conf.row.edge) {
 			for (let delta = 0; delta < format.length; delta++) {
 				const edge1 = delta;
@@ -788,53 +796,112 @@ class cReversi {
 	}
 	#evaluate(in_player, in_ix) {
 		const pos = this.#indexToPos(in_ix);
-		let ixIsRowEdge = false;
-		let ixIsColEdge = false;
-		if ((this.#conf.row.edge) && ((pos.row === this.#conf.row.size - 1) || (pos.row === 0))) {
-			ixIsRowEdge = true;
-		}
-		if ((this.#conf.col.edge) && ((pos.col === this.#conf.col.size - 1) || (pos.col === 0))) {
-			ixIsColEdge = true;
-		}
-		let edgeIndexes;
+		const noLoop = this.#conf.row.edge && this.#conf.col.edge;
+		const ixIsEdge = in_dir => ((this.#conf[in_dir].edge) && ((pos[in_dir] === this.#conf[in_dir].size - 1) || (pos[in_dir] === 0)));
+		const ixIsRowEdge = ixIsEdge('row');
+		const ixIsColEdge = ixIsEdge('col');
+		/*
+			1. e (= edge) : check if area of edge is safe
+			2. x (= xSquare) : check if xSquare positions will be not changed
+		*/
+		const would = {
+			e : {
+				indexes : null,
+				currItems : [],
+				nextItems : [],
+				evaluated : 0
+			},
+			x : {
+				indexes : null,
+				currItems : [],
+				nextItems : [],
+				evaluated : 0
+			}
+		};
+		const indexes = this.#conf.indexes;
 		if (ixIsRowEdge) {
-			edgeIndexes = this.#sameRowIndexes(pos.row);
+			if (ixIsColEdge) {
+				// on the corner
+				return +1;
+			} else {
+				would.e.indexes = indexes.sameRow[pos.row];
+			}
 		} else {
 			if (ixIsColEdge) {
-				edgeIndexes = this.#sameColIndexes(pos.col);
+				would.e.indexes = indexes.sameCol[pos.col];
 			} else {
-				return 0;
+				// inside
+				if (!noLoop) {
+					return 0;
+				}
 			}
 		}
-		const index = edgeIndexes.indexOf(in_ix);
-		const edgeItems = this.#items(edgeIndexes);
-		return cLineEvaluater.evaluate(edgeItems, in_player, index, (this.#conf.row.edge && this.#conf.col.edge));
+		if (noLoop) {
+			would.x.indexes = [];
+			for (let i = 0; i < indexes.corner.length; i++) {
+				if (indexes.corner[i] === in_player) {
+					// does not need to check x
+					continue;
+				} else {
+					would.x.indexes.push(indexes.xSquare[i]);
+				}
+			}
+		}
+		if (would.e.indexes) {
+			would.e.currItems = this.#items(would.e.indexes);
+		}
+		if (would.x.indexes) {
+			would.x.currItems = this.#items(would.x.indexes);
+		}
+		const backup = this.#copyAreaData();
+		this.#choose(in_player, in_ix, false);
+		if (would.e.indexes) {
+			would.e.nextItems = this.#items(would.e.indexes);
+			would.e.evaluated = cLineEvaluater.evaluate1(would.e.currItems, would.e.nextItems, in_player, noLoop);
+		}
+		if (would.x.indexes) {
+			would.x.nextItems = this.#items(would.x.indexes);
+			would.x.evaluated = would.x.nextItems.every((in_item, in_ix) => in_item === would.x.currItems[in_ix]);
+			if (!would.x.nextItems.every((in_item, in_ix) => in_item === would.x.currItems[in_ix])) {
+				would.x.evaluated = -1;
+			}
+		}
+		this.#restoreAreaData(backup);
+		if (would.x.evaluated < 0) {
+			return -1;
+		} else {
+			return would.e.evaluated;
+		}
 	}
 	#countNextEnemyOption(in_player, in_ix) {
-		const items = this.#areaBackup();
+		const backup = this.#copyAreaData();
 		this.#choose(in_player, in_ix, false);
 		const player = (in_player + 1 + cReversi.#maxPlayers) % cReversi.#maxPlayers;
 		const count = this.#searchCandidates(player).length;
-		this.#areaRestore(items);
+		this.#restoreAreaData(backup);
 		return count;
 	}
 	#countNextOwnedArea(in_player, in_ix) {
-		const items = this.#areaBackup();
+		const backup = this.#copyAreaData();
 		this.#choose(in_player, in_ix, false);
 		const count = this.#areaData.filter(in_item => in_item === in_player).length;
-		this.#areaRestore(items);
+		this.#restoreAreaData(backup);
 		return count;
 	}
-	#calculateNextScore(in_player, in_ix) {
-		const items = this.#areaBackup();
-		this.#choose(in_player, in_ix, false);
+	#calculateScore(in_player) {
 		let score = 0;
 		for (let ix = 0; ix < this.#areaData.length; ix++) {
 			if (this.#areaData[ix] === in_player) {
 				score += this.#getAreaScore(in_player, ix);
 			}
 		}
-		this.#areaRestore(items);
+		return score;
+	}
+	#calculateNextScore(in_player, in_ix) {
+		const backup = this.#copyAreaData();
+		this.#choose(in_player, in_ix, false);
+		const score = this.#calculateScore(in_player);
+		this.#restoreAreaData(backup);
 		return score;
 	}
 	#npc_phased_tactics(in_player, in_candArr) {
@@ -853,14 +920,13 @@ class cReversi {
 				return cReversi.#priorityLast;
 			case 0 :
 			default :
-				// return this.#countNextEnemyOption(in_player, in_ix) * -1 + this.#getAreaScore(in_player, in_ix);
-				return this.#countNextEnemyOption(in_player, in_ix) * -1 + this.#calculateNextScore(in_player, in_ix) / 10;
+				return this.#getAreaScore(in_player, in_ix) + this.#countNextEnemyOption(in_player, in_ix) * -1;
 			}
 		};
 		const candArr_2nd = cReversi.#maximize(eval1st, in_player, in_candArr);
 		if (candArr_2nd.length > 1) {
 			const eval2nd = (in_player, in_ix) => {
-				return this.#countNextOwnedArea(in_player, in_ix) + this.#getAreaScore(in_player, in_ix);
+				return this.#countNextOwnedArea(in_player, in_ix);
 			};
 			const candArr_3rd = cReversi.#maximize(eval2nd, in_player, candArr_2nd);
 			this.#choose(in_player, candArr_3rd[arrRand]());
@@ -877,14 +943,13 @@ class cReversi {
 				return cReversi.#priorityLast;
 			case 0 :
 			default :
-				// return this.#countNextOwnedArea(in_player, in_ix) + this.#getAreaScore(in_player, in_ix);
-				return this.#countNextOwnedArea(in_player, in_ix) + this.#calculateNextScore(in_player, in_ix) / 10;
+				return this.#getAreaScore(in_player, in_ix) + this.#countNextOwnedArea(in_player, in_ix);
 			}
 		};
 		const candArr_2nd = cReversi.#maximize(eval1st, in_player, in_candArr);
 		if (candArr_2nd.length > 1) {
 			const eval2nd = (in_player, in_ix) => {
-				return this.#countNextEnemyOption(in_player, in_ix) * -1 + this.#getAreaScore(in_player, in_ix);
+				return this.#countNextEnemyOption(in_player, in_ix) * -1;
 			};
 			const candArr_3rd = cReversi.#maximize(eval2nd, in_player, candArr_2nd);
 			this.#choose(in_player, candArr_3rd[arrRand]());
@@ -892,7 +957,7 @@ class cReversi {
 			this.#choose(in_player, candArr_2nd[0]);
 		}
 	}
-	#npc_max_score(in_player, in_candArr) {
+	#npc_score_spot_smart(in_player, in_candArr) {
 		const eval1st = (in_player, in_ix) => {
 			switch (this.#evaluate(in_player, in_ix)) {
 			case +1 :
@@ -901,20 +966,27 @@ class cReversi {
 				return cReversi.#priorityLast;
 			case 0 :
 			default :
-				return this.#calculateNextScore(in_player, in_ix);
+				return this.#getAreaScore(in_player, in_ix);
 			}
 		};
 		const candArr_2nd = cReversi.#maximize(eval1st, in_player, in_candArr);
 		this.#choose(in_player, candArr_2nd[arrRand]());
 	}
-	#npc_strong_random(in_player, in_candArr) {
+	#npc_score_total(in_player, in_candArr) {
+		const eval1st = (in_player, in_ix) => {
+			return this.#calculateNextScore(in_player, in_ix);
+		};
+		const candArr_2nd = cReversi.#maximize(eval1st, in_player, in_candArr);
+		this.#choose(in_player, candArr_2nd[arrRand]());
+	}
+	#npc_score_spot(in_player, in_candArr) {
 		const eval1st = (in_player, in_ix) => {
 			return this.#getAreaScore(in_player, in_ix);
 		};
 		const candArr_2nd = cReversi.#maximize(eval1st, in_player, in_candArr);
 		this.#choose(in_player, candArr_2nd[arrRand]());
 	}
-	#npc_weak_random(in_player, in_candArr) {
+	#npc_random(in_player, in_candArr) {
 		const eval1st = (in_player, in_ix) => {
 			return 0;
 		};
@@ -925,11 +997,12 @@ class cReversi {
 		balance : this.#npc_phased_tactics,
 		spiteful : this.#npc_min_enemy_option,
 		greedy : this.#npc_max_owned_area,
-		classic : this.#npc_max_score,
-		beginner : this.#npc_strong_random,
-		monkey : this.#npc_weak_random
+		learner : this.#npc_score_spot_smart,
+		classic : this.#npc_score_total,
+		beginner : this.#npc_score_spot,
+		monkey : this.#npc_random
 	}
-	_simulation() {
+	_simulation(in_repeat = 30) {
 		const test = (in_argoArr) => {
 			let cnt = 100;
 			while (true) {
@@ -957,7 +1030,7 @@ class cReversi {
 			}
 			return winner;
 		};
-		const items = this.#areaBackup();
+		const backup = this.#copyAreaData();
 		// start simulation
 		const table = [];
 		table.push(['(vs)', ...Object.keys(this.#npcSet)]);
@@ -969,8 +1042,7 @@ class cReversi {
 					row.push('-');
 					return;
 				}
-				const repeat = 25;
-				let cnt = repeat;
+				let cnt = in_repeat;
 				let win = 0;
 				while (true) {
 					if (cnt-- > 0) {
@@ -978,16 +1050,16 @@ class cReversi {
 							win++;
 						}
 						this.#initAreaScores();
-						this.#areaRestore(items);
+						this.#restoreAreaData(backup);
 					} else {
 						break;
 					}
 				}
 				const digit = 2;
 				const order = 10 ** digit;
-				row.push(Math.floor(win / repeat * order) / order);
+				row.push(Math.floor(win / in_repeat * order) / order);
 				this.#initAreaScores();
-				this.#areaRestore(items);
+				this.#restoreAreaData(backup);
 			});
 			table.push(row);
 		});
