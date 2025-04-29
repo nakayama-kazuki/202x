@@ -420,7 +420,7 @@ class cReversi {
 						}
 					} else {
 						currRow = (currRow + sizeRow) % sizeRow;
-						if (currRow === initRow) {
+						if ((currRow === initRow) && (dr !== 0)) {
 							// cyclic
 							break;
 						}
@@ -433,7 +433,7 @@ class cReversi {
 						}
 					} else {
 						currCol = (currCol + sizeCol) % sizeCol;
-						if (currCol === initCol) {
+						if ((currCol === initCol) && (dc !== 0)) {
 							// cyclic
 							break;
 						}
