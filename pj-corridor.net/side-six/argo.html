@@ -93,7 +93,52 @@ class cLineEvaluater {
 				return false;
 			}
 		}
-		return safes.length > risks.length;
+		if (safes.length >= risks.length) {
+			return true;
+		} else {
+			if (subset.length < 3) {
+				return false;
+			}
+			const targets = [
+				{
+					edgeIx : 0,
+					emptyIx : 0,
+					neighbor : +1
+				},
+				{
+					edgeIx : subset.length - 1,
+					emptyIx : subset[subset.length - 1].length - 1,
+					neighbor : -1
+				}
+			];
+			return targets.some(in_target => {
+				/*
+					to find specific format ...
+					1. |E, x, x, x, o, E, o --> [E, x, x, x], [E]
+					2. o, E, o, x, x, x, E| --> [E], [x, x, x, E]
+				*/
+				const outerIx = in_target.edgeIx;
+				const innerIx = in_target.edgeIx + in_target.neighbor;
+				if ((subset[outerIx].length === 1) && (subset[innerIx].length !== 1)) {
+					return false;
+				}
+				if (subset[innerIx][0] !== cLineEvaluater.#empty) {
+					return false;
+				}
+				for (let i = 0; i < subset[outerIx].length; i++) {
+					if (i === in_target.emptyIx) {
+						if (subset[outerIx][i] !== cLineEvaluater.#empty) {
+							return false;
+						}
+					} else {
+						if (subset[outerIx][i] === cLineEvaluater.#empty) {
+							return false;
+						}
+					}
+				}
+				return true;
+			});
+		}
 	}
 	static evaluate1(in_items1st, in_items2nd, in_player, in_noLoop) {
 		let eval1st, eval2nd;
