@@ -83,235 +83,263 @@ import * as SOUND from 'sound';
 	the cReversi class is designed to implement NPC algorithms for the game of reversi.
 */
 
-class cLineEvaluater {
+class cLineParser {
 	static #empty = 9;
-	static #makeSubset(in_items, in_player) {
-		let index = 0;
-		const subset = [];
-		for (let i = 0; i < in_items.length; i++) {
-			if (!subset[index]) {
-				subset[index] = [];
-			}
-			if (in_items[i] === in_player) {
-				if (subset[index].length > 0) {
-					index++;
-				}
-			} else {
-				subset[index].push(in_items[i]);
-			}
-		}
-		const last = subset[subset.length - 1];
-		if (last.length === 0) {
-			// remove last
-			subset.pop();
-		}
-		return subset;
-	}
-	static #checkSafe(in_items, in_player, in_edge) {
-		if (in_items.indexOf(in_player) === -1) {
-			return true;
-		}
-		let decrement = 1;
-		if (!in_edge) {
-			// if check first + last
-			if (in_player === in_items[0]) {
-				decrement = 0;
-			}
-			if (in_player === in_items[in_items.length - 1]) {
-				decrement = 0;
-			}
-		}
-		// search safe pattern : both sides of in_player are the same
-		const subset = cLineEvaluater.#makeSubset(in_items, in_player);
-		const safes = [];
-		const risks = [];
-		for (let currIx = 0; currIx < subset.length - decrement; currIx++) {
-			const nextIx = (currIx + 1 + subset.length) % subset.length;
-			const currArr = subset[currIx];
-			const nextArr = subset[nextIx];
-			if (currArr[currArr.length - 1] === nextArr[0]) {
-				safes.push(currIx);
-			} else {
-				risks.push(currIx);
-			}
-		}
-		if (in_edge) {
-			const edgeRisk = ([0, subset.length - 1]).some(in_ix => {
-				if (!risks.includes(in_ix)) {
-					return false;
-				}
-				if (subset[in_ix].length > 1) {
-					return false;
-				}
-				return (subset[in_ix][0] === cLineEvaluater.#empty);
-			});
-			if (edgeRisk) {
-				return false;
-			}
-		}
-		if (safes.length >= risks.length) {
-			return true;
-		} else {
-			if (subset.length < 3) {
-				return false;
-			}
-			const targets = [
-				{
-					edgeIx : 0,
-					emptyIx : 0,
-					neighbor : +1
-				},
-				{
-					edgeIx : subset.length - 1,
-					emptyIx : subset[subset.length - 1].length - 1,
-					neighbor : -1
-				}
-			];
-			return targets.some(in_target => {
-				/*
-					to find specific format ...
-					1. |E, x, x, x, o, E, o --> [E, x, x, x], [E]
-					2. o, E, o, x, x, x, E| --> [E], [x, x, x, E]
-				*/
-				const outerIx = in_target.edgeIx;
-				const innerIx = in_target.edgeIx + in_target.neighbor;
-				if ((subset[outerIx].length === 1) && (subset[innerIx].length !== 1)) {
-					return false;
-				}
-				if (subset[innerIx][0] !== cLineEvaluater.#empty) {
-					return false;
-				}
-				for (let i = 0; i < subset[outerIx].length; i++) {
-					if (i === in_target.emptyIx) {
-						if (subset[outerIx][i] !== cLineEvaluater.#empty) {
-							return false;
-						}
-					} else {
-						if (subset[outerIx][i] === cLineEvaluater.#empty) {
-							return false;
-						}
-					}
-				}
+	static #findHighRisk(in_playerNodes) {
+		/*
+			L : |9,0,0,0,1  ---> [9], [1,x,x]
+			R :  1,0,0,0,9| ---> [x,x,1], [9]
+		*/
+		const playerL = in_playerNodes[0];
+		const playerR = in_playerNodes[in_playerNodes.length - 1];
+		if ((playerL.L.length === 1) &&
+			(playerL.L[0] === cLineParser.#empty)) {
+			if ((playerL.R.length > 0) &&
+				(playerL.R[0] !== cLineParser.#empty)) {
 				return true;
+			}
+		}
+		if ((playerR.R.length === 1) &&
+			(playerR.R[0] === cLineParser.#empty)) {
+			if ((playerR.L.length > 0) &&
+				(playerR.L[playerR.L.length - 1] !== cLineParser.#empty)) {
+				return true;
+			}
+		}
+		return false;
+	};
+	static #findPressureFormat(in_playerNodes) {
+		/*
+			L : |9,1,1,1,0,9,0  ---> [9,1,1,1], [9]
+			R :  0,9,0,1,1,1,9| ---> [9], [1,1,1,9]
+		*/
+		const playerL = in_playerNodes[0];
+		const playerR = in_playerNodes[in_playerNodes.length - 1];
+		if ((playerL.R.length === 1) &&
+			(playerL.R[0] === cLineParser.#empty)) {
+			if ((playerL.L.length > 1) &&
+				(playerL.L[0] === cLineParser.#empty)) {
+				if (playerL.L.filter(in_item => in_item === cLineParser.#empty).length === 1) {
+					// only playerL.L[0]
+					return true;
+				}
+			}
+		}
+		if ((playerR.L.length === 1) &&
+			(playerR.L[0] === cLineParser.#empty)) {
+			if ((playerR.R.length > 1) &&
+				(playerR.R[playerR.R.length - 1] === cLineParser.#empty)) {
+				if (playerR.R.filter(in_item => in_item === cLineParser.#empty).length === 1) {
+					// only playerR.R[playerR.R.length - 1]
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+	static parse(in_items, in_player, in_loop, in_debug = false) {
+		const parsed = {
+			fulfilledWithMe : true,
+			highriskForMe : false,
+			pressuredByMe : false,
+			safetyScore : 0
+		};
+		/*
+			(1) split array using in_player
+		*/
+		if (in_items.indexOf(in_player) === -1) {
+			parsed.fulfilledWithMe = false;
+			return parsed;
+		}
+		let playerCnt = 0;
+		let playerZone = false;
+		const subsets = [[]];
+		for (let i = 0; i < in_items.length; i++) {
+			if (in_items[i] === in_player) {
+				if (playerZone) {
+					continue;
+				}
+				playerZone = true;
+				subsets[++playerCnt] = [];
+			} else {
+				if (in_items[i] === cLineParser.#empty) {
+					parsed.fulfilledWithMe = false;
+				}
+				playerZone = false;
+				subsets[playerCnt].push(in_items[i]);
+			}
+		}
+		/*
+			(2) relate left side / right side to in_player
+		*/
+		const playerNodes = [];
+		for (let i = 0; i < playerCnt; i++) {
+			let L = subsets[i];
+			let R = subsets[i + 1];
+			playerNodes[i] = {L : L, R : R};
+		}
+		/*
+			(3) in case of loop / non-loop
+		*/
+		const playerL = playerNodes[0];
+		const playerR = playerNodes[playerCnt - 1];
+		if (in_loop) {
+			if ((playerL.L.length > 0) || (playerR.R.length > 0)) {
+				playerL.L = [...playerR.R, ...playerL.L];
+				playerR.R = playerL.L;
+			} else {
+				playerL.L = playerR.L;
+				playerNodes.pop();
+			}
+		} else {
+			parsed.highriskForMe = cLineParser.#findHighRisk(playerNodes);
+			parsed.pressuredByMe = cLineParser.#findPressureFormat(playerNodes);
+		}
+		/*
+			(4) calculate score
+		*/
+		let safe = 0;
+		let risk = 0;
+		if (!parsed.fulfilledWithMe) {
+			playerNodes.forEach(in_node => {
+				const L = in_node.L.length > 0 ? in_node.L[in_node.L.length - 1] : -1;
+				const R = in_node.R.length > 0 ? in_node.R[0] : -1;
+				if ((L === R) || (L < 0) || (R < 0)) {
+					safe++;
+				} else {
+					risk++;
+				}
 			});
 		}
-	}
-	static evaluate1(in_items1st, in_items2nd, in_player, in_noLoop) {
-		let eval1st, eval2nd;
-		if (in_noLoop) {
-			eval1st = cLineEvaluater.#checkSafe(in_items1st, in_player, true);
-			eval2nd = cLineEvaluater.#checkSafe(in_items2nd, in_player, true);
-		} else {
-			eval1st = cLineEvaluater.#checkSafe(in_items1st, in_player, false);
-			eval2nd = cLineEvaluater.#checkSafe(in_items2nd, in_player, false);
+		parsed.safetyScore = safe - risk;
+		if (in_debug) {
+			console.log(playerNodes, parsed);
 		}
-		if (eval1st) {
-			if (eval2nd) {
-				// safe ---> safe
-				return 0;
-			} else {
-				// safe ---> unsafe
-				return -1;
-			}
-		} else {
-			if (eval2nd) {
-				// unsafe ---> safe
-				return +1;
-			} else {
-				// unsafe ---> unsafe
-				return 0;
-			}
-		}
-
-	}
-	static evaluate2(in_items1st, in_ix, in_player, in_noLoop) {
-		const items2nd = [...in_items1st];
-		items2nd[in_ix] = in_player;
-		// flip if needed
-		([-1, +1]).forEach(in_direction => {
-			let ix = in_ix;
-			let enemyAppears = false;
-			let canFlip = false;
-			const indexes = [];
-			while (true) {
-				ix += in_direction;
-				if (in_noLoop) {
-					if ((ix < 0) || (items2nd.length - 1 < ix)) {
-						break;
-					}
-				} else {
-					ix = (ix + items2nd.length) % items2nd.length;
-					if (ix === in_ix) {
-						break;
-					}
-				}
-				if (items2nd[ix] === in_player) {
-					if (enemyAppears) {
-						canFlip = true;
-					}
-					break;
-				} else {
-					if (items2nd[ix] === cLineEvaluater.#empty) {
-						break;
-					} else {
-						indexes.push(ix);
-						enemyAppears = true;
-					}
-				}
-			}
-			if (canFlip) {
-				indexes.forEach(in_filp_ix => items2nd[in_filp_ix] = in_player);
-			}
-		});
-		return this.evaluate1(in_items1st, items2nd, in_player, in_noLoop);
+		return parsed;
 	}
 	static test() {
-		const p = 0;
-		const x = 'x';
-		const cases = [
+		const suites = [
+			{group : '*** 1. there is no pc ***'},
 
-			{line : [x,9,9,9,9,9,9,9], edge : true, expected : 0},
-			{line : [x,9,9,9,9,9,9,9], edge : false, expected : 0},
-			{line : [9,9,9,9,9,9,9,x], edge : true, expected : 0},
-			{line : [9,9,9,9,9,9,9,x], edge : false, expected : 0},
+				{items : [9,9,9,9,9,9,9,9], loop : false, safetyScore : 0, dp : false},
+				{items : [9,9,9,9,1,2,1,2], loop : false, safetyScore : 0, dp : false},
+				{items : [1,2,1,2,1,2,1,2], loop : false, safetyScore : 0, dp : false},
 
-			{line : [9,x,9,9,9,9,9,9], edge : true, expected : 0},
-			{line : [9,x,9,9,9,9,9,9], edge : false, expected : 0},
-			{line : [9,9,9,9,9,9,x,9], edge : true, expected : 0},
-			{line : [9,9,9,9,9,9,x,9], edge : false, expected : 0},
+				{items : [9,9,9,9,9,9,9,9], loop : true, safetyScore : 0, dp : false},
+				{items : [9,9,9,9,1,2,1,2], loop : true, safetyScore : 0, dp : false},
+				{items : [1,2,1,2,1,2,1,2], loop : true, safetyScore : 0, dp : false},
 
-			{line : [x,1,9,9,9,9,9,9], edge : true, expected : 0},
-			{line : [x,1,9,9,9,9,9,9], edge : false, expected : -1},
-			{line : [9,9,9,9,9,9,1,x], edge : true, expected : 0},
-			{line : [9,9,9,9,9,9,1,x], edge : false, expected : -1},
+			{group : '*** 2. no empty ***'},
 
-			{line : [x,1,0,9,9,9,9,9], edge : true, expected : +1},
-			{line : [x,1,0,9,9,9,9,9], edge : false, expected : +1},
-			{line : [9,9,9,9,9,0,1,x], edge : true, expected : +1},
-			{line : [9,9,9,9,9,0,1,x], edge : false, expected : +1},
+				{items : [0,0,0,0,0,0,0,0], loop : false, safetyScore : 0, dp : false},
+				{items : [1,2,1,2,0,0,0,0], loop : false, safetyScore : 0, dp : false},
 
-			{line : [x,1,0,9,9,9,9,1], edge : true, expected : +1},
-			{line : [x,1,0,9,9,9,9,1], edge : false, expected : 0},
-			{line : [1,9,9,9,9,0,1,x], edge : true, expected : +1},
-			{line : [1,9,9,9,9,0,1,x], edge : false, expected : 0},
+				{items : [0,0,0,0,0,0,0,0], loop : true, safetyScore : 0, dp : false},
+				{items : [1,2,1,2,0,0,0,0], loop : true, safetyScore : 0, dp : false},
 
-			{line : [9,9,0,1,x,1,9,9], edge : true, expected : 0},
-			{line : [9,9,0,1,x,1,9,9], edge : false, expected : 0},
-			{line : [9,9,1,x,1,0,9,9], edge : true, expected : 0},
-			{line : [9,9,1,x,1,0,9,9], edge : false, expected : 0},
+			{group : '*** 3. pc is on the left side ***'},
 
-			{line : [9,9,1,0,x,1,9,9], edge : true, expected : +1},
-			{line : [9,9,1,0,x,1,9,9], edge : false, expected : +1},
-			{line : [9,9,1,x,0,1,9,9], edge : true, expected : +1},
-			{line : [9,9,1,x,0,1,9,9], edge : false, expected : +1},
+				{items : [0,9,9,9,9,9,9,9], loop : false, safetyScore : 1, dp : false},
+				{items : [0,1,9,9,9,9,9,9], loop : false, safetyScore : 1, dp : false},
+				{items : [0,9,9,9,9,9,9,1], loop : false, safetyScore : 1, dp : false},
+				{items : [0,1,9,9,9,9,9,1], loop : false, safetyScore : 1, dp : false},
 
+				{items : [0,9,9,9,9,9,9,9], loop : true, safetyScore : 1, dp : false},
+				{items : [0,1,9,9,9,9,9,9], loop : true, safetyScore : -1, dp : false},
+				{items : [0,9,9,9,9,9,9,1], loop : true, safetyScore : -1, dp : false},
+				{items : [0,1,9,9,9,9,9,1], loop : true, safetyScore : 1, dp : false},
+				{items : [0,1,9,9,9,9,9,2], loop : true, safetyScore : -1, dp : false},
+
+			{group : '*** 4. pc is on the right side ***'},
+
+				{items : [9,9,9,9,9,9,9,0], loop : false, safetyScore : 1, dp : false},
+				{items : [9,9,9,9,9,9,1,0], loop : false, safetyScore : 1, dp : false},
+				{items : [1,9,9,9,9,9,9,0], loop : false, safetyScore : 1, dp : false},
+				{items : [1,9,9,9,9,9,1,0], loop : false, safetyScore : 1, dp : false},
+
+				{items : [9,9,9,9,9,9,9,0], loop : true, safetyScore : 1, dp : false},
+				{items : [9,9,9,9,9,9,1,0], loop : true, safetyScore : -1, dp : false},
+				{items : [1,9,9,9,9,9,9,0], loop : true, safetyScore : -1, dp : false},
+				{items : [1,0,9,9,9,9,1,0], loop : true, safetyScore : 0, dp : false},
+				{items : [2,0,9,9,9,9,1,0], loop : true, safetyScore : -2, dp : false},
+
+			{group : '*** 5. pc is on the both sides ***'},
+
+				{items : [0,9,9,9,9,9,9,0], loop : false, safetyScore : 2, dp : false},
+				{items : [0,1,9,9,9,9,9,0], loop : false, safetyScore : 2, dp : false},
+				{items : [0,9,9,9,9,9,1,0], loop : false, safetyScore : 2, dp : false},
+				{items : [0,1,9,9,9,9,1,0], loop : false, safetyScore : 2, dp : false},
+
+				{items : [0,9,9,9,9,9,9,0], loop : true, safetyScore : 1, dp : false},
+				{items : [0,1,9,9,9,9,9,0], loop : true, safetyScore : -1, dp : false},
+				{items : [0,9,9,9,9,9,1,0], loop : true, safetyScore : -1, dp : false},
+				{items : [0,1,9,9,9,9,1,0], loop : true, safetyScore : 1, dp : false},
+				{items : [0,2,9,9,9,9,1,0], loop : true, safetyScore : -1, dp : false},
+
+			{group : '*** 6. npc is on the both sides ***'},
+
+				{items : [1,9,9,9,9,9,9,1], loop : false, safetyScore : 0, dp : false},
+				{items : [1,0,9,9,9,9,9,1], loop : false, safetyScore : -1, dp : false},
+				{items : [1,9,9,9,9,9,0,1], loop : false, safetyScore : -1, dp : false},
+				{items : [1,0,9,9,9,9,0,1], loop : false, safetyScore : -2, dp : false},
+
+				{items : [1,9,9,9,9,9,9,1], loop : true, safetyScore : 0, dp : false},
+				{items : [1,0,9,9,9,9,9,1], loop : true, safetyScore : -1, dp : false},
+				{items : [1,9,9,9,9,9,0,1], loop : true, safetyScore : -1, dp : false},
+				{items : [1,0,9,9,9,9,0,1], loop : true, safetyScore : -2, dp : false},
+
+			{group : '*** 7. fulfilledWithMe ***'},
+
+				{items : [1,1,1,1,1,1,1,1], loop : false, fulfilledWithMe : false, dp : false},
+				{items : [1,1,1,9,0,1,1,1], loop : false, fulfilledWithMe : false, dp : false},
+				{items : [1,1,1,0,0,1,1,1], loop : false, fulfilledWithMe : true, dp : false},
+				{items : [0,0,0,0,0,0,0,0], loop : false, fulfilledWithMe : true, dp : false},
+				{items : [0,0,0,9,0,0,0,0], loop : false, fulfilledWithMe : false, dp : false},
+
+				{items : [1,1,1,1,1,1,1,1], loop : true, fulfilledWithMe : false, dp : false},
+				{items : [1,1,1,9,0,1,1,1], loop : true, fulfilledWithMe : false, dp : false},
+				{items : [1,1,1,0,0,1,1,1], loop : true, fulfilledWithMe : true, dp : false},
+				{items : [0,0,0,0,0,0,0,0], loop : true, fulfilledWithMe : true, dp : false},
+				{items : [0,0,0,9,0,0,0,0], loop : true, fulfilledWithMe : false, dp : false},
+
+			{group : '*** 8. highriskForMe ***'},
+
+				{items : [0,1,9,9,9,9,9,9], loop : false, highriskForMe : false, dp : false},
+				{items : [9,0,1,9,9,9,9,9], loop : false, highriskForMe : true, dp : false},
+				{items : [9,0,1,0,9,9,9,9], loop : false, highriskForMe : true, dp : false},
+				{items : [9,0,1,2,9,9,9,9], loop : false, highriskForMe : true, dp : false},
+				{items : [9,0,9,1,9,9,9,9], loop : false, highriskForMe : false, dp : false},
+
+				{items : [9,9,9,9,9,9,1,0], loop : false, highriskForMe : false, dp : false},
+				{items : [9,9,9,9,9,1,0,9], loop : false, highriskForMe : true, dp : false},
+				{items : [9,9,9,9,0,1,0,9], loop : false, highriskForMe : true, dp : false},
+				{items : [9,9,9,9,2,1,0,9], loop : false, highriskForMe : true, dp : false},
+				{items : [9,9,9,9,1,9,0,9], loop : false, highriskForMe : false, dp : false},
+
+			{group : '*** 9. pressuredByMe ***'},
+
+				{items : [9,1,0,9,0,9,9,9], loop : false, pressuredByMe : true, dp : false},
+				{items : [9,1,0,0,9,0,9,9], loop : false, pressuredByMe : true, dp : false},
+				{items : [9,1,1,0,9,0,9,9], loop : false, pressuredByMe : true, dp : false},
+				{items : [9,9,9,0,9,0,1,9], loop : false, pressuredByMe : true, dp : false},
+				{items : [9,9,0,9,0,0,1,9], loop : false, pressuredByMe : true, dp : false},
+				{items : [9,9,0,9,0,1,1,9], loop : false, pressuredByMe : true, dp : false}
 		];
-		cases.forEach(in_case => {
-			const ix = in_case.line.indexOf(x);
-			const text = in_case.line.toString() + (in_case.edge ? ' |' : ' -') + ' : ';
-			const line = in_case.line.map(in_item => in_item === x ? 9 : in_item);
-			const evaluated = cLineEvaluater.evaluate2(line, ix, p, in_case.edge);
-			console.log(text, (evaluated === in_case.expected));
+		suites.forEach(in_suite => {
+			if (in_suite.group) {
+				console.log(in_suite.group);
+			} else {
+				const parsed = cLineParser.parse(in_suite.items, 0, in_suite.loop, in_suite.dp);
+				Object.keys(parsed).forEach(in_prop => {
+					if (!in_suite.hasOwnProperty(in_prop)) {
+						return;
+					}
+					if (in_suite[in_prop] !== parsed[in_prop]) {
+						const loop = in_suite.loop ? ' (loop)' : '';
+						console.log('failed : ' + in_suite.items.join() + loop + ' is ' + parsed[in_prop]);
+					}
+				});
+			}
 		});
 	}
 }
@@ -368,10 +396,13 @@ class cReversi {
 	static #priorityTop = +99;
 	static #priorityLast = -99;
 	static #ignore = Symbol();
-	#areaData = [];
-	#areaScores = {
-		default : [],
-		current : []
+	#area = {
+		items : [],
+		options : new Set(),
+		scores : {
+			default : [],
+			players : []
+		}
 	};
 	#npcArgoPriority = [];
 	#history = [];
@@ -459,7 +490,7 @@ class cReversi {
 				this.#conf.indexes.sameCol[col].push(this.#posToIndex(row, col));
 			}
 		}
-		for (let ix = 0; ix < this.#areaData.length; ix++) {
+		for (let ix = 0; ix < this.#area.items.length; ix++) {
 			const {row : initRow, col : initCol} = this.#indexToPos(ix);
 			const radiating = this.#conf.indexes.radiating[ix] = [];
 			for (let dir = 0; dir < cReversi.#directions.length; dir++) {
@@ -505,6 +536,37 @@ class cReversi {
 		for (let i = 0; i < argoArr.length; i++) {
 			this.#npcArgoPriority.push((argoArr.slice(0, i + 1))[arrRand]());
 		}
+		this.#updateOptionsAll();
+	}
+	#updateOptions(in_ix) {
+		const radiating = this.#conf.indexes.radiating[in_ix];
+		radiating.forEach(in_towards => {
+			const aroundIx = in_towards[0];
+			if (this.#getItemByIndex(aroundIx) === cReversi.#empty) {
+				this.#area.options.add(aroundIx);
+			}
+		});
+		// in_ix should be new occupied position
+		this.#area.options.delete(in_ix);
+	}
+	#updateOptionsAll() {
+		this.#area.options.clear();
+		for (let ix = 0; ix < this.#area.items.length; ix++) {
+			if (this.#getItemByIndex(ix) === cReversi.#empty) {
+				continue;
+			}
+			this.#updateOptions(ix);
+		}
+	}
+	#createRollback() {
+		const backup = {
+			items : [...this.#area.items],
+			options : [...this.#area.options]
+		};
+		return () => {
+			this.#area.items = [...backup.items];
+			this.#area.options = new Set(backup.options);
+		};
 	}
 	#indexToPos(in_ix) {
 		return {
@@ -515,20 +577,14 @@ class cReversi {
 	#posToIndex(in_row, in_col) {
 		return in_row * this.#conf.col.size + in_col;
 	}
-	#copyAreaData() {
-		return [...this.#areaData];
-	}
-	#restoreAreaData(in_array) {
-		this.#areaData = [...in_array];
-	}
 	#setItemByIndex(in_ix, in_item) {
-		this.#areaData[in_ix] = in_item;
+		this.#area.items[in_ix] = in_item;
 	}
 	#setItemByPos(in_row, in_col, in_item) {
 		this.#setItemByIndex(this.#posToIndex(in_row, in_col), in_item);
 	}
 	#getItemByIndex(in_ix) {
-		return this.#areaData[in_ix];
+		return this.#area.items[in_ix];
 	}
 	#getItemByPos(in_row, in_col) {
 		return this.#getItemByIndex(this.#posToIndex(in_row, in_col));
@@ -542,7 +598,7 @@ class cReversi {
 	}
 	#rotateItems(in_indexes, in_delta) {
 		const shifted = cReversi.#rotateArray(in_indexes, in_delta);
-		const copy = this.#copyAreaData();
+		const copy = [...this.#area.items];
 		for (let i = 0; i < in_indexes.length; i++) {
 			/*
 				for example ...
@@ -562,7 +618,7 @@ class cReversi {
 	}
 	#flip(in_player, in_ix, in_test = false) {
 		const radiating = this.#conf.indexes.radiating[in_ix];
-		let choosable = false;
+		let flipped = false;
 		for (let i = 0; i < radiating.length; i++) {
 			const towards = radiating[i];
 			const ixArr = [];
@@ -575,7 +631,7 @@ class cReversi {
 						if (in_test) {
 							return true;
 						} else {
-							choosable = true;
+							flipped = true;
 							ixArr.forEach(in_flipped_ix => this.#setItemByIndex(in_flipped_ix, in_player));
 						}
 					}
@@ -590,8 +646,9 @@ class cReversi {
 				}
 			}
 		}
-		if (choosable) {
+		if (flipped) {
 			this.#setItemByIndex(in_ix, in_player);
+			this.#updateOptions(in_ix);
 			return true;
 		} else {
 			return false;
@@ -604,6 +661,7 @@ class cReversi {
 	#choose(in_player, in_ix) {
 		// in_ix must be choosable
 		this.#flip(in_player, in_ix);
+		this.#updatePlayersAreaScores(in_player, in_ix);
 		const pos = this.#indexToPos(in_ix);
 		this.#history.push({
 			who : in_player,
@@ -613,58 +671,12 @@ class cReversi {
 			target : -1,
 			delta : -1
 		});
-		if (this.#conf.row.edge && this.#conf.col.edge) {
-			// in case edge x2
-			const angleKey = Object.keys(this.#conf.corners).find(in_angleKey => {
-				const corner = this.#conf.corners[in_angleKey].pos;
-				return ((corner.row === pos.row) && (corner.col === pos.col));
-			});
-			if (angleKey) {
-				this.#updateCurrentScoresEdge2(in_player, angleKey);
-			}
-		} else {
-			// in case edge x1
-			let edge, repl;
-			const indexes = this.#conf.indexes;
-			if (this.#conf.row.edge) {
-				if (pos.row === 0) {
-					edge = indexes.sameRow[0];
-					repl = indexes.sameRow[1];
-				} else if (pos.row === this.#conf.row.size - 1) {
-					edge = indexes.sameRow[pos.row];
-					repl = indexes.sameRow[pos.row - 1];
-				}
-			} else if (this.#conf.col.edge) {
-				if (pos.col === 0) {
-					edge = indexes.sameCol[0];
-					repl = indexes.sameCol[1];
-				} else if (pos.col === this.#conf.col.size - 1) {
-					edge = indexes.sameCol[pos.col];
-					repl = indexes.sameCol[pos.col - 1];
-				}
-			}
-			if (edge && repl) {
-				for (let i = 0; i < edge.length; i++) {
-					const index = repl[i];
-					const newScore = +3;
-					const owner = this.#getItemByIndex(edge[i]);
-					// 1. rollback to default
-					for (let player = 0; player < cReversi.#maxPlayers; player++) {
-						this.#areaScores.current[player][index] = this.#areaScores.default[index];
-					}
-					// 2. update for owner
-					if (owner < cReversi.#maxPlayers) {
-						this.#areaScores.current[owner][index] = newScore;
-					}
-				}
-			}
-		}
 		// this._debug();
 	}
 	#npcTryRotate(in_player, in_dir) {
 		const rowSet = new Set();
 		const colSet = new Set();
-		for (let ix = 0; ix < this.#areaData.length; ix++) {
+		for (let ix = 0; ix < this.#area.items.length; ix++) {
 			if (this.#getItemByIndex(ix) !== in_player) {
 				continue;
 			}
@@ -673,7 +685,6 @@ class cReversi {
 			rowSet.add(row);
 			colSet.add(col);
 		}
-		const backup = this.#copyAreaData();
 		const setting = {
 			row : {
 				action : 'npc-col-wise-rotate',
@@ -691,6 +702,7 @@ class cReversi {
 		// this algorithm can be improved
 		const {action, targetArr, rotateFunc, maxCnt} = setting[in_dir];
 		let target, delta;
+		const rollback = this.#createRollback();
 		let rotated = targetArr.some(in_target => {
 			target = in_target;
 			let rest = maxCnt;
@@ -703,10 +715,11 @@ class cReversi {
 					return true;
 				}
 			}
-			this.#restoreAreaData(backup);
+			(rollback)();
 			return false;
 		});
 		if (rotated) {
+			this.#updateOptionsAll();
 			this.#history.push({
 				who : in_player,
 				action : action,
@@ -720,24 +733,21 @@ class cReversi {
 	}
 	#phase() {
 		const total = this.#conf.row.size * this.#conf.col.size;
-		const remaining = this.#areaData.filter(in_el => in_el === cReversi.#empty).length;
+		const remaining = this.#area.items.filter(in_el => in_el === cReversi.#empty).length;
 		// from 0.0x (!= 0) to 1
 		return 1 - remaining / total;
 	}
 	#searchCandidates(in_player) {
 		const candidates = [];
-		for (let ix = 0; ix < this.#areaData.length; ix++) {
-			if (this.#getItemByIndex(ix) !== cReversi.#empty) {
-				continue;
+		this.#area.options.forEach(in_empty_ix => {
+			if (this.#flippable(in_player, in_empty_ix)) {
+				candidates.push(in_empty_ix);
 			}
-			if (this.#flippable(in_player, ix)) {
-				candidates.push(ix);
-			}
-		}
+		});
 		return candidates;
 	}
 	#getAreaScore(in_player, in_ix) {
-		return this.#areaScores.current[in_player][in_ix];
+		return this.#area.scores.players[in_player][in_ix];
 	}
 	#updateScoresByAngle(io_areaScores, in_format, in_angleKey) {
 		const angle = this.#conf.corners[in_angleKey];
@@ -752,8 +762,70 @@ class cReversi {
 			}
 		}
 	}
-	#updateCurrentScoresEdge2(in_player, in_angleKey) {
+	#initAreaScores() {
+		// default
+		this.#area.scores.default = new Array(this.#conf.row.size * this.#conf.col.size).fill(-1);
+		this.#initDefaultAreaScores();
+		// players
+		for (let player = 0; player < cReversi.#maxPlayers; player++) {
+			this.#area.scores.players[player] = [...this.#area.scores.default];
+		}
+	}
+	#initDefaultAreaScores() {
+		if (this.#conf.row.edge) {
+			if (this.#conf.col.edge) {
+				this.#initDefaultAreaScoresEx2();
+			} else {
+				this.#initDefaultAreaScoresEx1();
+			}
+		} else {
+			if (this.#conf.col.edge) {
+				this.#initDefaultAreaScoresEx1();
+			} else {
+				this.#initDefaultAreaScoresEx0();
+			}
+		}
+	}
+	#updatePlayersAreaScores(in_player, in_ix) {
+		if (this.#conf.row.edge) {
+			if (this.#conf.col.edge) {
+				this.#updatePlayersAreaScoresEx2(in_player, in_ix);
+			} else {
+				this.#updatePlayersAreaScoresEx1(in_player, in_ix);
+			}
+		} else {
+			if (this.#conf.col.edge) {
+				this.#updatePlayersAreaScoresEx1(in_player, in_ix);
+			} else {
+				this.#updatePlayersAreaScoresEx0(in_player, in_ix);
+			}
+		}
+	}
+	#initDefaultAreaScoresEx2() {
+		const newScore = [
+			[+35,  -4, +2, +1],
+			[ -4, -10, -2,  0],
+			[ +2,  -2,  1, -1],
+			[ +1,   0, -1, -1],
+		];
+		const size = Math.min(newScore.length, Math.floor(Math.min(this.#conf.row.size, this.#conf.col.size) / 2));
+		const format = newScore.slice(0, size).map(in_row => in_row.slice(0, size));
+		this.#updateScoresByAngle(this.#area.scores.default, format, 'angle000');
+		this.#updateScoresByAngle(this.#area.scores.default, format, 'angle090');
+		this.#updateScoresByAngle(this.#area.scores.default, format, 'angle180');
+		this.#updateScoresByAngle(this.#area.scores.default, format, 'angle270');
+	}
+	#updatePlayersAreaScoresEx2(in_player, in_ix) {
 		const newScore = +4;
+		const pos = this.#indexToPos(in_ix);
+		const angleKey = Object.keys(this.#conf.corners).find(in_angleKey => {
+			const corner = this.#conf.corners[in_angleKey].pos;
+			return ((corner.row === pos.row) && (corner.col === pos.col));
+		});
+		if (!angleKey) {
+			// in_ix is not on the corner
+			return;
+		}
 		const format = [];
 		const size = Math.min(this.#conf.row.size, this.#conf.col.size);
 		for (let row = 0; row < size; row++) {
@@ -762,63 +834,78 @@ class cReversi {
 				if ((row !== 0) && (col !== 0)) {
 					continue;
 				}
-				const score = this.#areaScores.current[in_player][this.#posToIndex(row, col)];
+				const score = this.#area.scores.players[in_player][this.#posToIndex(row, col)];
 				if (newScore > score) {
 					format[row][col] = newScore;
 				}
 			}
 		}
 		format[1][1] = newScore;
-		this.#updateScoresByAngle(this.#areaScores.current[in_player], format, in_angleKey);
+		this.#updateScoresByAngle(this.#area.scores.players[in_player], format, angleKey);
 	}
-	#initAreaScores() {
-		this.#areaScores.default = new Array(this.#conf.row.size * this.#conf.col.size).fill(-1);
-		if (this.#conf.row.edge && this.#conf.col.edge) {
-			this.#initDefaultAreaScoresEdge2();
-		} else if (this.#conf.row.edge || this.#conf.col.edge) {
-			this.#initDefaultAreaScoresEdge1();
-		}
-		for (let player = 0; player < cReversi.#maxPlayers; player++) {
-			this.#areaScores.current[player] = [...this.#areaScores.default];
-		}
-	}
-	#initDefaultAreaScoresEdge2() {
-		/*
-			asume this.#conf.row.size >= 6
-			asume this.#conf.col.size >= 6
-		*/
-		const cornerScore = [];
-		const format = [
-			[+35,  -4, +2],
-			[ -4, -10, -2],
-			[ +2,  -2,  0]
-		];
-		Object.keys(this.#conf.corners).forEach(in_angleKey => {
-			this.#updateScoresByAngle(this.#areaScores.default, format, in_angleKey);
-		});
-	}
-	#initDefaultAreaScoresEdge1() {
-		const format = [+4, -3, +2];
+	#initDefaultAreaScoresEx1() {
+		const newScore = [+4, -3, +2];
+		let format = [];
 		if (this.#conf.row.edge) {
-			for (let delta = 0; delta < format.length; delta++) {
-				const edge1 = delta;
-				const edge2 = this.#conf.row.size - 1 - delta;
-				for (let col = 0; col < this.#conf.col.size; col++) {
-					this.#areaScores.default[this.#posToIndex(edge1, col)] = format[delta];
-					this.#areaScores.default[this.#posToIndex(edge2, col)] = format[delta];
-				}
-			}
-		} else {
-			// this.#conf.col.edge
-			for (let delta = 0; delta < format.length; delta++) {
-				const edge1 = delta;
-				const edge2 = this.#conf.col.size - 1 - delta;
-				for (let row = 0; row < this.#conf.row.size; row++) {
-					this.#areaScores.default[this.#posToIndex(row, edge1)] = format[delta];
-					this.#areaScores.default[this.#posToIndex(row, edge2)] = format[delta];
-				}
+			for (let row = 0; row < newScore.length; row++) {
+				format[row] = new Array(this.#conf.col.size).fill(newScore[row]);
 			}
 		}
+		if (this.#conf.col.edge) {
+			for (let row = 0; row < this.#conf.row.size; row++) {
+				format[row] = [...newScore];
+			}
+		}
+		this.#updateScoresByAngle(this.#area.scores.default, format, 'angle000');
+		this.#updateScoresByAngle(this.#area.scores.default, format, 'angle180');
+	}
+	#updatePlayersAreaScoresEx1(in_player, in_ix) {
+		const newScore = +3;
+		const pos = this.#indexToPos(in_ix);
+		let edge, repl;
+		const indexes = this.#conf.indexes;
+		if (this.#conf.row.edge) {
+			if (pos.row === 0) {
+				edge = indexes.sameRow[pos.row];
+				repl = indexes.sameRow[pos.row + 1];
+			} else if (pos.row === this.#conf.row.size - 1) {
+				edge = indexes.sameRow[pos.row];
+				repl = indexes.sameRow[pos.row - 1];
+			} else {
+				// in_ix is not on the row-edge
+				return;
+			}
+		}
+		if (this.#conf.col.edge) {
+			if (pos.col === 0) {
+				edge = indexes.sameRow[pos.col];
+				repl = indexes.sameRow[pos.col + 1];
+			} else if (pos.col === this.#conf.col.size - 1) {
+				edge = indexes.sameRow[pos.col];
+				repl = indexes.sameRow[pos.col - 1];
+			} else {
+				// in_ix is not on the col-edge
+				return;
+			}
+		}
+		for (let i = 0; i < edge.length; i++) {
+			const index = repl[i];
+			const owner = this.#getItemByIndex(edge[i]);
+			// 1. rollback to default
+			for (let player = 0; player < cReversi.#maxPlayers; player++) {
+				this.#area.scores.players[player][index] = this.#area.scores.default[index];
+			}
+			// 2. update for owner
+			if (owner < cReversi.#maxPlayers) {
+				this.#area.scores.players[owner][index] = newScore;
+			}
+		}
+	}
+	#initDefaultAreaScoresEx0() {
+		return;
+	}
+	#updatePlayersAreaScoresEx0(in_player, in_ix) {
+		return;
 	}
 	#evaluate(in_player, in_ix) {
 		const pos = this.#indexToPos(in_ix);
@@ -835,13 +922,13 @@ class cReversi {
 				indexes : null,
 				currItems : [],
 				nextItems : [],
-				evaluated : 0
+				diff : {}
 			},
 			x : {
 				indexes : null,
 				currItems : [],
 				nextItems : [],
-				evaluated : 0
+				diff : false
 			}
 		};
 		const indexes = this.#conf.indexes;
@@ -856,7 +943,7 @@ class cReversi {
 			if (ixIsColEdge) {
 				would.e.indexes = indexes.sameCol[pos.col];
 			} else {
-				// inside
+				// inside & without xSquare
 				if (!corner_x4) {
 					return 0;
 				}
@@ -879,55 +966,74 @@ class cReversi {
 		if (would.x.indexes) {
 			would.x.currItems = this.#items(would.x.indexes);
 		}
-		const backup = this.#copyAreaData();
+		const rollback = this.#createRollback();
 		this.#flip(in_player, in_ix);
 		if (would.e.indexes) {
 			would.e.nextItems = this.#items(would.e.indexes);
-			would.e.evaluated = cLineEvaluater.evaluate1(would.e.currItems, would.e.nextItems, in_player, corner_x4);
+			const curr = cLineParser.parse(would.e.currItems, in_player, !corner_x4);
+			const next = cLineParser.parse(would.e.nextItems, in_player, !corner_x4);
+			Object.keys(next).forEach(in_key => {
+				if (curr[in_key] !== next[in_key]) {
+					would.e.diff[in_key] = next[in_key];
+				}
+			});
 		}
 		if (would.x.indexes) {
 			would.x.nextItems = this.#items(would.x.indexes);
-			would.x.evaluated = would.x.nextItems.every((in_item, in_ix) => in_item === would.x.currItems[in_ix]);
-			if (!would.x.nextItems.every((in_item, in_ix) => in_item === would.x.currItems[in_ix])) {
-				would.x.evaluated = -1;
-			}
+			would.x.diff = !would.x.nextItems.every((in_item, in_ix) => in_item === would.x.currItems[in_ix]);
 		}
-		this.#restoreAreaData(backup);
-		if (would.x.evaluated < 0) {
+		(rollback)();
+		// 1. never take edge-highriskForMe
+		if (would.e.diff.hasOwnProperty('highriskForMe') && would.e.diff['highriskForMe']) {
 			return -1;
-		} else {
-			return would.e.evaluated;
 		}
+		// 2. never take unsafe xSquare
+		if (would.x.diff) {
+			return -1;
+		}
+		// 3. take edge-fulfilledWithMe
+		if (would.e.diff.hasOwnProperty('fulfilledWithMe') && would.e.diff['fulfilledWithMe']) {
+			return +1;
+		}
+		// 4. take edge-pressuredByMe
+		if (would.e.diff.hasOwnProperty('pressuredByMe')) {
+			return would.e.diff['pressuredByMe'] ? +1 : -1;
+		}
+		// 5. maximize safetyScore
+		if (would.e.diff.hasOwnProperty('safetyScore')) {
+			return (would.e.diff['safetyScore'] > 0) ? +1 : -1;
+		}
+		return 0;
 	}
 	#countNextEnemyOption(in_player, in_ix) {
-		const backup = this.#copyAreaData();
+		const rollback = this.#createRollback();
 		this.#flip(in_player, in_ix);
 		const player = (in_player + 1 + cReversi.#maxPlayers) % cReversi.#maxPlayers;
 		const count = this.#searchCandidates(player).length;
-		this.#restoreAreaData(backup);
+		(rollback)();
 		return count;
 	}
 	#countNextOwnedArea(in_player, in_ix) {
-		const backup = this.#copyAreaData();
+		const rollback = this.#createRollback();
 		this.#flip(in_player, in_ix);
-		const count = this.#areaData.filter(in_item => in_item === in_player).length;
-		this.#restoreAreaData(backup);
+		const count = this.#area.items.filter(in_item => in_item === in_player).length;
+		(rollback)();
 		return count;
 	}
 	#calculateNextScore(in_player, in_ix) {
-		const backup = this.#copyAreaData();
+		const rollback = this.#createRollback();
 		this.#flip(in_player, in_ix);
 		let score = 0;
-		for (let ix = 0; ix < this.#areaData.length; ix++) {
+		for (let ix = 0; ix < this.#area.items.length; ix++) {
 			if (this.#getItemByIndex(ix) === in_player) {
 				score += this.#getAreaScore(in_player, ix);
 			}
 		}
-		this.#restoreAreaData(backup);
+		(rollback)();
 		return score;
 	}
 	#npc_phased_tactics(in_player, in_candArr) {
-		if (this.#phase() < 0.7) {
+		if (this.#phase() < 0.6) {
 			this.#npc_min_enemy_option(in_player, in_candArr);
 		} else {
 			this.#npc_max_owned_area(in_player, in_candArr);
@@ -1055,7 +1161,7 @@ class cReversi {
 			}
 			return winner;
 		};
-		const backup = this.#copyAreaData();
+		const rollback = this.#createRollback();
 		// start simulation
 		const table = [];
 		table.push(['(vs)', ...Object.keys(this.#npcSet)]);
@@ -1075,7 +1181,7 @@ class cReversi {
 							win++;
 						}
 						this.#initAreaScores();
-						this.#restoreAreaData(backup);
+						(rollback)();
 					} else {
 						break;
 					}
@@ -1084,7 +1190,7 @@ class cReversi {
 				const order = 10 ** digit;
 				row.push(Math.floor(win / in_repeat * order) / order);
 				this.#initAreaScores();
-				this.#restoreAreaData(backup);
+				(rollback)();
 			});
 			table.push(row);
 		});
@@ -1127,9 +1233,9 @@ class cReversi {
 		script.parentNode.insertBefore(elem, script.nextSibling);
 	}
 	_debug() {
-		const sources = {area : this.#areaData};
+		const sources = {area : this.#area.items};
 		for (let player = 0; player < cReversi.#maxPlayers; player++) {
-			sources['p-' + player] = this.#areaScores.current[player];
+			sources['p-' + player] = this.#area.scores.players[player];
 		}
 		Object.keys(sources).forEach(in_key => {
 			console.log('*** ' + in_key + ' ***');
@@ -1160,7 +1266,7 @@ class cReversi {
 		let npcAlive = false;
 		let playerCnt = 0;
 		for (let player = 0; player < cReversi.#maxPlayers; player++) {
-			if (this.#areaData.indexOf(player) >= 0) {
+			if (this.#area.items.indexOf(player) >= 0) {
 				playerCnt++;
 				if (player === in_player) {
 					npcAlive = true;
@@ -1176,7 +1282,7 @@ class cReversi {
 			// in_player is died
 			return false;
 		}
-		if (this.#areaData.indexOf(cReversi.#empty) === -1) {
+		if (this.#area.items.indexOf(cReversi.#empty) === -1) {
 			// fulfilled
 			return false;
 		}
@@ -1226,7 +1332,7 @@ class cReversi {
 	}
 	getTable() {
 		const table = [];
-		for (let ix = 0; ix < this.#areaData.length; ix++) {
+		for (let ix = 0; ix < this.#area.items.length; ix++) {
 			const pos = this.#indexToPos(ix);
 			if (!table[pos.row]) {
 				table[pos.row] = [];
@@ -1270,7 +1376,7 @@ class cReversi {
 		};
 		for (let player = 0; player < cReversi.#maxPlayers; player++) {
 			let score, dead, frozen;
-			score = (this.#areaData.filter(in_el => in_el === player)).length;
+			score = (this.#area.items.filter(in_el => in_el === player)).length;
 			dead = (score === 0);
 			if (dead) {
 				frozen = true;
