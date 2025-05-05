@@ -31,8 +31,8 @@ class cLineParser {
 	static #empty = 9;
 	static #findHighRisk(in_playerNodes) {
 		/*
-			L : |9,0,0,0,1  ---> [9], [1,x,x]
-			R :  1,0,0,0,9| ---> [x,x,1], [9]
+			L : |9,0,0,0,1  ---> [9], [1,x,x], ...
+			R :  1,0,0,0,9| ---> ..., [x,x,1], [9]
 		*/
 		const playerL = in_playerNodes[0];
 		const playerR = in_playerNodes[in_playerNodes.length - 1];
@@ -52,10 +52,33 @@ class cLineParser {
 		}
 		return false;
 	};
+	static #findPreRisk(in_playerNodes) {
+		/*
+			L : |9,0,0,9,0  ---> [9], [9], ...
+			R :  0,9,0,0,9| ---> ..., [9], [9]
+		*/
+		const playerL = in_playerNodes[0];
+		const playerR = in_playerNodes[in_playerNodes.length - 1];
+		if ((playerL.L.length === 1) &&
+			(playerL.L[0] === cLineParser.#empty)) {
+			if ((playerL.R.length === 1) &&
+				(playerL.R[0] === cLineParser.#empty)) {
+				return true;
+			}
+		}
+		if ((playerR.R.length === 1) &&
+			(playerR.R[0] === cLineParser.#empty)) {
+			if ((playerR.L.length === 1) &&
+				(playerR.L[0] === cLineParser.#empty)) {
+				return true;
+			}
+		}
+		return false;
+	}
 	static #findPressureFormat(in_playerNodes) {
 		/*
-			L : |9,1,1,1,0,9,0  ---> [9,1,1,1], [9]
-			R :  0,9,0,1,1,1,9| ---> [9], [1,1,1,9]
+			L : |9,1,1,1,0,9,0  ---> [9,1,1,1], [9], ...
+			R :  0,9,0,1,1,1,9| ---> ..., [9], [1,1,1,9]
 		*/
 		const playerL = in_playerNodes[0];
 		const playerR = in_playerNodes[in_playerNodes.length - 1];
@@ -84,7 +107,9 @@ class cLineParser {
 	static parse(in_items, in_player, in_loop, in_debug = false) {
 		const parsed = {
 			fulfilledWithMe : true,
+			sandwichedByMe : false,
 			highriskForMe : false,
+			preriskForMe : false,
 			pressuredByMe : false,
 			safetyScore : 0
 		};
@@ -121,6 +146,11 @@ class cLineParser {
 			let L = subsets[i];
 			let R = subsets[i + 1];
 			playerNodes[i] = {L : L, R : R};
+			if (parsed.sandwichedByMe || ((i === 0) && (!in_loop))) {
+				// already checked or not target
+				continue;
+			}
+			parsed.sandwichedByMe = (subsets[i].indexOf(cLineParser.#empty) === -1);
 		}
 		/*
 			(3) in case of loop / non-loop
@@ -137,6 +167,7 @@ class cLineParser {
 			}
 		} else {
 			parsed.highriskForMe = cLineParser.#findHighRisk(playerNodes);
+			parsed.preriskForMe = cLineParser.#findPreRisk(playerNodes);
 			parsed.pressuredByMe = cLineParser.#findPressureFormat(playerNodes);
 		}
 		/*
@@ -246,7 +277,23 @@ class cLineParser {
 				{items : [0,0,0,0,0,0,0,0], loop : true, fulfilledWithMe : true, dp : false},
 				{items : [0,0,0,9,0,0,0,0], loop : true, fulfilledWithMe : false, dp : false},
 
-			{group : '*** 8. highriskForMe ***'},
+			{group : '*** 8. sandwichedByMe ***'},
+
+				{items : [0,1,0,9,9,9,9,9], loop : false, sandwichedByMe : true, dp : false},
+				{items : [1,0,9,9,9,9,9,0], loop : false, sandwichedByMe : false, dp : false},
+				{items : [0,9,9,9,9,9,0,1], loop : false, sandwichedByMe : false, dp : false},
+				{items : [9,9,9,9,9,0,1,0], loop : false, sandwichedByMe : true, dp : false},
+				{items : [9,9,0,1,2,0,9,9], loop : false, sandwichedByMe : true, dp : false},
+				{items : [2,0,9,9,9,9,0,1], loop : false, sandwichedByMe : false, dp : false},
+
+				{items : [0,1,0,9,9,9,9,9], loop : true, sandwichedByMe : true, dp : false},
+				{items : [1,0,9,9,9,9,9,0], loop : true, sandwichedByMe : true, dp : false},
+				{items : [0,9,9,9,9,9,0,1], loop : true, sandwichedByMe : true, dp : false},
+				{items : [9,9,9,9,9,0,1,0], loop : true, sandwichedByMe : true, dp : false},
+				{items : [9,9,0,1,2,0,9,9], loop : true, sandwichedByMe : true, dp : false},
+				{items : [2,0,9,9,9,9,0,1], loop : true, sandwichedByMe : true, dp : false},
+
+			{group : '*** 9. highriskForMe ***'},
 
 				{items : [0,1,9,9,9,9,9,9], loop : false, highriskForMe : false, dp : false},
 				{items : [9,0,1,9,9,9,9,9], loop : false, highriskForMe : true, dp : false},
@@ -260,11 +307,26 @@ class cLineParser {
 				{items : [9,9,9,9,2,1,0,9], loop : false, highriskForMe : true, dp : false},
 				{items : [9,9,9,9,1,9,0,9], loop : false, highriskForMe : false, dp : false},
 
-			{group : '*** 9. pressuredByMe ***'},
+			{group : '*** 10. preriskForMe ***'},
 
+				{items : [9,0,9,0,9,9,9,9], loop : false, preriskForMe : true, dp : false},
+				{items : [9,0,9,9,0,9,9,9], loop : false, preriskForMe : false, dp : false},
+				{items : [9,9,0,9,0,9,9,9], loop : false, preriskForMe : false, dp : false},
+				{items : [9,0,0,9,0,0,9,9], loop : false, preriskForMe : true, dp : false},
+
+				{items : [9,9,9,9,0,9,0,9], loop : false, preriskForMe : true, dp : false},
+				{items : [9,9,9,0,9,9,0,9], loop : false, preriskForMe : false, dp : false},
+				{items : [9,9,9,0,9,0,9,9], loop : false, preriskForMe : false, dp : false},
+				{items : [9,9,0,0,9,0,0,9], loop : false, preriskForMe : true, dp : false},
+
+			{group : '*** 11. pressuredByMe ***'},
+
+				{items : [1,1,0,9,0,9,9,9], loop : false, pressuredByMe : false, dp : false},
 				{items : [9,1,0,9,0,9,9,9], loop : false, pressuredByMe : true, dp : false},
 				{items : [9,1,0,0,9,0,9,9], loop : false, pressuredByMe : true, dp : false},
 				{items : [9,1,1,0,9,0,9,9], loop : false, pressuredByMe : true, dp : false},
+
+				{items : [9,9,9,0,9,0,1,1], loop : false, pressuredByMe : false, dp : false},
 				{items : [9,9,9,0,9,0,1,9], loop : false, pressuredByMe : true, dp : false},
 				{items : [9,9,0,9,0,0,1,9], loop : false, pressuredByMe : true, dp : false},
 				{items : [9,9,0,9,0,1,1,9], loop : false, pressuredByMe : true, dp : false}
@@ -861,18 +923,19 @@ class cReversi {
 			1. e (= edge) : check if area of edge is safe
 			2. x (= xSquare) : check if xSquare positions will be not changed
 		*/
-		const would = {
+		const check = {
 			e : {
 				indexes : null,
 				currItems : [],
 				nextItems : [],
-				diff : {}
+				currParsed : {},
+				nextParsed : {}
 			},
 			x : {
 				indexes : null,
 				currItems : [],
 				nextItems : [],
-				diff : false
+				increased : false
 			}
 		};
 		const indexes = this.#conf.indexes;
@@ -881,11 +944,11 @@ class cReversi {
 				// on the corner
 				return +1;
 			} else {
-				would.e.indexes = indexes.sameRow[pos.row];
+				check.e.indexes = indexes.sameRow[pos.row];
 			}
 		} else {
 			if (ixIsColEdge) {
-				would.e.indexes = indexes.sameCol[pos.col];
+				check.e.indexes = indexes.sameCol[pos.col];
 			} else {
 				// inside & without xSquare
 				if (!corner_x4) {
@@ -894,60 +957,82 @@ class cReversi {
 			}
 		}
 		if (corner_x4) {
-			would.x.indexes = [];
+			check.x.indexes = [];
 			for (let i = 0; i < indexes.corner.length; i++) {
 				if (indexes.corner[i] === in_player) {
 					// does not need to check x
 					continue;
 				} else {
-					would.x.indexes.push(indexes.xSquare[i]);
+					check.x.indexes.push(indexes.xSquare[i]);
 				}
 			}
 		}
-		if (would.e.indexes) {
-			would.e.currItems = this.#items(would.e.indexes);
+		if (check.e.indexes) {
+			check.e.currItems = this.#items(check.e.indexes);
 		}
-		if (would.x.indexes) {
-			would.x.currItems = this.#items(would.x.indexes);
+		if (check.x.indexes) {
+			check.x.currItems = this.#items(check.x.indexes);
 		}
 		const rollback = this.#createRollback();
 		this.#flip(in_player, in_ix);
-		if (would.e.indexes) {
-			would.e.nextItems = this.#items(would.e.indexes);
-			const curr = cLineParser.parse(would.e.currItems, in_player, !corner_x4);
-			const next = cLineParser.parse(would.e.nextItems, in_player, !corner_x4);
-			Object.keys(next).forEach(in_key => {
-				if (curr[in_key] !== next[in_key]) {
-					would.e.diff[in_key] = next[in_key];
-				}
-			});
+		if (check.e.indexes) {
+			check.e.nextItems = this.#items(check.e.indexes);
+			check.e.currParsed = cLineParser.parse(check.e.currItems, in_player, !corner_x4);
+			check.e.nextParsed = cLineParser.parse(check.e.nextItems, in_player, !corner_x4);
 		}
-		if (would.x.indexes) {
-			would.x.nextItems = this.#items(would.x.indexes);
-			would.x.diff = !would.x.nextItems.every((in_item, in_ix) => in_item === would.x.currItems[in_ix]);
+		if (check.x.indexes) {
+			check.x.nextItems = this.#items(check.x.indexes);
+			check.x.increased = !check.x.nextItems.every((in_item, in_ix) => in_item === check.x.currItems[in_ix]);
 		}
 		(rollback)();
 		// 1. never take edge-highriskForMe
-		if (would.e.diff.hasOwnProperty('highriskForMe') && would.e.diff['highriskForMe']) {
-			return -1;
+		if (check.e.currParsed['highriskForMe']) {
+			if (!check.e.nextParsed['highriskForMe']) {
+				return +1;
+			}
+		} else {
+			if (check.e.nextParsed['highriskForMe']) {
+				return -1;
+			}
 		}
 		// 2. never take unsafe xSquare
-		if (would.x.diff) {
+		if (check.x.increased) {
 			return -1;
 		}
 		// 3. take edge-fulfilledWithMe
-		if (would.e.diff.hasOwnProperty('fulfilledWithMe') && would.e.diff['fulfilledWithMe']) {
+		if (check.e.nextParsed['fulfilledWithMe']) {
 			return +1;
 		}
 		// 4. take edge-pressuredByMe
-		if (would.e.diff.hasOwnProperty('pressuredByMe')) {
-			return would.e.diff['pressuredByMe'] ? +1 : -1;
+		if (check.e.currParsed['pressuredByMe']) {
+			if (!check.e.nextParsed['pressuredByMe']) {
+				return -1;
+			}
+		} else {
+			if (check.e.nextParsed['pressuredByMe']) {
+				return +1;
+			}
 		}
-		// 5. maximize safetyScore
-		if (would.e.diff.hasOwnProperty('safetyScore')) {
-			return (would.e.diff['safetyScore'] > 0) ? +1 : -1;
+		// 5. never take edge-preriskForMe
+		if (check.e.currParsed['preriskForMe']) {
+			if (!check.e.nextParsed['preriskForMe']) {
+				return +1;
+			}
+		} else {
+			if (check.e.nextParsed['preriskForMe']) {
+				return -1;
+			}
 		}
-		return 0;
+		// 6. depends on sandwichedByMe + safetyScore
+		if (check.e.currParsed['safetyScore'] === check.e.nextParsed['safetyScore']) {
+			if (check.e.nextParsed['sandwichedByMe']) {
+				return +1;
+			} else {
+				return 0;
+			}
+		} else {
+			return (check.e.nextParsed['safetyScore'] - check.e.currParsed['safetyScore'] > 0) ? +1 : -1;
+		}
 	}
 	#countNextEnemyOption(in_player, in_ix) {
 		const rollback = this.#createRollback();
@@ -985,7 +1070,7 @@ class cReversi {
 	}
 	#npc_min_enemy_option(in_player, in_candArr) {
 		const eval1st = (in_player, in_ix) => {
-			const score = this.#getAreaScore(in_player, in_ix);
+			const score = this.#countNextEnemyOption(in_player, in_ix) * -1;
 			switch (this.#evaluate(in_player, in_ix)) {
 			case +1 :
 				return score + cReversi.#priorityTop;
@@ -993,23 +1078,15 @@ class cReversi {
 				return score + cReversi.#priorityLast;
 			case 0 :
 			default :
-				return score + this.#countNextEnemyOption(in_player, in_ix) * -1;
+				return score;
 			}
 		};
 		const candArr_2nd = cReversi.#maximize(eval1st, in_player, in_candArr);
-		if (candArr_2nd.length > 1) {
-			const eval2nd = (in_player, in_ix) => {
-				return this.#calculateNextScore(in_player, in_ix);
-			};
-			const candArr_3rd = cReversi.#maximize(eval2nd, in_player, candArr_2nd);
-			this.#choose(in_player, candArr_3rd[arrRand]());
-		} else {
-			this.#choose(in_player, candArr_2nd[0]);
-		}
+		this.#choose(in_player, candArr_2nd[arrRand]());
 	}
 	#npc_max_owned_area(in_player, in_candArr) {
 		const eval1st = (in_player, in_ix) => {
-			const score = this.#getAreaScore(in_player, in_ix);
+			const score = this.#countNextOwnedArea(in_player, in_ix);
 			switch (this.#evaluate(in_player, in_ix)) {
 			case +1 :
 				return score + cReversi.#priorityTop;
@@ -1017,19 +1094,11 @@ class cReversi {
 				return score + cReversi.#priorityLast;
 			case 0 :
 			default :
-				return score + this.#countNextOwnedArea(in_player, in_ix);
+				return score;
 			}
 		};
 		const candArr_2nd = cReversi.#maximize(eval1st, in_player, in_candArr);
-		if (candArr_2nd.length > 1) {
-			const eval2nd = (in_player, in_ix) => {
-				return this.#calculateNextScore(in_player, in_ix);
-			};
-			const candArr_3rd = cReversi.#maximize(eval2nd, in_player, candArr_2nd);
-			this.#choose(in_player, candArr_3rd[arrRand]());
-		} else {
-			this.#choose(in_player, candArr_2nd[0]);
-		}
+		this.#choose(in_player, candArr_2nd[arrRand]());
 	}
 	#npc_score_spot_smart(in_player, in_candArr) {
 		const eval1st = (in_player, in_ix) => {
