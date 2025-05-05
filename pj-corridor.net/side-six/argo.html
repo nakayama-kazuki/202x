@@ -1063,13 +1063,13 @@ class cReversi {
 	}
 	#npc_phased_tactics(in_player, in_candArr) {
 		if (this.#phase() < 0.6) {
-			this.#npc_min_enemy_option(in_player, in_candArr);
+			return this.#npc_min_enemy_option(in_player, in_candArr);
 		} else {
-			this.#npc_max_owned_area(in_player, in_candArr);
+			return this.#npc_max_owned_area(in_player, in_candArr);
 		}
 	}
 	#npc_min_enemy_option(in_player, in_candArr) {
-		const eval1st = (in_player, in_ix) => {
+		const evaluator = (in_player, in_ix) => {
 			const score = this.#countNextEnemyOption(in_player, in_ix) * -1;
 			switch (this.#evaluate(in_player, in_ix)) {
 			case +1 :
@@ -1081,11 +1081,11 @@ class cReversi {
 				return score;
 			}
 		};
-		const candArr_2nd = cReversi.#maximize(eval1st, in_player, in_candArr);
-		this.#choose(in_player, candArr_2nd[arrRand]());
+		const narrowedArr = cReversi.#maximize(evaluator, in_player, in_candArr);
+		return this.#npc_score_spot(in_player, narrowedArr);
 	}
 	#npc_max_owned_area(in_player, in_candArr) {
-		const eval1st = (in_player, in_ix) => {
+		const evaluator = (in_player, in_ix) => {
 			const score = this.#countNextOwnedArea(in_player, in_ix);
 			switch (this.#evaluate(in_player, in_ix)) {
 			case +1 :
@@ -1097,11 +1097,11 @@ class cReversi {
 				return score;
 			}
 		};
-		const candArr_2nd = cReversi.#maximize(eval1st, in_player, in_candArr);
-		this.#choose(in_player, candArr_2nd[arrRand]());
+		const narrowedArr = cReversi.#maximize(evaluator, in_player, in_candArr);
+		return this.#npc_score_spot(in_player, narrowedArr);
 	}
 	#npc_score_spot_smart(in_player, in_candArr) {
-		const eval1st = (in_player, in_ix) => {
+		const evaluator = (in_player, in_ix) => {
 			const score = this.#getAreaScore(in_player, in_ix);
 			switch (this.#evaluate(in_player, in_ix)) {
 			case +1 :
@@ -1113,29 +1113,25 @@ class cReversi {
 				return score;
 			}
 		};
-		const candArr_2nd = cReversi.#maximize(eval1st, in_player, in_candArr);
-		this.#choose(in_player, candArr_2nd[arrRand]());
+		const narrowedArr = cReversi.#maximize(evaluator, in_player, in_candArr);
+		return this.#npc_random(in_player, narrowedArr);
 	}
 	#npc_score_total(in_player, in_candArr) {
-		const eval1st = (in_player, in_ix) => {
+		const evaluator = (in_player, in_ix) => {
 			return this.#calculateNextScore(in_player, in_ix);
 		};
-		const candArr_2nd = cReversi.#maximize(eval1st, in_player, in_candArr);
-		this.#choose(in_player, candArr_2nd[arrRand]());
+		const narrowedArr = cReversi.#maximize(evaluator, in_player, in_candArr);
+		return this.#npc_random(in_player, narrowedArr);
 	}
 	#npc_score_spot(in_player, in_candArr) {
-		const eval1st = (in_player, in_ix) => {
+		const evaluator = (in_player, in_ix) => {
 			return this.#getAreaScore(in_player, in_ix);
 		};
-		const candArr_2nd = cReversi.#maximize(eval1st, in_player, in_candArr);
-		this.#choose(in_player, candArr_2nd[arrRand]());
+		const narrowedArr = cReversi.#maximize(evaluator, in_player, in_candArr);
+		return this.#npc_random(in_player, narrowedArr);
 	}
 	#npc_random(in_player, in_candArr) {
-		const eval1st = (in_player, in_ix) => {
-			return 0;
-		};
-		const candArr_2nd = cReversi.#maximize(eval1st, in_player, in_candArr);
-		this.#choose(in_player, candArr_2nd[arrRand]());
+		return in_candArr[arrRand]();
 	}
 	#npcSet = {
 		balance : this.#npc_phased_tactics,
@@ -1308,7 +1304,8 @@ class cReversi {
 		// console.log(in_player, npcAlive, playerCnt, npcArgo);
 		const candidates = this.#searchCandidates(in_player);
 		if (candidates.length > 0) {
-			(this.#npcSet[npcArgo].bind(this))(in_player, candidates);
+			const index = (this.#npcSet[npcArgo].bind(this))(in_player, candidates);
+			this.#choose(in_player, index);
 			return true;
 		} else {
 			if (this.#conf.row.edge) {
