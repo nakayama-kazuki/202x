@@ -108,6 +108,7 @@ class cLineParser {
 		const parsed = {
 			fulfilledWithMe : true,
 			sandwichedByMe : false,
+			preSandwichedByMe : false,
 			highRiskForMe : false,
 			preRiskForMe : false,
 			pressuredByMe : false,
@@ -146,11 +147,16 @@ class cLineParser {
 			let L = subsets[i];
 			let R = subsets[i + 1];
 			playerNodes[i] = {L : L, R : R};
-			if (parsed.sandwichedByMe || ((i === 0) && (!in_loop))) {
-				// already checked or not target
-				continue;
+			if ((i > 0) || in_loop) {
+				if (!parsed.sandwichedByMe) {
+					parsed.sandwichedByMe = (subsets[i].indexOf(cLineParser.#empty) === -1);
+				}
+				if (!parsed.preSandwichedByMe) {
+					if ((subsets[i].length === 1) && (subsets[i][0] === cLineParser.#empty)) {
+						parsed.preSandwichedByMe = true;
+					}
+				}
 			}
-			parsed.sandwichedByMe = (subsets[i].indexOf(cLineParser.#empty) === -1);
 		}
 		/*
 			(3) in case of loop / non-loop
@@ -293,7 +299,17 @@ class cLineParser {
 				{items : [9,9,0,1,2,0,9,9], loop : true, sandwichedByMe : true, dp : false},
 				{items : [2,0,9,9,9,9,0,1], loop : true, sandwichedByMe : true, dp : false},
 
-			{group : '*** 9. highRiskForMe ***'},
+			{group : '*** 9. preSandwichedByMe ***'},
+
+				{items : [9,0,9,9,9,9,9,0], loop : false, preSandwichedByMe : false, dp : false},
+				{items : [0,9,0,9,9,9,9,9], loop : false, preSandwichedByMe : true, dp : false},
+				{items : [9,0,9,0,9,9,9,9], loop : false, preSandwichedByMe : true, dp : false},
+				{items : [9,0,1,0,9,9,9,9], loop : false, preSandwichedByMe : false, dp : false},
+				{items : [9,0,9,9,0,9,9,9], loop : false, preSandwichedByMe : false, dp : false},
+
+				{items : [9,0,9,9,9,9,9,0], loop : true, preSandwichedByMe : true, dp : false},
+
+			{group : '*** 10. highRiskForMe ***'},
 
 				{items : [0,1,9,9,9,9,9,9], loop : false, highRiskForMe : false, dp : false},
 				{items : [9,0,1,9,9,9,9,9], loop : false, highRiskForMe : true, dp : false},
@@ -307,7 +323,7 @@ class cLineParser {
 				{items : [9,9,9,9,2,1,0,9], loop : false, highRiskForMe : true, dp : false},
 				{items : [9,9,9,9,1,9,0,9], loop : false, highRiskForMe : false, dp : false},
 
-			{group : '*** 10. preRiskForMe ***'},
+			{group : '*** 11. preRiskForMe ***'},
 
 				{items : [9,0,9,0,9,9,9,9], loop : false, preRiskForMe : true, dp : false},
 				{items : [9,0,9,9,0,9,9,9], loop : false, preRiskForMe : false, dp : false},
@@ -319,7 +335,7 @@ class cLineParser {
 				{items : [9,9,9,0,9,0,9,9], loop : false, preRiskForMe : false, dp : false},
 				{items : [9,9,0,0,9,0,0,9], loop : false, preRiskForMe : true, dp : false},
 
-			{group : '*** 11. pressuredByMe ***'},
+			{group : '*** 12. pressuredByMe ***'},
 
 				{items : [1,1,0,9,0,9,9,9], loop : false, pressuredByMe : false, dp : false},
 				{items : [9,1,0,9,0,9,9,9], loop : false, pressuredByMe : true, dp : false},
@@ -536,7 +552,7 @@ class cReversi {
 				}
 			}
 		}
-		const argoArr = ['balance', 'spiteful', 'greedy', 'learner', 'classic', 'beginner', 'monkey'];
+		const argoArr = ['spiteful', 'balance', 'greedy', 'learner', 'classic', 'beginner', 'monkey'];
 		for (let i = 0; i < argoArr.length; i++) {
 			this.#npcArgoPriority.push((argoArr.slice(0, i + 1))[arrRand]());
 		}
@@ -735,11 +751,12 @@ class cReversi {
 		}
 		return rotated;
 	}
-	#phase() {
-		const total = this.#conf.row.size * this.#conf.col.size;
-		const remaining = this.#area.items.filter(in_el => in_el === cReversi.#empty).length;
-		// from 0.0x (!= 0) to 1
-		return 1 - remaining / total;
+	#count(in_player) {
+		const items = this.#area.items.filter(in_el => in_el === in_player);
+		return items.length;
+	}
+	#emptyCnt() {
+		return this.#count(cReversi.#empty);
 	}
 	#searchCandidates(in_player) {
 		const candidates = [];
@@ -923,7 +940,8 @@ class cReversi {
 		pressuredByMeP : 0,
 		pressuredByMeN : 0,
 		safetyScore : 0,
-		sandwichedByMe : 0
+		sandwichedByMe : 0,
+		preSandwichedByMe : 0
 	};
 	#evaluate(in_player, in_ix) {
 		cReversi.#evaluateStats.total++;
@@ -1046,17 +1064,29 @@ class cReversi {
 				return +444;
 			}
 		}
-		// 6. depends on sandwichedByMe + safetyScore
+		// 6. never take edge-preSandwichedByMe
+		if (check.e.currParsed['preSandwichedByMe']) {
+			if (!check.e.nextParsed['preSandwichedByMe']) {
+				cReversi.#evaluateStats.preSandwichedByMe++;
+				return +333;
+			}
+		} else {
+			if (check.e.nextParsed['preSandwichedByMe']) {
+				cReversi.#evaluateStats.preSandwichedByMe++;
+				return -333;
+			}
+		}
+		// 7. depends on edge-sandwichedByMe + safetyScore
 		if (check.e.currParsed['safetyScore'] === check.e.nextParsed['safetyScore']) {
 			if (check.e.nextParsed['sandwichedByMe']) {
 				cReversi.#evaluateStats.sandwichedByMe++;
-				return +333;
+				return +222;
 			} else {
 				return 0;
 			}
 		} else {
 			cReversi.#evaluateStats.safetyScore++;
-			return (check.e.nextParsed['safetyScore'] - check.e.currParsed['safetyScore'] > 0) ? +222 : -222;
+			return (check.e.nextParsed['safetyScore'] - check.e.currParsed['safetyScore'] > 0) ? +111 : -111;
 		}
 	}
 	#countNextEnemyOption(in_player, in_ix) {
@@ -1067,10 +1097,17 @@ class cReversi {
 		(rollback)();
 		return count;
 	}
+	#countNextOption(in_player, in_ix) {
+		const rollback = this.#createRollback();
+		this.#flip(in_player, in_ix);
+		const count = this.#searchCandidates(in_player).length;
+		(rollback)();
+		return count;
+	}
 	#countNextOwnedArea(in_player, in_ix) {
 		const rollback = this.#createRollback();
 		this.#flip(in_player, in_ix);
-		const count = this.#area.items.filter(in_item => in_item === in_player).length;
+		const count = this.#count(in_player);
 		(rollback)();
 		return count;
 	}
@@ -1086,16 +1123,16 @@ class cReversi {
 		(rollback)();
 		return score;
 	}
-	#npc_phased_tactics(in_player, in_candArr) {
-		if (this.#phase() < 0.7) {
-			return this.#npc_min_enemy_option(in_player, in_candArr);
-		} else {
-			return this.#npc_max_owned_area(in_player, in_candArr);
-		}
-	}
 	#npc_min_enemy_option(in_player, in_candArr) {
 		const evaluator = (in_player, in_ix) => {
 			return this.#evaluate(in_player, in_ix) + this.#countNextEnemyOption(in_player, in_ix) * -1;
+		};
+		const narrowedArr = cReversi.#maximize(evaluator, in_player, in_candArr);
+		return this.#npc_score_spot(in_player, narrowedArr);
+	}
+	#npc_max_option(in_player, in_candArr) {
+		const evaluator = (in_player, in_ix) => {
+			return this.#evaluate(in_player, in_ix) + this.#countNextOption(in_player, in_ix);
 		};
 		const narrowedArr = cReversi.#maximize(evaluator, in_player, in_candArr);
 		return this.#npc_score_spot(in_player, narrowedArr);
@@ -1132,8 +1169,8 @@ class cReversi {
 		return in_candArr[arrRand]();
 	}
 	#npcSet = {
-		balance : this.#npc_phased_tactics,
 		spiteful : this.#npc_min_enemy_option,
+		balance : this.#npc_max_option,
 		greedy : this.#npc_max_owned_area,
 		learner : this.#npc_score_smart,
 		classic : this.#npc_score_total,
@@ -1395,7 +1432,7 @@ class cReversi {
 		};
 		for (let player = 0; player < cReversi.#maxPlayers; player++) {
 			let score, dead, frozen;
-			score = (this.#area.items.filter(in_el => in_el === player)).length;
+			score = this.#count(player);
 			dead = (score === 0);
 			if (dead) {
 				frozen = true;
@@ -1417,7 +1454,7 @@ class cReversi {
 			// all players are frozen
 			(cnt.activePlayer === 0) ||
 			// there is no emply
-			(this.#phase() === 1);
+			(this.#emptyCnt() === 0);
 		return condition;
 	}
 }
