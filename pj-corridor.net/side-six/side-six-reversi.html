@@ -2879,16 +2879,50 @@ Object.assign(gBackgroundCanvas.style, {
 });
 
 document.addEventListener('DOMContentLoaded', (() => {
-	let resizeWorld = in_ev => {
-		gWorld.resize(
-			window.innerWidth,
-			window.innerHeight);
-		gBackgroundCanvas.width = window.innerWidth;
-		gBackgroundCanvas.height = window.innerHeight;
+	const delay = 300;
+	let cur_w = gWorld.canvas.width;
+	let cur_h = gWorld.canvas.height;
+	const redrawWorld = debouncing(in_ev => {
+		let w, h;
+		if (in_ev && (in_ev.type === 'resizeCanvasEvent')) {
+			console.log('canvas resized');
+			w = gWorld.canvas.width;
+			h = gWorld.canvas.height;
+		} else {
+			console.log('window resized');
+			w = window.innerWidth;
+			h = window.innerHeight;
+		}
+		if ((w === cur_w) && (h === cur_h)) {
+			console.log('already resized');
+			return;
+		} else {
+			cur_w = w;
+			cur_h = h;
+		}
+		gWorld.resize(w, h);
+		gBackgroundCanvas.width = w;
+		gBackgroundCanvas.height = h;
 		drawCosmicView(gBackgroundCanvas, 400, 50);
-	};
-	window.addEventListener('resize', debouncing(resizeWorld, 300));
-	window.dispatchEvent(new Event('resize'));
+	}, delay);
+	// for resizing window + canvas
+	window.addEventListener('resize', redrawWorld);
+	window.setTimeout(() => (redrawWorld)(), 0);
+	(in_target => {
+		// for resizing canvas
+		const resizeCanvasEvent = new Event('resizeCanvasEvent');
+		window.addEventListener('resizeCanvasEvent', redrawWorld);
+		const resizeObserver = new ResizeObserver(in_resizedArr => {
+			for (let resized of in_resizedArr) {
+				if (resized.target !== in_target) {
+					continue;
+				}
+				const {width, height} = resized.contentRect;
+				window.dispatchEvent(resizeCanvasEvent);
+			}
+		});
+		resizeObserver.observe(in_target);
+	})(gWorld.canvas);
 	if (!document.body) {
 		document.documentElement.appendChild(document.createElement('BODY'));
 	}
