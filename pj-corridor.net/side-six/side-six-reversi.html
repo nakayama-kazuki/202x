@@ -2907,7 +2907,8 @@ document.addEventListener('DOMContentLoaded', (() => {
 	// for resizing window + canvas
 	const delay = 300;
 	window.addEventListener('resize', debouncing(redrawWorld, delay));
-	window.setTimeout(() => (redrawWorld)(), 0);
+	window.dispatchEvent(new Event('resize'));
+//	window.setTimeout(() => (redrawWorld)(), 0);
 /*
 	(in_target => {
 		// for resizing canvas
