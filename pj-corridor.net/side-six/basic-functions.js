@@ -792,9 +792,6 @@ class _cNDCVector2 extends THREE.Vector2 {
 
 export function ndcFromEvent(in_ev) {
 	const elem = in_ev.currentTarget
-	if ((elem.offsetLeft !== 0) || (elem.offsetTop !== 0)) {
-		console.log(elem.offsetLeft, elem.offsetTop);
-	}
 	return new _cNDCVector2(
 		in_ev.clientX - elem.offsetLeft,
 		in_ev.clientY - elem.offsetTop,
