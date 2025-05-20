@@ -2879,10 +2879,9 @@ Object.assign(gBackgroundCanvas.style, {
 });
 
 document.addEventListener('DOMContentLoaded', (() => {
-	const delay = 300;
 	let cur_w = gWorld.canvas.width;
 	let cur_h = gWorld.canvas.height;
-	const redrawWorld = debouncing(in_ev => {
+	const redrawWorld = in_ev => {
 		let w, h;
 		if (in_ev && (in_ev.type === 'resizeCanvasEvent')) {
 			console.log('canvas resized');
@@ -2904,9 +2903,10 @@ document.addEventListener('DOMContentLoaded', (() => {
 		gBackgroundCanvas.width = w;
 		gBackgroundCanvas.height = h;
 		drawCosmicView(gBackgroundCanvas, 400, 50);
-	}, delay);
+	};
 	// for resizing window + canvas
-	window.addEventListener('resize', redrawWorld);
+	const delay = 300;
+	window.addEventListener('resize', debouncing(redrawWorld, delay));
 	window.setTimeout(() => (redrawWorld)(), 0);
 /*
 	(in_target => {
