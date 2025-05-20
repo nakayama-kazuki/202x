@@ -2878,26 +2878,41 @@ Object.assign(gBackgroundCanvas.style, {
 	zIndex : -1
 });
 
-document.addEventListener('DOMContentLoaded', (() => {
-	let resizeWorld = in_ev => {
-		gWorld.resize(
-			window.innerWidth,
-			window.innerHeight);
-		gBackgroundCanvas.width = window.innerWidth;
-		gBackgroundCanvas.height = window.innerHeight;
-		drawCosmicView(gBackgroundCanvas, 400, 50);
-	};
-	window.addEventListener('resize', debouncing(resizeWorld, 300));
-	window.dispatchEvent(new Event('resize'));
-	if (!document.body) {
-		document.documentElement.appendChild(document.createElement('BODY'));
+function setupBody(in_document) {
+	if (!in_document.body) {
+		in_document.documentElement.appendChild(in_document.createElement('BODY'));
 	}
-	Object.assign(document.body.style, {
+	Object.assign(in_document.body.style, {
 		margin : '0',
 		overflow : 'hidden'
 	});
-	document.body.appendChild(gWorld.canvas);
-	document.body.appendChild(gBackgroundCanvas);
+}
+
+function createChildWindow(in_document) {
+	setupBody(in_document);
+	const iframe = in_document.createElement('iframe');
+	in_document.body.appendChild(iframe);
+	Object.assign(iframe.style, {
+		width: '100%',
+		height: '100%',
+		border: 'none'
+	});
+	setupBody(iframe.contentDocument);
+	return iframe.contentWindow;
+}
+
+document.addEventListener('DOMContentLoaded', (() => {
+	const outer = createChildWindow(document);
+	let resizeWorld = in_ev => {
+		gWorld.resize(outer.innerWidth, outer.innerHeight);
+		gBackgroundCanvas.width = outer.innerWidth;
+		gBackgroundCanvas.height = outer.innerHeight;
+		drawCosmicView(gBackgroundCanvas, 400, 50);
+	};
+	outer.addEventListener('resize', debouncing(resizeWorld, 300));
+	outer.dispatchEvent(new Event('resize'));
+	outer.document.body.appendChild(gWorld.canvas);
+	outer.document.body.appendChild(gBackgroundCanvas);
 	gWorld.start();
 }));
 
