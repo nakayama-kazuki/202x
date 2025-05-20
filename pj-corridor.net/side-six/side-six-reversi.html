@@ -2902,9 +2902,7 @@ document.addEventListener('DOMContentLoaded', (() => {
 	// for resizing window + canvas
 	const delay = 300;
 	window.addEventListener('resize', debouncing(redrawWorld, delay));
-//	window.dispatchEvent(new Event('resize'));
 	window.setTimeout(() => (redrawWorld)(), 0);
-/*
 	(in_target => {
 		// for resizing canvas
 		const resizeCanvasEvent = new Event('resizeCanvasEvent');
@@ -2920,7 +2918,6 @@ document.addEventListener('DOMContentLoaded', (() => {
 		});
 		resizeObserver.observe(in_target);
 	})(gWorld.canvas);
-*/
 	if (!document.body) {
 		document.documentElement.appendChild(document.createElement('BODY'));
 	}
