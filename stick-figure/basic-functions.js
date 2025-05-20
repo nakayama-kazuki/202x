@@ -1263,7 +1263,6 @@ export class cSphericalWorld {
 		this.#centerBall.add(light);
 		this.add(new THREE.AmbientLight(lightColor), true);
 		// other
-		this.#resizeSetObserver();
 		this.resize(this.canvas.width, this.canvas.height);
 		this.#setupEventHandler();
 		_emulateTouchEvent(this.canvas);
@@ -1459,29 +1458,10 @@ export class cSphericalWorld {
 			delete this.stopRotation;
 		};
 	}
-	#resizeSetObserver() {
-		const resizeObserver = new ResizeObserver(in_resizedArr => {
-			for (let resized of in_resizedArr) {
-				if (resized.target !== this.canvas) {
-					continue;
-				}
-				console.log('canvas is resized');
-				const {width, height} = resized.contentRect;
-				this.#resizePostProcess(width, height);
-				return;
-			}
-		});
-		resizeObserver.observe(this.canvas);
-	}
-	#resizePostProcess(in_w, in_h) {
-		this.#renderer.setViewport(0, 0, in_w, in_h);
+	resize(in_w, in_h) {
+		this.#renderer.setSize(in_w, in_h);
 		this.#camera.aspect = in_w / in_h;
 		this.#camera.updateProjectionMatrix();
-	}
-	resize(in_w, in_h) {
-		this.canvas.width = in_w;
-		this.canvas.height = in_h;
-		// this.#resizePostProcess(width, height);
 	}
 	#getUserObjectRadius() {
 		let max = Number.NEGATIVE_INFINITY;
