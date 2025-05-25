@@ -28,343 +28,563 @@ Array.prototype[arrTrim] = function(in_value) {
 };
 
 class cLineParser {
+	static #border = -1;
 	static #empty = 9;
-	static #findHighRisk(in_playerNodes) {
-		/*
-			L : |9,0,0,0,1  ---> [9], [1,x,x], ...
-			R :  1,0,0,0,9| ---> ..., [x,x,1], [9]
-		*/
-		const playerL = in_playerNodes[0];
-		const playerR = in_playerNodes[in_playerNodes.length - 1];
-		if ((playerL.L.length === 1) &&
-			(playerL.L[0] === cLineParser.#empty)) {
-			if ((playerL.R.length > 0) &&
-				(playerL.R[0] !== cLineParser.#empty)) {
-				return true;
+	static #cntEmpty(in_arr) {
+		return in_arr.filter(in_el => in_el === cLineParser.#empty).length;
+	}
+	static #findOneInnerEmpty(in_arr) {
+		let emptyAppear = false;
+		for (let i = 1; i < in_arr.length - 1; i++) {
+			if (emptyAppear) {
+				if (in_arr[i] === cLineParser.#empty) {
+					return false;
+				} else {
+					return true;
+				}
 			}
-		}
-		if ((playerR.R.length === 1) &&
-			(playerR.R[0] === cLineParser.#empty)) {
-			if ((playerR.L.length > 0) &&
-				(playerR.L[playerR.L.length - 1] !== cLineParser.#empty)) {
-				return true;
+			if (in_arr[i] === cLineParser.#empty) {
+				emptyAppear = true;
 			}
 		}
 		return false;
-	};
-	static #findPreRisk(in_playerNodes) {
-		/*
-			L : |9,0,0,9,0  ---> [9], [9], ...
-			R :  0,9,0,0,9| ---> ..., [9], [9]
-		*/
-		const playerL = in_playerNodes[0];
-		const playerR = in_playerNodes[in_playerNodes.length - 1];
-		if ((playerL.L.length === 1) &&
-			(playerL.L[0] === cLineParser.#empty)) {
-			if ((playerL.R.length === 1) &&
-				(playerL.R[0] === cLineParser.#empty)) {
-				return true;
-			}
-		}
-		if ((playerR.R.length === 1) &&
-			(playerR.R[0] === cLineParser.#empty)) {
-			if ((playerR.L.length === 1) &&
-				(playerR.L[0] === cLineParser.#empty)) {
+	}
+	/*
+		fmt_eXXXXX is for edge
+	*/
+	static #fmt_eCriticalToMe(in_l, in_r) {
+		// B90011 ---> [B9][11]
+		if ((in_l.length === 2) &&
+			(in_l[0] === cLineParser.#border) &&
+			(in_l[1] === cLineParser.#empty)) {
+			if (in_r[0] !== cLineParser.#empty) {
 				return true;
 			}
 		}
 		return false;
 	}
-	static #findPressureFormat(in_playerNodes) {
-		/*
-			L : |9,1,1,1,0,9,0  ---> [9,1,1,1], [9], ...
-			R :  0,9,0,1,1,1,9| ---> ..., [9], [1,1,1,9]
-		*/
-		const playerL = in_playerNodes[0];
-		const playerR = in_playerNodes[in_playerNodes.length - 1];
-		if ((playerL.R.length === 1) &&
-			(playerL.R[0] === cLineParser.#empty)) {
-			if ((playerL.L.length > 1) &&
-				(playerL.L[0] === cLineParser.#empty)) {
-				if (playerL.L.filter(in_item => in_item === cLineParser.#empty).length === 1) {
-					// only playerL.L[0]
-					return true;
-				}
+	static #fmt_ePreRiskToMe(in_l, in_r) {
+		// B90090 ---> [B9][9]
+		if ((in_l.length === 2) &&
+			(in_l[0] === cLineParser.#border) &&
+			(in_l[1] === cLineParser.#empty)) {
+			if ((in_r.length === 1) &&
+				(in_r[0] === cLineParser.#empty)) {
+				return true;
 			}
 		}
-		if ((playerR.L.length === 1) &&
-			(playerR.L[0] === cLineParser.#empty)) {
-			if ((playerR.R.length > 1) &&
-				(playerR.R[playerR.R.length - 1] === cLineParser.#empty)) {
-				if (playerR.R.filter(in_item => in_item === cLineParser.#empty).length === 1) {
-					// only playerR.R[playerR.R.length - 1]
-					return true;
-				}
+		return false;
+	}
+	static #fmt_ePressureToMe(in_l, in_r) {
+		// B900191 ---> [B9][191]
+		if ((in_l.length === 2) &&
+			(in_l[0] === cLineParser.#border)) {
+			return cLineParser.#fmt_bPressureToMe(in_l, in_r);
+		}
+		return false;
+	}
+	static #fmt_ePrePressureToMe(in_l, in_r) {
+		// B909191 ---> [B9][9191]
+		if ((in_l.length === 2) &&
+			(in_l[0] === cLineParser.#border)) {
+			return cLineParser.#fmt_bPrePressureToMe(in_l, in_r);
+		}
+		return false;
+	}
+	static #fmt_ePressureByMe(in_l, in_r) {
+		// B911090 ---> [B911][9]
+		if ((in_l.length >= 3) &&
+			(in_l[0] === cLineParser.#border) &&
+			(in_l[1] === cLineParser.#empty) &&
+			(cLineParser.#cntEmpty(in_l) === 1)) {
+			return cLineParser.#fmt_bPressureByMe(in_l, in_r);
+		}
+		return false;
+	}
+	/*
+		fmt_bXXXXX is for both edge and inner
+	*/
+	static #fmt_bPressureToMe(in_l, in_r) {
+		// 9900191 ---> [99][191]
+		if (in_l[in_l.length - 1] === cLineParser.#empty) {
+			if ((in_r.length >= 3) &&
+				(in_r[0] !== cLineParser.#empty)) {
+				return cLineParser.#findOneInnerEmpty(in_r);
 			}
+		}
+		return false;
+	}
+	static #fmt_bPrePressureToMe(in_l, in_r) {
+		// 9909191 ---> [99][9191]
+		if (in_l[in_l.length - 1] === cLineParser.#empty) {
+			if ((in_r.length >= 3) &&
+				(in_r[0] === cLineParser.#empty)) {
+				return cLineParser.#findOneInnerEmpty(in_r);
+			}
+		}
+		return false;
+	}
+	static #fmt_bPressureByMe(in_l, in_r) {
+		// 9911090 ---> [9911][9]
+		if ((in_l[in_l.length - 1] !== cLineParser.#empty) &&
+			(cLineParser.#cntEmpty(in_l) >= 1)) {
+			if ((in_r.length === 1) &&
+				(in_r[0] === cLineParser.#empty)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	static #fmt_bInnerByMe(in_l, in_r) {
+		// 110199 --> [11][199]
+		if ((in_l[in_l.length - 1] === in_r[0]) &&
+			(in_r[0] !== cLineParser.#empty)) {
+			return true;
 		}
 		return false;
 	}
 	static parse(in_items, in_player, in_loop, in_debug = false) {
 		const parsed = {
-			fulfilledWithMe : true,
-			sandwichedByMe : false,
-			preSandwichedByMe : false,
-			highRiskForMe : false,
-			preRiskForMe : false,
-			pressuredByMe : false,
+			eCriticalToMe : false,
+			ePreRiskToMe : false,
+			ePressureToMe : false,
+			ePrePressureToMe : false,
+			ePressureByMe : false,
+			bFulfilledWith : false,
+			bPressureToMe : false,
+			bPrePressureToMe : false,
+			bPressureByMe : false,
+			bPreOuterByMe : false,
+			bOuterByMe : false,
+			bInnerByMe : false,
 			safetyScore : 0
 		};
-		/*
-			(1) split array using in_player
-		*/
-		if (in_items.indexOf(in_player) === -1) {
-			parsed.fulfilledWithMe = false;
+		let items;
+		if (in_loop) {
+			items = [...in_items];
+		} else {
+			items = [cLineParser.#border, ...in_items, cLineParser.#border];
+		}
+		if (items.indexOf(in_player) === -1) {
 			return parsed;
 		}
-		let playerCnt = 0;
-		let playerZone = false;
+		/*
+			(1) as in_player should be exist from here, split array using in_player
+
+				from ...
+
+				ex1 : [12*34]
+				ex2 : [12*34*]
+				ex3 : [*12*34*]
+
+				to ...
+
+				ex1 (loop) : [12],[34]
+				ex2 (loop) : [12],[34],[]
+				ex3 (loop) : [],[12],[34],[]
+
+				ex1 (non-loop) : [B12],[45B]
+				ex2 (non-loop) : [B12],[34],[B]
+				ex3 (non-loop) : [B],[12],[34],[B]
+		*/
+		let meMaxIx = 0;
+		let meStart = false;
+		// the 1st item may be empty
 		const subsets = [[]];
-		for (let i = 0; i < in_items.length; i++) {
-			if (in_items[i] === in_player) {
-				if (playerZone) {
+		parsed.bFulfilledWith = true;
+		for (let i = 0; i < items.length; i++) {
+			if (items[i] === in_player) {
+				if (meStart) {
 					continue;
+				} else {
+					meStart = true;
+					// the last item may be empty
+					subsets[++meMaxIx] = [];
 				}
-				playerZone = true;
-				subsets[++playerCnt] = [];
 			} else {
-				if (in_items[i] === cLineParser.#empty) {
-					parsed.fulfilledWithMe = false;
+				meStart = false;
+				if (items[i] === cLineParser.#empty) {
+					parsed.bFulfilledWith = false;
 				}
-				playerZone = false;
-				subsets[playerCnt].push(in_items[i]);
+				subsets[meMaxIx].push(items[i]);
 			}
+		}
+		if (parsed.bFulfilledWith) {
+			return parsed;
 		}
 		/*
 			(2) relate left side / right side to in_player
+
+				from ...
+
+				ex1 : [12*34]
+				ex2 : [12*34*]
+				ex3 : [*12*34*]
+
+				to ...
+
+				ex1 (loop) : L[12]+R[34]
+				ex2 (loop) : L[12]+R[34], L[34]+R[]
+				ex3 (loop) : L[]+R[12],L[12]+R[34],L[34]+R[]
+
+				ex1 (non-loop) : L[B12]+R[45B]
+				ex2 (non-loop) : L[B12]+R[34],L[34]+R[B]
+				ex3 (non-loop) : L[B]+R[12],L[12]+R[34],L[34]+R[B]
 		*/
-		const playerNodes = [];
-		for (let i = 0; i < playerCnt; i++) {
-			let L = subsets[i];
-			let R = subsets[i + 1];
-			playerNodes[i] = {L : L, R : R};
-			if ((i > 0) || in_loop) {
-				if (!parsed.sandwichedByMe) {
-					parsed.sandwichedByMe = (subsets[i].indexOf(cLineParser.#empty) === -1);
-				}
-				if (!parsed.preSandwichedByMe) {
-					if ((subsets[i].length === 1) && (subsets[i][0] === cLineParser.#empty)) {
-						parsed.preSandwichedByMe = true;
-					}
-				}
+		const meNodes = [];
+		for (let i = 0; i < meMaxIx; i++) {
+			meNodes[i] = {
+				L : subsets[i],
+				R : subsets[i + 1]
+			};
+		}
+		/*
+			(3) normalize
+
+				from ...
+
+				ex1 : [12*34]
+				ex2 : [12*34*]
+				ex3 : [*12*34*]
+
+				to ...
+
+				ex1 (loop) : L[3412]+R[3412]
+				ex2 (loop) : L[12]+R[34],L[34]+R[12]
+				ex3 (loop) : L[34]+R[12],L[12]+R[34]
+
+				ex1 (non-loop) : L[B12]+R[45B]
+				ex2 (non-loop) : L[B12]+R[34],L[34]+R[B]
+				ex3 (non-loop) : L[B]+R[12],L[12]+R[34],L[34]+R[B]
+		*/
+		const meFirst = meNodes[0];
+		const meLast = meNodes[meNodes.length - 1];
+		if (in_loop) {
+			if ((meFirst.L.length === 0) && (meLast.R.length === 0)) {
+				meFirst.L = [...meLast.L];
+				meNodes.pop();
+			} else {
+				meFirst.L = [...meLast.R, ...meFirst.L];
+				meLast.R = meFirst.L;
 			}
 		}
 		/*
-			(3) in case of loop / non-loop
+			(4) bPreOuterByMe, bOuterByMe
 		*/
-		const playerL = playerNodes[0];
-		const playerR = playerNodes[playerCnt - 1];
 		if (in_loop) {
-			if ((playerL.L.length > 0) || (playerR.R.length > 0)) {
-				playerL.L = [...playerR.R, ...playerL.L];
-				playerR.R = playerL.L;
-			} else {
-				playerL.L = playerR.L;
-				playerNodes.pop();
+			for (let i = 0; i < meNodes.length; i++) {
+				const cnt = cLineParser.#cntEmpty(meNodes[i].L);
+				parsed['bPreOuterByMe'] ||= (cnt === 1);
+				parsed['bOuterByMe'] ||= (cnt === 0);
 			}
 		} else {
-			parsed.highRiskForMe = cLineParser.#findHighRisk(playerNodes);
-			parsed.preRiskForMe = cLineParser.#findPreRisk(playerNodes);
-			parsed.pressuredByMe = cLineParser.#findPressureFormat(playerNodes);
+			// except for both edges
+			for (let i = 1; i < subsets.length - 1; i++) {
+				const cnt = cLineParser.#cntEmpty(subsets[i]);
+				parsed['bPreOuterByMe'] ||= (cnt === 1);
+				parsed['bOuterByMe'] ||= (cnt === 0);
+			}
 		}
 		/*
-			(4) calculate score
+			(5) calculate score + check format
 		*/
-		let safe = 0;
-		let risk = 0;
-		if (!parsed.fulfilledWithMe) {
-			playerNodes.forEach(in_node => {
-				const L = in_node.L.length > 0 ? in_node.L[in_node.L.length - 1] : -1;
-				const R = in_node.R.length > 0 ? in_node.R[0] : -1;
-				if ((L === R) || (L < 0) || (R < 0)) {
-					safe++;
-				} else {
-					risk++;
+		const formatArr = [
+			['eCriticalToMe', cLineParser.#fmt_eCriticalToMe],
+			['ePreRiskToMe', cLineParser.#fmt_ePreRiskToMe],
+			['ePressureToMe', cLineParser.#fmt_ePressureToMe],
+			['ePrePressureToMe', cLineParser.#fmt_ePrePressureToMe],
+			['ePressureByMe', cLineParser.#fmt_ePressureByMe],
+			['bPressureToMe', cLineParser.#fmt_bPressureToMe],
+			['bPrePressureToMe', cLineParser.#fmt_bPrePressureToMe],
+			['bPressureByMe', cLineParser.#fmt_bPressureByMe],
+			['bInnerByMe', cLineParser.#fmt_bInnerByMe]
+		];
+		for (let i = 0; i < meNodes.length; i++) {
+			const curr = meNodes[i];
+			const neighborL = curr.L[curr.L.length - 1];
+			const neighborR = curr.R[0];
+			if ((neighborL === neighborR) ||
+				(neighborL === cLineParser.#border) ||
+				(neighborR === cLineParser.#border)) {
+				parsed.safetyScore += 1;
+			} else {
+				parsed.safetyScore -= 1;
+			}
+			const reversedR = curr.R.toReversed();
+			const reversedL = curr.L.toReversed()
+			formatArr.forEach(([in_format, in_checker]) => {
+				if (parsed[in_format]) {
+					return;
 				}
+				const toL = (in_checker)(curr.L, curr.R);
+				const toR = (in_checker)(reversedR, reversedL);
+				parsed[in_format] = toL || toR;
 			});
-		}
-		parsed.safetyScore = safe - risk;
-		if (in_debug) {
-			console.log(playerNodes, parsed);
 		}
 		return parsed;
 	}
-	static test() {
-		const suites = [
-			{group : '*** 1. there is no pc ***'},
+}
 
-				{items : [9,9,9,9,9,9,9,9], loop : false, safetyScore : 0, dp : false},
-				{items : [9,9,9,9,1,2,1,2], loop : false, safetyScore : 0, dp : false},
-				{items : [1,2,1,2,1,2,1,2], loop : false, safetyScore : 0, dp : false},
+(in_test => {
 
-				{items : [9,9,9,9,9,9,9,9], loop : true, safetyScore : 0, dp : false},
-				{items : [9,9,9,9,1,2,1,2], loop : true, safetyScore : 0, dp : false},
-				{items : [1,2,1,2,1,2,1,2], loop : true, safetyScore : 0, dp : false},
+if (!in_test) {
+	return;
+}
 
-			{group : '*** 2. no empty ***'},
+const suites = [
 
-				{items : [0,0,0,0,0,0,0,0], loop : false, safetyScore : 0, dp : false},
-				{items : [1,2,1,2,0,0,0,0], loop : false, safetyScore : 0, dp : false},
+	{group : '*** 1. there is no pc ***'},
 
-				{items : [0,0,0,0,0,0,0,0], loop : true, safetyScore : 0, dp : false},
-				{items : [1,2,1,2,0,0,0,0], loop : true, safetyScore : 0, dp : false},
+		{items : [9,9,9,9,9,9,9,9], loop : false, safetyScore : 0, dp : false},
+		{items : [9,9,9,9,1,2,1,2], loop : false, safetyScore : 0, dp : false},
+		{items : [1,2,1,2,1,2,1,2], loop : false, safetyScore : 0, dp : false},
 
-			{group : '*** 3. pc is on the left side ***'},
+		{items : [9,9,9,9,9,9,9,9], loop : true, safetyScore : 0, dp : false},
+		{items : [9,9,9,9,1,2,1,2], loop : true, safetyScore : 0, dp : false},
+		{items : [1,2,1,2,1,2,1,2], loop : true, safetyScore : 0, dp : false},
 
-				{items : [0,9,9,9,9,9,9,9], loop : false, safetyScore : 1, dp : false},
-				{items : [0,1,9,9,9,9,9,9], loop : false, safetyScore : 1, dp : false},
-				{items : [0,9,9,9,9,9,9,1], loop : false, safetyScore : 1, dp : false},
-				{items : [0,1,9,9,9,9,9,1], loop : false, safetyScore : 1, dp : false},
+	{group : '*** 2. no empty ***'},
 
-				{items : [0,9,9,9,9,9,9,9], loop : true, safetyScore : 1, dp : false},
-				{items : [0,1,9,9,9,9,9,9], loop : true, safetyScore : -1, dp : false},
-				{items : [0,9,9,9,9,9,9,1], loop : true, safetyScore : -1, dp : false},
-				{items : [0,1,9,9,9,9,9,1], loop : true, safetyScore : 1, dp : false},
-				{items : [0,1,9,9,9,9,9,2], loop : true, safetyScore : -1, dp : false},
+		{items : [0,0,0,0,0,0,0,0], loop : false, safetyScore : 0, dp : false},
+		{items : [1,2,1,2,0,0,0,0], loop : false, safetyScore : 0, dp : false},
 
-			{group : '*** 4. pc is on the right side ***'},
+		{items : [0,0,0,0,0,0,0,0], loop : true, safetyScore : 0, dp : false},
+		{items : [1,2,1,2,0,0,0,0], loop : true, safetyScore : 0, dp : false},
 
-				{items : [9,9,9,9,9,9,9,0], loop : false, safetyScore : 1, dp : false},
-				{items : [9,9,9,9,9,9,1,0], loop : false, safetyScore : 1, dp : false},
-				{items : [1,9,9,9,9,9,9,0], loop : false, safetyScore : 1, dp : false},
-				{items : [1,9,9,9,9,9,1,0], loop : false, safetyScore : 1, dp : false},
+	{group : '*** 3. pc is on the left side ***'},
 
-				{items : [9,9,9,9,9,9,9,0], loop : true, safetyScore : 1, dp : false},
-				{items : [9,9,9,9,9,9,1,0], loop : true, safetyScore : -1, dp : false},
-				{items : [1,9,9,9,9,9,9,0], loop : true, safetyScore : -1, dp : false},
-				{items : [1,0,9,9,9,9,1,0], loop : true, safetyScore : 0, dp : false},
-				{items : [2,0,9,9,9,9,1,0], loop : true, safetyScore : -2, dp : false},
+		{items : [0,9,9,9,9,9,9,9], loop : false, safetyScore : 1, dp : false},
+		{items : [0,1,9,9,9,9,9,9], loop : false, safetyScore : 1, dp : false},
+		{items : [0,9,9,9,9,9,9,1], loop : false, safetyScore : 1, dp : false},
+		{items : [0,1,9,9,9,9,9,1], loop : false, safetyScore : 1, dp : false},
 
-			{group : '*** 5. pc is on the both sides ***'},
+		{items : [0,9,9,9,9,9,9,9], loop : true, safetyScore : 1, dp : false},
+		{items : [0,1,9,9,9,9,9,9], loop : true, safetyScore : -1, dp : false},
+		{items : [0,9,9,9,9,9,9,1], loop : true, safetyScore : -1, dp : false},
+		{items : [0,1,9,9,9,9,9,1], loop : true, safetyScore : 1, dp : false},
+		{items : [0,1,9,9,9,9,9,2], loop : true, safetyScore : -1, dp : false},
 
-				{items : [0,9,9,9,9,9,9,0], loop : false, safetyScore : 2, dp : false},
-				{items : [0,1,9,9,9,9,9,0], loop : false, safetyScore : 2, dp : false},
-				{items : [0,9,9,9,9,9,1,0], loop : false, safetyScore : 2, dp : false},
-				{items : [0,1,9,9,9,9,1,0], loop : false, safetyScore : 2, dp : false},
+	{group : '*** 4. pc is on the right side ***'},
 
-				{items : [0,9,9,9,9,9,9,0], loop : true, safetyScore : 1, dp : false},
-				{items : [0,1,9,9,9,9,9,0], loop : true, safetyScore : -1, dp : false},
-				{items : [0,9,9,9,9,9,1,0], loop : true, safetyScore : -1, dp : false},
-				{items : [0,1,9,9,9,9,1,0], loop : true, safetyScore : 1, dp : false},
-				{items : [0,2,9,9,9,9,1,0], loop : true, safetyScore : -1, dp : false},
+		{items : [9,9,9,9,9,9,9,0], loop : false, safetyScore : 1, dp : false},
+		{items : [9,9,9,9,9,9,1,0], loop : false, safetyScore : 1, dp : false},
+		{items : [1,9,9,9,9,9,9,0], loop : false, safetyScore : 1, dp : false},
+		{items : [1,9,9,9,9,9,1,0], loop : false, safetyScore : 1, dp : false},
 
-			{group : '*** 6. npc is on the both sides ***'},
+		{items : [9,9,9,9,9,9,9,0], loop : true, safetyScore : 1, dp : false},
+		{items : [9,9,9,9,9,9,1,0], loop : true, safetyScore : -1, dp : false},
+		{items : [1,9,9,9,9,9,9,0], loop : true, safetyScore : -1, dp : false},
+		{items : [1,0,9,9,9,9,1,0], loop : true, safetyScore : 0, dp : false},
+		{items : [2,0,9,9,9,9,1,0], loop : true, safetyScore : -2, dp : false},
 
-				{items : [1,9,9,9,9,9,9,1], loop : false, safetyScore : 0, dp : false},
-				{items : [1,0,9,9,9,9,9,1], loop : false, safetyScore : -1, dp : false},
-				{items : [1,9,9,9,9,9,0,1], loop : false, safetyScore : -1, dp : false},
-				{items : [1,0,9,9,9,9,0,1], loop : false, safetyScore : -2, dp : false},
+	{group : '*** 5. pc is on the both sides ***'},
 
-				{items : [1,9,9,9,9,9,9,1], loop : true, safetyScore : 0, dp : false},
-				{items : [1,0,9,9,9,9,9,1], loop : true, safetyScore : -1, dp : false},
-				{items : [1,9,9,9,9,9,0,1], loop : true, safetyScore : -1, dp : false},
-				{items : [1,0,9,9,9,9,0,1], loop : true, safetyScore : -2, dp : false},
+		{items : [0,9,9,9,9,9,9,0], loop : false, safetyScore : 2, dp : false},
+		{items : [0,1,9,9,9,9,9,0], loop : false, safetyScore : 2, dp : false},
+		{items : [0,9,9,9,9,9,1,0], loop : false, safetyScore : 2, dp : false},
+		{items : [0,1,9,9,9,9,1,0], loop : false, safetyScore : 2, dp : false},
 
-			{group : '*** 7. fulfilledWithMe ***'},
+		{items : [0,9,9,9,9,9,9,0], loop : true, safetyScore : 1, dp : false},
+		{items : [0,1,9,9,9,9,9,0], loop : true, safetyScore : -1, dp : false},
+		{items : [0,9,9,9,9,9,1,0], loop : true, safetyScore : -1, dp : false},
+		{items : [0,1,9,9,9,9,1,0], loop : true, safetyScore : 1, dp : false},
+		{items : [0,2,9,9,9,9,1,0], loop : true, safetyScore : -1, dp : false},
 
-				{items : [1,1,1,1,1,1,1,1], loop : false, fulfilledWithMe : false, dp : false},
-				{items : [1,1,1,9,0,1,1,1], loop : false, fulfilledWithMe : false, dp : false},
-				{items : [1,1,1,0,0,1,1,1], loop : false, fulfilledWithMe : true, dp : false},
-				{items : [0,0,0,0,0,0,0,0], loop : false, fulfilledWithMe : true, dp : false},
-				{items : [0,0,0,9,0,0,0,0], loop : false, fulfilledWithMe : false, dp : false},
+	{group : '*** 6. npc is on the both sides ***'},
 
-				{items : [1,1,1,1,1,1,1,1], loop : true, fulfilledWithMe : false, dp : false},
-				{items : [1,1,1,9,0,1,1,1], loop : true, fulfilledWithMe : false, dp : false},
-				{items : [1,1,1,0,0,1,1,1], loop : true, fulfilledWithMe : true, dp : false},
-				{items : [0,0,0,0,0,0,0,0], loop : true, fulfilledWithMe : true, dp : false},
-				{items : [0,0,0,9,0,0,0,0], loop : true, fulfilledWithMe : false, dp : false},
+		{items : [1,9,9,9,9,9,9,1], loop : false, safetyScore : 0, dp : false},
+		{items : [1,0,9,9,9,9,9,1], loop : false, safetyScore : -1, dp : false},
+		{items : [1,9,9,9,9,9,0,1], loop : false, safetyScore : -1, dp : false},
+		{items : [1,0,9,9,9,9,0,1], loop : false, safetyScore : -2, dp : false},
 
-			{group : '*** 8. sandwichedByMe ***'},
+		{items : [1,9,9,9,9,9,9,1], loop : true, safetyScore : 0, dp : false},
+		{items : [1,0,9,9,9,9,9,1], loop : true, safetyScore : -1, dp : false},
+		{items : [1,9,9,9,9,9,0,1], loop : true, safetyScore : -1, dp : false},
+		{items : [1,0,9,9,9,9,0,1], loop : true, safetyScore : -2, dp : false},
 
-				{items : [0,1,0,9,9,9,9,9], loop : false, sandwichedByMe : true, dp : false},
-				{items : [1,0,9,9,9,9,9,0], loop : false, sandwichedByMe : false, dp : false},
-				{items : [0,9,9,9,9,9,0,1], loop : false, sandwichedByMe : false, dp : false},
-				{items : [9,9,9,9,9,0,1,0], loop : false, sandwichedByMe : true, dp : false},
-				{items : [9,9,0,1,2,0,9,9], loop : false, sandwichedByMe : true, dp : false},
-				{items : [2,0,9,9,9,9,0,1], loop : false, sandwichedByMe : false, dp : false},
+	{group : '*** 7. bFulfilledWith ***'},
 
-				{items : [0,1,0,9,9,9,9,9], loop : true, sandwichedByMe : true, dp : false},
-				{items : [1,0,9,9,9,9,9,0], loop : true, sandwichedByMe : true, dp : false},
-				{items : [0,9,9,9,9,9,0,1], loop : true, sandwichedByMe : true, dp : false},
-				{items : [9,9,9,9,9,0,1,0], loop : true, sandwichedByMe : true, dp : false},
-				{items : [9,9,0,1,2,0,9,9], loop : true, sandwichedByMe : true, dp : false},
-				{items : [2,0,9,9,9,9,0,1], loop : true, sandwichedByMe : true, dp : false},
+		{items : [1,1,1,1,1,1,1,1], loop : false, bFulfilledWith : false, dp : false},
+		{items : [1,1,1,9,0,1,1,1], loop : false, bFulfilledWith : false, dp : false},
+		{items : [1,1,1,0,0,1,1,1], loop : false, bFulfilledWith : true, dp : false},
+		{items : [0,0,0,0,0,0,0,0], loop : false, bFulfilledWith : true, dp : false},
+		{items : [0,0,0,9,0,0,0,0], loop : false, bFulfilledWith : false, dp : false},
 
-			{group : '*** 9. preSandwichedByMe ***'},
+		{items : [1,1,1,1,1,1,1,1], loop : true, bFulfilledWith : false, dp : false},
+		{items : [1,1,1,9,0,1,1,1], loop : true, bFulfilledWith : false, dp : false},
+		{items : [1,1,1,0,0,1,1,1], loop : true, bFulfilledWith : true, dp : false},
+		{items : [0,0,0,0,0,0,0,0], loop : true, bFulfilledWith : true, dp : false},
+		{items : [0,0,0,9,0,0,0,0], loop : true, bFulfilledWith : false, dp : false},
 
-				{items : [9,0,9,9,9,9,9,0], loop : false, preSandwichedByMe : false, dp : false},
-				{items : [0,9,0,9,9,9,9,9], loop : false, preSandwichedByMe : true, dp : false},
-				{items : [9,0,9,0,9,9,9,9], loop : false, preSandwichedByMe : true, dp : false},
-				{items : [9,0,1,0,9,9,9,9], loop : false, preSandwichedByMe : false, dp : false},
-				{items : [9,0,9,9,0,9,9,9], loop : false, preSandwichedByMe : false, dp : false},
+	{group : '*** 8. bOuterByMe ***'},
 
-				{items : [9,0,9,9,9,9,9,0], loop : true, preSandwichedByMe : true, dp : false},
+		{items : [0,1,0,9,9,9,9,9], loop : false, bOuterByMe : true, dp : false},
+		{items : [1,0,9,9,9,9,9,0], loop : false, bOuterByMe : false, dp : false},
+		{items : [0,9,9,9,9,9,0,1], loop : false, bOuterByMe : false, dp : false},
+		{items : [9,9,9,9,9,0,1,0], loop : false, bOuterByMe : true, dp : false},
+		{items : [9,9,0,1,2,0,9,9], loop : false, bOuterByMe : true, dp : false},
+		{items : [2,0,9,9,9,9,0,1], loop : false, bOuterByMe : false, dp : false},
 
-			{group : '*** 10. highRiskForMe ***'},
+		{items : [0,1,0,9,9,9,9,9], loop : true, bOuterByMe : true, dp : false},
+		{items : [1,0,9,9,9,9,9,0], loop : true, bOuterByMe : true, dp : false},
+		{items : [0,9,9,9,9,9,0,1], loop : true, bOuterByMe : true, dp : false},
+		{items : [9,9,9,9,9,0,1,0], loop : true, bOuterByMe : true, dp : false},
+		{items : [9,9,0,1,2,0,9,9], loop : true, bOuterByMe : true, dp : false},
+		{items : [2,0,9,9,9,9,0,1], loop : true, bOuterByMe : true, dp : false},
 
-				{items : [0,1,9,9,9,9,9,9], loop : false, highRiskForMe : false, dp : false},
-				{items : [9,0,1,9,9,9,9,9], loop : false, highRiskForMe : true, dp : false},
-				{items : [9,0,1,0,9,9,9,9], loop : false, highRiskForMe : true, dp : false},
-				{items : [9,0,1,2,9,9,9,9], loop : false, highRiskForMe : true, dp : false},
-				{items : [9,0,9,1,9,9,9,9], loop : false, highRiskForMe : false, dp : false},
+	{group : '*** 9. bPreOuterByMe ***'},
 
-				{items : [9,9,9,9,9,9,1,0], loop : false, highRiskForMe : false, dp : false},
-				{items : [9,9,9,9,9,1,0,9], loop : false, highRiskForMe : true, dp : false},
-				{items : [9,9,9,9,0,1,0,9], loop : false, highRiskForMe : true, dp : false},
-				{items : [9,9,9,9,2,1,0,9], loop : false, highRiskForMe : true, dp : false},
-				{items : [9,9,9,9,1,9,0,9], loop : false, highRiskForMe : false, dp : false},
+		{items : [9,0,9,9,9,9,9,0], loop : false, bPreOuterByMe : false, dp : false},
+		{items : [0,9,0,9,9,9,9,9], loop : false, bPreOuterByMe : true, dp : false},
+		{items : [9,0,9,0,9,9,9,9], loop : false, bPreOuterByMe : true, dp : false},
+		{items : [9,0,1,0,9,9,9,9], loop : false, bPreOuterByMe : false, dp : false},
+		{items : [9,0,9,9,0,9,9,9], loop : false, bPreOuterByMe : false, dp : false},
 
-			{group : '*** 11. preRiskForMe ***'},
+		{items : [9,0,9,9,9,9,9,0], loop : true, bPreOuterByMe : true, dp : false},
 
-				{items : [9,0,9,0,9,9,9,9], loop : false, preRiskForMe : true, dp : false},
-				{items : [9,0,9,9,0,9,9,9], loop : false, preRiskForMe : false, dp : false},
-				{items : [9,9,0,9,0,9,9,9], loop : false, preRiskForMe : false, dp : false},
-				{items : [9,0,0,9,0,0,9,9], loop : false, preRiskForMe : true, dp : false},
+	{group : '*** 10. eCriticalToMe ***'},
 
-				{items : [9,9,9,9,0,9,0,9], loop : false, preRiskForMe : true, dp : false},
-				{items : [9,9,9,0,9,9,0,9], loop : false, preRiskForMe : false, dp : false},
-				{items : [9,9,9,0,9,0,9,9], loop : false, preRiskForMe : false, dp : false},
-				{items : [9,9,0,0,9,0,0,9], loop : false, preRiskForMe : true, dp : false},
+		{items : [0,1,9,9,9,9,9,9], loop : false, eCriticalToMe : false, dp : false},
+		{items : [9,0,1,9,9,9,9,9], loop : false, eCriticalToMe : true, dp : false},
+		{items : [9,0,1,0,9,9,9,9], loop : false, eCriticalToMe : true, dp : false},
+		{items : [9,0,1,2,9,9,9,9], loop : false, eCriticalToMe : true, dp : false},
+		{items : [9,0,9,1,9,9,9,9], loop : false, eCriticalToMe : false, dp : false},
 
-			{group : '*** 12. pressuredByMe ***'},
+		{items : [9,9,9,9,9,9,1,0], loop : false, eCriticalToMe : false, dp : false},
+		{items : [9,9,9,9,9,1,0,9], loop : false, eCriticalToMe : true, dp : false},
+		{items : [9,9,9,9,0,1,0,9], loop : false, eCriticalToMe : true, dp : false},
+		{items : [9,9,9,9,2,1,0,9], loop : false, eCriticalToMe : true, dp : false},
+		{items : [9,9,9,9,1,9,0,9], loop : false, eCriticalToMe : false, dp : false},
 
-				{items : [1,1,0,9,0,9,9,9], loop : false, pressuredByMe : false, dp : false},
-				{items : [9,1,0,9,0,9,9,9], loop : false, pressuredByMe : true, dp : false},
-				{items : [9,1,0,0,9,0,9,9], loop : false, pressuredByMe : true, dp : false},
-				{items : [9,1,1,0,9,0,9,9], loop : false, pressuredByMe : true, dp : false},
+	{group : '*** 11. ePreRiskToMe ***'},
 
-				{items : [9,9,9,0,9,0,1,1], loop : false, pressuredByMe : false, dp : false},
-				{items : [9,9,9,0,9,0,1,9], loop : false, pressuredByMe : true, dp : false},
-				{items : [9,9,0,9,0,0,1,9], loop : false, pressuredByMe : true, dp : false},
-				{items : [9,9,0,9,0,1,1,9], loop : false, pressuredByMe : true, dp : false}
-		];
-		suites.forEach(in_suite => {
-			if (in_suite.group) {
-				console.log(in_suite.group);
-			} else {
-				const parsed = cLineParser.parse(in_suite.items, 0, in_suite.loop, in_suite.dp);
-				Object.keys(parsed).forEach(in_prop => {
-					if (!in_suite.hasOwnProperty(in_prop)) {
-						return;
-					}
-					if (in_suite[in_prop] !== parsed[in_prop]) {
-						const loop = in_suite.loop ? ' (loop)' : '';
-						console.log('failed : ' + in_suite.items.join() + loop + ' is ' + parsed[in_prop]);
-					}
-				});
+		{items : [9,0,9,0,9,9,9,9], loop : false, ePreRiskToMe : true, dp : false},
+		{items : [9,0,9,9,0,9,9,9], loop : false, ePreRiskToMe : false, dp : false},
+		{items : [9,9,0,9,0,9,9,9], loop : false, ePreRiskToMe : false, dp : false},
+		{items : [9,0,0,9,0,0,9,9], loop : false, ePreRiskToMe : true, dp : false},
+
+		{items : [9,9,9,9,0,9,0,9], loop : false, ePreRiskToMe : true, dp : false},
+		{items : [9,9,9,0,9,9,0,9], loop : false, ePreRiskToMe : false, dp : false},
+		{items : [9,9,9,0,9,0,9,9], loop : false, ePreRiskToMe : false, dp : false},
+		{items : [9,9,0,0,9,0,0,9], loop : false, ePreRiskToMe : true, dp : false},
+
+	{group : '*** 12. ePressureToMe ***'},
+
+		{items : [9,0,1,9,1,9,9,9], loop : false, ePressureToMe : true, dp : false},
+		{items : [9,9,0,1,9,1,9,9], loop : false, ePressureToMe : false, dp : false},
+		{items : [9,0,0,1,1,9,1,9], loop : false, ePressureToMe : true, dp : false},
+		{items : [9,0,1,9,1,9,9,9], loop : true, ePressureToMe : false, dp : false},
+		{items : [9,9,0,1,9,1,9,9], loop : true, ePressureToMe : false, dp : false},
+		{items : [9,0,0,1,1,9,1,9], loop : true, ePressureToMe : false, dp : false},
+
+		{items : [9,9,1,9,1,0,9,9], loop : false, ePressureToMe : false, dp : false},
+		{items : [9,1,9,1,1,0,0,9], loop : false, ePressureToMe : true, dp : false},
+
+	{group : '*** 13. bPressureToMe ***'},
+
+		{items : [9,0,1,9,1,9,9,9], loop : false, bPressureToMe : true, dp : false},
+		{items : [9,9,0,1,9,1,9,9], loop : false, bPressureToMe : true, dp : false},
+		{items : [9,0,0,1,1,9,1,9], loop : false, bPressureToMe : true, dp : false},
+		{items : [9,0,1,9,1,9,9,9], loop : true, bPressureToMe : true, dp : false},
+		{items : [9,9,0,1,9,1,9,9], loop : true, bPressureToMe : true, dp : false},
+		{items : [9,0,0,1,1,9,1,9], loop : true, bPressureToMe : true, dp : false},
+
+		{items : [9,9,1,9,1,0,9,9], loop : false, bPressureToMe : true, dp : false},
+		{items : [9,1,9,1,1,0,0,9], loop : false, bPressureToMe : true, dp : false},
+
+	{group : '*** 14. ePrePressureToMe ***'},
+
+		{items : [9,0,9,9,1,9,9,9], loop : false, ePrePressureToMe : true, dp : false},
+		{items : [9,9,0,9,9,1,9,9], loop : false, ePrePressureToMe : false, dp : false},
+		{items : [9,0,0,9,1,9,1,9], loop : false, ePrePressureToMe : true, dp : false},
+		{items : [9,0,9,9,1,9,9,9], loop : true, ePrePressureToMe : false, dp : false},
+		{items : [9,9,0,9,9,1,9,9], loop : true, ePrePressureToMe : false, dp : false},
+		{items : [9,0,0,9,1,9,1,9], loop : true, ePrePressureToMe : false, dp : false},
+
+		{items : [9,9,1,9,9,0,9,9], loop : false, ePrePressureToMe : false, dp : false},
+		{items : [9,1,9,1,9,0,0,9], loop : false, ePrePressureToMe : true, dp : false},
+
+	{group : '*** 15. bPrePressureToMe ***'},
+
+		{items : [9,0,9,9,1,9,9,9], loop : false, bPrePressureToMe : true, dp : false},
+		{items : [9,9,0,9,9,1,9,9], loop : false, bPrePressureToMe : true, dp : false},
+		{items : [9,0,0,9,1,9,1,9], loop : false, bPrePressureToMe : true, dp : false},
+		{items : [9,0,9,9,1,9,9,9], loop : true, bPrePressureToMe : true, dp : false},
+		{items : [9,9,0,9,9,1,9,9], loop : true, bPrePressureToMe : true, dp : false},
+		{items : [9,0,0,9,1,9,1,9], loop : true, bPrePressureToMe : true, dp : false},
+
+		{items : [9,9,1,9,9,0,9,9], loop : false, bPrePressureToMe : true, dp : false},
+		{items : [9,1,9,1,9,0,0,9], loop : false, bPrePressureToMe : true, dp : false},
+
+	{group : '*** 16. ePressureByMe ***'},
+
+		{items : [1,1,0,9,0,9,9,9], loop : false, ePressureByMe : false, dp : false},
+		{items : [9,9,1,0,9,0,9,9], loop : false, ePressureByMe : false, dp : false},
+		{items : [9,1,0,9,0,9,9,9], loop : false, ePressureByMe : true, dp : false},
+		{items : [9,1,0,0,9,0,9,9], loop : false, ePressureByMe : true, dp : false},
+		{items : [9,1,1,0,9,0,9,9], loop : false, ePressureByMe : true, dp : false},
+		{items : [9,1,1,0,9,0,9,9], loop : true, ePressureByMe : false, dp : false},
+
+		{items : [9,9,9,0,9,0,1,1], loop : false, ePressureByMe : false, dp : false},
+		{items : [9,9,0,9,0,1,9,9], loop : false, ePressureByMe : false, dp : false},
+		{items : [9,9,9,0,9,0,1,9], loop : false, ePressureByMe : true, dp : false},
+		{items : [9,9,0,9,0,0,1,9], loop : false, ePressureByMe : true, dp : false},
+		{items : [9,9,0,9,0,1,1,9], loop : false, ePressureByMe : true, dp : false},
+		{items : [9,9,0,9,0,1,1,9], loop : true, ePressureByMe : false, dp : false},
+
+	{group : '*** 17. bPressureByMe ***'},
+
+		{items : [1,1,0,9,0,9,9,9], loop : false, bPressureByMe : false, dp : false},
+		{items : [9,9,1,0,9,0,9,9], loop : false, bPressureByMe : true, dp : false},
+		{items : [9,1,0,9,0,9,9,9], loop : false, bPressureByMe : true, dp : false},
+		{items : [9,1,0,0,9,0,9,9], loop : false, bPressureByMe : true, dp : false},
+		{items : [9,1,1,0,9,0,9,9], loop : false, bPressureByMe : true, dp : false},
+		{items : [9,1,1,0,9,0,9,9], loop : true, bPressureByMe : true, dp : false},
+
+		{items : [9,9,9,0,9,0,1,1], loop : false, bPressureByMe : false, dp : false},
+		{items : [9,9,0,9,0,1,9,9], loop : false, bPressureByMe : true, dp : false},
+		{items : [9,9,9,0,9,0,1,9], loop : false, bPressureByMe : true, dp : false},
+		{items : [9,9,0,9,0,0,1,9], loop : false, bPressureByMe : true, dp : false},
+		{items : [9,9,0,9,0,1,1,9], loop : false, bPressureByMe : true, dp : false},
+		{items : [9,9,0,9,0,1,1,9], loop : true, bPressureByMe : true, dp : false},
+
+	{group : '*** 18. bInnerByMe ***'},
+
+		{items : [9,9,9,9,9,9,9,9], loop : false, bInnerByMe : false, dp : false},
+
+		{items : [1,0,1,9,9,9,9,9], loop : false, bInnerByMe : true, dp : false},
+		{items : [1,0,0,1,9,9,9,9], loop : false, bInnerByMe : true, dp : false},
+		{items : [2,0,0,1,9,9,9,9], loop : false, bInnerByMe : false, dp : false},
+		{items : [1,9,0,1,9,9,9,9], loop : false, bInnerByMe : false, dp : false},
+
+		{items : [0,1,9,9,9,9,9,1], loop : false, bInnerByMe : false, dp : false},
+		{items : [0,1,9,9,9,9,1,0], loop : false, bInnerByMe : false, dp : false},
+		{items : [0,1,9,9,9,9,2,0], loop : false, bInnerByMe : false, dp : false},
+		{items : [0,1,9,9,9,9,1,9], loop : false, bInnerByMe : false, dp : false},
+
+		{items : [0,1,9,9,9,9,9,1], loop : true, bInnerByMe : true, dp : false},
+		{items : [0,1,9,9,9,9,1,0], loop : true, bInnerByMe : true, dp : false},
+		{items : [0,1,9,9,9,9,2,0], loop : true, bInnerByMe : false, dp : false},
+		{items : [0,1,9,9,9,9,1,9], loop : true, bInnerByMe : false, dp : false}
+];
+suites.forEach(in_suite => {
+	if (in_suite.group) {
+		console.log(in_suite.group);
+	} else {
+		const parsed = cLineParser.parse(in_suite.items, 0, in_suite.loop, in_suite.dp);
+		Object.keys(parsed).forEach(in_prop => {
+			if (!in_suite.hasOwnProperty(in_prop)) {
+				return;
+			}
+			if (in_suite[in_prop] !== parsed[in_prop]) {
+				const loop = in_suite.loop ? ' (loop)' : '';
+				console.log('failed : ' + in_suite.items.join() + loop + ' is ' + parsed[in_prop]);
 			}
 		});
 	}
-}
+});
+
+})(false);
 
 class cReversi {
 	static #maximize(in_evaluator, in_player, in_candArr) {
@@ -928,23 +1148,16 @@ class cReversi {
 	#updatePlayersAreaScoresEx0(in_player, in_ix) {
 		return;
 	}
-	static #evaluateStats = {
-		total : 0,
-		corner : 0,
-		highRiskForMeP : 0,
-		highRiskForMeN : 0,
-		preRiskForMeP : 0,
-		preRiskForMeN : 0,
-		xSquare : 0,
-		fulfilledWithMe : 0,
-		pressuredByMeP : 0,
-		pressuredByMeN : 0,
-		safetyScore : 0,
-		sandwichedByMe : 0,
-		preSandwichedByMe : 0
-	};
+	static #evaluateStats = {};
 	#evaluate(in_player, in_ix) {
-		cReversi.#evaluateStats.total++;
+		const registerStats = in_key => {
+			if (cReversi.#evaluateStats[in_key]) {
+				cReversi.#evaluateStats[in_key]++;
+			} else {
+				cReversi.#evaluateStats[in_key] = 1;
+			}
+		};
+		registerStats('total');
 		const pos = this.#indexToPos(in_ix);
 		const corner_x4 = this.#conf.row.edge && this.#conf.col.edge;
 		const ixIsEdge = in_dir => ((this.#conf[in_dir].edge) && ((pos[in_dir] === this.#conf[in_dir].size - 1) || (pos[in_dir] === 0)));
@@ -972,8 +1185,7 @@ class cReversi {
 		const indexes = this.#conf.indexes;
 		if (ixIsRowEdge) {
 			if (ixIsColEdge) {
-				// on the corner
-				cReversi.#evaluateStats.corner++;
+				registerStats('corner');
 				return +999;
 			} else {
 				check.e.indexes = indexes.sameRow[pos.row];
@@ -982,8 +1194,8 @@ class cReversi {
 			if (ixIsColEdge) {
 				check.e.indexes = indexes.sameCol[pos.col];
 			} else {
-				// inside & without xSquare
 				if (!corner_x4) {
+					registerStats('inside & without xSquare');
 					return 0;
 				}
 			}
@@ -1017,77 +1229,65 @@ class cReversi {
 			check.x.increased = !check.x.nextItems.every((in_item, in_ix) => in_item === check.x.currItems[in_ix]);
 		}
 		(rollback)();
-		// 1. never take edge-highRiskForMe
-		if (check.e.currParsed['highRiskForMe']) {
-			if (!check.e.nextParsed['highRiskForMe']) {
-				cReversi.#evaluateStats.highRiskForMeP++;
-				return +888;
+		const priorityArr = [
+			{format : 'eCriticalToMe', positive : false},
+			{format : 'ePreRiskToMe', positive : false},
+			{format : 'xSquare', positive : false},
+			{format : 'ePressureByMe', positive : true},
+			{format : 'ePressureToMe', positive : false},
+			{format : 'ePrePressureToMe', positive : false},
+			{format : 'bFulfilledWith', positive : true},
+			{format : 'bPressureByMe', positive : true},
+			{format : 'bPressureToMe', positive : false},
+			{format : 'bPrePressureToMe', positive : false},
+			{format : 'bInnerByMe', positive : true},
+			{format : 'bPreOuterByMe', positive : false},
+			{format : 'safetyScore', positive : true},
+			{format : 'bOuterByMe', positive : true}
+		];
+		const scale = 10;
+		for (let i = 0; i < priorityArr.length; i++) {
+			const {format, positive} = priorityArr[i];
+			let score = ((priorityArr.length - i - 1) * scale + 1) * (positive ? +1 : -1);
+			if (format === 'xSquare') {
+				// 1. special case (xSquare)
+				if (check.x.increased) {
+					registerStats(format);
+					return score;
+				} else {
+					continue;
+				}
 			}
-		} else {
-			if (check.e.nextParsed['highRiskForMe']) {
-				cReversi.#evaluateStats.highRiskForMeN++;
-				return -888;
-			}
-		}
-		// 2. never take edge-preRiskForMe
-		if (check.e.currParsed['preRiskForMe']) {
-			if (!check.e.nextParsed['preRiskForMe']) {
-				cReversi.#evaluateStats.preRiskForMeP++;
-				return +777;
-			}
-		} else {
-			if (check.e.nextParsed['preRiskForMe']) {
-				cReversi.#evaluateStats.preRiskForMeN++;
-				return -777;
-			}
-		}
-		// 3. never take unsafe xSquare
-		if (check.x.increased) {
-			cReversi.#evaluateStats.xSquare++;
-			// to check inner flipping, this case can be improved
-			return -666;
-		}
-		// 4. take edge-fulfilledWithMe
-		if (check.e.nextParsed['fulfilledWithMe']) {
-			cReversi.#evaluateStats.fulfilledWithMe++;
-			return +555;
-		}
-		// 5. take edge-pressuredByMe
-		if (check.e.currParsed['pressuredByMe']) {
-			if (!check.e.nextParsed['pressuredByMe']) {
-				cReversi.#evaluateStats.pressuredByMeN++;
-				return -444;
-			}
-		} else {
-			if (check.e.nextParsed['pressuredByMe']) {
-				cReversi.#evaluateStats.pressuredByMeP++;
-				return +444;
-			}
-		}
-		// 6. never take edge-preSandwichedByMe
-		if (check.e.currParsed['preSandwichedByMe']) {
-			if (!check.e.nextParsed['preSandwichedByMe']) {
-				cReversi.#evaluateStats.preSandwichedByMe++;
-				return +333;
-			}
-		} else {
-			if (check.e.nextParsed['preSandwichedByMe']) {
-				cReversi.#evaluateStats.preSandwichedByMe++;
-				return -333;
-			}
-		}
-		// 7. depends on edge-sandwichedByMe + safetyScore
-		if (check.e.currParsed['safetyScore'] === check.e.nextParsed['safetyScore']) {
-			if (check.e.nextParsed['sandwichedByMe']) {
-				cReversi.#evaluateStats.sandwichedByMe++;
-				return +222;
+			if (check.e.currParsed[format] === check.e.nextParsed[format]) {
+				// 2. special case (bOuterByMe)
+				if ((format === 'bOuterByMe') && (check.e.nextParsed[format])) {
+					registerStats(format);
+					return score;
+				} else {
+					continue;
+				}
 			} else {
-				return 0;
+				// 3. generic cases
+				if (typeof check.e.nextParsed[format] === 'number') {
+					const delta = check.e.nextParsed[format] - check.e.currParsed[format];
+					registerStats(format);
+					return (delta > 0) ? score * +1 : score * -1;
+				} else {
+					let statsKey;
+					if (check.e.nextParsed[format]) {
+						statsKey = format + '-false-to-true';
+						score *= +1;
+					} else {
+						statsKey = format + '-true-to-false';
+						score *= -1;
+					}
+					registerStats(statsKey);
+					return score;
+				}
 			}
-		} else {
-			cReversi.#evaluateStats.safetyScore++;
-			return (check.e.nextParsed['safetyScore'] - check.e.currParsed['safetyScore'] > 0) ? +111 : -111;
 		}
+		registerStats('can not evaluate');
+		return 0;
 	}
 	#countNextEnemyOption(in_player, in_ix) {
 		const rollback = this.#createRollback();
@@ -1123,7 +1323,11 @@ class cReversi {
 		(rollback)();
 		return score;
 	}
+	static #randomizeCnt = 5;
 	#npc_min_enemy_option(in_player, in_candArr) {
+		if (this.#history.length < cReversi.#randomizeCnt) {
+			return this.#npc_random(in_player, in_candArr);
+		}
 		const evaluator = (in_player, in_ix) => {
 			return this.#evaluate(in_player, in_ix) + this.#countNextEnemyOption(in_player, in_ix) * -1;
 		};
@@ -1131,6 +1335,9 @@ class cReversi {
 		return this.#npc_score_spot(in_player, narrowedArr);
 	}
 	#npc_max_option(in_player, in_candArr) {
+		if (this.#history.length < cReversi.#randomizeCnt) {
+			return this.#npc_random(in_player, in_candArr);
+		}
 		const evaluator = (in_player, in_ix) => {
 			return this.#evaluate(in_player, in_ix) + this.#countNextOption(in_player, in_ix);
 		};
@@ -1138,6 +1345,9 @@ class cReversi {
 		return this.#npc_score_spot(in_player, narrowedArr);
 	}
 	#npc_max_owned_area(in_player, in_candArr) {
+		if (this.#history.length < cReversi.#randomizeCnt) {
+			return this.#npc_random(in_player, in_candArr);
+		}
 		const evaluator = (in_player, in_ix) => {
 			return this.#evaluate(in_player, in_ix) + this.#countNextOwnedArea(in_player, in_ix);
 		};
@@ -1145,6 +1355,9 @@ class cReversi {
 		return this.#npc_score_spot(in_player, narrowedArr);
 	}
 	#npc_score_smart(in_player, in_candArr) {
+		if (this.#history.length < cReversi.#randomizeCnt) {
+			return this.#npc_random(in_player, in_candArr);
+		}
 		const evaluator = (in_player, in_ix) => {
 			return this.#evaluate(in_player, in_ix) + this.#getAreaScore(in_player, in_ix);
 		};
@@ -1229,6 +1442,7 @@ class cReversi {
 							win++;
 						}
 						this.#initAreaScores();
+						this.#history.length = 0;
 						(rollback)();
 					} else {
 						break;
@@ -1236,6 +1450,7 @@ class cReversi {
 				}
 				row.push(truncateDecimal(win / in_repeat, 2));
 				this.#initAreaScores();
+				this.#history.length = 0;
 				(rollback)();
 			});
 			table.push(row);
@@ -1283,7 +1498,7 @@ class cReversi {
 				total = cReversi.#evaluateStats[in_key];
 				return;
 			}
-			const taking =truncateDecimal(cReversi.#evaluateStats[in_key] / total, 4);
+			const taking = truncateDecimal(cReversi.#evaluateStats[in_key] / total, 4);
 			console.log(in_key + ' : ' + taking);
 		});
 	}
