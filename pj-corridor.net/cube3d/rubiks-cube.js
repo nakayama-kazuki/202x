@@ -254,7 +254,7 @@ export class cRubiksCube extends THREE.Object3D {
 			});
 			intersectBoxes.push(boxes);
 		});
-		// 3. compute area
+		// 3. compute area, isSquareLike
 		const [a1, a2] = cRubiksCube.axisComponent(in_axis, false);
 		const areas = [];
 		intersectBoxes.forEach(in_boxes => {
@@ -268,12 +268,15 @@ export class cRubiksCube extends THREE.Object3D {
 			});
 			areas.push(area);
 		});
+		const isSquareLike = (in_size => {
+			return (Math.abs(in_size[a1] / in_size[a2] - 1) < error);
+		})(aabb.getSize(VEC3()));
 		// 4. check angle
 		const allEqual = (...in_args) => {
 			// error has already been declared
 			return in_args.every(in_arg => Math.abs(in_arg - in_args[0]) < error);
 		};
-		if (allEqual(areas[0], areas[1], areas[2], areas[3])) {
+		if (allEqual(areas[0], areas[1], areas[2], areas[3]) && isSquareLike) {
 			return Math.PI / 2;
 		} else {
 			if (allEqual(areas[0] + areas[1], areas[2] + areas[3])) {
