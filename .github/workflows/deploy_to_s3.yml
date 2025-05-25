@@ -7,6 +7,7 @@ on:
       - main
     paths:
       - 'pj-corridor.net/index.html'
+      - 'pj-corridor.net/ads.txt'
       - 'pj-corridor.net/images/**'
       - 'pj-corridor.net/cube3d/**'
       - 'stick-figure/**'
@@ -20,6 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       INDEXPATH: pj-corridor.net/index.html
+      ADTXTPATH: pj-corridor.net/ads.txt
       IMAGEPATH: pj-corridor.net/images/
       APPL1PATH: pj-corridor.net/cube3d/
       APPL2PATH: stick-figure/
@@ -51,7 +53,11 @@ jobs:
       if: contains(env.FILES, env.INDEXPATH)
       run: |
         aws s3 cp ${{ env.INDEXPATH }} s3://pj-corridor.net/index.html
-    - name: sync-1
+    - name: copy-1-1
+      if: contains(env.FILES, env.ADTXTPATH)
+      run: |
+        aws s3 cp ${{ env.ADTXTPATH }} s3://pj-corridor.net/ads.txt
+    - name: sync-1-2
       if: contains(env.FILES, env.IMAGEPATH)
       run: |
         aws s3 sync ${{ env.IMAGEPATH }} s3://pj-corridor.net/images/ --exclude ".git/*"
