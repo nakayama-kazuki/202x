@@ -393,7 +393,7 @@ function complete() {
 	gWorld.addAnimationHook(progress);
 	const duration = 2000;
 	gWorld.motionZoom2(WORLD_RADIUS * 1.5, duration * 0.9);
-	window.setTimeout(() => {
+	setTimeout(() => {
 		gWorld.removeAnimationHook(progress);
 		gCube.removeCompleteCallback();
 		const dialog = document.createElement('div');
@@ -473,7 +473,7 @@ function setTransition(in_elem, in_shorthand, in_val1, in_val2) {
 	const components = in_shorthand.split(/\s+/);
 	in_elem.style.transition = in_shorthand;
 	in_elem.style[components[0]] = in_val1;
-	window.setTimeout(() => {
+	setTimeout(() => {
 		/*
 			*** NOTE ***
 			to fire the transition function,
@@ -752,6 +752,11 @@ function createChildWindow(in_document) {
 }
 
 document.addEventListener('DOMContentLoaded', (() => {
+	/*
+		*** NOTE ***
+		without iframe (outer window),
+		geometry in event will be wrong because of google ads
+	*/
 	const outer = createChildWindow(document);
 	let resizeWorld = in_ev => {
 		gWorld.resize(outer.innerWidth, outer.innerHeight);
