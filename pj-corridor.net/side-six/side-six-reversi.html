@@ -3084,14 +3084,17 @@ function drawCosmicView(in_canvas, in_stars, in_nebulae_patterns, in_color = 0x0
 	event handlers
 */
 
-const gBackgroundCanvas = document.createElement('CANVAS');
+function drawBackground(in_canvas) {
+	Object.assign(in_canvas.style, {
+		position : 'absolute',
+		left : 0,
+		top : 0,
+		zIndex : -1
+	});
+	drawCosmicView(in_canvas, 400, 50);
+}
 
-Object.assign(gBackgroundCanvas.style, {
-	position : 'absolute',
-	left : 0,
-	top : 0,
-	zIndex : -1
-});
+const gBackgroundCanvas = document.createElement('CANVAS');
 
 function setupBody(in_document) {
 	if (!in_document.body) {
@@ -3122,7 +3125,7 @@ document.addEventListener('DOMContentLoaded', (() => {
 		gWorld.resize(outer.innerWidth, outer.innerHeight);
 		gBackgroundCanvas.width = outer.innerWidth;
 		gBackgroundCanvas.height = outer.innerHeight;
-		drawCosmicView(gBackgroundCanvas, 400, 50);
+		drawBackground(gBackgroundCanvas);
 	};
 	outer.addEventListener('resize', debouncing(resizeWorld, 300));
 	outer.dispatchEvent(new Event('resize'));
