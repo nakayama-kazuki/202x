@@ -502,7 +502,7 @@ function initializeByLevel() {
 
 (in_level => {
 	if (in_level === false) {
-		gMeshLevelMap.setOrder(0);
+		gMeshLevelMap.setOrder(2);
 	} else {
 		gMeshLevelMap.setOrder(in_level);
 	}
@@ -629,10 +629,7 @@ function shuffle10() {
 function uiHelp() {
 	const url = {
 		ver : './version.txt',
-		im1 : 'https://pj-corridor.net/images/cube-2-03.png',
-		im2 : 'https://pj-corridor.net/images/diamond-2-4.png',
-		im3 : 'https://pj-corridor.net/images/cube-6-03.png',
-		im4 : 'https://pj-corridor.net/images/diamond-6-4.png',
+		img : './side-six-help.gif',
 		src : 'https://github.com/nakayama-kazuki/202x/commit/'
 	};
 	const dialog = document.createElement('div');
@@ -643,11 +640,7 @@ function uiHelp() {
 		borderRadius : '1em',
 		padding : '1em'
 	});
-	dialog.innerHTML += '<div>';
-	[url.im1, url.im2, url.im3, url.im4].forEach(in_img => {
-		dialog.innerHTML += '<img width="100" src="' + in_img + '" />';
-	});
-	dialog.innerHTML += '</div>';
+	dialog.innerHTML += '<div><img src="' + url.img + '" /></div>';
 	const verLabel = document.createElement('div');
 	Object.assign(verLabel.style, {
 		textAlign : 'right'
@@ -658,7 +651,7 @@ function uiHelp() {
 		verLabel.addEventListener('mousedown', in_e => in_e.stopPropagation());
 		verLabel.addEventListener('touchstart', in_e => in_e.stopPropagation());
 	}).catch(in_err => {
-	    console.log(in_err);
+	    console.error(in_err);
 		verLabel.innerHTML = 'version : unknown';
 	});
 	startDialog(dialog);
