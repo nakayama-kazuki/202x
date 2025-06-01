@@ -1,0 +1,43 @@
+@echo off
+setlocal enabledelayedexpansion
+
+rem **********************************************
+
+rem ***
+rem *** 1. download qpdf-12.2.0-mingw64.zip from https://github.com/qpdf/qpdf/releases/tag/v12.2.0
+rem ***
+
+set "QPDF_PATH=bin\qpdf.exe"
+
+rem ***
+rem *** 2. your browser
+rem ***
+
+set "BROWSER_PATH=C:\Program Files\Google\Chrome\Application\chrome.exe"
+
+rem ***
+rem *** 3. password for pdf
+rem ***
+
+set "PDF_PASSWORD=XXXXX"
+
+rem **********************************************
+
+set "filenames="
+
+:LOOP
+if "%~1"=="" goto END
+set "filenames=!filenames! %~1"
+shift
+goto LOOP
+
+:END
+rem echo filename: !filenames!
+
+for %%f in (!filenames!) do (
+	set "TEP_PDF=%TEMP%\%%~nf_!RANDOM!.pdf"
+	"%QPDF_PATH%" --decrypt --password=!PDF_PASSWORD! "%%~f" "!TEP_PDF!"
+	timeout /t 2 /nobreak >nul
+	start "" "%BROWSER_PATH%" --allow-file-access-from-files "file:///!TEP_PDF!"
+)
+
