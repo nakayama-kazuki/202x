@@ -19,7 +19,7 @@ rem ***
 rem *** 3. password for pdf
 rem ***
 
-set "PDF_PASSWORD=XXXXX"
+rem set "PDF_PASSWORD=XXXXX"
 
 rem **********************************************
 
@@ -35,6 +35,12 @@ goto LOOP
 rem echo filename: !filenames!
 
 for %%f in (!filenames!) do (
+	if not defined PDF_PASSWORD (
+		set "filename=%%~nf"
+		for /f "tokens=2 delims=-" %%p in ("!filename!") do (
+			set "PDF_PASSWORD=%%p"
+		)
+	)
 	set "TEP_PDF=%TEMP%\%%~nf_!RANDOM!.pdf"
 	"%QPDF_PATH%" --decrypt --password=!PDF_PASSWORD! "%%~f" "!TEP_PDF!"
 	timeout /t 2 /nobreak >nul
