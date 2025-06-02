@@ -122,4 +122,5 @@ foreach ($terminal in $arrTerminals) {
 	$offsRecent = ($kvDaysOnOff[$terminal] | Where-Object { $_ -ge $ago }).Count
 	$daysRecent = ($kvDaysTotal[$terminal] | Where-Object { $_ -ge $ago }).Count
 	$rateRecent = $offsRecent / $daysRecent
-	Add-Content -Path $outputFile -Value "$identifier, until=$keepOnDays, rate-total=$rateTotal($offsTotal/$daysTotal), rate-recent=$rateRecent($offsRecent/$daysRecent)" -Encoding Default}
+	Add-Content -Path $outputFile -Value "$identifier, until=$keepOnDays, rate-total=$rateTotal($offsTotal/$daysTotal), rate-recent=$rateRecent($offsRecent/$daysRecent)" -Encoding Default
+}
