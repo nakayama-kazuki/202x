@@ -489,6 +489,21 @@ class cAbstractPart extends THREE.SkinnedMesh {
 	helper() {
 		return new THREE.SkeletonHelper(this);
 	}
+	copyPoseData() {
+		return this.skeleton.bones.map(in_bone => {
+			return {
+				position : in_bone.position.toArray(),
+				rotation : in_bone.rotation.toArray()
+			};
+		});
+	}
+	restorePoseData(in_poseData) {
+		in_poseData.forEach((in_boneData, in_ix) => {
+			const bone = this.skeleton.bones[in_ix];
+			bone.position.fromArray(in_boneData.position);
+			bone.rotation.fromArray(in_boneData.rotation);
+		});
+	}
 }
 
 class cSoftBoxPart extends cAbstractPart {
@@ -582,7 +597,7 @@ class cSolidPart extends cAbstractPart {
 		*/
 		this.plane_1_0_0 = in_restricted;
 	}
-	bendAt(in_dstV3) {
+	bendAt(in_dstV3, in_byUserInteraction = true) {
 		let projection;
 		if (this.plane_1_0_0) {
 			projection = this[getWorldVec3](DIRECTION.XP);
@@ -590,10 +605,28 @@ class cSolidPart extends cAbstractPart {
 			projection = null;
 		}
 		this[lookAtWithoutRotation](in_dstV3, projection);
-		this.resetDraggingRcv();
+		if (in_byUserInteraction) {
+			this.resetDraggingRcv();
+		}
 	}
 	moreShrink() {
 		return false;
+	}
+	copyPoseData() {
+		const poseData = {};
+		poseData.bone = super.copyPoseData();
+		const lookAt = this.getWorldDirection(VEC3());
+		poseData.lookAt = lookAt.toArray();
+		poseData.plane_1_0_0 = this.plane_1_0_0;
+		return poseData;
+	}
+	restorePoseData(in_poseData) {
+		super.restorePoseData(in_poseData.bone);
+		this.plane_1_0_0 = in_poseData.plane_1_0_0;
+		const src = this.getWorldPosition(VEC3());
+		const dir = VEC3().fromArray(in_poseData.lookAt);
+		const dst = src.add(dir);
+		this.bendAt(dst, false);
 	}
 }
 
@@ -776,6 +809,19 @@ class cJointedSolidPart extends cSolidPart {
 		this.#jointed.forEach(in_obj => {
 			// call resetMaterial@cAbstractPart
 			super.resetMaterial.call(in_obj, in_material);
+		});
+	}
+	copyPoseData() {
+		return {
+			self : super.copyPoseData(),
+			// without this
+			jointed : this.userData.jointed.map(in_obj => in_obj.copyPoseData())
+		};
+	}
+	restorePoseData(in_poseData) {
+		super.restorePoseData(in_poseData.self);
+		in_poseData.jointed.forEach((in_partData, in_ix) => {
+			this.userData.jointed[in_ix].restorePoseData(in_partData);
 		});
 	}
 }
@@ -967,6 +1013,24 @@ class cFigure extends THREE.Object3D {
 			merged.applyMatrix4(new THREE.Matrix4().copy(this.matrixWorld).invert());
 		}
 		return merged;
+	}
+	copyPoseData() {
+		const poseData = {};
+		Object.keys(cFigure.#cacheKeys).forEach(in_key => {
+			const part = this.#getCache(in_key);
+			if (part && part.copyPoseData) {
+				poseData[in_key] = part.copyPoseData();
+			}
+		});
+		return poseData;
+	}
+	restorePoseData(in_poseData) {
+		Object.keys(cFigure.#cacheKeys).forEach(in_key => {
+			const part = this.#getCache(in_key);
+			if (part && part.restorePoseData && in_poseData[in_key]) {
+				part.restorePoseData(in_poseData[in_key]);
+			}
+		});
 	}
 }
 
@@ -1288,6 +1352,29 @@ function uiChangeMaterial() {
 	});
 }
 
+function geometryTransition(in_geoCurr, in_geoNext, in_material, in_callback) {
+	in_geoCurr.morphAttributes.position = [in_geoNext.attributes.position];
+	// use morphingFigure only during morphing
+	const morphingMesh = new THREE.Mesh(in_geoCurr, in_material);
+	let morph = 0;
+	const hook = () => {
+		if (morph > 1) {
+			gWorld.removeAnimationHook(hook);
+			gWorld.remove(morphingMesh);
+			if (in_callback) {
+				(in_callback)();
+			}
+			in_geoCurr.dispose();
+			in_geoNext.dispose();
+		} else {
+			morph += 0.05;
+			morphingMesh.morphTargetInfluences[0] = morph;
+		}
+	};
+	gWorld.add(morphingMesh);
+	gWorld.addAnimationHook(hook);
+}
+
 function uiChangeFigure() {
 	const currFigure = gCyclicFigures.currValue();
 	const nextFigure = gCyclicFigures.incrementedValue();
@@ -1295,30 +1382,17 @@ function uiChangeFigure() {
 	if (currItem) {
 		currItem.removeFromParent();
 	}
-	// use morphingFigure only during morphing
 	const currGeometry = currFigure.cloneGeometry(false);
 	const nextGeometry = nextFigure.cloneGeometry(false);
-	currGeometry.morphAttributes.position = [nextGeometry.attributes.position];
-	const morphingFigure = new THREE.Mesh(currGeometry, gCyclicMaterials.currValue());
-	let morph = 0;
-	const hook = () => {
-		if (morph > 1) {
-			gWorld.removeAnimationHook(hook);
-			gWorld.remove(morphingFigure);
-			gWorld.add(nextFigure);
-			if (currItem) {
-				nextFigure.resetItem(currItem);
-			}
-			currGeometry.dispose();
-			nextGeometry.dispose();
-		} else {
-			morph += 0.05;
-			morphingFigure.morphTargetInfluences[0] = morph;
+	const material = gCyclicMaterials.currValue();
+	const callback = () => {
+		gWorld.add(nextFigure);
+		if (currItem) {
+			nextFigure.resetItem(currItem);
 		}
 	};
 	gWorld.remove(currFigure);
-	gWorld.add(morphingFigure);
-	gWorld.addAnimationHook(hook);
+	geometryTransition(currGeometry, nextGeometry, material, callback);
 }
 
 function uiChangeItem() {
@@ -1330,6 +1404,41 @@ function uiChangeItem() {
 function uiDefaultView() {
 	gWorld.motionViewFrom(VEC3(0, 0, 1));
 }
+
+const uiPose = (() => {
+	const knock = nonReentrantAsync(async () => {
+		SE_BEEP.play();
+		await gWorld.motionKnock();
+	});
+	let poseData = null;
+	function save() {
+		knock();
+		poseData = JSON.stringify(gCyclicFigures.currValue().copyPoseData());
+	}
+	function restore() {
+		if (!poseData) {
+			return;
+		}
+		knock();
+		gCyclicFigures.currValue().restorePoseData(JSON.parse(poseData));
+		/*
+			*** NOTE ***
+			the morphing process for the spherical geometry part is not working properly
+
+			const figure = gCyclicFigures.currValue();
+			const currGeometry = figure.cloneGeometry(false);
+			figure.restorePoseData(poseData, serialize);
+			const nextGeometry = figure.cloneGeometry(false);
+			const material = gCyclicMaterials.currValue();
+			const callback = () => {
+				gWorld.add(figure);
+			};
+			gWorld.remove(figure);
+			geometryTransition(currGeometry, nextGeometry, material, callback);
+		*/
+	}
+	return {save, restore};
+})();
 
 const gCyclicDouble = new cCyclicValues(
 	{
@@ -1620,6 +1729,14 @@ function uiRights() {
 	{
 		text : 'default position',
 		func : uiDefaultView
+	},
+	{
+		text : 'save pose',
+		func : uiPose.save
+	},
+	{
+		text : 'restore pose',
+		func : uiPose.restore
 	},
 	{
 		text : gCyclicDouble.currValue().text,
