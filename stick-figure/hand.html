@@ -494,6 +494,21 @@ class cAbstractPart extends THREE.SkinnedMesh {
 	helper() {
 		return new THREE.SkeletonHelper(this);
 	}
+	copyPoseData() {
+		return this.skeleton.bones.map(in_bone => {
+			return {
+				position : in_bone.position.toArray(),
+				quaternion : in_bone.quaternion.toArray() 
+			};
+		});
+	}
+	restorePoseData(in_poseData) {
+		in_poseData.forEach((in_boneData, in_ix) => {
+			const bone = this.skeleton.bones[in_ix];
+			bone.position.fromArray(in_boneData.position);
+			bone.quaternion.fromArray(in_boneData.quaternion);
+		});
+	}
 }
 
 class cSoftBoxPart extends cAbstractPart {
@@ -587,7 +602,7 @@ class cSolidPart extends cAbstractPart {
 		*/
 		this.plane_1_0_0 = in_restricted;
 	}
-	bendAt(in_dstV3) {
+	bendAt(in_dstV3, in_byUserInteraction = true) {
 		let projection;
 		if (this.plane_1_0_0) {
 			projection = this[getWorldVec3](DIRECTION.XP);
@@ -595,10 +610,24 @@ class cSolidPart extends cAbstractPart {
 			projection = null;
 		}
 		this[lookAtWithoutRotation](in_dstV3, projection);
-		this.resetDraggingRcv();
+		if (in_byUserInteraction) {
+			this.resetDraggingRcv();
+		}
 	}
 	moreShrink() {
 		return false;
+	}
+	copyPoseData() {
+		const poseData = {};
+		poseData.bone = super.copyPoseData();
+		poseData.quaternion = this.quaternion.clone().toArray();
+		poseData.plane_1_0_0 = this.plane_1_0_0;
+		return poseData;
+	}
+	restorePoseData(in_poseData) {
+		super.restorePoseData(in_poseData.bone);
+		this.quaternion.fromArray(in_poseData.quaternion);
+		this.plane_1_0_0 = in_poseData.plane_1_0_0;
 	}
 }
 
@@ -781,6 +810,19 @@ class cJointedSolidPart extends cSolidPart {
 		this.#jointed.forEach(in_obj => {
 			// call resetMaterial@cAbstractPart
 			super.resetMaterial.call(in_obj, in_material);
+		});
+	}
+	copyPoseData() {
+		return {
+			self : super.copyPoseData(),
+			// without this
+			jointed : this.userData.jointed.map(in_obj => in_obj.copyPoseData())
+		};
+	}
+	restorePoseData(in_poseData) {
+		super.restorePoseData(in_poseData.self);
+		in_poseData.jointed.forEach((in_partData, in_ix) => {
+			this.userData.jointed[in_ix].restorePoseData(in_partData);
 		});
 	}
 }
@@ -980,6 +1022,24 @@ class cFigure extends THREE.Object3D {
 	}
 	static isDetailed(in_obj) {
 		return in_obj.parent?.#detailed === in_obj || false;
+	}
+	copyPoseData() {
+		const poseData = {};
+		Object.keys(cFigure.#cacheKeys).forEach(in_key => {
+			const part = this.#getCache(in_key);
+			if (part && part.copyPoseData) {
+				poseData[in_key] = part.copyPoseData();
+			}
+		});
+		return poseData;
+	}
+	restorePoseData(in_poseData) {
+		Object.keys(cFigure.#cacheKeys).forEach(in_key => {
+			const part = this.#getCache(in_key);
+			if (part && part.restorePoseData && in_poseData[in_key]) {
+				part.restorePoseData(in_poseData[in_key]);
+			}
+		});
 	}
 }
 
@@ -1576,9 +1636,6 @@ const gHandlers = (() => {
 			}
 			// (2) bendAt() is applied to c.obj
 			c.obj.bendAt(intersects[0].point);
-			if (c.obj instanceof cSmartPhone) {
-				gCyclicFigures.currValue().resetItemUpToHead();
-			}
 		} else {
 			// (3) c.obj is released
 			if (c.animating) {

@@ -490,6 +490,21 @@ class cAbstractPart extends THREE.SkinnedMesh {
 	helper() {
 		return new THREE.SkeletonHelper(this);
 	}
+	copyPoseData() {
+		return this.skeleton.bones.map(in_bone => {
+			return {
+				position : in_bone.position.toArray(),
+				quaternion : in_bone.quaternion.toArray() 
+			};
+		});
+	}
+	restorePoseData(in_poseData) {
+		in_poseData.forEach((in_boneData, in_ix) => {
+			const bone = this.skeleton.bones[in_ix];
+			bone.position.fromArray(in_boneData.position);
+			bone.quaternion.fromArray(in_boneData.quaternion);
+		});
+	}
 }
 
 class cSoftBoxPart extends cAbstractPart {
@@ -583,7 +598,7 @@ class cSolidPart extends cAbstractPart {
 		*/
 		this.plane_1_0_0 = in_restricted;
 	}
-	bendAt(in_dstV3) {
+	bendAt(in_dstV3, in_byUserInteraction = true) {
 		let projection;
 		if (this.plane_1_0_0) {
 			projection = this[getWorldVec3](DIRECTION.XP);
@@ -591,10 +606,24 @@ class cSolidPart extends cAbstractPart {
 			projection = null;
 		}
 		this[lookAtWithoutRotation](in_dstV3, projection);
-		this.resetDraggingRcv();
+		if (in_byUserInteraction) {
+			this.resetDraggingRcv();
+		}
 	}
 	moreShrink() {
 		return false;
+	}
+	copyPoseData() {
+		const poseData = {};
+		poseData.bone = super.copyPoseData();
+		poseData.quaternion = this.quaternion.clone().toArray();
+		poseData.plane_1_0_0 = this.plane_1_0_0;
+		return poseData;
+	}
+	restorePoseData(in_poseData) {
+		super.restorePoseData(in_poseData.bone);
+		this.quaternion.fromArray(in_poseData.quaternion);
+		this.plane_1_0_0 = in_poseData.plane_1_0_0;
 	}
 }
 
@@ -777,6 +806,19 @@ class cJointedSolidPart extends cSolidPart {
 		this.#jointed.forEach(in_obj => {
 			// call resetMaterial@cAbstractPart
 			super.resetMaterial.call(in_obj, in_material);
+		});
+	}
+	copyPoseData() {
+		return {
+			self : super.copyPoseData(),
+			// without this
+			jointed : this.userData.jointed.map(in_obj => in_obj.copyPoseData())
+		};
+	}
+	restorePoseData(in_poseData) {
+		super.restorePoseData(in_poseData.self);
+		in_poseData.jointed.forEach((in_partData, in_ix) => {
+			this.userData.jointed[in_ix].restorePoseData(in_partData);
 		});
 	}
 }
@@ -968,6 +1010,27 @@ class cFigure extends THREE.Object3D {
 			merged.applyMatrix4(new THREE.Matrix4().copy(this.matrixWorld).invert());
 		}
 		return merged;
+	}
+	copyPoseData() {
+		const poseData = {};
+		Object.keys(cFigure.#cacheKeys).forEach(in_key => {
+			const part = this.#getCache(in_key);
+			if (part && part.copyPoseData) {
+				poseData[in_key] = part.copyPoseData();
+				if (in_key === 'ITEM') {
+					poseData['ITEM_CLASS'] = part.constructor.name;
+				}
+			}
+		});
+		return poseData;
+	}
+	restorePoseData(in_poseData) {
+		Object.keys(cFigure.#cacheKeys).forEach(in_key => {
+			const part = this.#getCache(in_key);
+			if (part && part.restorePoseData && in_poseData[in_key]) {
+				part.restorePoseData(in_poseData[in_key]);
+			}
+		});
 	}
 }
 
@@ -1208,6 +1271,37 @@ gCyclicFigures.forEach(in_figure => {
 
 gWorld.add(gCyclicFigures.currValue());
 
+function restoreFigureAndItem(in_figure, in_poseData) {
+	let item = gCyclicItems.currValue();
+	let itemClass = item ? item.constructor.name : null;
+	const targetItemClass = in_poseData.hasOwnProperty('ITEM_CLASS') ? in_poseData['ITEM_CLASS'] : null;
+	let cnt = 10;
+	while (itemClass !== targetItemClass) {
+		item = gCyclicItems.incrementedValue();
+		itemClass = item ? item.constructor.name : null;
+		if (cnt-- === 0) {
+			throw new Error('loop : restoreFigureAndItem');
+		}
+	}
+	in_figure.resetItem(item);
+	in_figure.restorePoseData(in_poseData);
+}
+
+const GALLERY_PATH = './gallery/';
+
+(in_pose => {
+	if (in_pose === false) {
+		return;
+	}
+	// in_pose : posture.situation.emotion.usecase
+	const path = GALLERY_PATH + in_pose + '.txt';
+	getResource(path).then(in_json => {
+		restoreFigureAndItem(gCyclicFigures.currValue(), JSON.parse(in_json));
+	}).catch(in_err => {
+	    console.error(in_err);
+	});
+})(getParam('pose'));
+
 function uiChangeColor() {
 	const currColor = new THREE.Color(gCyclicColors.currValue());
 	const nextColor = new THREE.Color(gCyclicColors.nextValue());
@@ -1234,6 +1328,29 @@ function uiChangeMaterial() {
 	});
 }
 
+function geometryTransition(in_geoCurr, in_geoNext, in_material, in_callback) {
+	in_geoCurr.morphAttributes.position = [in_geoNext.attributes.position];
+	// use morphingFigure only during morphing
+	const morphingMesh = new THREE.Mesh(in_geoCurr, in_material);
+	let morph = 0;
+	const hook = () => {
+		if (morph > 1) {
+			gWorld.removeAnimationHook(hook);
+			gWorld.remove(morphingMesh);
+			if (in_callback) {
+				(in_callback)();
+			}
+			in_geoCurr.dispose();
+			in_geoNext.dispose();
+		} else {
+			morph += 0.05;
+			morphingMesh.morphTargetInfluences[0] = morph;
+		}
+	};
+	gWorld.add(morphingMesh);
+	gWorld.addAnimationHook(hook);
+}
+
 function uiChangeFigure() {
 	const currFigure = gCyclicFigures.currValue();
 	const nextFigure = gCyclicFigures.incrementedValue();
@@ -1241,30 +1358,17 @@ function uiChangeFigure() {
 	if (currItem) {
 		currItem.removeFromParent();
 	}
-	// use morphingFigure only during morphing
 	const currGeometry = currFigure.cloneGeometry(false);
 	const nextGeometry = nextFigure.cloneGeometry(false);
-	currGeometry.morphAttributes.position = [nextGeometry.attributes.position];
-	const morphingFigure = new THREE.Mesh(currGeometry, gCyclicMaterials.currValue());
-	let morph = 0;
-	const hook = () => {
-		if (morph > 1) {
-			gWorld.removeAnimationHook(hook);
-			gWorld.remove(morphingFigure);
-			gWorld.add(nextFigure);
-			if (currItem) {
-				nextFigure.resetItem(currItem);
-			}
-			currGeometry.dispose();
-			nextGeometry.dispose();
-		} else {
-			morph += 0.05;
-			morphingFigure.morphTargetInfluences[0] = morph;
+	const material = gCyclicMaterials.currValue();
+	const callback = () => {
+		gWorld.add(nextFigure);
+		if (currItem) {
+			nextFigure.resetItem(currItem);
 		}
 	};
 	gWorld.remove(currFigure);
-	gWorld.add(morphingFigure);
-	gWorld.addAnimationHook(hook);
+	geometryTransition(currGeometry, nextGeometry, material, callback);
 }
 
 function uiChangeItem() {
@@ -1276,6 +1380,55 @@ function uiChangeItem() {
 function uiDefaultView() {
 	gWorld.motionViewFrom(VEC3(0, 0, 1));
 }
+
+const uiPose = (() => {
+	const knock = nonReentrantAsync(async () => {
+		SE_BEEP.play();
+		await gWorld.motionKnock();
+	});
+	let closureData = null;
+	function save() {
+		knock();
+		const pose = gCyclicFigures.currValue().copyPoseData();
+		pose['WORLD_VIEWCODE'] = gWorld.getViewCode();
+		closureData = JSON.stringify(pose);
+		// console.log(closureData);
+		if (false) {
+			const path = GALLERY_PATH + 'save.php';
+			const obj = {};
+			postResource(path, obj).then(in_response => {
+			    console.log('saved on the server-side');
+			}).catch(in_err => {
+			    console.error(in_err);
+			});
+		}
+	}
+	function restore() {
+		if (!closureData) {
+			return;
+		}
+		knock();
+		const pose = JSON.parse(closureData);
+		restoreFigureAndItem(gCyclicFigures.currValue(), pose);
+		gWorld.setViewCode(pose['WORLD_VIEWCODE']);
+		/*
+			*** NOTE ***
+			the morphing process for the spherical geometry part is not working properly
+
+			// const figure = gCyclicFigures.currValue();
+			// const currGeometry = figure.cloneGeometry(false);
+			// figure.restorePoseData(closureData, serialize);
+			// const nextGeometry = figure.cloneGeometry(false);
+			// const material = gCyclicMaterials.currValue();
+			// const callback = () => {
+			//     gWorld.add(figure);
+			// };
+			// gWorld.remove(figure);
+			// geometryTransition(currGeometry, nextGeometry, material, callback);
+		*/
+	}
+	return {save, restore};
+})();
 
 const gCyclicDouble = new cCyclicValues(
 	{
@@ -1566,6 +1719,14 @@ function uiRights() {
 	{
 		text : 'default position',
 		func : uiDefaultView
+	},
+	{
+		text : 'save pose',
+		func : uiPose.save
+	},
+	{
+		text : 'restore pose',
+		func : uiPose.restore
 	},
 	{
 		text : gCyclicDouble.currValue().text,

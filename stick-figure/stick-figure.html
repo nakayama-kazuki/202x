@@ -494,7 +494,7 @@ class cAbstractPart extends THREE.SkinnedMesh {
 		return this.skeleton.bones.map(in_bone => {
 			return {
 				position : in_bone.position.toArray(),
-				rotation : in_bone.rotation.toArray()
+				quaternion : in_bone.quaternion.toArray() 
 			};
 		});
 	}
@@ -502,7 +502,7 @@ class cAbstractPart extends THREE.SkinnedMesh {
 		in_poseData.forEach((in_boneData, in_ix) => {
 			const bone = this.skeleton.bones[in_ix];
 			bone.position.fromArray(in_boneData.position);
-			bone.rotation.fromArray(in_boneData.rotation);
+			bone.quaternion.fromArray(in_boneData.quaternion);
 		});
 	}
 }
@@ -616,18 +616,14 @@ class cSolidPart extends cAbstractPart {
 	copyPoseData() {
 		const poseData = {};
 		poseData.bone = super.copyPoseData();
-		const lookAt = this.getWorldDirection(VEC3());
-		poseData.lookAt = lookAt.toArray();
+		poseData.quaternion = this.quaternion.clone().toArray();
 		poseData.plane_1_0_0 = this.plane_1_0_0;
 		return poseData;
 	}
 	restorePoseData(in_poseData) {
 		super.restorePoseData(in_poseData.bone);
+		this.quaternion.fromArray(in_poseData.quaternion);
 		this.plane_1_0_0 = in_poseData.plane_1_0_0;
-		const src = this.getWorldPosition(VEC3());
-		const dir = VEC3().fromArray(in_poseData.lookAt);
-		const dst = src.add(dir);
-		this.bendAt(dst, false);
 	}
 }
 
@@ -1446,13 +1442,13 @@ const uiPose = (() => {
 		await gWorld.motionKnock();
 	});
 	let closureData = null;
-	function save(in_post = false) {
+	function save() {
 		knock();
 		const pose = gCyclicFigures.currValue().copyPoseData();
 		pose['WORLD_VIEWCODE'] = gWorld.getViewCode();
 		closureData = JSON.stringify(pose);
 		// console.log(closureData);
-		if (in_post) {
+		if (false) {
 			const path = GALLERY_PATH + 'save.php';
 			const obj = {};
 			postResource(path, obj).then(in_response => {
@@ -1480,7 +1476,7 @@ const uiPose = (() => {
 			// const nextGeometry = figure.cloneGeometry(false);
 			// const material = gCyclicMaterials.currValue();
 			// const callback = () => {
-			// 	gWorld.add(figure);
+			//     gWorld.add(figure);
 			// };
 			// gWorld.remove(figure);
 			// geometryTransition(currGeometry, nextGeometry, material, callback);
