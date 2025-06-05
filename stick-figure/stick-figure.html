@@ -7,8 +7,8 @@
 <script type='importmap'>
 {
 	"imports" : {
-		"three" : "https://cdn.jsdelivr.net/npm/three@0.175.0/build/three.module.min.js",
-		"utils" : "https://cdn.jsdelivr.net/npm/three@0.175.0/examples/jsm/utils/BufferGeometryUtils.js",
+		"three" : "https://cdn.jsdelivr.net/npm/three@0.177.0/build/three.module.min.js",
+		"utils" : "https://cdn.jsdelivr.net/npm/three@0.177.0/examples/jsm/utils/BufferGeometryUtils.js",
 		"basic" : "./basic-functions.js",
 		"sound" : "./sound-effect.js"
 	}
@@ -21,7 +21,8 @@
 import * as THREE from 'three';
 import * as UTILS from 'utils';
 import {
-	getVersion,
+	getResource,
+	postResource,
 	getParam,
 	DEBUG,
 	randomString,
@@ -1020,6 +1021,9 @@ class cFigure extends THREE.Object3D {
 			const part = this.#getCache(in_key);
 			if (part && part.copyPoseData) {
 				poseData[in_key] = part.copyPoseData();
+				if (in_key === 'ITEM') {
+					poseData['ITEM_CLASS'] = part.constructor.name;
+				}
 			}
 		});
 		return poseData;
@@ -1326,6 +1330,37 @@ gCyclicFigures.forEach(in_figure => {
 
 gWorld.add(gCyclicFigures.currValue());
 
+function restoreFigureAndItem(in_figure, in_poseData) {
+	let item = gCyclicItems.currValue();
+	let itemClass = item ? item.constructor.name : null;
+	const targetItemClass = in_poseData.hasOwnProperty('ITEM_CLASS') ? in_poseData['ITEM_CLASS'] : null;
+	let cnt = 10;
+	while (itemClass !== targetItemClass) {
+		item = gCyclicItems.incrementedValue();
+		itemClass = item ? item.constructor.name : null;
+		if (cnt-- === 0) {
+			throw new Error('loop : restoreFigureAndItem');
+		}
+	}
+	in_figure.resetItem(item);
+	in_figure.restorePoseData(in_poseData);
+}
+
+const GALLERY_PATH = './gallery/';
+
+(in_pose => {
+	if (in_pose === false) {
+		return;
+	}
+	// in_pose : posture.situation.emotion.usecase
+	const path = GALLERY_PATH + in_pose + '.txt';
+	getResource(path).then(in_json => {
+		restoreFigureAndItem(gCyclicFigures.currValue(), JSON.parse(in_json));
+	}).catch(in_err => {
+	    console.error(in_err);
+	});
+})(getParam('pose'));
+
 function uiChangeColor() {
 	const currColor = new THREE.Color(gCyclicColors.currValue());
 	const nextColor = new THREE.Color(gCyclicColors.nextValue());
@@ -1410,31 +1445,45 @@ const uiPose = (() => {
 		SE_BEEP.play();
 		await gWorld.motionKnock();
 	});
-	let poseData = null;
-	function save() {
+	let closureData = null;
+	function save(in_post = false) {
 		knock();
-		poseData = JSON.stringify(gCyclicFigures.currValue().copyPoseData());
+		const pose = gCyclicFigures.currValue().copyPoseData();
+		pose['WORLD_VIEWCODE'] = gWorld.getViewCode();
+		closureData = JSON.stringify(pose);
+		// console.log(closureData);
+		if (in_post) {
+			const path = GALLERY_PATH + 'save.php';
+			const obj = {};
+			postResource(path, obj).then(in_response => {
+			    console.log('saved on the server-side');
+			}).catch(in_err => {
+			    console.error(in_err);
+			});
+		}
 	}
 	function restore() {
-		if (!poseData) {
+		if (!closureData) {
 			return;
 		}
 		knock();
-		gCyclicFigures.currValue().restorePoseData(JSON.parse(poseData));
+		const pose = JSON.parse(closureData);
+		restoreFigureAndItem(gCyclicFigures.currValue(), pose);
+		gWorld.setViewCode(pose['WORLD_VIEWCODE']);
 		/*
 			*** NOTE ***
 			the morphing process for the spherical geometry part is not working properly
 
-			const figure = gCyclicFigures.currValue();
-			const currGeometry = figure.cloneGeometry(false);
-			figure.restorePoseData(poseData, serialize);
-			const nextGeometry = figure.cloneGeometry(false);
-			const material = gCyclicMaterials.currValue();
-			const callback = () => {
-				gWorld.add(figure);
-			};
-			gWorld.remove(figure);
-			geometryTransition(currGeometry, nextGeometry, material, callback);
+			// const figure = gCyclicFigures.currValue();
+			// const currGeometry = figure.cloneGeometry(false);
+			// figure.restorePoseData(closureData, serialize);
+			// const nextGeometry = figure.cloneGeometry(false);
+			// const material = gCyclicMaterials.currValue();
+			// const callback = () => {
+			// 	gWorld.add(figure);
+			// };
+			// gWorld.remove(figure);
+			// geometryTransition(currGeometry, nextGeometry, material, callback);
 		*/
 	}
 	return {save, restore};
@@ -1656,7 +1705,7 @@ function uiHelp() {
 		textAlign : 'right'
 	});
 	dialog.appendChild(verLabel);
-	getVersion(url.ver).then(in_hash => {
+	getResource(url.ver).then(in_hash => {
 		verLabel.innerHTML = 'version : <a href="' + url.src + in_hash + '">' + in_hash.substring(0, 7) + '</a>';
 		verLabel.addEventListener('mousedown', in_e => in_e.stopPropagation());
 		verLabel.addEventListener('touchstart', in_e => in_e.stopPropagation());
@@ -1851,7 +1900,7 @@ const gHandlers = (() => {
 			// uncontrollable object
 			return;
 		}
-		const cameraPos = gWorld.copyCameraPosition();
+		const cameraPos = gWorld.getCameraPos();
 		const objectPos = target.getWorldPosition(VEC3());
 		const fineAdjustment = 0.9;
 		c.far = (rayHit.distance * fineAdjustment > cameraPos.distanceTo(objectPos));

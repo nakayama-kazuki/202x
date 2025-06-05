@@ -22,6 +22,7 @@ import * as THREE from 'three';
 import * as UTILS from 'utils';
 import {
 	getResource,
+	postResource,
 	getParam,
 	DEBUG,
 	randomString,
@@ -1679,7 +1680,7 @@ const gHandlers = (() => {
 			// uncontrollable object
 			return;
 		}
-		const cameraPos = gWorld.copyCameraPosition();
+		const cameraPos = gWorld.getCameraPos();
 		const objectPos = target.getWorldPosition(VEC3());
 		const fineAdjustment = 0.9;
 		c.far = (rayHit.distance * fineAdjustment > cameraPos.distanceTo(objectPos));

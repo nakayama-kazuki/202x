@@ -26,6 +26,7 @@ import {
 } from 'modif';
 import {
 	getResource,
+	postResource,
 	getParam,
 	DEBUG,
 	randomString,
@@ -1545,7 +1546,7 @@ const gHandlers = (() => {
 			}
 			return;
 		}
-		const cameraPos = gWorld.copyCameraPosition();
+		const cameraPos = gWorld.getCameraPos();
 		const objectPos = target.getWorldPosition(VEC3());
 		const fineAdjustment = 0.9;
 		c.far = (rayHit.distance * fineAdjustment > cameraPos.distanceTo(objectPos));
