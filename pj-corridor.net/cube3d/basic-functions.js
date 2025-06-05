@@ -5,9 +5,18 @@ import * as UTILS from 'utils';
 	(1) utilities
 */
 
-export async function getResource(in_version_file) {
+async function _request(in_path, in_object = null) {
 	try {
-		const response = await fetch(in_version_file);
+		let response;
+		if (in_object) {
+			response = await fetch(in_path, {
+				method: 'POST',
+				headers: {'Content-Type': 'application/json'},
+				body: JSON.stringify(in_object)
+			});
+		} else {
+			response = await fetch(in_path);
+		}
 		if (response.ok) {
 			return await response.text();
 		} else {
@@ -16,6 +25,14 @@ export async function getResource(in_version_file) {
 	} catch (in_err) {
 		throw new Error('SOP Error etc');
 	}
+}
+
+export async function getResource(in_path) {
+	return await _request(in_path);
+}
+
+export async function postResource(in_path, in_object) {
+	return await _request(in_path, in_object);
 }
 
 function _parseParam(in_url = location.href) {
@@ -1318,6 +1335,15 @@ export class cSphericalWorld {
 	getCameraPos() {
 		return this.#camera.getWorldPosition(VEC3());
 	}
+	static #encode = false;
+	getViewCode() {
+		const wrapper = cSphericalWorld.#encode ? btoa : in_data => in_data;
+		return wrapper(JSON.stringify(this.#centerBall.rotation.toArray()));
+	}
+	setViewCode(in_code) {
+		const wrapper = cSphericalWorld.#encode ? atob : in_data => in_data;
+		this.#centerBall.rotation.fromArray(JSON.parse(wrapper(in_code)));
+	}
 	moveView(in_world_dx, in_world_dy) {
 		// event-x ++ : world-x ++ : camera-rotate-y ++ : object-rotate-y -- : object-view-x ++
 		this.#centerBall.rotateY(in_world_dx * +1);
@@ -1347,9 +1373,6 @@ export class cSphericalWorld {
 	}
 	intersectNegative(in_ndc, in_layer = 0) {
 		return this.#intersectObjects(in_ndc, false, in_layer);
-	}
-	copyCameraPosition() {
-		return this.#camera.getWorldPosition(VEC3());
 	}
 	#easing(in_initValue, in_stopValue, in_duration, in_progressCallback, in_method) {
 		return new Promise(resolve => {
