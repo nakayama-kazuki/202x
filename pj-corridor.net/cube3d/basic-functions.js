@@ -5,7 +5,7 @@ import * as UTILS from 'utils';
 	(1) utilities
 */
 
-export async function getVersion(in_version_file) {
+export async function getResource(in_version_file) {
 	try {
 		const response = await fetch(in_version_file);
 		if (response.ok) {
@@ -367,9 +367,9 @@ export const debouncing = (() => {
 	return (in_callback, in_interval, in_group = Symbol()) => {
 		return in_ev => {
 			if (timerIds.hasOwnProperty(in_group)) {
-				window.clearTimeout(timerIds[in_group]);
+				clearTimeout(timerIds[in_group]);
 			}
-			timerIds[in_group] = window.setTimeout(() => {
+			timerIds[in_group] = setTimeout(() => {
 				(in_callback)(in_ev);
 				delete timerIds[in_group];
 			}, in_interval);
@@ -1488,7 +1488,7 @@ export class cSphericalWorld {
 			if (radius < 0) {
 				// don't have visible object
 				delayed *= 2;
-				window.setTimeout(update, delayed);
+				setTimeout(update, delayed);
 			} else {
 				this.#zoomMin = this.#camera.far - radius;
 				this.#zoomMax = radius
