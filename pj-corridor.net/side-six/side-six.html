@@ -7,8 +7,8 @@
 <script type='importmap'>
 {
 	"imports" : {
-		"three" : "https://cdn.jsdelivr.net/npm/three@0.175.0/build/three.module.min.js",
-		"utils" : "https://cdn.jsdelivr.net/npm/three@0.175.0/examples/jsm/utils/BufferGeometryUtils.js",
+		"three" : "https://cdn.jsdelivr.net/npm/three@0.177.0/build/three.module.min.js",
+		"utils" : "https://cdn.jsdelivr.net/npm/three@0.177.0/examples/jsm/utils/BufferGeometryUtils.js",
 		"basic" : "./basic-functions.js",
 		"side6" : "./side-six.js",
 		"sound" : "./sound-effect.js"
@@ -22,7 +22,7 @@
 import * as THREE from 'three';
 import * as UTILS from 'utils';
 import {
-	getVersion,
+	getResource,
 	getParam,
 	DEBUG,
 	randomString,
@@ -646,7 +646,7 @@ function uiHelp() {
 		textAlign : 'right'
 	});
 	dialog.appendChild(verLabel);
-	getVersion(url.ver).then(in_hash => {
+	getResource(url.ver).then(in_hash => {
 		verLabel.innerHTML = 'version : <a href="' + url.src + in_hash + '">' + in_hash.substring(0, 7) + '</a>';
 		verLabel.addEventListener('mousedown', in_e => in_e.stopPropagation());
 		verLabel.addEventListener('touchstart', in_e => in_e.stopPropagation());

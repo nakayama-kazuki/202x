@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import * as UTILS from 'utils';
 import {
-	getVersion,
+	getResource,
 	getParam,
 	DEBUG,
 	randomString,
