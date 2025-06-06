@@ -1329,6 +1329,21 @@ export class cSphericalWorld {
 	get canvas() {
 		return this.#renderer.domElement;
 	}
+	base64png(in_margin) {
+		/*
+			*** NOTE ***
+			before getting betmap, you need re-render.
+			without it, for example, you can't use canvas.toDataURL('image/png') etc. 
+		*/
+		this.render();
+		const box = this.canvas[clipClearArea](in_margin);
+		const tmpElem = document.createElement('canvas');
+		tmpElem.width = box.w;
+		tmpElem.height = box.h;
+		const ctx = tmpElem.getContext('2d');
+		ctx.drawImage(this.canvas, box.l, box.t, box.w, box.h, 0, 0, box.w, box.h);
+		return tmpElem.toDataURL('image/png');
+	}
 	get #camera() {
 		return this.#centerBall.children.find(in_child => in_child instanceof THREE.Camera);
 	}

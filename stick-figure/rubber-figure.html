@@ -1296,7 +1296,9 @@ const GALLERY_PATH = './gallery/';
 	// in_pose : posture.situation.emotion.usecase
 	const path = GALLERY_PATH + in_pose + '.txt';
 	getResource(path).then(in_json => {
-		restoreFigureAndItem(gCyclicFigures.currValue(), JSON.parse(in_json));
+		const pose = JSON.parse(in_json);
+		restoreFigureAndItem(gCyclicFigures.currValue(), pose);
+		gWorld.setViewCode(pose['WORLD_VIEWCODE']);
 	}).catch(in_err => {
 	    console.error(in_err);
 	});
@@ -1381,6 +1383,8 @@ function uiDefaultView() {
 	gWorld.motionViewFrom(VEC3(0, 0, 1));
 }
 
+const CLIPMARGIN = 10;
+
 const uiPose = (() => {
 	const knock = nonReentrantAsync(async () => {
 		SE_BEEP.play();
@@ -1395,7 +1399,10 @@ const uiPose = (() => {
 		// console.log(closureData);
 		if (false) {
 			const path = GALLERY_PATH + 'save.php';
-			const obj = {};
+			const obj = {
+				poseImg : gWorld.base64png(CLIPMARGIN),
+				poseJson : closureData
+			};
 			postResource(path, obj).then(in_response => {
 			    console.log('saved on the server-side');
 			}).catch(in_err => {
@@ -1562,30 +1569,16 @@ function takeShotFlash() {
 	});
 }
 
-const CLIPMARGIN = 10;
-
 function uiGetScreenShot() {
 	takeShotSound();
 	takeShotFlash();
-	/*
-		*** NOTE ***
-		before getting betmap, you need re-render.
-		without it, for example, you can't use canvas.toDataURL('image/png') etc. 
-	*/
-	gWorld.render();
-	const box = gWorld.canvas[clipClearArea](CLIPMARGIN);
-	const tmpElem = document.createElement('canvas');
-	tmpElem.width = box.w;
-	tmpElem.height = box.h;
-	const ctx = tmpElem.getContext('2d');
-	ctx.drawImage(gWorld.canvas, box.l, box.t, box.w, box.h, 0, 0, box.w, box.h);
 	(async () => {
 		/*
 			*** NOTE ***
 			the browser treats the data URL as a resource when using fetch.
 			the fetch function retrieves the data and allows us to convert it into a Blob.
 		*/
-		const response = await fetch(tmpElem.toDataURL('image/png'));
+		const response = await fetch(gWorld.base64png(CLIPMARGIN));
 		const blob = await response.blob();
 		try {
 			await navigator.clipboard.write([
