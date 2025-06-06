@@ -1452,7 +1452,7 @@ const uiPose = (() => {
 		pose['WORLD_VIEWCODE'] = gWorld.getViewCode();
 		closureData = JSON.stringify(pose);
 		// console.log(closureData);
-		if (false) {
+		if (getParam('save')) {
 			const path = GALLERY_PATH + 'save.php';
 			const obj = {
 				poseImg : gWorld.base64png(CLIPMARGIN),
