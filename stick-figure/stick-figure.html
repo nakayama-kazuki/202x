@@ -719,7 +719,8 @@ class cJointedSolidPart extends cSolidPart {
 			    [2] > threshold : affect [2] + bendAt [1] ([0] is the same angle with [1])
 			    [2] < threshold : i++
 		*/
-		const threshold = 0.02;
+		const threshold = 0.01;
+		const smoothing = 0.9;
 		const vectorToStretch = in_targetObj => {
 			return VEC3().subVectors(in_dstV3, in_targetObj.getWorldPosition(VEC3()));
 		};
@@ -745,7 +746,7 @@ class cJointedSolidPart extends cSolidPart {
 				const delta = in_dstV3.distanceTo(parent.getWorldPosition(VEC3())) / adhocScale;
 				const angle = Math.min(srcDir.angleTo(dstDir), delta);
 				const axis = VEC3().crossVectors(srcDir, dstDir).normalize();
-				const quat = new THREE.Quaternion().setFromAxisAngle(axis, angle);
+				const quat = new THREE.Quaternion().setFromAxisAngle(axis, angle * smoothing);
 				srcDir.applyQuaternion(quat).multiplyScalar(WORLD_RADIUS);
 				parent[lookAtWithoutRotation](parent.position.clone().add(srcDir));
 				// bendAt [n - 1]

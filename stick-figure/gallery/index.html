@@ -1,0 +1,55 @@
+<html>
+<head>
+<meta name='viewport' content='width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1' />
+<meta name='description' content='game, rubiks cube' />
+<meta property='og:description' content='game, rubiks cube' />
+<script async src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7863584801355594' crossorigin='anonymous'></script>
+<style>
+body {
+	margin: 0;
+	background-color: black;
+}
+div {
+	margin: 3%;
+	text-align: center;
+}
+img {
+	width: 10%;
+	margin: 1em;
+}
+</style>
+</head>
+<body>
+<div id ='iGallery'></div>
+<script>
+
+const cContainer = document.querySelector('#iGallery');
+
+const STICK_START = 0;
+const STICK_END = 39;
+
+const RUBBER_START = 40;
+const RUBBER_END = 44;
+
+const ITEMS_PER_LINE = 5;
+
+function showGallery(in_baseUrl, in_start, in_end) {
+	let cntItems = 0;
+	for (let i = in_start; i <= in_end; i++) {
+		cntItems++;
+		const pose = String(i).padStart(3, '0');
+		const thumbnail = pose + '.png';
+		cContainer.innerHTML += "<a href='" + in_baseUrl + "?pose=" + pose + "'><img src='" + thumbnail + "' /></a>\n";
+		if (cntItems === ITEMS_PER_LINE) {
+			cContainer.innerHTML += "\n<br />\n";
+			cntItems = 0;
+		}
+	}
+}
+
+showGallery('../stick-figure.html',STICK_START, STICK_END);
+showGallery('../rubber-figure.html', RUBBER_START, RUBBER_END);
+
+</script>
+</body>
+</html>
