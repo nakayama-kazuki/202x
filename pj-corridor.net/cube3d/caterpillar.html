@@ -734,25 +734,36 @@ function setupBody(in_document) {
 }
 
 function createChildWindow(in_document) {
-	setupBody(in_document);
-	const iframe = in_document.createElement('iframe');
-	in_document.body.appendChild(iframe);
-	Object.assign(iframe.style, {
-		width: '100%',
-		height: '100%',
-		border: 'none'
+	return new Promise(in_callback => {
+		setupBody(in_document);
+		const iframe = in_document.createElement('iframe');
+		in_document.body.appendChild(iframe);
+		Object.assign(iframe.style, {
+			width: '100%',
+			height: '100%',
+			border: 'none'
+		});
+		/*
+			*** NOTE ***
+			although Chrome can use iframe.contentDocument right after createElement,
+			Firefox can not use it ant needs to use asynchronous process.
+			by the way, if you use not timer but load event,
+			your code will not work for Chrome.
+		*/
+		setTimeout(() => {
+			setupBody(iframe.contentDocument);
+			(in_callback)(iframe.contentWindow);
+		}, 0);
 	});
-	setupBody(iframe.contentDocument);
-	return iframe.contentWindow;
 }
 
-document.addEventListener('DOMContentLoaded', (() => {
+document.addEventListener('DOMContentLoaded', (async () => {
 	/*
 		*** NOTE ***
 		without iframe (outer window),
 		geometry in event will be wrong because of google ads
 	*/
-	const outer = createChildWindow(document);
+	const outer = await createChildWindow(document);
 	let resizeWorld = in_ev => {
 		gWorld.resize(outer.innerWidth, outer.innerHeight);
 		gBackgroundCanvas.width = outer.innerWidth;
