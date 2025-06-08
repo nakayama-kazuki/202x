@@ -25,11 +25,14 @@ img {
 
 const cContainer = document.querySelector('#iGallery');
 
-const STICK_START = 0;
-const STICK_END = 39;
+const STICK1_START = 0;
+const STICK1_END = 39;
 
 const RUBBER_START = 40;
 const RUBBER_END = 44;
+
+const STICK2_START = 45;
+const STICK2_END = 59;
 
 const ITEMS_PER_LINE = 5;
 
@@ -47,8 +50,9 @@ function showGallery(in_baseUrl, in_start, in_end) {
 	}
 }
 
-showGallery('../stick-figure.html',STICK_START, STICK_END);
+showGallery('../stick-figure.html',STICK1_START, STICK1_END);
 showGallery('../rubber-figure.html', RUBBER_START, RUBBER_END);
+showGallery('../stick-figure.html',STICK2_START, STICK2_END);
 
 </script>
 </body>
