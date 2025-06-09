@@ -1123,6 +1123,9 @@ const gCyclicItems = (in_material => {
 	const smartPhone = new cSmartPhone(40, 80, 5, in_material);
 	smartPhone.resetMaterial(in_material);
 	cyclic.push(smartPhone);
+	const tablet = new cSmartPhone(120, 80, 5, in_material);
+	tablet.resetMaterial(in_material);
+	cyclic.push(tablet);
 	return cyclic;
 })(gCyclicMaterials.currValue());
 
@@ -1225,6 +1228,39 @@ const gCyclicFigures = (in_material => {
 				POSI : {
 					DLT : VEC3(0, 0, 0),
 					DIR : VEC3(0, 0, -10)
+				}
+			}
+		},
+		{
+			HEADSIZE : 100,
+			THICK1 : 15,
+			BODY : {
+				SHOULDER : 70,
+				WAIST : 50,
+				HEIGHT : 120
+			},
+			ARM : {
+				LENGTH : 140,
+				THICK2 : 20,
+				NEGA : {
+					DLT : VEC3(0, 0, 0),
+					DIR : VEC3(-10, 0, -10)
+				},
+				POSI : {
+					DLT : VEC3(0, 0, 0),
+					DIR : VEC3(+10, 0, -10)
+				}
+			},
+			LEG : {
+				LENGTH : 160,
+				THICK2 : 20,
+				NEGA : {
+					DLT : VEC3(0, 0, 0),
+					DIR : VEC3(-1, 0, -10)
+				},
+				POSI : {
+					DLT : VEC3(0, 0, 0),
+					DIR : VEC3(+1, 0, -10)
 				}
 			}
 		}

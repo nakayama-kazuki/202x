@@ -1123,6 +1123,9 @@ const gCyclicItems = (in_material => {
 	const smartPhone = new cSmartPhone(40, 80, 5, in_material);
 	smartPhone.resetMaterial(in_material);
 	cyclic.push(smartPhone);
+	const tablet = new cSmartPhone(120, 80, 5, in_material);
+	tablet.resetMaterial(in_material);
+	cyclic.push(tablet);
 	return cyclic;
 })(gCyclicMaterials.currValue());
 
