@@ -606,6 +606,9 @@ export class cCyclicValues extends Array {
 		this.#increment();
 		return this.currValue();
 	}
+	setCurrentIndex(in_index) {
+		this.#currIndex = in_index % this.length;
+	}
 }
 
 export const arrRand = Symbol();
