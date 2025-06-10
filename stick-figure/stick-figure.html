@@ -1057,8 +1057,16 @@ const gCyclicColors = new cCyclicValues(
 	// lightgray
 	0xD3D3D3,
 	// gray
-	0x808080
+	0x808080,
+	// black
+	0x000000
 );
+
+(in_index => {
+	if (in_index !== false) {
+		gCyclicColors.setCurrentIndex(in_index);
+	}
+})(getParam('color'));
 
 function createToonTexture() {
 	const canvas = document.createElement('canvas');
@@ -1105,6 +1113,12 @@ const gCyclicMaterials = (in_color => {
 	}));
 	return cyclic;
 })(gCyclicColors.currValue());
+
+(in_index => {
+	if (in_index !== false) {
+		gCyclicMaterials.setCurrentIndex(in_index);
+	}
+})(getParam('material'));
 
 function incrementColor() {
 	// gCyclicColors --> gCyclicMaterials
@@ -1313,6 +1327,12 @@ const gCyclicFigures = (in_material => {
 	});
 	return cyclic;
 })(gCyclicMaterials.currValue());
+
+(in_index => {
+	if (in_index !== false) {
+		gCyclicFigures.setCurrentIndex(in_index);
+	}
+})(getParam('figure'));
 
 let gDoubleFigure = null;
 

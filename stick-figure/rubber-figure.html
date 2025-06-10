@@ -1057,8 +1057,16 @@ const gCyclicColors = new cCyclicValues(
 	// lightgray
 	0xD3D3D3,
 	// gray
-	0x808080
+	0x808080,
+	// black
+	0x000000
 );
+
+(in_index => {
+	if (in_index !== false) {
+		gCyclicColors.setCurrentIndex(in_index);
+	}
+})(getParam('color'));
 
 function createToonTexture() {
 	const canvas = document.createElement('canvas');
@@ -1105,6 +1113,12 @@ const gCyclicMaterials = (in_color => {
 	}));
 	return cyclic;
 })(gCyclicColors.currValue());
+
+(in_index => {
+	if (in_index !== false) {
+		gCyclicMaterials.setCurrentIndex(in_index);
+	}
+})(getParam('material'));
 
 function incrementColor() {
 	// gCyclicColors --> gCyclicMaterials
@@ -1212,11 +1226,30 @@ function roundedBoxFigure(
 	return new cFigure(head, body, arm_xn, arm_xp, leg_xn, leg_xp);
 }
 
+function thinFigure() {
+	return roundedBoxFigure(
+		// in_headSize
+		100,
+		// in_bodyWidth
+		70,
+		// in_bodyHeight
+		120,
+		// in_armLen
+		140,
+		// in_legLen
+		160,
+		// in_circumf
+		15,
+		// in_bentCnt
+		10);
+}
+
 const gCyclicFigures = (in_material => {
 	const cyclic = new cCyclicValues();
 	const figureMakers = [
 		sharpBoxFigure,
-		roundedBoxFigure
+		roundedBoxFigure,
+		thinFigure
 	];
 	figureMakers.forEach(in_maker => {
 		const figure = (in_maker)();
@@ -1225,6 +1258,12 @@ const gCyclicFigures = (in_material => {
 	});
 	return cyclic;
 })(gCyclicMaterials.currValue());
+
+(in_index => {
+	if (in_index !== false) {
+		gCyclicFigures.setCurrentIndex(in_index);
+	}
+})(getParam('figure'));
 
 let gDoubleFigure = null;
 
