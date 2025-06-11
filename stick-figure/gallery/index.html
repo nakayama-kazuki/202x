@@ -30,24 +30,16 @@ img:hover {
 
 const cContainer = document.querySelector('#iGallery');
 
-const STICK1_START = 0;
-const STICK1_END = 39;
-
-const RUBBER_START = 40;
-const RUBBER_END = 44;
-
-const STICK2_START = 45;
-const STICK2_END = 59;
-
 const ITEMS_PER_LINE = 5;
 
-function showGallery(in_baseUrl, in_start, in_end) {
+function showGallery(in_baseUrl, in_params, in_start, in_end) {
 	let cntItems = 0;
 	for (let i = in_start; i <= in_end; i++) {
 		cntItems++;
 		const pose = String(i).padStart(3, '0');
 		const thumbnail = pose + '.png';
-		cContainer.innerHTML += "<a href='" + in_baseUrl + "?pose=" + pose + "'><img src='" + thumbnail + "' /></a>\n";
+		const param = Object.entries(in_params).map(([in_key, in_val]) => in_key + '=' + in_val).join('&');
+		cContainer.innerHTML += "<a href='" + in_baseUrl + "?pose=" + pose + (param ? '&' + param : '') + "'><img src='" + thumbnail + "' /></a>\n";
 		if (cntItems === ITEMS_PER_LINE) {
 			cContainer.innerHTML += "\n<br />\n";
 			cntItems = 0;
@@ -55,9 +47,10 @@ function showGallery(in_baseUrl, in_start, in_end) {
 	}
 }
 
-showGallery('../stick-figure.html',STICK1_START, STICK1_END);
-showGallery('../rubber-figure.html', RUBBER_START, RUBBER_END);
-showGallery('../stick-figure.html',STICK2_START, STICK2_END);
+showGallery('../stick-figure.html', {color : 0, material : 1, figure : 0}, 0, 59);
+showGallery('../rubber-figure.html', {color : 1, material : 1, figure : 1}, 60, 74);
+showGallery('../stick-figure.html', {color : 5, material : 3, figure : 3}, 75, 129);
+showGallery('../rubber-figure.html', {color : 1, material : 3, figure : 2}, 130, 144);
 
 </script>
 </body>
