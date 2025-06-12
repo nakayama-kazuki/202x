@@ -498,10 +498,12 @@ class cAbstractPart extends THREE.SkinnedMesh {
 			};
 		});
 	}
-	restorePoseData(in_poseData) {
+	restorePoseData(in_poseData, in_restorePosition = true) {
 		in_poseData.forEach((in_boneData, in_ix) => {
 			const bone = this.skeleton.bones[in_ix];
-			bone.position.fromArray(in_boneData.position);
+			if (in_restorePosition) {
+				bone.position.fromArray(in_boneData.position);
+			}
 			bone.quaternion.fromArray(in_boneData.quaternion);
 		});
 	}
@@ -621,7 +623,7 @@ class cSolidPart extends cAbstractPart {
 		return poseData;
 	}
 	restorePoseData(in_poseData) {
-		super.restorePoseData(in_poseData.bone);
+		super.restorePoseData(in_poseData.bone, false);
 		this.quaternion.fromArray(in_poseData.quaternion);
 		this.plane_1_0_0 = in_poseData.plane_1_0_0;
 	}
