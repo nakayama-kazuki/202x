@@ -1,6 +1,6 @@
 # そんな時どうする Three.js アプリ開発
 
-こんにちは、以前は広告エンジニア、現在はデータプラットフォームエンジニアの中山です。この記事では趣味の Three.js アプリ開発を通じて得た気付き、例えば Three.js 固有の落とし穴や AdSense 導入時のトラブルやその解決方法などを共有させていただきます。
+こんにちは、以前は広告エンジニア、現在はデータプラットフォームエンジニアの中山です。この記事では趣味の Three.js アプリ開発を通じて得た気付き、例えばブラウザ互換問題や Three.js 初心者が陥りそうなトラブル、その解決方法について共有させていただきます。
 
 最初に Three.js アプリをご紹介します。
 
@@ -22,10 +22,10 @@
 鉄板の Three.js 題材、ルービックキューブを発展させて多様なパズルを開発してみました。
 
 - <a href='https://pj-corridor.net/cube3d/cube3d.html'>通常のルービックキューブ</a>
-- <a href='https://pj-corridor.net/cube3d/cube3d.html?level=3'>ピースの形状が変則的なパズル</a>
-- <a href='https://pj-corridor.net/cube3d/caterpillar.html'>ピースの回転が変則的なパズル</a>
+- <a href='https://pj-corridor.net/cube3d/cube3d.html?level=3'>ピースの形状が変則的なキューブ</a>
+- <a href='https://pj-corridor.net/cube3d/caterpillar.html'>ピースの回転が変則的なキューブ</a>
 - <a href='https://pj-corridor.net/cube3d/diamond.html'>ダイヤモンド型のパズル</a>
-- <a href='https://pj-corridor.net/cube3d/gemini.html'>双子のルービックキューブ</a>
+- <a href='https://pj-corridor.net/cube3d/gemini.html'>双子のキューブ</a>
 - <a href='https://pj-corridor.net/side-six/side-six.htmll'>シリンダ型のパズル</a>
 
 ### 棒人間
@@ -34,9 +34,9 @@
 
 私はしばしば <a href='https://lydesign.jp/n/n3aa55611b347'>ポンチ絵を多用したパワポスライド</a> を作ることがありますが、スライドに張り付ける著作権フリーな棒人間素材を探すのは少々面倒です。ならばいっそ自前で、と開発したのがこちらです。みなさまのスライドにも是非ご利用ください。
 
-- <a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間（関節操作で任意のポージング）</a>
-- <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間（引っ張ってポージング）</a>
-- <a href='https://pj-corridor.net/stick-figure/hand.html'>手（引っ張ってポージング）</a>
+- <a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間（関節操作のポージング）</a>
+- <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間（曲げて引っ張るポージング）</a>
+- <a href='https://pj-corridor.net/stick-figure/hand.html'>手（曲げて引っ張るポージング）</a>
 
 ### 棒人間ギャラリー
 
@@ -50,19 +50,48 @@
 
 ## ブラウザ互換と格闘
 
-ここからはアプリ開発を通じて得た気付きをご共有します。
+ではここからはアプリ開発を通じて得た気付きをご共有します。
 
-最近はメジャーブラウザ互換に悩むことが少なくなりましたが（10 年くらい前は結構多かった）、サイトに AdSense を導入したところ久しぶりにブラウザ互換と格闘することになりました。ご覧の通り AdSense は DOM 構造の変更を伴う広告の自動挿入を実行します。
+最近はメジャーブラウザ互換に悩むことが少なくなりましたが（10 年くらい前は結構多かった）、サイトに AdSense を導入したところ久しぶりにブラウザ互換と格闘することになりました。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/adsense.png' />
-
-Three.js アプリは CANVAS のサイズに応じた
+Three.js アプリは適切なレンダリングやイベント処理のために domElement のサイズに応じた
 
 - Camera の aspect の変更
 - Camera の updateProjectionMatrix() 呼び出し
 - WebGLRenderer の setSize() 呼び出し
 
-が必要ですが、
+が必要です。
+
+この処理を初期化時とウインドウの resize イベント発生時に加え、domElement に影響を与える AdSense による広告の自動挿入時にも実行する必要があります。
+
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/adsense.png' />
+
+```
+document.addEventListener('DOMContentLoaded', (async () => {
+	/*
+		*** NOTE ***
+		without iframe (outer window),
+		geometry in event will be wrong because of google ads
+	*/
+	const outer = await createChildWindow(document);
+	let resizeWorld = in_ev => {
+		gWorld.resize(outer.innerWidth, outer.innerHeight);
+		gBackgroundCanvas.width = outer.innerWidth;
+		gBackgroundCanvas.height = outer.innerHeight;
+		drawBackground(gBackgroundCanvas);
+	};
+	outer.addEventListener('resize', debouncing(resizeWorld, 300));
+	outer.dispatchEvent(new Event('resize'));
+	outer.document.body.appendChild(gWorld.canvas);
+	outer.document.body.appendChild(gBackgroundCanvas);
+	gWorld.start();
+}));
+```
+
+
+
+
+
 
 最近はメジャーブラウザ間の動作相違に悩むことが少なくなりましたが（10 年くらい前は結構多かった印象）、試しに AdSense を導入したところ、広告の自動挿入で CANVAS の座標系が狂ってしまう問題が発生し、回避のために iframe を利用したものの Chrome と Firefox で動作相違が生じてまあまあ苦戦しました。前者は createElement 直後から同期的に contentDocument を操作できたのですが、後者ではそれがワークしません。後者のために load イベントハンドラ + await を導入してみたものの、今度は前者で load イベントが発生しません。タイマー + await でイベントループ処理を一周遅延させることで両ブラウザで期待動作が得られました。このあたりのネタを myTips か techblog にまとめたいと思ってます ^^
 
