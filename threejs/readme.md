@@ -8,7 +8,7 @@
 
 <img width='300' src='https://pj-corridor.net/images/ix-side6-reversi-4-loop.png' />
 
-リバーシに Three.js 必要？と突っ込まれそうですが、シリンダ状にループする盤面で新たなゲーム戦略を楽しめます。加えて DMZ 概念の導入や NPC の選択肢にも幅があり（1～3）、ループ盤面の場合は回転操作も可能です。ルールベース（2025 年 6 月現在）の NPC 実装は一対一で戦う場合は物足りなさを感じるかもしれませんが、カオスな 4 人対決（NPC x3 + 人間）だと経験者でも苦戦すること請け合いです。
+リバーシに Three.js 必要？と突っ込まれそうですが、シリンダ状にループする盤面で新たなゲーム戦略を楽しめます。加えて DMZ 概念の導入や NPC の選択肢にも幅があり（1～3）、ループ盤面の場合は回転操作も可能です。ルールベース（2025 年 6 月現在）の NPC 実装は一対一で戦う場合は物足りなさを感じるかもしれませんが、カオスな 4 人対決（NPC x3 + 人間）だと経験者でも苦戦すること請け合いです。よろしければ電車の待ち時間に遊んでください。
 
 - <a href='https://pj-corridor.net/side-six/side-six-reversi.html?type=2-non-loop'>2 人プレー（NPC x1 + 人間）通常盤面リバーシ</a>
 - <a href='https://pj-corridor.net/side-six/side-six-reversi.html?type=2-loop'>2 人プレー（NPC x1 + 人間）ループ盤面リバーシ</a>
@@ -32,7 +32,7 @@
 
 <img width='300' src='https://pj-corridor.net/images/ix-figure.png' />
 
-私は <a href='https://lydesign.jp/n/n3aa55611b347'>ポンチ絵を多用したパワポスライド</a> を好んでいますが、スライドに張り付ける著作権フリーな棒人間素材を探すのは少々面倒です。ならばいっそ自前で、と開発したのがこちらです。
+私はしばしば <a href='https://lydesign.jp/n/n3aa55611b347'>ポンチ絵を多用したパワポスライド</a> を作ることがありますが、スライドに張り付ける著作権フリーな棒人間素材を探すのは少々面倒です。ならばいっそ自前で、と開発したのがこちらです。みなさまのスライドにも是非ご利用ください。
 
 - <a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間（関節操作で任意のポージング）</a>
 - <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間（引っ張ってポージング）</a>
@@ -48,9 +48,21 @@
 
 次のステップとして、ポーズデータにラベルを付け、機械学習を利用して自然言語（例えば感情や姿勢を表す言葉）から適当なポーズを生成する棒人間を構想中です。
 
-## AdSense との格闘
+## ブラウザ互換と格闘
 
-アプリ開発を通じて得た気付き
+ここからはアプリ開発を通じて得た気付きをご共有します。
+
+最近はメジャーブラウザ互換に悩むことが少なくなりましたが（10 年くらい前は結構多かった）、サイトに AdSense を導入したところ久しぶりにブラウザ互換と格闘することになりました。ご覧の通り AdSense は DOM 構造の変更を伴う広告の自動挿入を実行します。
+
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/adsense.png' />
+
+Three.js アプリは CANVAS のサイズに応じた
+
+- Camera の aspect の変更
+- Camera の updateProjectionMatrix() 呼び出し
+- WebGLRenderer の setSize() 呼び出し
+
+が必要ですが、
 
 最近はメジャーブラウザ間の動作相違に悩むことが少なくなりましたが（10 年くらい前は結構多かった印象）、試しに AdSense を導入したところ、広告の自動挿入で CANVAS の座標系が狂ってしまう問題が発生し、回避のために iframe を利用したものの Chrome と Firefox で動作相違が生じてまあまあ苦戦しました。前者は createElement 直後から同期的に contentDocument を操作できたのですが、後者ではそれがワークしません。後者のために load イベントハンドラ + await を導入してみたものの、今度は前者で load イベントが発生しません。タイマー + await でイベントループ処理を一周遅延させることで両ブラウザで期待動作が得られました。このあたりのネタを myTips か techblog にまとめたいと思ってます ^^
 
@@ -63,35 +75,35 @@ Firefox can not use it ant needs to use asynchronous process.
 by the way, if you use not timer but load event,
 your code will not work for Chrome.
 
-## そういう仕様か
+## SkinnedMesh と Raycaster
 
-★そういう仕様か
 スキンメッシュがダメなので …
 vertices of SkinnedMesh.geometry will not be changed after moving bones.
 because of it, SkinnedMesh.geometry can't catch raycasting properly.
 so, to catch raycasting, rough formed geometry is attached.
-
-★CSS トランジションを動的に変更したい場合
-to fire the transition function,
-the final style should be set in the next event loop.
-
-★そういう仕様か
-これも調査。再描画しないとキャプチャとれない理由
-before getting betmap, you need re-render.
-without it, for example, you can't use canvas.toDataURL('image/png') etc. 
-
-## 
-
-★コレの再確認
-クラス拡張でコンストラクタ引数を変更している場合の clone メソッド
-継承クラスから clone を使って失敗した
-https://github.com/mrdoob/three.js/blob/master/src/math/Vector2.js
 
 ★ミス
 as CircleGeometry can't catch raycast from opposite side,
 use rotated CircleGeometry in addition.
 CircleGeometry は反対からのレイキャストを拾ってくれない
 
+## WebGLRenderer
 
+★そういう仕様か
+これも調査。再描画しないとキャプチャとれない理由
+before getting betmap, you need re-render.
+without it, for example, you can't use canvas.toDataURL('image/png') etc. 
 
+## CSS Transitions の変更
+
+★CSS トランジションを動的に変更したい場合
+to fire the transition function,
+the final style should be set in the next event loop.
+
+## 継承 + clone()
+
+★コレの再確認
+クラス拡張でコンストラクタ引数を変更している場合の clone メソッド
+継承クラスから clone を使って失敗した
+https://github.com/mrdoob/three.js/blob/master/src/math/Vector2.js
 
