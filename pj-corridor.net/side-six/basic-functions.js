@@ -304,6 +304,30 @@ function _emulateTouchEvent(in_elem) {
 	});
 }
 
+function _watchResize(in_elem) {
+	const sizeProps = ['offsetWidth', 'offsetHeight'];
+	const closure = {};
+	sizeProps.forEach(in_prop => closure[in_prop] = in_elem[in_prop]);
+	const resizeObserver = new ResizeObserver(in_resizedArr => {
+		for (let resized of in_resizedArr) {
+			if (resized.target !== in_elem) {
+				continue;
+			}
+			sizeProps.forEach(in_prop => {
+				const currentSize = in_elem[in_prop];
+				if (closure[in_prop] === currentSize) {
+					return;
+				} else {
+					const diff = currentSize - closure[in_prop];
+					console.log(in_prop + ' is resized ( ' + diff + ' )');
+					closure[in_prop] = currentSize;
+				}
+			});
+		}
+	});
+	resizeObserver.observe(in_elem);
+}
+
 const _MOUSEMOVE_IGNORE = 5.0;
 const _MOUSEMOVE_AMPLIFIER = 2.5;
 
@@ -1286,6 +1310,7 @@ export class cSphericalWorld {
 		this.resize(this.canvas.width, this.canvas.height);
 		this.#setupEventHandler();
 		_emulateTouchEvent(this.canvas);
+		_watchResize(this.canvas);
 	}
 	#setupEventHandler() {
 		const events = (() => {
