@@ -1,6 +1,6 @@
 # そんな時どうする Three.js アプリ開発
 
-こんにちは、以前は広告エンジニア、現在はデータプラットフォームエンジニアの中山です。この記事では趣味の Three.js アプリ開発を通じて得た気付き、例えばブラウザ互換問題や Three.js 初心者が陥りそうなトラブル、その解決方法について共有させていただきます。
+こんにちは、以前は広告エンジニア、現在はデータプラットフォームエンジニアの中山です。この記事では趣味の Three.js アプリ開発を通じて得た気付き、例えばブラウザ互換問題や Three.js 初心者が陥りそうなトラブル、その解決方法について共有させていただきます（以前シナジーマーケティングでご一緒させて頂いたこともあり、TECHSCORE BLOG への掲載をご快諾いただきました ^^ どうもありがとうございます）。
 
 最初に Three.js アプリをご紹介します。
 
@@ -52,21 +52,74 @@
 
 ではここからはアプリ開発を通じて得た気付きをご共有します。
 
-最近はメジャーブラウザ互換に悩むことが少なくなりましたが（10 年くらい前は結構多かった）、サイトに AdSense を導入したところ久しぶりにブラウザ互換と格闘することになりました。
+最近はメジャーブラウザ互換に悩むことが少なくなりましたが、サイトに AdSense を導入したところ久しぶりにブラウザ互換と格闘することになりました。
 
-Three.js アプリは適切なレンダリングやイベント処理のために domElement のサイズに応じた
+Three.js アプリは適切なレンダリングやイベント処理のために、初期化時とウインドウの resize イベント発生時に
 
-- Camera の aspect の変更
-- Camera の updateProjectionMatrix() 呼び出し
-- WebGLRenderer の setSize() 呼び出し
+- Camera.aspect の変更
+- Camera.updateProjectionMatrix() 呼び出し
+- WebGLRenderer.setSize() 呼び出し
 
-が必要です。
+が必要です。加えて AdSense が広告を自動挿入（例えばこの広告の場合 WebGLRenderer.domElement の offsetHeight を変更）するタイミングでも同じ処理が必要になります。
 
-この処理を初期化時とウインドウの resize イベント発生時に加え、domElement に影響を与える AdSense による広告の自動挿入時にも実行する必要があります。
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/adsense.gif' />
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/adsense.png' />
+そこで iframe 内に WebGLRenderer.domElement を表示して iframe ウインドウの resize イベントハンドラに処理を集約することにしました。
 
 ```
+function createOuterWindow(in_document) {
+    const iframe = in_document.createElement('iframe');
+    Object.assign(iframe.style, {
+        width: '100%',
+        height: '100%',
+        border: 'none'
+    });
+    in_document.body.appendChild(iframe);
+    return iframe.contentWindow;
+}
+
+const outerWin = createOuterWindow(document);
+const outerDoc = outerWin.document;
+
+// canvas = WebGLRenderer.domElement
+outerDoc.body.appendChild(canvas);
+
+outerWin.addEventListener('resize', in_event => {
+    // maintain Camera.aspect etc
+    console.log('resized');
+});
+```
+
+ところが Chrome では動作するものの Firefox では WebGLRenderer.domElement が表示されません。iframe の仕様にも
+https://html.spec.whatwg.org/#the-iframe-element
+
+
+
+
+function createChildWindow(in_document) {
+	return new Promise(in_callback => {
+		setupBody(in_document);
+		const iframe = in_document.createElement('iframe');
+		in_document.body.appendChild(iframe);
+		Object.assign(iframe.style, {
+			width: '100%',
+			height: '100%',
+			border: 'none'
+		});
+		/*
+			*** NOTE ***
+			although Chrome can use iframe.contentDocument right after createElement,
+			Firefox can not use it ant needs to use asynchronous process.
+			by the way, if you use not timer but load event,
+			your code will not work for Chrome.
+		*/
+		setTimeout(() => {
+			setupBody(iframe.contentDocument);
+			(in_callback)(iframe.contentWindow);
+		}, 0);
+	});
+}
+
 document.addEventListener('DOMContentLoaded', (async () => {
 	/*
 		*** NOTE ***
