@@ -4,22 +4,22 @@
 
 最初に Three.js アプリをご紹介します。
 
-### リバーシ
+### 新リバーシ
 
 <img width='300' src='https://pj-corridor.net/images/ix-side6-reversi-4-loop.png' />
 
-リバーシに Three.js 必要？と突っ込まれそうですが、シリンダ状にループする盤面で従前のリバーシにはない戦略を楽しめます。加えて DMZ 概念の導入や NPC の選択肢にも幅があり（1～3）、ループ盤面の場合は回転操作も可能です。ルールベース（2025 年 6 月現在）の NPC 実装は一対一で戦う場合は物足りなさを感じるかもしれませんが、カオスな 4 人対決（NPC x3 + 人間）だと経験者でも苦戦すること請け合いです。よろしければ電車の待ち時間に遊んでください。
+リバーシに Three.js 必要？と突っ込まれそうですが、シリンダ状にループする 3D 盤面で従前にはない戦略を楽しめます。加えて DMZ 概念の導入や NPC の選択肢にも幅があり（1～3）、ループ盤面の場合は回転戦術も選択できます。ルールベース（2025 年 6 月現在）の NPC 実装は一対一で戦う場合は物足りなさを感じるかもしれませんが、カオスな 4 人対決（NPC x3 + 人間）だと経験者でも苦戦すること請け合いです。よろしければ電車の待ち時間に遊んでください。
 
 - <a href='https://pj-corridor.net/side-six/side-six-reversi.html?type=2-non-loop'>2 人プレー（NPC x1 + 人間）通常盤面リバーシ</a>
 - <a href='https://pj-corridor.net/side-six/side-six-reversi.html?type=2-loop'>2 人プレー（NPC x1 + 人間）ループ盤面リバーシ</a>
 - <a href='https://pj-corridor.net/side-six/side-six-reversi.html?type=4-non-loop'>4 人プレー（NPC x3 + 人間）通常盤面リバーシ</a>
 - <a href='https://pj-corridor.net/side-six/side-six-reversi.html?type=4-loop'>4 人プレー（NPC x3 + 人間）ループ盤面リバーシ</a>
 
-### パズル
+### 多様なパズル
 
 <img width='300' src='https://pj-corridor.net/images/ix-cube1.png' />
 
-鉄板の Three.js 題材、ルービックキューブを発展させて多様なパズルを開発してみました。
+鉄板の Three.js 習作題材、ルービックキューブを発展させて多様なパズルを開発してみました。
 
 - <a href='https://pj-corridor.net/cube3d/cube3d.html'>通常のルービックキューブ</a>
 - <a href='https://pj-corridor.net/cube3d/cube3d.html?level=3'>ピースの形状が変則的なキューブ</a>
@@ -48,23 +48,23 @@
 
 次のステップとして、ポーズデータにラベルを付け、機械学習を利用して自然言語（例えば感情や姿勢を表す言葉）から適当なポーズを生成する棒人間を構想中です。
 
-ではここからはアプリ開発を通じて得た気付きをご共有します。
+さて、ここからはアプリ開発を通じて得た気付きのご紹介です。
 
 ## ブラウザ互換と格闘
 
-最近はメジャーブラウザ互換に悩むことが少なくなりましたが、サイトに AdSense を導入したところ久しぶりにブラウザ互換と格闘する羽目になりました。
+最近は主要ブラウザ間の互換性に悩むことが少なくなりましたが、サイトに AdSense を導入したところ久しぶりに互換性の問題に直面しました。その際の記録をご紹介します。
 
 Three.js アプリは適切なレンダリングやイベント処理のために、初期化時とウインドウの resize イベント発生時に
 
-- Camera.aspect の変更
-- Camera.updateProjectionMatrix() 呼び出し
-- WebGLRenderer.setSize() 呼び出し
+- <a href='https://threejs.org/docs/#api/en/cameras/PerspectiveCamera.aspect'>PerspectiveCamera.aspect</a> の変更
+- <a href='https://threejs.org/docs/#api/en/cameras/PerspectiveCamera.updateProjectionMatrix'>PerspectiveCamera.updateProjectionMatrix()</a> 呼び出し
+- <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.setSize'>WebGLRenderer.setSize()</a> 呼び出し
 
-が必要です。加えて AdSense が広告を自動挿入（例えばこの広告の場合 WebGLRenderer.domElement の offsetHeight を変更）するタイミングでも同じ処理が必要になります。
+が必要です。加えて AdSense が広告を自動挿入するタイミングでブラウザの top-level browsing context（以降メインウインドウと呼びます）内の要素の offsetHeight を変更するため、同様の処理が必要になります。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/adsense.gif' />
 
-そこで iframe 内に WebGLRenderer.domElement を表示して iframe ウインドウの resize イベントハンドラに処理を集約することにしました。
+そこで、メインウインドウではなく iframe 内に WebGLRenderer.domElement を表示して iframe ウインドウの resize イベントハンドラに処理を集約することにしました。
 
 ```
 function createOuterWindow(in_document) {
@@ -85,12 +85,12 @@ const outerDoc = outerWin.document;
 outerDoc.body.appendChild(myCanvas);
 
 outerWin.addEventListener('resize', in_event => {
-    // maintain Camera.aspect etc
+    // maintain PerspectiveCamera.aspect etc
     console.log('resized');
 });
 ```
 
-ところが Chrome（137.0）では動作するものの Firefox（139.0）では WebGLRenderer.domElement が表示されません。仕様に <a href='https://html.spec.whatwg.org/#the-iframe-element'>以下の記載</a> があるので
+ところが Chrome（137.0）では動作するものの Firefox（139.0）では WebGLRenderer.domElement が表示されません。<a href='https://html.spec.whatwg.org/#the-iframe-element'>iframe 仕様</a> には以下の記載があるので
 
 > If url matches about:blank and initialInsertion is true, then: Run the iframe load event steps given element.
 
@@ -100,38 +100,27 @@ load イベントでの処理を試してみました。
 const outerWin = createChildWindow(document);
 
 outerWin.addEventListener('load', () => {
-	const outerDoc = outerWin.document;
+    const outerDoc = outerWin.document;
 
-	// myCanvas : WebGLRenderer.domElement
-	outerDoc.body.appendChild(myCanvas);
+    // myCanvas : WebGLRenderer.domElement
+    outerDoc.body.appendChild(myCanvas);
 });
 ```
 
-今度は逆に Firefox では動作するものの Chrome では WebGLRenderer.domElement が表示されません（仕様通りに load イベントが発生しない）。Firefox では createElement 直後の iframe.contentWindow や iframe.contentWindow.document に対する操作が失敗するため、処理を次のイベントループまで遅延させてみます。
+今度は逆に Firefox では動作するものの Chrome では WebGLRenderer.domElement が表示されません（仕様通りに load イベントが発生しない）。Firefox では createElement('iframe') 直後の iframe.contentWindow.document に対する操作が失敗するため、処理を次のイベントループまで遅延させてみます。
 
 ```
 const outerWin = createChildWindow(document);
 
 setTimeout(() => {
-	const outerDoc = outerWin.document;
+    const outerDoc = outerWin.document;
 
-	// myCanvas : WebGLRenderer.domElement
-	outerDoc.body.appendChild(myCanvas);
+    // myCanvas : WebGLRenderer.domElement
+    outerDoc.body.appendChild(myCanvas);
 }, 0);
 ```
 
-これでようやく両ブラウザで期待動作となり、広告の自動挿入タイミングで Camera や WebGLRenderer の更新ができるようになりました。
-
-
-
-★
-Google 広告の掲載
-・広告挿入で操作不可 : iframe で包んでも再発
-・広告挿入で操作不可 : リサイズのオブザーブ（リサイズ無限ループ）
-although Chrome can use iframe.contentDocument right after createElement,
-Firefox can not use it ant needs to use asynchronous process.
-by the way, if you use not timer but load event,
-your code will not work for Chrome.
+これでようやく両ブラウザで期待動作となり、広告の自動挿入タイミングで PerspectiveCamera や WebGLRenderer の更新ができるようになりました。
 
 ## SkinnedMesh と Raycaster
 
