@@ -8,7 +8,7 @@
 
 <img width='300' src='https://pj-corridor.net/images/ix-side6-reversi-4-loop.png' />
 
-リバーシに Three.js 必要？と突っ込まれそうですが、シリンダ状にループする盤面で新たなゲーム戦略を楽しめます。加えて DMZ 概念の導入や NPC の選択肢にも幅があり（1～3）、ループ盤面の場合は回転操作も可能です。ルールベース（2025 年 6 月現在）の NPC 実装は一対一で戦う場合は物足りなさを感じるかもしれませんが、カオスな 4 人対決（NPC x3 + 人間）だと経験者でも苦戦すること請け合いです。よろしければ電車の待ち時間に遊んでください。
+リバーシに Three.js 必要？と突っ込まれそうですが、シリンダ状にループする盤面で従前のリバーシにはない戦略を楽しめます。加えて DMZ 概念の導入や NPC の選択肢にも幅があり（1～3）、ループ盤面の場合は回転操作も可能です。ルールベース（2025 年 6 月現在）の NPC 実装は一対一で戦う場合は物足りなさを感じるかもしれませんが、カオスな 4 人対決（NPC x3 + 人間）だと経験者でも苦戦すること請け合いです。よろしければ電車の待ち時間に遊んでください。
 
 - <a href='https://pj-corridor.net/side-six/side-six-reversi.html?type=2-non-loop'>2 人プレー（NPC x1 + 人間）通常盤面リバーシ</a>
 - <a href='https://pj-corridor.net/side-six/side-six-reversi.html?type=2-loop'>2 人プレー（NPC x1 + 人間）ループ盤面リバーシ</a>
@@ -32,7 +32,7 @@
 
 <img width='300' src='https://pj-corridor.net/images/ix-figure.png' />
 
-私はしばしば <a href='https://lydesign.jp/n/n3aa55611b347'>ポンチ絵を多用したパワポスライド</a> を作ることがありますが、スライドに張り付ける著作権フリーな棒人間素材を探すのは少々面倒です。ならばいっそ自前で、と開発したのがこちらです。みなさまのスライドにも是非ご利用ください。
+私は <a href='https://lydesign.jp/n/n3aa55611b347'>ポンチ絵を多用したパワポスライド</a> を作ることがありますが、スライドに張り付ける著作権フリーな棒人間素材を探すのは少々面倒です。ならばいっそ自前で、と開発したのがこちらです。みなさまのスライドにも是非ご利用ください。
 
 - <a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間（関節操作のポージング）</a>
 - <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間（曲げて引っ張るポージング）</a>
@@ -42,17 +42,17 @@
 
 <img width='300' src='https://pj-corridor.net/images/figure-gallery.png' />
 
-棒人間は便利でしたが、ポージングすら面倒になり :-p 構造化したポーズデータの I/O とそれを使ったギャラリーを用意しました。イメージに近いものを探して少々整えるだけで目的の棒人間素材が手に入ります。
+棒人間は便利でしたが、ポージングすら面倒になり :-p 構造化したポーズデータの入出力とそれを使ったギャラリーを用意しました。イメージに近いものを探して少々整えるだけで目的の棒人間素材が手に入ります。
 
 - <a href='https://pj-corridor.net/stick-figure/gallery/index.html'>棒人間ギャラリー</a>
 
 次のステップとして、ポーズデータにラベルを付け、機械学習を利用して自然言語（例えば感情や姿勢を表す言葉）から適当なポーズを生成する棒人間を構想中です。
 
-## ブラウザ互換と格闘
-
 ではここからはアプリ開発を通じて得た気付きをご共有します。
 
-最近はメジャーブラウザ互換に悩むことが少なくなりましたが、サイトに AdSense を導入したところ久しぶりにブラウザ互換と格闘することになりました。
+## ブラウザ互換と格闘
+
+最近はメジャーブラウザ互換に悩むことが少なくなりましたが、サイトに AdSense を導入したところ久しぶりにブラウザ互換と格闘する羽目になりました。
 
 Three.js アプリは適切なレンダリングやイベント処理のために、初期化時とウインドウの resize イベント発生時に
 
@@ -81,8 +81,8 @@ function createOuterWindow(in_document) {
 const outerWin = createOuterWindow(document);
 const outerDoc = outerWin.document;
 
-// canvas = WebGLRenderer.domElement
-outerDoc.body.appendChild(canvas);
+// myCanvas : WebGLRenderer.domElement
+outerDoc.body.appendChild(myCanvas);
 
 outerWin.addEventListener('resize', in_event => {
     // maintain Camera.aspect etc
@@ -90,63 +90,39 @@ outerWin.addEventListener('resize', in_event => {
 });
 ```
 
-ところが Chrome では動作するものの Firefox では WebGLRenderer.domElement が表示されません。iframe の仕様にも
-https://html.spec.whatwg.org/#the-iframe-element
+ところが Chrome（137.0）では動作するものの Firefox（139.0）では WebGLRenderer.domElement が表示されません。仕様に <a href='https://html.spec.whatwg.org/#the-iframe-element'>以下の記載</a> があるので
 
+> If url matches about:blank and initialInsertion is true, then: Run the iframe load event steps given element.
 
+load イベントでの処理を試してみました。
 
+```
+const outerWin = createChildWindow(document);
 
-function createChildWindow(in_document) {
-	return new Promise(in_callback => {
-		setupBody(in_document);
-		const iframe = in_document.createElement('iframe');
-		in_document.body.appendChild(iframe);
-		Object.assign(iframe.style, {
-			width: '100%',
-			height: '100%',
-			border: 'none'
-		});
-		/*
-			*** NOTE ***
-			although Chrome can use iframe.contentDocument right after createElement,
-			Firefox can not use it ant needs to use asynchronous process.
-			by the way, if you use not timer but load event,
-			your code will not work for Chrome.
-		*/
-		setTimeout(() => {
-			setupBody(iframe.contentDocument);
-			(in_callback)(iframe.contentWindow);
-		}, 0);
-	});
-}
+outerWin.addEventListener('load', () => {
+	const outerDoc = outerWin.document;
 
-document.addEventListener('DOMContentLoaded', (async () => {
-	/*
-		*** NOTE ***
-		without iframe (outer window),
-		geometry in event will be wrong because of google ads
-	*/
-	const outer = await createChildWindow(document);
-	let resizeWorld = in_ev => {
-		gWorld.resize(outer.innerWidth, outer.innerHeight);
-		gBackgroundCanvas.width = outer.innerWidth;
-		gBackgroundCanvas.height = outer.innerHeight;
-		drawBackground(gBackgroundCanvas);
-	};
-	outer.addEventListener('resize', debouncing(resizeWorld, 300));
-	outer.dispatchEvent(new Event('resize'));
-	outer.document.body.appendChild(gWorld.canvas);
-	outer.document.body.appendChild(gBackgroundCanvas);
-	gWorld.start();
-}));
+	// myCanvas : WebGLRenderer.domElement
+	outerDoc.body.appendChild(myCanvas);
+});
 ```
 
+今度は逆に Firefox では動作するものの Chrome では WebGLRenderer.domElement が表示されません（仕様通りに load イベントが発生しない）。Firefox では createElement 直後の iframe.contentWindow や iframe.contentWindow.document に対する操作が失敗するため、処理を次のイベントループまで遅延させてみます。
+
+```
+const outerWin = createChildWindow(document);
+
+setTimeout(() => {
+	const outerDoc = outerWin.document;
+
+	// myCanvas : WebGLRenderer.domElement
+	outerDoc.body.appendChild(myCanvas);
+}, 0);
+```
+
+これでようやく両ブラウザで期待動作となり、広告の自動挿入タイミングで Camera や WebGLRenderer の更新ができるようになりました。
 
 
-
-
-
-最近はメジャーブラウザ間の動作相違に悩むことが少なくなりましたが（10 年くらい前は結構多かった印象）、試しに AdSense を導入したところ、広告の自動挿入で CANVAS の座標系が狂ってしまう問題が発生し、回避のために iframe を利用したものの Chrome と Firefox で動作相違が生じてまあまあ苦戦しました。前者は createElement 直後から同期的に contentDocument を操作できたのですが、後者ではそれがワークしません。後者のために load イベントハンドラ + await を導入してみたものの、今度は前者で load イベントが発生しません。タイマー + await でイベントループ処理を一周遅延させることで両ブラウザで期待動作が得られました。このあたりのネタを myTips か techblog にまとめたいと思ってます ^^
 
 ★
 Google 広告の掲載
