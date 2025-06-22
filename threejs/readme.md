@@ -1,10 +1,10 @@
 # そんな時どうする Three.js アプリ開発
 
-こんにちは、以前は広告エンジニア、現在はデータプラットフォームエンジニアの中山です。この記事では趣味の Three.js アプリ開発を通じて得た気付き、例えばブラウザ互換問題や Three.js 初心者が陥りそうなトラブル、その解決方法について共有させていただきます（以前シナジーマーケティングでご一緒させて頂いたこともあり、TECHSCORE BLOG への掲載をご快諾いただきました ^^ どうもありがとうございます）。
+こんにちは、以前は広告エンジニア、現在はデータプラットフォームエンジニアの中山です。この記事では趣味の Three.js アプリ開発を通じて得た気付き、例えばブラウザ互換問題や Three.js 初心者が陥りそうなトラブル、その解決方法についてご紹介させていただきます（以前シナジーマーケティングでご一緒させて頂いたこともあり、TECHSCORE BLOG への掲載をご快諾いただきました ^^ どうもありがとうございます）。
 
 最初に Three.js アプリをご紹介します。
 
-### 新リバーシ
+### 新コンセプトのリバーシ
 
 <img width='300' src='https://pj-corridor.net/images/ix-side6-reversi-4-loop.png' />
 
@@ -56,11 +56,11 @@
 
 Three.js アプリは適切なレンダリングやイベント処理のために、初期化時とウインドウの resize イベント発生時に
 
-- <a href='https://threejs.org/docs/#api/en/cameras/PerspectiveCamera.aspect'>PerspectiveCamera.aspect</a> の変更
-- <a href='https://threejs.org/docs/#api/en/cameras/PerspectiveCamera.updateProjectionMatrix'>PerspectiveCamera.updateProjectionMatrix()</a> 呼び出し
-- <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.setSize'>WebGLRenderer.setSize()</a> 呼び出し
+- <a href='https://threejs.org/docs/#api/en/cameras/PerspectiveCamera.aspect'>PerspectiveCamera.aspect</a> プロパティーの変更
+- <a href='https://threejs.org/docs/#api/en/cameras/PerspectiveCamera.updateProjectionMatrix'>PerspectiveCamera.updateProjectionMatrix()</a> メソッド呼び出し
+- <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.setSize'>WebGLRenderer.setSize()</a> メソッド呼び出し
 
-が必要です。加えて AdSense が広告を自動挿入するタイミングでブラウザの top-level browsing context（以降メインウインドウと呼びます）内の要素の offsetHeight を変更するため、同様の処理が必要になります。
+が必要です。加えて AdSense の広告自動挿入時にブラウザの top-level browsing context（以降メインウインドウと呼びます）内の要素の offsetHeight が変更されるため、そのタイミングでも同様の処理が必要になります。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/adsense.gif' />
 
@@ -122,6 +122,7 @@ setTimeout(() => {
 
 これでようやく両ブラウザで期待動作となり、広告の自動挿入タイミングで PerspectiveCamera や WebGLRenderer の更新ができるようになりました。
 
+## Raycasting が届かない！？
 ## SkinnedMesh と Raycaster
 
 スキンメッシュがダメなので …
@@ -140,12 +141,6 @@ CircleGeometry は反対からのレイキャストを拾ってくれない
 これも調査。再描画しないとキャプチャとれない理由
 before getting betmap, you need re-render.
 without it, for example, you can't use canvas.toDataURL('image/png') etc. 
-
-## CSS Transitions の変更
-
-★CSS トランジションを動的に変更したい場合
-to fire the transition function,
-the final style should be set in the next event loop.
 
 ## 継承 + clone()
 
