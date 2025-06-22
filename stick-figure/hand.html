@@ -1400,6 +1400,7 @@ function uiRights() {
 	Object.assign(dialog.style, {
 		width : '30%',
 		height : 'auto',
+		color : 'white',
 		background : 'black',
 		borderRadius : '1em',
 		padding : '1.5em'
@@ -1414,7 +1415,6 @@ function uiRights() {
 	]).forEach(in_fragment => {
 		dialog.innerHTML += in_fragment;
 	});
-	autoTransition(dialog, 'color 0.5s ease-out', 'gray', 'white')
 	startDialog(dialog);
 }
 
