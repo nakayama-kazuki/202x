@@ -39,6 +39,8 @@ import {
 	thresholding,
 	debouncing,
 	nonReentrantAsync,
+	autoTransition,
+	startDialog,
 	factoryBuilder,
 	arrRand,
 	arrTrim,
@@ -1647,20 +1649,6 @@ SOUND.RELEASE.then(in_decompress => {
 	SE_RELEASE = new Audio('data:audio/mpeg;base64,' + in_decompress);
 });
 
-function setTransition(in_elem, in_shorthand, in_val1, in_val2) {
-	const components = in_shorthand.split(/\s+/);
-	in_elem.style.transition = in_shorthand;
-	in_elem.style[components[0]] = in_val1;
-	setTimeout(() => {
-		/*
-			*** NOTE ***
-			to fire the transition function,
-			the final style should be set in the next event loop.
-		*/
-		in_elem.style[components[0]] = in_val2;
-	}, 0);
-}
-
 function takeShotSound() {
 	SE_SHUTTER.play();
 }
@@ -1677,7 +1665,7 @@ function takeShotFlash() {
 		zIndex : 2 ** 31 - 1,
 	});
 	document.body.appendChild(flash);
-	setTransition(flash, 'opacity 0.2s ease-out', 1, 0);
+	autoTransition(flash, 'opacity 0.2s ease-out', 1, 0);
 	flash.addEventListener('transitionend', () => {
 		document.body.removeChild(flash);
 	});
@@ -1702,35 +1690,6 @@ function uiGetScreenShot() {
 			alert(err);
 		}
 	})();
-}
-
-function startDialog(in_element, in_callback = null) {
-	const maxInt = 2 ** 31 - 1;
-	const background = document.createElement('div');
-	Object.assign(background.style, {
-		position : 'fixed',
-		left : '0px',
-		top : '0px',
-		width : '100%',
-		height : '100%',
-		zIndex : maxInt
-	});
-	background.appendChild(in_element);
-	Object.assign(in_element.style, {
-		position : 'absolute',
-		left : '50%',
-		top : '50%',
-		transform : 'translate(-50%, -50%)'
-	});
-	document.body.appendChild(background);
-	const closeDialog = () => {
-		document.body.removeChild(background);
-		if (in_callback) {
-			(in_callback)();
-		}
-	};
-	background.addEventListener('mousedown', closeDialog);
-	background.addEventListener('touchstart', closeDialog);
 }
 
 function uiHelp() {
@@ -1783,7 +1742,7 @@ function uiRights() {
 	]).forEach(in_fragment => {
 		dialog.innerHTML += in_fragment;
 	});
-	setTransition(dialog, 'color 0.5s ease-out', 'gray', 'white')
+	autoTransition(dialog, 'color 0.5s ease-out', 'gray', 'white')
 	startDialog(dialog);
 }
 
