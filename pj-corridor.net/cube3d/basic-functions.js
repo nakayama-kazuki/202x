@@ -430,6 +430,45 @@ export function nonReentrantAsync(in_async) {
 	};
 }
 
+export function autoTransition(in_elem, in_shorthand, in_start, in_end, in_delay = 0) {
+	let [prop,,] = in_shorthand.split(/\s+/);
+	// convert from CSS to CSSOM
+	prop = prop.replace(/-([a-z])/g, (in_match, in_letter) => in_letter.toUpperCase());
+	in_elem.style['transition'] = in_shorthand;
+	in_elem.style[prop] = in_start;
+	// automatically start the transition in the next event loop
+	setTimeout(() => {in_elem.style[prop] = in_end}, in_delay);
+}
+
+export function startDialog(in_elem, in_callback = null) {
+	const maxInt = 2 ** 31 - 1;
+	const background = document.createElement('div');
+	Object.assign(background.style, {
+		position : 'fixed',
+		left : '0px',
+		top : '0px',
+		width : '100%',
+		height : '100%',
+		zIndex : maxInt
+	});
+	background.appendChild(in_elem);
+	Object.assign(in_elem.style, {
+		position : 'absolute',
+		left : '50%',
+		top : '50%',
+		transform : 'translate(-50%, -50%)'
+	});
+	document.body.appendChild(background);
+	const closeDialog = () => {
+		document.body.removeChild(background);
+		if (in_callback) {
+			(in_callback)();
+		}
+	};
+	background.addEventListener('mousedown', closeDialog);
+	background.addEventListener('touchstart', closeDialog);
+}
+
 export function factoryBuilder(in_constructor) {
 	const group = pseudoMessageDigest2(in_constructor.toString().substring(0, 200));
 	class cCache {
