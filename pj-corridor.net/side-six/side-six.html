@@ -479,6 +479,7 @@ function complete() {
 		Object.assign(dialog.style, {
 			width : 'auto',
 			height : 'auto',
+			color : 'white',
 			background : 'black',
 			borderRadius : '1em',
 			padding : '1.5em'
@@ -491,7 +492,6 @@ function complete() {
 		]).forEach(in_fragment => {
 			dialog.innerHTML += in_fragment;
 		});
-		autoTransition(dialog, 'color 0.5s ease-out', 'gray', 'white');
 		startDialog(dialog, () => {
 			drawCosmicView(gBackgroundCanvas, 400, 50);
 			gWorld.motionZoom2(WORLD_INIT_ZOOM, 1000);
@@ -596,6 +596,7 @@ function uiHelp() {
 	Object.assign(dialog.style, {
 		width : 'auto',
 		height : 'auto',
+		color : 'white',
 		background : 'white',
 		borderRadius : '1em',
 		padding : '1em'
@@ -638,7 +639,6 @@ function uiRights() {
 	]).forEach(in_fragment => {
 		dialog.innerHTML += in_fragment;
 	});
-	autoTransition(dialog, 'color 0.5s ease-out', 'gray', 'white')
 	startDialog(dialog);
 }
 
