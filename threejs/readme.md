@@ -90,11 +90,11 @@ outerWin.addEventListener('resize', in_event => {
 });
 ```
 
-ところが Chrome（137.0）では動作するものの Firefox（139.0）では WebGLRenderer.domElement が表示されません。<a href='https://html.spec.whatwg.org/#the-iframe-element'>iframe 仕様</a> には以下の記載があるので
+ところが Chrome（137.0）では動作するものの Firefox（139.0）では WebGLRenderer.domElement が表示されません。この iframe は src 属性を持たないためデフォルトの about:blank がロードされます。そこで <a href='https://html.spec.whatwg.org/#the-iframe-element'>iframe 仕様</a> に記載のある
 
-> If url matches about:blank and initialInsertion is true, then: Run the iframe load event steps given element.
+> 3. If url matches about:blank and initialInsertion is true, then: Run the iframe load event steps given element.
 
-load イベントでの処理を試してみました。
+を参考に load イベントでの処理を試してみます。
 
 ```
 const outerWin = createChildWindow(document);
@@ -107,11 +107,13 @@ outerWin.addEventListener('load', () => {
 });
 ```
 
-今度は逆に Firefox では動作するものの Chrome では WebGLRenderer.domElement が表示されません（仕様通りに load イベントが発生しない）。Firefox では createElement('iframe') 直後の iframe.contentWindow.document に対する操作が失敗するため、処理を次のイベントループまで遅延させてみます。
+今度は逆に Firefox では動作するものの Chrome で WebGLRenderer.domElement が表示されません（Chrome では about:blank の load を同期的に実行し、イベントを発生させないのかもしれません）。ブラウザ毎に処理を分岐させてもよいのですが、できるなら同じコードを動かしたいですね。同期的な iframe.contentWindow.document の操作に失敗する Firefox への対応で処理を次回イベントループまで遅延させ、申し訳程度にコメントを残すことにしました。
+
 
 ```
 const outerWin = createChildWindow(document);
 
+// asynchronous process for Firefox
 setTimeout(() => {
     const outerDoc = outerWin.document;
 
@@ -120,7 +122,45 @@ setTimeout(() => {
 }, 0);
 ```
 
-これでようやく両ブラウザで期待動作となり、広告の自動挿入タイミングで PerspectiveCamera や WebGLRenderer の更新ができるようになりました。
+これで両ブラウザともに広告の自動挿入タイミングで PerspectiveCamera や WebGLRenderer の更新ができるようになりました。
+
+## WebGLRenderer
+
+★そういう仕様か
+これも調査。再描画しないとキャプチャとれない理由
+before getting betmap, you need re-render.
+without it, for example, you can't use canvas.toDataURL('image/png') etc. 
+
+
+
+## シンプルアニメーション
+
+★Chrome でリロード時は実行されるがロード時は実行されない
+
+```
+export function autoTransition(in_elem, in_shorthand, in_start, in_end, in_callback = null) {
+    let [prop,,, delay = '0s'] = in_shorthand.split(/\s+/);
+    // convert from CSS to CSSOM
+    prop = prop.replace(/-([a-z])/g, (in_match, in_letter) => in_letter.toUpperCase());
+    delay = delay.includes('ms') ? parseFloat(delay) : parseFloat(delay) * 1000;
+    in_elem.style['transition'] = in_shorthand;
+    in_elem.style[prop] = in_start;
+    // automatically start the transition in the next event loop
+    setTimeout(() => in_elem.style[prop] = in_end, delay);
+    if (in_callback) {
+        const callback = in_ev => {
+            if (in_ev.propertyName === prop) {
+                in_elem.removeEventListener('transitionend', callback);
+                (in_callback)();
+            }
+        };
+        in_elem.addEventListener('transitionend', callback);
+    }
+}
+
+autoTransition(dialog, 'color 1.5s ease-out', 'blue', 'white');
+```
+
 
 ## Raycasting が届かない！？
 ## SkinnedMesh と Raycaster
@@ -135,12 +175,7 @@ as CircleGeometry can't catch raycast from opposite side,
 use rotated CircleGeometry in addition.
 CircleGeometry は反対からのレイキャストを拾ってくれない
 
-## WebGLRenderer
 
-★そういう仕様か
-これも調査。再描画しないとキャプチャとれない理由
-before getting betmap, you need re-render.
-without it, for example, you can't use canvas.toDataURL('image/png') etc. 
 
 ## 継承 + clone()
 
