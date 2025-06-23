@@ -430,14 +430,24 @@ export function nonReentrantAsync(in_async) {
 	};
 }
 
-export function autoTransition(in_elem, in_shorthand, in_start, in_end, in_delay = 0) {
-	let [prop,,] = in_shorthand.split(/\s+/);
+export function autoTransition(in_elem, in_shorthand, in_start, in_end, in_callback = null) {
+	let [prop,,, delay = '0s'] = in_shorthand.split(/\s+/);
 	// convert from CSS to CSSOM
 	prop = prop.replace(/-([a-z])/g, (in_match, in_letter) => in_letter.toUpperCase());
+	delay = delay.includes('ms') ? parseFloat(delay) : parseFloat(delay) * 1000;
 	in_elem.style['transition'] = in_shorthand;
 	in_elem.style[prop] = in_start;
 	// automatically start the transition in the next event loop
-	setTimeout(() => {in_elem.style[prop] = in_end}, in_delay);
+	setTimeout(() => in_elem.style[prop] = in_end, delay);
+	if (in_callback) {
+		const callback = in_ev => {
+			if (in_ev.propertyName === prop) {
+				in_elem.removeEventListener('transitionend', callback);
+				(in_callback)();
+			}
+		};
+		in_elem.addEventListener('transitionend', callback);
+	}
 }
 
 export function startDialog(in_elem, in_callback = null) {
@@ -458,12 +468,15 @@ export function startDialog(in_elem, in_callback = null) {
 		top : '50%',
 		transform : 'translate(-50%, -50%)'
 	});
+	autoTransition(background, 'opacity 0.5s ease-out 0s', '0', '1');
 	document.body.appendChild(background);
 	const closeDialog = () => {
-		document.body.removeChild(background);
-		if (in_callback) {
-			(in_callback)();
-		}
+		autoTransition(background, 'opacity 0.5s ease-out 0s', '1', '0', () => {
+			document.body.removeChild(background);
+			if (in_callback) {
+				(in_callback)();
+			}
+		});
 	};
 	background.addEventListener('mousedown', closeDialog);
 	background.addEventListener('touchstart', closeDialog);
