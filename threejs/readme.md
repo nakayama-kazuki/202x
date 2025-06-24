@@ -60,11 +60,11 @@ Three.js アプリは適切なレンダリングやイベント処理のため�
 - <a href='https://threejs.org/docs/#api/en/cameras/PerspectiveCamera.updateProjectionMatrix'>PerspectiveCamera.updateProjectionMatrix()</a> メソッド呼び出し
 - <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.setSize'>WebGLRenderer.setSize()</a> メソッド呼び出し
 
-が必要です。加えて AdSense の広告自動挿入時にブラウザの top-level browsing context（以降メインウインドウと呼びます）内の要素の offsetHeight が変更されるため、そのタイミングでも同様の処理が必要になります。
+が必要です。加えて AdSense の広告自動挿入時にブラウザの top-level browsing context（以降メインウインドウと呼びます）内の要素サイズが変更される可能性があるため（こちらの例だと offsetHeight を変更）、そのタイミングでも同様の処理が必要になります。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/adsense.gif' />
 
-そこで、メインウインドウではなく iframe 内に WebGLRenderer.domElement を表示して iframe ウインドウの resize イベントハンドラに処理を集約することにしました。
+しかし <a href='https://github.com/mrdoob/three.js/blob/master/src/renderers/WebGLRenderer.js'>WebGLRenderer.setSize() 処理</a> で WebGLRenderer.domElement の width や height を更新するため、ResizeObserver による検知は採用できません。そこで、メインウインドウではなく iframe 内に WebGLRenderer.domElement を表示し、その iframe ウインドウの resize イベントハンドラに処理を集約することで、広告自動挿入に対応することを考えました。
 
 ```
 function createOuterWindow(in_document) {
@@ -90,11 +90,11 @@ outerWin.addEventListener('resize', in_event => {
 });
 ```
 
-ところが Chrome（137.0）では動作するものの Firefox（139.0）では WebGLRenderer.domElement が表示されません。この iframe は src 属性を持たないためデフォルトの about:blank がロードされます。そこで <a href='https://html.spec.whatwg.org/#the-iframe-element'>iframe 仕様</a> に記載のある
+ところが Chrome（137.0）では動作するものの Firefox（139.0）では WebGLRenderer.domElement が表示されません。この iframe は src 属性を持たないためデフォルトの about:blank がロードされますが <a href='https://html.spec.whatwg.org/#the-iframe-element'>iframe 仕様</a> によれば
 
 > 3. If url matches about:blank and initialInsertion is true, then: Run the iframe load event steps given element.
 
-を参考に load イベントでの処理を試してみます。
+とのことで load イベントでの処理を試してみます。
 
 ```
 const outerWin = createChildWindow(document);
@@ -107,8 +107,9 @@ outerWin.addEventListener('load', () => {
 });
 ```
 
-今度は逆に Firefox では動作するものの Chrome で WebGLRenderer.domElement が表示されません（Chrome では about:blank の load を同期的に実行し、イベントを発生させないのかもしれません）。ブラウザ毎に処理を分岐させてもよいのですが、できるなら同じコードを動かしたいですね。同期的な iframe.contentWindow.document の操作に失敗する Firefox への対応で処理を次回イベントループまで遅延させ、申し訳程度にコメントを残すことにしました。
+今度は逆に Firefox では動作するものの Chrome で WebGLRenderer.domElement が表示されません（Chrome では about:blank の load を同期的に実行し、イベントを発生させないのかもしれません）。
 
+ブラウザ毎に処理を分岐させてもよいのですが、できるなら同じコードを動かしたいですよね。そこで、同期的な iframe.contentWindow.document の操作に失敗する Firefox への対応で処理を次回イベントループまで遅延させ、言い訳をコメントとして残すことにしました。
 
 ```
 const outerWin = createChildWindow(document);
@@ -122,7 +123,7 @@ setTimeout(() => {
 }, 0);
 ```
 
-これで両ブラウザともに広告の自動挿入タイミングで PerspectiveCamera や WebGLRenderer の更新ができるようになりました。
+これでようやく両ブラウザともに広告の自動挿入タイミングで PerspectiveCamera や WebGLRenderer の更新ができるようになりました。
 
 ## WebGLRenderer
 
