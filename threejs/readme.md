@@ -64,7 +64,7 @@ Three.js アプリは適切なレンダリングやイベント処理のため�
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/adsense.gif' />
 
-しかし <a href='https://github.com/mrdoob/three.js/blob/master/src/renderers/WebGLRenderer.js'>WebGLRenderer.setSize() 処理</a> で WebGLRenderer.domElement の width や height を更新するため、ResizeObserver による検知は採用できません。そこで、メインウインドウではなく iframe 内に WebGLRenderer.domElement を表示し、その iframe ウインドウの resize イベントハンドラに処理を集約することで、広告自動挿入に対応することを考えました。
+しかし <a href='https://github.com/mrdoob/three.js/blob/master/src/renderers/WebGLRenderer.js'>WebGLRenderer.setSize()</a> で WebGLRenderer.domElement の width や height を更新するため、ここでは ResizeObserver による検知を利用できません。そこで、メインウインドウではなく iframe 内に WebGLRenderer.domElement を表示し、その iframe ウインドウの resize イベントハンドラに処理を集約することで、広告自動挿入に対応することを考えました。
 
 ```
 function createOuterWindow(in_document) {
@@ -90,11 +90,11 @@ outerWin.addEventListener('resize', in_event => {
 });
 ```
 
-ところが Chrome（137.0）では動作するものの Firefox（139.0）では WebGLRenderer.domElement が表示されません。この iframe は src 属性を持たないためデフォルトの about:blank がロードされますが <a href='https://html.spec.whatwg.org/#the-iframe-element'>iframe 仕様</a> によれば
+ところが Chrome（137.0）では動作するものの Firefox（139.0）で WebGLRenderer.domElement が表示されません。この iframe にはデフォルトの about:blank がロードされますが <a href='https://html.spec.whatwg.org/#the-iframe-element'>iframe 仕様</a> によれば
 
 > 3. If url matches about:blank and initialInsertion is true, then: Run the iframe load event steps given element.
 
-とのことで load イベントでの処理を試してみます。
+ですので load イベントでの処理を試してみます。
 
 ```
 const outerWin = createChildWindow(document);
@@ -125,14 +125,60 @@ setTimeout(() => {
 
 これでようやく両ブラウザともに広告の自動挿入タイミングで PerspectiveCamera や WebGLRenderer の更新ができるようになりました。
 
-## WebGLRenderer
+## WebGLRenderer.domElement.toDataURL できない！？
 
-★そういう仕様か
-これも調査。再描画しないとキャプチャとれない理由
-before getting betmap, you need re-render.
-without it, for example, you can't use canvas.toDataURL('image/png') etc. 
+<a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> や <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間</a> や <a href='https://pj-corridor.net/stick-figure/hand.html'>手</a> では決定したポーズの画像をクリップボードにコピーする screenshot 機能を実装しています。
 
+ここで WebGLRenderer.domElement.toDataURL() を実行しますが、当初この処理がうまくいかずに悩みました。例えば
 
+```
+const w = 400;
+const h = 400;
+
+const renderer = new THREE.WebGLRenderer();
+document.body.appendChild(renderer.domElement);
+
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(w, h);
+
+const scene = new THREE.Scene();
+
+const camera = new THREE.PerspectiveCamera(45, w / h);
+camera.position.set(0, 0, +1000);
+
+const geometry = new THREE.BoxGeometry(50, 50, 50);
+const material = new THREE.MeshNormalMaterial();
+const box = new THREE.Mesh(geometry, material);
+scene.add(box);
+
+box.rotation.y += 0.5;
+box.rotation.x += 0.5;
+renderer.render(scene, camera);
+
+// 1. synchronous process right after WebGLRenderer.render()
+console.log(renderer.domElement.toDataURL('image/png'));
+
+setTimeout(() => {
+    // 2. asynchronous process after WebGLRenderer.render()
+    console.log(renderer.domElement.toDataURL('image/png'));
+}, 0);
+```
+
+のようなコードの場合 1 のタイミングでは toDataURL() は期待動作となりますが 2 では失敗します。これは WebGLRenderer が描画バッファを消去してしまうことが理由で、試しに <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.preserveDrawingBuffer'>WebGLRenderer.preserveDrawingBuffer</a> に true を設定すると
+
+```
+const renderer = new THREE.WebGLRenderer({preserveDrawingBuffer : true});
+```
+
+描画バッファの内容が保持されて 2 のタイミングでも toDataURL() が期待動作となりました。ただしこの値はメモリ使用量を抑えるために通常は false にすべきですので、これを変更するのではなく toDataURL() の手前で再度レンダリングすることにします。
+
+```
+setTimeout(() => {
+    renderer.render(scene, camera);
+    console.log(renderer.domElement.toDataURL('image/png'));
+}, 0);
+```
+これで無事 screenshot 機能が実装できました（パワポスライドへの貼り付け、お試しください ^^）。
 
 ## シンプルアニメーション
 
