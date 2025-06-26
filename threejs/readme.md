@@ -129,9 +129,9 @@ setTimeout(() => {
 
 <a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> や <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間</a> や <a href='https://pj-corridor.net/stick-figure/hand.html'>手</a> では決定したポーズの画像をクリップボードにコピーする screenshot 機能を実装しています。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/screenshot.gif' />
+<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/screenshot.gif' />
 
-この機能で WebGLRenderer.domElement.toDataURL() を実行しますが、当初これがうまくいきませんでした。例えばこのようなコード
+この機能で WebGLRenderer.domElement.toDataURL() を使っていますが、当初これがうまくいかずに悩みました。例えばこのようなコードの場合
 
 ```
 const w = 400;
@@ -166,13 +166,13 @@ setTimeout(() => {
 }, 0);
 ```
 
-… の場合 (1) のタイミングでは toDataURL() は期待動作となりますが (2) のタイミングではうまくいきません。これは WebGLRenderer が描画バッファを消去することが理由で、試しに <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.preserveDrawingBuffer'>WebGLRenderer.preserveDrawingBuffer</a> に true を設定すると
+コメント (1) のタイミングでは toDataURL() で期待した出力が得られますが (2) のタイミングではうまくいきません。これは WebGLRenderer が各フレームのレンダリング後に描画バッファを自動的に消去するためです。実験的に描画バッファの保持を指定すると
 
 ```
 const renderer = new THREE.WebGLRenderer({preserveDrawingBuffer : true});
 ```
 
-描画バッファの内容が保持されて 2 のタイミングでも toDataURL() が期待動作となりました。ただしこの値はメモリ使用量を抑えるために通常は false にすべきですので、これを変更するのではなく toDataURL() の手前で再度レンダリングすることにします。
+非同期的に呼び出される (2) のタイミングでも toDataURL() で期待した出力が得られました。ただし、この設定はフレーム合成などの特定のユースケースを除き、メモリ使用量を最適化するためにデフォルトの false を変更せず、代わりに toDataURL() の直前で再度レンダリングすることにします。
 
 ```
 setTimeout(() => {
