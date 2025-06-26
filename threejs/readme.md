@@ -129,7 +129,9 @@ setTimeout(() => {
 
 <a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> や <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間</a> や <a href='https://pj-corridor.net/stick-figure/hand.html'>手</a> では決定したポーズの画像をクリップボードにコピーする screenshot 機能を実装しています。
 
-ここで WebGLRenderer.domElement.toDataURL() を実行しますが、当初この処理がうまくいかずに悩みました。例えば
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/screenshot.gif' />
+
+この機能で WebGLRenderer.domElement.toDataURL() を実行しますが、当初これがうまくいきませんでした。例えばこのようなコード
 
 ```
 const w = 400;
@@ -155,16 +157,16 @@ box.rotation.y += 0.5;
 box.rotation.x += 0.5;
 renderer.render(scene, camera);
 
-// 1. synchronous process right after WebGLRenderer.render()
+// (1) synchronous process right after WebGLRenderer.render()
 console.log(renderer.domElement.toDataURL('image/png'));
 
 setTimeout(() => {
-    // 2. asynchronous process after WebGLRenderer.render()
+    // (2) asynchronous process after WebGLRenderer.render()
     console.log(renderer.domElement.toDataURL('image/png'));
 }, 0);
 ```
 
-のようなコードの場合 1 のタイミングでは toDataURL() は期待動作となりますが 2 では失敗します。これは WebGLRenderer が描画バッファを消去してしまうことが理由で、試しに <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.preserveDrawingBuffer'>WebGLRenderer.preserveDrawingBuffer</a> に true を設定すると
+… の場合 (1) のタイミングでは toDataURL() は期待動作となりますが (2) のタイミングではうまくいきません。これは WebGLRenderer が描画バッファを消去することが理由で、試しに <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.preserveDrawingBuffer'>WebGLRenderer.preserveDrawingBuffer</a> に true を設定すると
 
 ```
 const renderer = new THREE.WebGLRenderer({preserveDrawingBuffer : true});
