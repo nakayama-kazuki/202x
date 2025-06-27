@@ -129,7 +129,7 @@ setTimeout(() => {
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/screenshot.gif' />
 
-<a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> や <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間</a> や <a href='https://pj-corridor.net/stick-figure/hand.html'>手</a> では決定したポーズの画像をクリップボードにコピーする screenshot 機能を実装しています。この機能で WebGLRenderer.domElement.toDataURL() を使っていますが、当初これがうまくいかずに悩んでいました。
+<a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> や <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間</a> や <a href='https://pj-corridor.net/stick-figure/hand.html'>手</a> では決定したポーズの画像をクリップボードにコピーする screenshot 機能を実装しています。この機能で WebGLRenderer.domElement.toDataURL() を使っていますが、当初これがうまくいかずに悩みました。
 
 例えばこのようなコードの場合
 
@@ -163,18 +163,13 @@ setTimeout(() => {
 }, 0);
 ```
 
-コメント (1) のタイミングでは toDataURL() で期待した出力が得られますが (2) のタイミングではうまくいきません。これは WebGLRenderer が各フレームのレンダリング後に描画バッファを自動的に消去するためです。実験的に描画バッファの保持を指定すると
-
-★WEBGL の、とか入れる？
-★リンクもいれる
-★この設定はをリンクにする？
-
+コメント (1) のタイミングでは toDataURL() で期待した出力が得られますが (2) のタイミングではうまくいきません。これは WebGLRenderer が各フレームのレンダリング後に自動的に描画バッファを消去するためです。そこで実験的に描画バッファを保持してみます。
 
 ```
 const renderer = new THREE.WebGLRenderer({preserveDrawingBuffer : true});
 ```
 
-非同期的に呼び出される (2) のタイミングでも toDataURL() で期待した出力が得られました。ただし、この設定はフレーム合成などの特定のユースケースを除き、メモリ使用量を最適化するためにデフォルトの false を変更せず、代わりに toDataURL() の直前で再度レンダリングすることにします。
+その結果、非同期的に呼び出される (2) のタイミングでも toDataURL() で期待した出力が得られました。ただし <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.preserveDrawingBuffer'>WebGLRenderer.preserveDrawingBuffer</a> はフレーム合成などの特定のユースケースを除き、デフォルト値の false を変更せずにメモリ使用量を最適化し、代わりに toDataURL() の直前で再度レンダリングすることにします。
 
 ```
 setTimeout(() => {
@@ -187,32 +182,35 @@ setTimeout(() => {
 
 ## シンプルアニメーション
 
-★Chrome でリロード時は実行されるがロード時は実行されない
+WebGLRenderer の描画は全体的にアニメーション表現を採用していますが、どうせなら通常の HTML 要素（ダイアログ表示など）も同様にアニメーションさせたいところです。とはいえ CSS に @keyframes を定義して … 的なことは抜きにしてアプリケーションのコードのみでアニメーションできないかと考えた末の実装がこちらです。
 
 ```
-function autoTransition(in_elem, in_shorthand, in_start, in_end, in_callback = null) {
-    let [prop,,, delay = '0s'] = in_shorthand.split(/\s+/);
-    // convert from CSS to CSSOM
-    prop = prop.replace(/-([a-z])/g, (in_match, in_letter) => in_letter.toUpperCase());
-    delay = delay.includes('ms') ? parseFloat(delay) : parseFloat(delay) * 1000;
-    in_elem.style['transition'] = in_shorthand;
-    in_elem.style[prop] = in_start;
-    // automatically start the transition in the next event loop
-    setTimeout(() => in_elem.style[prop] = in_end, delay);
-    if (in_callback) {
+function autoTransition(in_elem, in_shorthand, in_start, in_end) {
+    return new Promise(in_resolve => {
+        let [prop,,, delay = '0s'] = in_shorthand.split(/\s+/);
+        // convert from CSS to CSSOM
+        prop = prop.replace(/-([a-z])/g, (in_match, in_letter) => in_letter.toUpperCase());
+        delay = delay.includes('ms') ? parseFloat(delay) : parseFloat(delay) * 1000;
+        in_elem.style['transition'] = in_shorthand;
+        in_elem.style[prop] = in_start;
+        // automatically start the transition in the next event loop
+        setTimeout(() => in_elem.style[prop] = in_end, delay);
         const callback = in_ev => {
             if (in_ev.propertyName === prop) {
                 in_elem.removeEventListener('transitionend', callback);
-                (in_callback)();
+                (in_resolve)();
             }
         };
         in_elem.addEventListener('transitionend', callback);
-    }
+    });
 }
 
-autoTransition(dialog, 'color 1.5s ease-out', 'blue', 'white');
+autoTransition(element, 'color 1.5s ease-out', 'blue', 'white').then(() => {
+    console.log('transitioned');
+});
 ```
 
+CSS Transitions の shorthand と transition-property の開始値と終了値を指定することで要素のアニメーションを実行します。
 
 ## Raycasting が届かない！？
 ## SkinnedMesh と Raycaster
