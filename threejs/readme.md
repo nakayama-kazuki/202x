@@ -127,11 +127,11 @@ setTimeout(() => {
 
 ## WebGLRenderer.domElement.toDataURL できない！？
 
-<a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> や <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間</a> や <a href='https://pj-corridor.net/stick-figure/hand.html'>手</a> では決定したポーズの画像をクリップボードにコピーする screenshot 機能を実装しています。
-
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/screenshot.gif' />
 
-この機能で WebGLRenderer.domElement.toDataURL() を使っていますが、当初これがうまくいかずに悩みました。例えばこのようなコードの場合
+<a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> や <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間</a> や <a href='https://pj-corridor.net/stick-figure/hand.html'>手</a> では決定したポーズの画像をクリップボードにコピーする screenshot 機能を実装しています。この機能で WebGLRenderer.domElement.toDataURL() を使っていますが、当初これがうまくいかずに悩んでいました。
+
+例えばこのようなコードの場合
 
 ```
 const w = 400;
@@ -143,30 +143,32 @@ document.body.appendChild(renderer.domElement);
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(w, h);
 
-const scene = new THREE.Scene();
-
 const camera = new THREE.PerspectiveCamera(45, w / h);
 camera.position.set(0, 0, +1000);
 
+const scene = new THREE.Scene();
 const geometry = new THREE.BoxGeometry(50, 50, 50);
 const material = new THREE.MeshNormalMaterial();
 const box = new THREE.Mesh(geometry, material);
 scene.add(box);
 
-box.rotation.y += 0.5;
-box.rotation.x += 0.5;
 renderer.render(scene, camera);
 
-// (1) synchronous process right after WebGLRenderer.render()
+// (1)
 console.log(renderer.domElement.toDataURL('image/png'));
 
 setTimeout(() => {
-    // (2) asynchronous process after WebGLRenderer.render()
+    // (2)
     console.log(renderer.domElement.toDataURL('image/png'));
 }, 0);
 ```
 
 コメント (1) のタイミングでは toDataURL() で期待した出力が得られますが (2) のタイミングではうまくいきません。これは WebGLRenderer が各フレームのレンダリング後に描画バッファを自動的に消去するためです。実験的に描画バッファの保持を指定すると
+
+★WEBGL の、とか入れる？
+★リンクもいれる
+★この設定はをリンクにする？
+
 
 ```
 const renderer = new THREE.WebGLRenderer({preserveDrawingBuffer : true});
@@ -176,6 +178,7 @@ const renderer = new THREE.WebGLRenderer({preserveDrawingBuffer : true});
 
 ```
 setTimeout(() => {
+    // (2)
     renderer.render(scene, camera);
     console.log(renderer.domElement.toDataURL('image/png'));
 }, 0);
@@ -187,7 +190,7 @@ setTimeout(() => {
 ★Chrome でリロード時は実行されるがロード時は実行されない
 
 ```
-export function autoTransition(in_elem, in_shorthand, in_start, in_end, in_callback = null) {
+function autoTransition(in_elem, in_shorthand, in_start, in_end, in_callback = null) {
     let [prop,,, delay = '0s'] = in_shorthand.split(/\s+/);
     // convert from CSS to CSSOM
     prop = prop.replace(/-([a-z])/g, (in_match, in_letter) => in_letter.toUpperCase());
