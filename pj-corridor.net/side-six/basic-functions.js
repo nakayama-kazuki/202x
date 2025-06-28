@@ -437,7 +437,7 @@ export function autoTransition(in_elem, in_shorthand, in_start, in_end, in_callb
 	delay = delay.includes('ms') ? parseFloat(delay) : parseFloat(delay) * 1000;
 	in_elem.style['transition'] = in_shorthand;
 	in_elem.style[prop] = in_start;
-	// automatically start the transition in the next event loop
+	// automatically start the transition in the next or later event loop
 	setTimeout(() => in_elem.style[prop] = in_end, delay);
 	if (in_callback) {
 		const callback = in_ev => {
@@ -468,10 +468,10 @@ export function startDialog(in_elem, in_callback = null) {
 		top : '50%',
 		transform : 'translate(-50%, -50%)'
 	});
-	autoTransition(background, 'opacity 0.5s ease-out 0s', '0', '1');
+	autoTransition(background, 'opacity 0.5s ease-out', '0', '1');
 	document.body.appendChild(background);
 	const closeDialog = () => {
-		autoTransition(background, 'opacity 0.5s ease-out 0s', '1', '0', () => {
+		autoTransition(background, 'opacity 0.5s ease-out', '1', '0', () => {
 			document.body.removeChild(background);
 			if (in_callback) {
 				(in_callback)();
@@ -1453,7 +1453,11 @@ export class cSphericalWorld {
 		raycaster.layers.set(in_layer);
 		// camera ---[ raycast ]---> object
 		raycaster.setFromCamera(in_ndc, this.#camera);
-		const intersects = raycaster.intersectObjects(this.#scene.children);
+		let children = this.#scene.children;
+		if (DEBUG) {
+			children = children.filter(in_child => !(in_child instanceof THREE.AxesHelper));
+		}
+		const intersects = raycaster.intersectObjects(children);
 		if (in_direction || (intersects.length === 0)) {
 			return intersects;
 		}
@@ -1461,7 +1465,7 @@ export class cSphericalWorld {
 		const opposit = (intersects[0].point.clone()).add(raycaster.ray.direction.multiplyScalar(this.#camera.far));
 		// camera ---> object <---[ raycast again ]--- opposit
 		raycaster.set(opposit, (raycaster.ray.direction.clone()).negate());
-		return raycaster.intersectObjects(this.#scene.children);
+		return raycaster.intersectObjects(children);
 	}
 	intersectPositive(in_ndc, in_layer = 0) {
 		return this.#intersectObjects(in_ndc, true, in_layer);
