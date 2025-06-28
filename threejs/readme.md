@@ -1,6 +1,6 @@
 # そんな時どうする Three.js アプリ開発
 
-こんにちは、以前は広告エンジニア、現在はデータプラットフォームエンジニアの中山です。この記事では趣味の Three.js アプリ開発を通じて得た気付き、例えばブラウザ互換問題や Three.js 初心者が陥りそうなトラブル、その解決方法についてご紹介させていただきます（以前シナジーマーケティングでご一緒させて頂いたこともあり、TECHSCORE BLOG への掲載をご快諾いただきました ^^ どうもありがとうございます）。
+こんにちは、以前は広告エンジニア、現在はデータプラットフォームエンジニアの中山です。この記事では趣味の Three.js アプリ開発を通じて得た気付き、例えば Three.js 初心者が陥りそうなトラブルやブラウザ互換問題、それらの解決方法についてご紹介させていただきます（以前シナジーマーケティングでご一緒させて頂いたこともあり、TECHSCORE BLOG への掲載をご快諾いただきました ^^ どうもありがとうございます）。
 
 最初に Three.js アプリをご紹介します。
 
@@ -48,11 +48,11 @@
 
 次のステップとして、ポーズデータにラベルを付け、機械学習を利用して自然言語（例えば感情や姿勢を表す言葉）から適当なポーズを生成する棒人間を構想中です。
 
-さて、ここからはアプリ開発を通じて得た気付きのご紹介です。
+さて、ここからは Three.js アプリ開発を通じて得た気付きのご紹介です。
 
-## ブラウザ互換と格闘
+## AdSense が招いたブラウザ互換問題
 
-最近は主要ブラウザ間の互換性に悩むことが少なくなりましたが、サイトに AdSense を導入したところ久しぶりに互換性の問題に直面しました。その際の記録をご紹介します。
+最近は主要ブラウザ間の互換性に悩むことが少なくなりましたが、サイトに  を導入したところ久しぶりに互換性の問題に直面しました。その際の記録をご紹介します。
 
 Three.js アプリは適切なレンダリングやイベント処理のために、初期化時とウインドウの resize イベント発生時に
 
@@ -125,7 +125,7 @@ setTimeout(() => {
 
 これでようやく両ブラウザともに広告の自動挿入タイミングで PerspectiveCamera や WebGLRenderer の更新ができるようになりました。
 
-## WebGLRenderer.domElement.toDataURL できない！？
+## toDataURL() 空しく描画バッファはもぬけの殻
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/screenshot.gif' />
 
@@ -163,13 +163,13 @@ setTimeout(() => {
 }, 0);
 ```
 
-コメント (1) のタイミングでは toDataURL() で期待した出力が得られますが (2) のタイミングではうまくいきません。これは WebGLRenderer が各フレームのレンダリング後に自動的に描画バッファを消去するためです。そこで実験的に描画バッファを保持してみます。
+コメント (1) のタイミングでは toDataURL() で期待した出力が得られますが (2) のタイミングではうまくいきません。これは WebGLRenderer が各フレームのレンダリング後に自動的に描画バッファを消去するためです。そこで実験的に描画バッファの保持を WebGLRenderingContext に設定してみます。
 
 ```
 const renderer = new THREE.WebGLRenderer({preserveDrawingBuffer : true});
 ```
 
-その結果、非同期的に呼び出される (2) のタイミングでも toDataURL() で期待した出力が得られました。ただし <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.preserveDrawingBuffer'>WebGLRenderer.preserveDrawingBuffer</a> はフレーム合成などの特定のユースケースを除き、デフォルト値の false を変更せずにメモリ使用量を最適化し、代わりに toDataURL() の直前で再度レンダリングすることにします。
+その結果、非同期的に呼び出される (2) のタイミングでも toDataURL() で期待した出力を得ることができました。ただし <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.preserveDrawingBuffer'>WebGLRenderer.preserveDrawingBuffer</a> はメモリ使用量を最適化するため、フレーム合成などの特定のユースケースを除きデフォルトの false を変更せず、代わりに toDataURL() の直前で再度レンダリングすることにします。
 
 ```
 setTimeout(() => {
@@ -180,9 +180,9 @@ setTimeout(() => {
 ```
 これで無事 screenshot 機能が実装できました（パワポスライドへの貼り付け、お試しください ^^）。
 
-## シンプルアニメーション
+## ぼくのかんがえたさいきょうのアニメーション関数
 
-WebGLRenderer の描画は全体的にアニメーション表現を採用していますが、どうせなら通常の HTML 要素（ダイアログ表示など）も同様にアニメーションさせたいところです。とはいえ CSS に @keyframes を定義して … 的なことは抜きにしてアプリケーションのコードのみでアニメーションできないかと考えた末の実装がこちらです。
+Three.js アプリでの WebGLRenderer の描画は全体的にアニメーション表現を採用していますが、どうせなら通常の HTML 要素（例えばダイアログ表示で利用）でも同様の UX を採用したいですよね。とはいえ CSS の @keyframes 定義などアニメーションに関する記述を分散させたくありません。シンプルな記述でかつ JavaScript コードのみで一元的に管理できないかと考えた末の実装がこちらです。
 
 ```
 function autoTransition(in_elem, in_shorthand, in_start, in_end) {
@@ -205,25 +205,58 @@ function autoTransition(in_elem, in_shorthand, in_start, in_end) {
     });
 }
 
-autoTransition(element, 'color 1.5s ease-out', 'blue', 'white').then(() => {
-    console.log('transitioned');
-});
+(async () => await autoTransition(element, 'color 1.5s ease-out', 'blue', 'white'))();
 ```
 
-CSS Transitions の shorthand と transition-property の開始値と終了値を指定することで要素のアニメーションを実行します。
+CSS Transitions の shorthand と transition-property の開始値と終了値を指定することで要素に関するアニメーションを実行します。
 
-## Raycasting が届かない！？
-## SkinnedMesh と Raycaster
+## Raycasting の罠三選
 
-スキンメッシュがダメなので …
+Three.js アプリでは touch や mouse などのイベント処理で <a href='https://threejs.org/docs/#api/en/core/Raycaster'>Raycaster</a> を使うことがあります。
+
+> Raycasting is used for mouse picking (working out what objects in the 3d space the mouse is over) amongst other things.
+
+この際の私の失敗を幾つかご紹介します。
+
+### 1. AxesHelper
+
+問題点: AxesHelper が Raycasting をキャッチしてしまい、期待した動作にならない。
+
+解決策: AxesHelper はデバッグ用のオブジェクトであり、通常はRaycastingの対象にする必要がありません。Raycasterを使用する際には、AxesHelperを無視するようにフィルタリングを行いましょう。
+
+const intersects = raycaster.intersectObjects(scene.children.filter(obj => !(obj instanceof THREE.AxesHelper)));
+
+
+### 2. PlaneGeometry
+
+★マージして使っているのでダメだ
+
+
+問題点: PlaneGeometry が背面からの Raycasting をキャッチしない。
+
+解決策: CircleGeometry も同様に裏面からのレイキャストを拾いません。この問題を解決するためには、PlaneGeometry や CircleGeometry を回転させて、両面でキャッチできるようにするか、もしくは両面のマテリアルを使用します。
+
+const material = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
+const plane = new THREE.Mesh(new THREE.PlaneGeometry(5, 5), material);
+
+as CircleGeometry can't catch raycast from opposite side,
+use rotated CircleGeometry in addition.
+CircleGeometry は反対からのレイキャストを拾ってくれない
+
+### 3. SkinnedMesh
+
+問題点: 曲げたあとに Raycasting をキャッチしない問題。
+
+解決策: SkinnedMesh のボーンを動かしても、geometry の頂点は更新されないため、正しくレイキャストをキャッチできません。この問題を解決するためには、レイキャスト用に簡略化した形状を別に用意し、それを使ってレイキャストを行います。
+
 vertices of SkinnedMesh.geometry will not be changed after moving bones.
 because of it, SkinnedMesh.geometry can't catch raycasting properly.
 so, to catch raycasting, rough formed geometry is attached.
 
-★ミス
-as CircleGeometry can't catch raycast from opposite side,
-use rotated CircleGeometry in addition.
-CircleGeometry は反対からのレイキャストを拾ってくれない
+// スキンメッシュとは別に、シンプルなジオメトリを用意してレイキャストを行う
+const simplifiedGeometry = new THREE.BoxGeometry(1, 1, 1); // 例: ボックスジオメトリ
+const simplifiedMesh = new THREE.Mesh(simplifiedGeometry, someMaterial);
+scene.add(simplifiedMesh);
 
 
 
