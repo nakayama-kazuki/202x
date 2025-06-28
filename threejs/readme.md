@@ -216,22 +216,24 @@ CSS Transitions の shorthand と transition-property の開始値と終了値�
 
 ## Raycasting の罠
 
-Three.js アプリでは touch や mouse などのイベント処理で <a href='https://threejs.org/docs/#api/en/core/Raycaster'>Raycaster</a> を使うことがあります。
+Three.js アプリでは touch や mouse などのイベントを処理する際に <a href='https://threejs.org/docs/#api/en/core/Raycaster'>Raycasting</a> を使うことがあります。
 
 > Raycasting is used for mouse picking (working out what objects in the 3d space the mouse is over) amongst other things.
 
-この際の私の失敗を幾つかご紹介します。
+この処理に関連した失敗を幾つかご紹介します。
 
 ### 1. でしゃばる AxesHelper
 
-<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/AxesHelper.png' />
-
 <a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> や <a href='https://pj-corridor.net/cube3d/cube3d.html'>ルービックキューブ</a> では、イベントの開始座標からの Raycasting が …
 
-- オブジェクトと交点を持つ場合、オブジェクト自体の操作（例えばポーズの変更）
-- オブジェクトと交点を持たない場合、その座標を起点としたオブジェクトの回転（実際には PerspectiveCamera の位置をオブジェクトを中心とした球面上で変更）
+- オブジェクトと交点を持つ場合、オブジェクト自体を操作（例えばポーズの変更）する
+- オブジェクトと交点を持たない場合、その座標を起点としてオブジェクトを回転させる（実際にはオブジェクト自身の回転ではなく、オブジェクト方向に向けた PerspectiveCamera を球面上で移動）
 
-を共通の UI としていました。注意すべき点として、デバッグ目的で Scene に AxesHelper を追加した場合には、交点チェックの手前で AxesHelper の影響を排除しておきましょう。私はこれを失念して、しばらく誤動作に悩んでしまいました。
+… を共通の UI としていました。しかし、デバッグ目的で Scene に AxesHelper（軸を表す三色の線）を追加した際に何故だか期待動作となりません。
+
+<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/AxesHelper.png' />
+
+この理由は AxesHelper 自身も <a href='https://threejs.org/docs/#api/en/core/Raycaster.intersectObject'>Raycaster.intersectObject()</a> の対象となるためでした。交点チェック時に対象を確認するか、その手前で AxesHelper の影響を排除しておきましょう。
 
 ```
 const children = scene.children.filter(in_child => !(in_child instanceof THREE.AxesHelper));
@@ -250,6 +252,7 @@ const intersects = raycaster.intersectObjects(children);
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/PlaneGeometry.png' />
 
 ★コード
+★アニメ GIF 化する？
 
 問題点: PlaneGeometry が背面からの Raycasting をキャッチしない。
 
