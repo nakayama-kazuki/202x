@@ -182,10 +182,10 @@ setTimeout(() => {
 
 ## ぼくのかんがえたさいきょうのアニメーション関数
 
-Three.js アプリでの WebGLRenderer の描画は全体的にアニメーション表現を採用していますが、どうせなら通常の HTML 要素（例えばダイアログ表示で利用）でも同様の UX を採用したいですよね。とはいえ CSS の @keyframes 定義などアニメーションに関する記述を分散させたくありません。シンプルな記述でかつ JavaScript コードのみで一元的に管理できないかと考えた末の実装がこちらです。
+Three.js アプリでの WebGLRenderer の描画は全体的にアニメーション表現を採用していますが、どうせなら通常の HTML 要素の描画（例えばダイアログ表示）でも同様の UX を採用したいですよね。とはいえ CSS の @keyframes 定義などアニメーションに関する記述を分散させたくありません。シンプルな記述でかつ JavaScript コードのみで一元的に管理できないかと考えた末の実装がこちらです。
 
 ```
-function autoTransition(in_elem, in_shorthand, in_start, in_end) {
+function autoTransition1(in_elem, in_shorthand, in_start, in_end) {
     return new Promise(in_resolve => {
         let [prop,,, delay = '0s'] = in_shorthand.split(/\s+/);
         // convert from CSS to CSSOM
@@ -205,12 +205,16 @@ function autoTransition(in_elem, in_shorthand, in_start, in_end) {
     });
 }
 
-(async () => await autoTransition(element, 'color 1.5s ease-out', 'blue', 'white'))();
+function autoTransition2(in_elem, in_shorthand, in_start, in_end) {
+    (async () => await autoTransition1(in_elem, in_shorthand, in_start, in_end))();
+}
+
+autoTransition2(element, 'color 1.5s ease-out', 'blue', 'white');
 ```
 
 CSS Transitions の shorthand と transition-property の開始値と終了値を指定することで要素に関するアニメーションを実行します。
 
-## Raycasting の罠三選
+## Raycasting の罠
 
 Three.js アプリでは touch や mouse などのイベント処理で <a href='https://threejs.org/docs/#api/en/core/Raycaster'>Raycaster</a> を使うことがあります。
 
@@ -218,19 +222,34 @@ Three.js アプリでは touch や mouse などのイベント処理で <a href=
 
 この際の私の失敗を幾つかご紹介します。
 
-### 1. AxesHelper
+### 1. でしゃばる AxesHelper
 
-問題点: AxesHelper が Raycasting をキャッチしてしまい、期待した動作にならない。
+<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/AxesHelper.png' />
 
-解決策: AxesHelper はデバッグ用のオブジェクトであり、通常はRaycastingの対象にする必要がありません。Raycasterを使用する際には、AxesHelperを無視するようにフィルタリングを行いましょう。
+<a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> や <a href='https://pj-corridor.net/cube3d/cube3d.html'>ルービックキューブ</a> では、イベントの開始座標からの Raycasting が …
 
-const intersects = raycaster.intersectObjects(scene.children.filter(obj => !(obj instanceof THREE.AxesHelper)));
+- オブジェクトと交点を持つ場合、オブジェクト自体の操作（例えばポーズの変更）
+- オブジェクトと交点を持たない場合、その座標を起点としたオブジェクトの回転（実際には PerspectiveCamera の位置をオブジェクトを中心とした球面上で変更）
 
+を共通の UI としていました。注意すべき点として、デバッグ目的で Scene に AxesHelper を追加した場合には、交点チェックの手前で AxesHelper の影響を排除しておきましょう。私はこれを失念して、しばらく誤動作に悩んでしまいました。
 
-### 2. PlaneGeometry
+```
+const children = scene.children.filter(in_child => !(in_child instanceof THREE.AxesHelper));
+const intersects = raycaster.intersectObjects(children);
+```
 
-★マージして使っているのでダメだ
+### 2. 消えた PlaneGeometry
 
+<a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> のパーツを操作する際には、透明色の
+
+- 対象パーツの height と同じ半径を持つ SphereGeometry
+- その SphereGeometry の中心を通る CircleGeometry
+
+を Scene に追加し、イベント座標からの Raycasting との交点方向にパーツを <a href='https://threejs.org/docs/#api/en/core/Object3D.lookAt'>lookAt()</a> しています。こちらはデバッグ用に SphereGeometry と CircleGeometry を着色し、棒人間の頭を傾けている様子です。
+
+<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/PlaneGeometry.png' />
+
+★コード
 
 問題点: PlaneGeometry が背面からの Raycasting をキャッチしない。
 
