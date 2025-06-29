@@ -1,6 +1,6 @@
 # そんな時どうする Three.js アプリ開発
 
-こんにちは、以前は広告エンジニア、現在はデータプラットフォームエンジニアの中山です。この記事では趣味の Three.js アプリ開発を通じて得た気付き、例えば Three.js 初心者が陥りそうなトラブルやブラウザ互換問題、それらの解決方法についてご紹介させていただきます。なお、以前シナジーマーケティングでご一緒させて頂いたこともあり、TECHSCORE BLOG への掲載をご快諾いただきました ^^ どうもありがとうございます。
+こんにちは、以前は広告エンジニア、現在はデータプラットフォームエンジニアの中山です。この記事では趣味の Three.js アプリ開発を通じて得た気付き、例えば Three.js 初心者が陥りそうなトラブルやブラウザ互換問題、それらの解決方法についてご紹介させていただきます。なお、TECHSCORE BLOG への掲載ですが、以前シナジーマーケティングでご一緒させて頂いたこともありご快諾いただけました ^^ どうもありがとうございます。
 
 最初に Three.js アプリをご紹介します。
 
@@ -52,21 +52,28 @@
 
 ## AdSense が招くブラウザ互換問題
 
-最近は主要ブラウザ間の互換性に悩むことが少なくなりましたが、サイトに AdSense を導入したところ久しぶりにブラウザ互換問題に直面しました。その際の記録をご紹介します。
+最近は主要ブラウザ間の互換性に悩むことが少なくなりましたが、サイトに AdSense を導入したところ iframe に関連したブラウザ互換問題に直面しました。その解消までの道のりをご紹介します。
 
-Three.js アプリは適切なレンダリングやイベント処理のため、初期化時とウインドウのリサイズイベント発生時に
+Three.js アプリは初期化時とウインドウのリサイズ時、適切なレンダリングや座標処理のための設定変更 …
 
-- <a href='https://threejs.org/docs/#api/en/cameras/PerspectiveCamera.aspect'>PerspectiveCamera.aspect</a> プロパティーの変更
-- <a href='https://threejs.org/docs/#api/en/cameras/PerspectiveCamera.updateProjectionMatrix'>PerspectiveCamera.updateProjectionMatrix()</a> メソッド呼び出し
-- <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.setSize'>WebGLRenderer.setSize()</a> メソッド呼び出し
+- <a href='https://threejs.org/docs/#api/en/cameras/PerspectiveCamera.aspect'>PerspectiveCamera.aspect</a> の変更
+- <a href='https://threejs.org/docs/#api/en/cameras/PerspectiveCamera.updateProjectionMatrix'>PerspectiveCamera.updateProjectionMatrix()</a> 呼び出し
+- <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.setSize'>WebGLRenderer.setSize()</a> 呼び出し
 
-が必要になります。加えて AdSense コードを設置したサイト内の要素のサイズが広告自動挿入時に変更される可能性があるため（添付の例だと offsetHeight を変更）、そのタイミングでも同様の処理が必要になります。
+が必要になります。加えて <a href='https://support.google.com/adsense/answer/9190028'>AdSense コード</a> を設置したサイトで、広告自動挿入時に要素のサイズが変更される可能性があるため、そのタイミングでも同様の処理が必要になります。例えばこれは要素の offsetHeight が変更されています。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/adsense.gif' />
 
-ただし <a href='https://github.com/mrdoob/three.js/blob/master/src/renderers/WebGLRenderer.js'>WebGLRenderer.setSize()</a> は <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.domElement'>WebGLRenderer.domElement</a> の width や height への書き込みを行うため、ResizeObserver のコールバック内では避けたい処理です（補足すると <a href='https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/resize_observer/resize_observer.cc'>Chromium の実装</a> では前回観察時からの要素サイズの変更を確認しています）。
+ただし <a href='https://github.com/mrdoob/three.js/blob/master/src/renderers/WebGLRenderer.js'>WebGLRenderer.setSize()</a> 実装で <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.domElement'>WebGLRenderer.domElement</a> の width や height への書き込みが発生するため、ResizeObserver のコールバック内では呼び出したくない処理です（余談ですが <a href='https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/resize_observer/resize_observer.cc'>Chromium の実装</a> では前回観察時からの要素サイズの変更を確認しているため、処理が意図せずループすることはありません）
 
-そこで iframe 内に WebGLRenderer.domElement を配置し、iframe ウインドウに対するリサイズイベントハンドラに必要な処理を集約することで、広告自動挿入に対応することを考えました。
+そこで iframe 内に WebGLRenderer.domElement を配置することで
+
+1. 広告自動挿入
+2. 広告自動挿入に伴う iframe のリサイズ
+3. iframe 内の WebGLRenderer.domElement のリサイズ
+4. iframe のリサイズに伴うイベントハンドラ処理でレンダリングや座標処理のための設定変更
+
+のように対応することを考えました。
 
 ```
 function createOuterWindow(in_document) {
@@ -92,7 +99,7 @@ outerWin.addEventListener('resize', in_event => {
 });
 ```
 
-ところが Chrome（137.0）では動作するものの Firefox（139.0）では WebGLRenderer.domElement が表示されません（エラーメッセージもない）。ならば src や srcdoc 属性のない iframe はデフォルトの about:blank がロードされるため <a href='https://html.spec.whatwg.org/#the-iframe-element'>iframe 仕様</a>
+ところが Chrome（137.0）では動作するものの Firefox（139.0）では WebGLRenderer.domElement が表示されません（エラーメッセージもない）。ならば src や srcdoc 属性のない iframe はデフォルトの about:blank がロードされるため <a href='https://html.spec.whatwg.org/#the-iframe-element'>iframe の仕様</a>
 
 > 3. If url matches about:blank and initialInsertion is true, then: Run the iframe load event steps given element.
 
