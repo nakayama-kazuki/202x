@@ -99,7 +99,7 @@ outerWin.addEventListener('resize', in_event => {
 });
 ```
 
-ところが Chrome（137.0）では動作するものの Firefox（139.0）ではエラーメッセージは出力されないものの WebGLRenderer.domElement が表示されません。ならば src や srcdoc 属性のない iframe はデフォルトの about:blank がロードされるため <a href='https://html.spec.whatwg.org/#the-iframe-element'>iframe の仕様</a>
+ところが Chrome（137.0）では動作するものの Firefox（139.0）ではエラーメッセージこそ出力されないものの WebGLRenderer.domElement が表示されません。ならば src や srcdoc 属性のない iframe はデフォルトの about:blank がロードされるため <a href='https://html.spec.whatwg.org/#the-iframe-element'>iframe の仕様</a>
 
 > 3. If url matches about:blank and initialInsertion is true, then: Run the iframe load event steps given element.
 
@@ -116,9 +116,7 @@ outerWin.addEventListener('load', () => {
 });
 ```
 
-結果 Firefox では動作するようになりましたが、今度は Chrome で load イベントが実行されません（about:blank の load を同期的に実行し、イベントは発生させない仕様だろうか）。
-
-ブラウザ毎に処理を分岐させてもよいのですが、できるなら同じコードを動かしたいですよね。最終的に Firefox の同期的な iframe.contentWindow.document 操作の失敗は、処理を次回イベントループまで遅延させる形で解消できたので、保守用のコメントを残しておきました。
+結果 Firefox では動作するようになりましたが、今度は Chrome で load イベントが実行されず WebGLRenderer.domElement も表示されません。ブラウザ毎に分岐する処理にしてもよいですが、できるなら同じコードを動かしたいですよね。最終的に Firefox の同期的な iframe.contentWindow.document 操作の失敗は、処理を次回イベントループまで遅延させる形で解消できたので、保守用のコメントを残しておきました。
 
 ```
 const outerWin = createOuterWindow(document);
