@@ -52,7 +52,7 @@
 
 ## AdSense が招くブラウザ互換問題
 
-最近は主要ブラウザ間の互換性に悩むことが少なくなりましたが、サイトに AdSense を導入したところ iframe に関連したブラウザ互換問題に直面しました。その解消までの道のりをご紹介します。
+最近は主要ブラウザ間の互換性に悩むことが少なくなりましたが、サイトに AdSense を導入したところ iframe に関連したブラウザ互換問題に直面したので、その解消までの道のりをご紹介します。
 
 Three.js アプリは初期化時とウインドウのリサイズ時、適切なレンダリングや座標処理のための設定変更 …
 
@@ -64,11 +64,11 @@ Three.js アプリは初期化時とウインドウのリサイズ時、適切�
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/adsense.gif' />
 
-ただし <a href='https://github.com/mrdoob/three.js/blob/master/src/renderers/WebGLRenderer.js'>WebGLRenderer.setSize() の実装</a> には <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.domElement'>WebGLRenderer.domElement</a> の width や height への書き込みがあるため、ResizeObserver のコールバック内で呼び出すことは少々危うい感じもします（余談ですが <a href='https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/resize_observer/resize_observer.cc'>Chromium の実装</a> では前回観察時からの要素サイズの変更を確認しているので、意図せず処理がループしてしまうことはありません）
+ただし <a href='https://github.com/mrdoob/three.js/blob/master/src/renderers/WebGLRenderer.js'>WebGLRenderer.setSize() の実装</a> には <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.domElement'>WebGLRenderer.domElement</a> の width や height への書き込みがあるため、ResizeObserver のコールバック内で呼び出すのは少々危うさを感じます（ちなみに <a href='https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/resize_observer/resize_observer.cc'>Chromium の実装</a> については前回観察時からの要素サイズの変更を確認しているので、意図せず処理がループしてしまうことはありません）
 
 そこで iframe 内に WebGLRenderer.domElement を配置することで
 
-1. 広告自動挿入
+1. AdSense による広告自動挿入
 2. 広告自動挿入に伴う iframe のリサイズ
 3. iframe 内の WebGLRenderer.domElement のリサイズ
 4. iframe のリサイズに伴うイベントハンドラ処理でレンダリングや座標処理のための設定変更
@@ -99,11 +99,11 @@ outerWin.addEventListener('resize', in_event => {
 });
 ```
 
-ところが Chrome（137.0）では動作するものの Firefox（139.0）ではエラーメッセージこそ出力されないものの WebGLRenderer.domElement が表示されません。ならば src や srcdoc 属性のない iframe はデフォルトの about:blank がロードされるため <a href='https://html.spec.whatwg.org/#the-iframe-element'>iframe の仕様</a>
+ところが Chrome（137.0）では動作するものの Firefox（139.0）ではエラーメッセージこそ出力されないものの WebGLRenderer.domElement が表示されません。そこで src や srcdoc 属性のない iframe はデフォルトの about:blank がロードされるため <a href='https://html.spec.whatwg.org/#the-iframe-element'>iframe の仕様</a>
 
 > 3. If url matches about:blank and initialInsertion is true, then: Run the iframe load event steps given element.
 
-に従って load イベントでの処理を試してみます。
+に従って load イベントでの処理を試してみました。
 
 ```
 const outerWin = createOuterWindow(document);
@@ -116,7 +116,9 @@ outerWin.addEventListener('load', () => {
 });
 ```
 
-結果 Firefox では動作するようになりましたが、今度は Chrome で load イベントが実行されず WebGLRenderer.domElement も表示されません。ブラウザ毎に分岐する処理にしてもよいですが、できるなら同じコードを動かしたいですよね。最終的に Firefox の同期的な iframe.contentWindow.document 操作の失敗は、処理を次回イベントループまで遅延させる形で解消できたので、保守用のコメントを残しておきました。
+結果 Firefox では動作するようになりましたが、一方 Chrome では load イベントが実行されません（その結果 WebGLRenderer.domElement も表示されません）。
+
+ブラウザ毎に分岐する処理にしてもよいですが、できれば同じコードを動かしたいですよね。最終的に Firefox の同期的な iframe.contentWindow.document 操作の失敗は、処理を次回イベントループまで遅延させる形で解消できたので、保守用のコメントを残しておきました。
 
 ```
 const outerWin = createOuterWindow(document);
