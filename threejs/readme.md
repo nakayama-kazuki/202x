@@ -1,6 +1,6 @@
 # そんな時どうする Three.js アプリ開発
 
-こんにちは、以前は広告エンジニア、現在はデータプラットフォームエンジニアの中山です。この記事では趣味の Three.js アプリ開発を通じて得た気付き、例えば Three.js 初心者が陥りそうなトラブルやブラウザ互換問題、それらの解決方法についてご紹介させていただきます（以前シナジーマーケティングでご一緒させて頂いたこともあり、TECHSCORE BLOG への掲載をご快諾いただきました ^^ どうもありがとうございます）。
+こんにちは、以前は広告エンジニア、現在はデータプラットフォームエンジニアの中山です。この記事では趣味の Three.js アプリ開発を通じて得た気付き、例えば Three.js 初心者が陥りそうなトラブルやブラウザ互換問題、それらの解決方法についてご紹介させていただきます。なお、以前シナジーマーケティングでご一緒させて頂いたこともあり、TECHSCORE BLOG への掲載をご快諾いただきました ^^ どうもありがとうございます。
 
 最初に Three.js アプリをご紹介します。
 
@@ -50,21 +50,23 @@
 
 さて、ここからは Three.js アプリ開発を通じて得た気付きのご紹介です。
 
-## AdSense が招いたブラウザ互換問題
+## AdSense が招くブラウザ互換問題
 
-最近は主要ブラウザ間の互換性に悩むことが少なくなりましたが、サイトに  を導入したところ久しぶりに互換性の問題に直面しました。その際の記録をご紹介します。
+最近は主要ブラウザ間の互換性に悩むことが少なくなりましたが、サイトに AdSense を導入したところ久しぶりにブラウザ互換問題に直面しました。その際の記録をご紹介します。
 
-Three.js アプリは適切なレンダリングやイベント処理のために、初期化時とウインドウの resize イベント発生時に
+Three.js アプリは適切なレンダリングやイベント処理のため、初期化時とウインドウのリサイズイベント発生時に
 
 - <a href='https://threejs.org/docs/#api/en/cameras/PerspectiveCamera.aspect'>PerspectiveCamera.aspect</a> プロパティーの変更
 - <a href='https://threejs.org/docs/#api/en/cameras/PerspectiveCamera.updateProjectionMatrix'>PerspectiveCamera.updateProjectionMatrix()</a> メソッド呼び出し
 - <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.setSize'>WebGLRenderer.setSize()</a> メソッド呼び出し
 
-が必要です。加えて AdSense の広告自動挿入時にブラウザの top-level browsing context（以降メインウインドウと呼びます）内の要素サイズが変更される可能性があるため（こちらの例だと offsetHeight を変更）、そのタイミングでも同様の処理が必要になります。
+が必要になります。加えて AdSense コードを設置したサイト内の要素のサイズが広告自動挿入時に変更される可能性があるため（添付の例だと offsetHeight を変更）、そのタイミングでも同様の処理が必要になります。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/adsense.gif' />
 
-しかし <a href='https://github.com/mrdoob/three.js/blob/master/src/renderers/WebGLRenderer.js'>WebGLRenderer.setSize()</a> で WebGLRenderer.domElement の width や height を更新するため、ここでは ResizeObserver による検知を利用できません。そこで、メインウインドウではなく iframe 内に WebGLRenderer.domElement を表示し、その iframe ウインドウの resize イベントハンドラに処理を集約することで、広告自動挿入に対応することを考えました。
+ただし <a href='https://github.com/mrdoob/three.js/blob/master/src/renderers/WebGLRenderer.js'>WebGLRenderer.setSize()</a> は <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.domElement'>WebGLRenderer.domElement</a> の width や height への書き込みを行うため、ResizeObserver のコールバック内では避けたい処理です（補足すると <a href='https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/resize_observer/resize_observer.cc'>Chromium の実装</a> では前回観察時からの要素サイズの変更を確認しています）。
+
+そこで iframe 内に WebGLRenderer.domElement を配置し、iframe ウインドウに対するリサイズイベントハンドラに必要な処理を集約することで、広告自動挿入に対応することを考えました。
 
 ```
 function createOuterWindow(in_document) {
@@ -90,14 +92,14 @@ outerWin.addEventListener('resize', in_event => {
 });
 ```
 
-ところが Chrome（137.0）では動作するものの Firefox（139.0）で WebGLRenderer.domElement が表示されません。この iframe にはデフォルトの about:blank がロードされますが <a href='https://html.spec.whatwg.org/#the-iframe-element'>iframe 仕様</a> によれば
+ところが Chrome（137.0）では動作するものの Firefox（139.0）では WebGLRenderer.domElement が表示されません（エラーメッセージもない）。ならば src や srcdoc 属性のない iframe はデフォルトの about:blank がロードされるため <a href='https://html.spec.whatwg.org/#the-iframe-element'>iframe 仕様</a>
 
 > 3. If url matches about:blank and initialInsertion is true, then: Run the iframe load event steps given element.
 
-ですので load イベントでの処理を試してみます。
+に従って load イベントでの処理を試してみます。
 
 ```
-const outerWin = createChildWindow(document);
+const outerWin = createOuterWindow(document);
 
 outerWin.addEventListener('load', () => {
     const outerDoc = outerWin.document;
@@ -107,12 +109,12 @@ outerWin.addEventListener('load', () => {
 });
 ```
 
-今度は逆に Firefox では動作するものの Chrome で WebGLRenderer.domElement が表示されません（Chrome では about:blank の load を同期的に実行し、イベントを発生させないのかもしれません）。
+結果 Firefox では動作するようになりましたが、今度は Chrome で load イベントが実行されません（about:blank の load を同期的に実行し、イベントは発生させない仕様だろうか）。
 
-ブラウザ毎に処理を分岐させてもよいのですが、できるなら同じコードを動かしたいですよね。そこで、同期的な iframe.contentWindow.document の操作に失敗する Firefox への対応で処理を次回イベントループまで遅延させ、言い訳をコメントとして残すことにしました。
+ブラウザ毎に処理を分岐させてもよいのですが、できるなら同じコードを動かしたいですよね。最終的に Firefox の同期的な iframe.contentWindow.document 操作の失敗は、処理を次回イベントループまで遅延させる形で解消できたので、保守用のコメントを残しておきました。
 
 ```
-const outerWin = createChildWindow(document);
+const outerWin = createOuterWindow(document);
 
 // asynchronous process for Firefox
 setTimeout(() => {
@@ -253,6 +255,15 @@ const intersects = raycaster.intersectObjects(children);
 
 ★コード
 ★アニメ GIF 化する？
+
+
+
+
+
+
+
+★サークルもコード実験
+
 
 問題点: PlaneGeometry が背面からの Raycasting をキャッチしない。
 
