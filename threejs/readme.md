@@ -64,7 +64,7 @@ Three.js アプリは初期化時とウインドウのリサイズ時、適切�
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/adsense.gif' />
 
-ただし <a href='https://github.com/mrdoob/three.js/blob/master/src/renderers/WebGLRenderer.js'>WebGLRenderer.setSize()</a> 実装で <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.domElement'>WebGLRenderer.domElement</a> の width や height への書き込みが発生するため、ResizeObserver のコールバック内では呼び出したくない処理です（余談ですが <a href='https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/resize_observer/resize_observer.cc'>Chromium の実装</a> では前回観察時からの要素サイズの変更を確認しているため、処理が意図せずループすることはありません）
+ただし <a href='https://github.com/mrdoob/three.js/blob/master/src/renderers/WebGLRenderer.js'>WebGLRenderer.setSize()</a> の実装には <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.domElement'>WebGLRenderer.domElement</a> の width や height への書き込みがあるため、ResizeObserver のコールバック内で呼び出すことにはリスクを感じます（余談ですが <a href='https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/resize_observer/resize_observer.cc'>Chromium の実装</a> では前回観察時からの要素サイズの変更を確認しているため、処理が意図せずループすることはありません）
 
 そこで iframe 内に WebGLRenderer.domElement を配置することで
 
@@ -99,7 +99,7 @@ outerWin.addEventListener('resize', in_event => {
 });
 ```
 
-ところが Chrome（137.0）では動作するものの Firefox（139.0）では WebGLRenderer.domElement が表示されません（エラーメッセージもない）。ならば src や srcdoc 属性のない iframe はデフォルトの about:blank がロードされるため <a href='https://html.spec.whatwg.org/#the-iframe-element'>iframe の仕様</a>
+ところが Chrome（137.0）では動作するものの Firefox（139.0）ではエラーメッセージは出力されないものの WebGLRenderer.domElement が表示されません。ならば src や srcdoc 属性のない iframe はデフォルトの about:blank がロードされるため <a href='https://html.spec.whatwg.org/#the-iframe-element'>iframe の仕様</a>
 
 > 3. If url matches about:blank and initialInsertion is true, then: Run the iframe load event steps given element.
 
