@@ -1,6 +1,6 @@
 # そんな時どうする Three.js アプリ開発
 
-こんにちは、以前は広告エンジニア、現在はデータプラットフォームエンジニアの中山です。この記事では趣味の Three.js アプリ開発を通じて得た気付き、例えば Three.js 初心者が陥りそうなトラブルやブラウザ互換問題、それらの解決方法についてご紹介させていただきます。なお、TECHSCORE BLOG への掲載ですが、以前シナジーマーケティングでご一緒させて頂いたこともありご快諾いただけました ^^ どうもありがとうございます。
+こんにちは、以前は広告エンジニア、現在はデータプラットフォームエンジニアの中山です。この記事では趣味の Three.js アプリ開発を通じて得た気付き、例えば Three.js 初心者が陥りそうなトラブルやブラウザ互換問題、それらの解決方法についてご紹介させていただきます。なお、以前シナジーマーケティングでご一緒させて頂いたこともあり、記事の TECHSCORE BLOG への掲載についてご快諾いただきました ^^ どうもありがとうございます。
 
 最初に Three.js アプリをご紹介します。
 
@@ -8,7 +8,7 @@
 
 <img width='300' src='https://pj-corridor.net/images/ix-side6-reversi-4-loop.png' />
 
-リバーシに Three.js 必要？と突っ込まれそうですが、シリンダ状にループする 3D 盤面で従前にはない戦略を楽しめます。加えて DMZ 概念の導入や NPC の選択肢にも幅があり（1～3）、ループ盤面の場合は回転戦術も選択できます。ルールベース（2025 年 6 月現在）の NPC 実装は一対一で戦う場合は物足りなさを感じるかもしれませんが、カオスな 4 人対決（NPC x3 + 人間）だと経験者でも苦戦すること請け合いです。よろしければ電車の待ち時間に遊んでください。
+リバーシに Three.js 必要？と突っ込まれそうですが、シリンダ状にループする 3D 盤面で従前にはない戦略を楽しめます。加えて DMZ 概念の導入や NPC の選択肢にも幅があり（1～3）、ループ盤面の場合は回転戦術も選択できます。ルールベース（2025 年 6 月現在）の NPC 実装は一対一で戦う場合は物足りなさを感じるかもしれませんが、カオスな 4 人対決（NPC x3 + 人間）だと経験者でも苦戦すること請け合いです。よかったら電車の待ち時間に遊んでください。
 
 - <a href='https://pj-corridor.net/side-six/side-six-reversi.html?type=2-non-loop'>2 人プレー（NPC x1 + 人間）通常盤面リバーシ</a>
 - <a href='https://pj-corridor.net/side-six/side-six-reversi.html?type=2-loop'>2 人プレー（NPC x1 + 人間）ループ盤面リバーシ</a>
@@ -19,7 +19,7 @@
 
 <img width='300' src='https://pj-corridor.net/images/ix-cube1.png' />
 
-鉄板の Three.js 習作題材、ルービックキューブを発展させて多様なパズルを開発してみました。
+鉄板の Three.js 習作題材、ルービックキューブを発展させて多様なパズルを開発してみました。とはいえ <a href='https://www.youtube.com/@Z3Cubing'>Z3Cubing</a> の多様性に比べればまだまだです。今後は物理的なガジェットとしては実現できない方向性（<a href='https://pj-corridor.net/cube3d/caterpillar.html'>変則的な回転</a> はその一例）を模索してゆきます。
 
 - <a href='https://pj-corridor.net/cube3d/cube3d.html'>通常のルービックキューブ</a>
 - <a href='https://pj-corridor.net/cube3d/cube3d.html?level=3'>ピースの形状が変則的なキューブ</a>
@@ -42,7 +42,7 @@
 
 <img width='300' src='https://pj-corridor.net/images/figure-gallery.png' />
 
-棒人間は便利でしたが、ポージングすら面倒になり :-p 構造化したポーズデータの入出力とそれを使ったギャラリーを用意しました。イメージに近いものを探して少々整えるだけで目的の棒人間素材が手に入ります。
+棒人間で解決できた課題もありましたが、ポージングすら面倒になり :-p 構造化したポーズデータの入出力とそれを使ったギャラリーを用意しました。イメージに近いものを探して少々整えるだけで目的の棒人間素材を入手できます。
 
 - <a href='https://pj-corridor.net/stick-figure/gallery/index.html'>棒人間ギャラリー</a>
 
@@ -64,14 +64,15 @@ Three.js アプリは初期化時とウインドウのリサイズ時、適切�
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/adsense.gif' />
 
-ただし <a href='https://github.com/mrdoob/three.js/blob/master/src/renderers/WebGLRenderer.js'>WebGLRenderer.setSize() の実装</a> には <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.domElement'>WebGLRenderer.domElement</a> の width や height への書き込みがあるため、ResizeObserver のコールバック内で呼び出すのは少々危うさを感じます（ちなみに <a href='https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/resize_observer/resize_observer.cc'>Chromium の実装</a> については前回観察時からの要素サイズの変更を確認しているので、意図せず処理がループしてしまうことはありません）
+ただし <a href='https://github.com/mrdoob/three.js/blob/master/src/renderers/WebGLRenderer.js'>WebGLRenderer.setSize() の実装</a> には <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.domElement'>WebGLRenderer.domElement</a> の width や height への書き込みがあるため、ResizeObserver のコールバック内での呼び出しには少々危うさを感じます（ちなみに <a href='https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/resize_observer/resize_observer.cc'>Chromium の実装</a> では前回観察時からの要素サイズの変化を確認しているので、意図せず処理がループしてしまうことはありません）
 
 そこで iframe 内に WebGLRenderer.domElement を配置することで
 
 1. AdSense による広告自動挿入
-2. 広告自動挿入に伴う iframe のリサイズ
-3. iframe 内の WebGLRenderer.domElement のリサイズ
-4. iframe のリサイズに伴うイベントハンドラ処理でレンダリングや座標処理のための設定変更
+2. 1. に伴う iframe のリサイズ
+3. 2. に伴うイベントハンドラ処理
+  - WebGLRenderer.domElement のリサイズ
+  - レンダリングや座標処理のための設定変更
 
 のように対応することを考えました。
 
@@ -99,11 +100,11 @@ outerWin.addEventListener('resize', in_event => {
 });
 ```
 
-ところが Chrome（137.0）では動作するものの Firefox（139.0）ではエラーメッセージこそ出力されないものの WebGLRenderer.domElement が表示されません。そこで src や srcdoc 属性のない iframe はデフォルトの about:blank がロードされるため <a href='https://html.spec.whatwg.org/#the-iframe-element'>iframe の仕様</a>
+ところが Chrome（137.0）では期待動作となるものの、Firefox（139.0）では WebGLRenderer.domElement が表示されません。では、処理タイミングを変えて試してみましょう。<a href='https://html.spec.whatwg.org/#the-iframe-element'>iframe の仕様</a> によれば src や srcdoc 属性のない iframe はデフォルトの about:blank を load するので
 
 > 3. If url matches about:blank and initialInsertion is true, then: Run the iframe load event steps given element.
 
-に従って load イベントでの処理を試してみました。
+このイベント処理タイミングで …
 
 ```
 const outerWin = createOuterWindow(document);
@@ -116,9 +117,7 @@ outerWin.addEventListener('load', () => {
 });
 ```
 
-結果 Firefox では動作するようになりましたが、一方 Chrome では load イベントが実行されません（その結果 WebGLRenderer.domElement も表示されません）。
-
-ブラウザ毎に分岐する処理にしてもよいですが、できれば同じコードを動かしたいですよね。最終的に Firefox の同期的な iframe.contentWindow.document 操作の失敗は、処理を次回イベントループまで遅延させる形で解消できたので、保守用のコメントを残しておきました。
+とすると Firefox では期待動作となるものの、今度は Chrome で load イベントが実行されず WebGLRenderer.domElement を表示できません。関連する問題が <a href='https://github.com/whatwg/html/issues/6863'>stop triggering navigations to about:blank on iframe insertion</a> で議論されていますが、処理を次回イベントループまで遅延させることで両ブラウザともに期待動作に至ったため、いったんはこれで良しとして保守用のコメントを残しておきます。
 
 ```
 const outerWin = createOuterWindow(document);
@@ -132,7 +131,7 @@ setTimeout(() => {
 }, 0);
 ```
 
-これでようやく両ブラウザともに広告の自動挿入タイミングで PerspectiveCamera や WebGLRenderer の更新ができるようになりました。
+これでようやく広告自動挿入に追従するレンダリングや座標処理のための設定変更の完成です。
 
 ## toDataURL() 空しく描画バッファはもぬけの殻
 
