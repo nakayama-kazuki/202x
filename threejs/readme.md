@@ -54,7 +54,7 @@
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/screenshot.gif' />
 
-<a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> や <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間</a> や <a href='https://pj-corridor.net/stick-figure/hand.html'>手</a> では決定したポーズの画像をクリップボードにコピーする screenshot 機能を実装しています。この機能で WebGLRenderer.domElement.toDataURL() を使っていますが、当初この処理が期待動作とならずに悩んでいました。
+<a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> や <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間</a> や <a href='https://pj-corridor.net/stick-figure/hand.html'>手</a> では決定したポーズの画像をクリップボードにコピーする screenshot 機能を実装しています。この機能で WebGLRenderer.domElement.toDataURL() を使っていますが、当初この処理がうまくいかずに悩んでいました。
 
 例えばこのようなコードの場合
 
@@ -86,15 +86,25 @@ setTimeout(() => {
     // (2)
     console.log(renderer.domElement.toDataURL('image/png'));
 }, 0);
+
+button.addEventListener('click', in_ev => {
+	// (3)
+	console.log(renderer.domElement.toDataURL('image/png'));
+});
+
 ```
 
-コメント (1) のタイミングでは toDataURL() で期待した出力が得られますが (2) のタイミングではうまくいきません。これは WebGLRenderer が各フレームのレンダリング後に自動的に描画バッファを消去するためです。試しに描画バッファを保持すると
+コードの (1) のタイミングでは toDataURL() で期待した出力が得られますが (2) や (3) のタイミングではうまくいきません。これは WebGLRenderer が各フレームのレンダリング後に自動的に描画バッファを消去するためです。試しに <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.preserveDrawingBuffer'>WebGLRenderer.preserveDrawingBuffer</a> に描画バッファの保持を指定した場合
 
 ```
 const renderer = new THREE.WebGLRenderer({preserveDrawingBuffer : true});
 ```
 
-非同期的に呼び出される (2) のタイミングでも toDataURL() で期待した出力を得ることができました。ただし、メモリ使用量を最適化するためにはフレーム合成などの特定のユースケースを除いて<a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.preserveDrawingBuffer'>WebGLRenderer.preserveDrawingBuffer</a> はデフォルトの false のままとして、代わりに toDataURL() の直前で再度レンダリングすることにします。
+非同期的に呼び出される (2) や (3) のタイミングでも toDataURL() で期待した出力を得ることができました。ただし <a href='https://registry.khronos.org/webgl/specs/latest/1.0/'>WebGL Specification</a> によれば
+
+> While it is sometimes desirable to preserve the drawing buffer, it can cause significant performance loss on some platforms. Whenever possible this flag should remain false and other techniques used.
+
+とあり、加えて過去には WebKit のバグも報告されていたため、描画バッファの設定は変更せずに toDataURL() の直前で再度レンダリングすることにします。
 
 ```
 setTimeout(() => {
@@ -102,6 +112,12 @@ setTimeout(() => {
     renderer.render(scene, camera);
     console.log(renderer.domElement.toDataURL('image/png'));
 }, 0);
+
+button.addEventListener('click', in_ev => {
+	// (3)
+    renderer.render(scene, camera);
+	console.log(renderer.domElement.toDataURL('image/png'));
+});
 ```
 これで無事 screenshot 機能が実装できました（パワポスライドへの貼り付け、お試しください ^^）。
 
@@ -111,47 +127,38 @@ Three.js アプリでは touch や mouse イベント発生時、オブジェク
 
 > Raycasting is used for mouse picking (working out what objects in the 3d space the mouse is over) amongst other things.
 
-そこで Raycasting に関連した 3 つの失敗をご紹介します。
+ここでは Raycasting に関連した 3 つの失敗をご紹介します。
 
 ### 1. でしゃばる AxesHelper
 
 <a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> や <a href='https://pj-corridor.net/cube3d/cube3d.html'>ルービックキューブ</a> では、touchstart や mousedown イベントが発生した座標からの Raycasting が …
 
 - Secen 内のオブジェクトと交点を持つ場合、オブジェクト自体を操作する（例えばポーズの変更）
-- Secen 内のオブジェクトと交点を持たない場合、その座標をドラッグしてオブジェクトを回転させる（実際にはオブジェクト自身の回転ではなく、オブジェクトの方向を lookAat() する PerspectiveCamera を球面上で移動する）
+- Secen 内のオブジェクトと交点を持たない場合、その座標をドラッグしてオブジェクトを回転させる（実際にはオブジェクト自身の回転ではなく、オブジェクトの方向を lookAat() し続ける PerspectiveCamera が touchmove や mousemove イベントの反対方向に移動する）
 
-… を共通の UX としていました。しかし、デバッグ目的で Scene に AxesHelper（軸を表す三色の線）を追加した際にどういうわけか謎の挙動となります。
+… を共通の UX としていました。しかし、デバッグ目的で Scene に AxesHelper（軸を表す三色の線）を追加した際にどういうわけか怪しい挙動となります。
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/AxesHelper.png' />
 
-これは AxesHelper 自身も <a href='https://threejs.org/docs/#api/en/core/Raycaster.intersectObject'>Raycaster.intersectObject()</a> の対象となることが理由でした。交点チェック時にそれを考慮するか、その手前で AxesHelper の影響を排除しておきましょう。
+これは AxesHelper 自身も <a href='https://threejs.org/docs/#api/en/core/Raycaster.intersectObject'>Raycaster.intersectObject()</a> の対象となることが理由でした。交点チェック時にそのことを考慮するか、その手前で AxesHelper の影響を排除しておきましょう。
 
 ```
 const children = scene.children.filter(in_child => !(in_child instanceof THREE.AxesHelper));
 const intersects = raycaster.intersectObjects(children);
 ```
 
-### 2. 消えた PlaneGeometry
+### 2. 消えた CircleGeometry
 
-★
-
-
-<a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> のパーツを操作する際には、透明色の
-
-- 対象パーツの height と同じ半径を持つ SphereGeometry
-- その SphereGeometry の中心を通る CircleGeometry
-
-を Scene に追加し、イベント座標からの Raycasting との交点方向にパーツを <a href='https://threejs.org/docs/#api/en/core/Object3D.lookAt'>lookAt()</a> しています。こちらはデバッグ用に SphereGeometry と CircleGeometry を着色し、棒人間の頭を傾けている様子です。
+★アニメ GIF 化（1 も再度）
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/PlaneGeometry.png' />
 
-★コード
-★アニメ GIF 化する？
+<a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> のパーツを操作する際には、
 
+- 対象パーツの height と同じ半径を持つ SphereGeometry
+- その SphereGeometry の中心を通り PerspectiveCamera の方向を向いた CircleGeometry
 
-
-
-
+を Scene に追加し、touchmove や mousemove イベントが発生した座標からの Raycasting と、SphereGeometry および CircleGeometry との交点方向にドラッグしたパーツを <a href='https://threejs.org/docs/#api/en/core/Object3D.lookAt'>lookAt()</a> しています。こちらはデバッグ用に SphereGeometry と CircleGeometry を着色（通常は透明）し、棒人間の頭を傾けている様子です。
 
 
 ★サークルもコード実験
@@ -168,7 +175,7 @@ as CircleGeometry can't catch raycast from opposite side,
 use rotated CircleGeometry in addition.
 CircleGeometry は反対からのレイキャストを拾ってくれない
 
-### 3. SkinnedMesh
+### 3. 見た目と異なる SkinnedMesh
 
 問題点: 曲げたあとに Raycasting をキャッチしない問題。
 
@@ -198,15 +205,15 @@ Three.js アプリは初期化時とウインドウのリサイズ時、適切�
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/adsense.gif' />
 
-ただし <a href='https://github.com/mrdoob/three.js/blob/master/src/renderers/WebGLRenderer.js'>WebGLRenderer.setSize() の実装</a> には <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.domElement'>WebGLRenderer.domElement</a> の width や height への書き込みがあるため、ResizeObserver のコールバック内での呼び出しには少々危うさを感じます（ちなみに <a href='https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/resize_observer/resize_observer.cc'>Chromium の実装</a> では前回観察時からの要素サイズの変化を確認しているので、意図せず処理がループしてしまうことはありません）
+ただし <a href='https://github.com/mrdoob/three.js/blob/master/src/renderers/WebGLRenderer.js'>WebGLRenderer.setSize() の実装</a> に <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.domElement'>WebGLRenderer.domElement</a> の width や height への書き込みがあるため、ResizeObserver のコールバック内で呼び出すのは少々危うい感じがします（ちなみに <a href='https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/resize_observer/resize_observer.cc'>Chromium の実装</a> では前回観察時からの要素サイズの変化を確認しているので、処理が無限ループに陥ることはないようです）
 
 そこで iframe 内に WebGLRenderer.domElement を配置することで
 
 1. AdSense による広告自動挿入
 2. 上記に伴う iframe のリサイズ
 3. 上記に伴うイベントハンドラ処理
- - WebGLRenderer.domElement のリサイズ
- - 座標処理とレンダリングのための設定変更
+	a. WebGLRenderer.domElement のリサイズ
+	b. 座標処理とレンダリングのための設定変更
 
 のように対応することを考えました。
 
@@ -234,11 +241,11 @@ outerWin.addEventListener('resize', in_event => {
 });
 ```
 
-ところが Chrome（137.0）では期待動作となるものの、Firefox（139.0）では WebGLRenderer.domElement が表示されません。そこで、処理タイミングを変えて試してみます。<a href='https://html.spec.whatwg.org/#the-iframe-element'>iframe の仕様</a> によれば src や srcdoc 属性のない iframe はデフォルトの about:blank を load するので
+ところが Chrome（137.0）では期待動作となるものの、Firefox（139.0）では WebGLRenderer.domElement が表示されません。そこで、処理タイミングを変えて試してみます。<a href='https://html.spec.whatwg.org/#the-iframe-element'>iframe の仕様</a> によれば src や srcdoc 属性のない iframe はデフォルトの about:blank をロードするので
 
 > 3. If url matches about:blank and initialInsertion is true, then: Run the iframe load event steps given element.
 
-このイベント処理タイミングで …
+このイベントハンドラで試してみます。
 
 ```
 const outerWin = createOuterWindow(document);
@@ -251,7 +258,7 @@ outerWin.addEventListener('load', () => {
 });
 ```
 
-今度は Firefox では期待動作となるものの、Chrome では load イベントが実行されません。関連する問題が <a href='https://github.com/whatwg/html/issues/6863'>stop triggering navigations to about:blank on iframe insertion</a> で議論されていますが、処理を次回イベントループまで遅延させることで両ブラウザともに期待動作に至ったため、いったんはこれで良しとしてコメントを残しておきます。
+今度は Firefox では期待動作となるものの、Chrome ではイベントが実行されません。関連議論が <a href='https://github.com/whatwg/html/issues/6863'>stop triggering navigations to about:blank on iframe insertion</a> にありますが、処理を次回イベントループまで遅延させることで両ブラウザともに期待動作に至ったため、いったんはこれで良しとしてコメントを残しておきます。
 
 ```
 const outerWin = createOuterWindow(document);
@@ -269,7 +276,7 @@ setTimeout(() => {
 
 ## ぼくのかんがえたさいきょうのアニメーション関数
 
-Three.js アプリでの WebGLRenderer の描画は全体的にアニメーション表現を採用していますが、どうせなら通常の HTML 要素の描画（例えばダイアログ表示）でも同様の UX を採用したいですよね。とはいえ CSS の @keyframes 定義などアニメーションに関する記述を分散させたくありません。シンプルな記述でかつ JavaScript コードのみで一元的に管理できないかと考えた末の実装がこちらです。
+Three.js アプリでの WebGLRenderer の描画は全体的にアニメーション表現を採用していますが、どうせなら通常の HTML 要素の描画（例えばダイアログ表示）でも同様の UX を採用したいですよね。とはいえ CSS の @keyframes 定義などアニメーションに関する記述を分散させたくありません。JavaScript コードのみでシンプルに一元的に管理できないかと考えた末の実装がこちらです。
 
 ```
 function autoTransition1(in_elem, in_shorthand, in_start, in_end) {
