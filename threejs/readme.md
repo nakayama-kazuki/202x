@@ -149,33 +149,30 @@ const intersects = raycaster.intersectObjects(children);
 
 ### 2. 消えた CircleGeometry
 
-★アニメ GIF 化（1 も再度）
-
-<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/PlaneGeometry.png' />
-
-<a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> のパーツを操作する際には、
+<a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> のパーツを操作する際には Scene に
 
 - 対象パーツの height と同じ半径を持つ SphereGeometry
-- その SphereGeometry の中心を通り PerspectiveCamera の方向を向いた CircleGeometry
+- その SphereGeometry の中心を通り法線ベクトルが PerspectiveCamera を向いた CircleGeometry
 
-を Scene に追加し、touchmove や mousemove イベントが発生した座標からの Raycasting と、SphereGeometry および CircleGeometry との交点方向にドラッグしたパーツを <a href='https://threejs.org/docs/#api/en/core/Object3D.lookAt'>lookAt()</a> しています。こちらはデバッグ用に SphereGeometry と CircleGeometry を着色（通常は透明）し、棒人間の頭を傾けている様子です。
+を追加します。次いで touchmove や mousemove イベントが発生した座標からの Raycasting と、SphereGeometry および CircleGeometry との交点方向にドラッグしたパーツを <a href='https://threejs.org/docs/#api/en/core/Object3D.lookAt'>lookAt()</a> しています。こちらはデバッグ用に SphereGeometry と CircleGeometry を着色（通常は透明）し、棒人間の手を動かしている様子です。
 
+<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/CircleGeometry.png' />
 
-★サークルもコード実験
+空間内のパーツの位置に応じて PerspectiveCamera の反対方向から Raycasting する場合もあるのですが、この際にどういうわけか怪しい挙動となります。調べたところ SphereGeometry は背面からの Raycasting と交点を持たないことがわかりました。透明色かつ法線ベクトルが PerspectiveCamera を向いた交点判定目的の CircleGeometry だけに、結構悩みました ^^; 有識者にとっては常識かもしれませんが。
 
+この場合
 
-問題点: PlaneGeometry が背面からの Raycasting をキャッチしない。
+```
+const geometry = new THREE.CircleGeometry(100, 32);
+const material = new THREE.MeshNormalMaterial({side : THREE.DoubleSide});
+const circle = new THREE.Mesh(geometry, material);
+```
 
-解決策: CircleGeometry も同様に裏面からのレイキャストを拾いません。この問題を解決するためには、PlaneGeometry や CircleGeometry を回転させて、両面でキャッチできるようにするか、もしくは両面のマテリアルを使用します。
-
-const material = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
-const plane = new THREE.Mesh(new THREE.PlaneGeometry(5, 5), material);
-
-as CircleGeometry can't catch raycast from opposite side,
-use rotated CircleGeometry in addition.
-CircleGeometry は反対からのレイキャストを拾ってくれない
+のように両面のマテリアルを使用することで対応できます。
 
 ### 3. 見た目と異なる SkinnedMesh
+
+★★
 
 問題点: 曲げたあとに Raycasting をキャッチしない問題。
 
