@@ -8,7 +8,7 @@
 
 <img width='300' src='https://pj-corridor.net/images/ix-side6-reversi-4-loop.png' />
 
-リバーシに Three.js 必要？と突っ込まれそうですが、シリンダ状にループする 3D 盤面で従前にはない戦略を楽しめます。加えて DMZ 概念の導入や NPC の選択肢にも幅があり（1～3）、ループ盤面の場合は回転戦術も選択できます。ルールベース（2025 年 6 月現在）の NPC 実装は一対一で戦う場合は物足りなさを感じるかもしれませんが、カオスな 4 人対決（NPC x3 + 人間）だと経験者でも苦戦すること請け合いです。よかったら電車の待ち時間に遊んでください。
+リバーシに Three.js 必要？と突っ込まれそうですが、シリンダ状にループする 3D 盤面で従来にはなかった戦略を楽しめます。加えて DMZ 概念の導入や NPC の選択肢にも幅があり（1～3）、ループ盤面の場合は回転戦術も選択できます。ルールベース（2025 年 6 月現在）の NPC 実装は一対一で戦う場合は物足りなさを感じるかもしれませんが、カオスな 4 人対決（NPC x3 + 人間）だと経験者でも苦戦すること請け合いです。よかったら電車の待ち時間に遊んでください。
 
 - <a href='https://pj-corridor.net/side-six/side-six-reversi.html?type=2-non-loop'>2 人プレー（NPC x1 + 人間）通常盤面リバーシ</a>
 - <a href='https://pj-corridor.net/side-six/side-six-reversi.html?type=2-loop'>2 人プレー（NPC x1 + 人間）ループ盤面リバーシ</a>
@@ -19,7 +19,7 @@
 
 <img width='300' src='https://pj-corridor.net/images/ix-cube1.png' />
 
-鉄板の Three.js 習作題材、ルービックキューブを発展させて多様なパズルを開発してみました。とはいえ <a href='https://www.youtube.com/@Z3Cubing'>Z3Cubing</a> の多様性に比べればまだまだです。今後は物理的なガジェットでは実現できない方向性（<a href='https://pj-corridor.net/cube3d/caterpillar.html'>変則的な回転</a> はその一例）を模索してゆきます。
+鉄板の Three.js 習作題材、ルービックキューブを発展させて多様なパズルを開発してみました。とはいえ <a href='https://www.youtube.com/@Z3Cubing'>Z3Cubing</a> に比べればまだまだです。今後は物理的なガジェットでは実現できない方向性（<a href='https://pj-corridor.net/cube3d/caterpillar.html'>変則的な回転</a> はその一例）を探求してゆきます。
 
 - <a href='https://pj-corridor.net/cube3d/cube3d.html'>通常のルービックキューブ</a>
 - <a href='https://pj-corridor.net/cube3d/cube3d.html?level=3'>ピースの形状が変則的なキューブ</a>
@@ -42,7 +42,7 @@
 
 <img width='300' src='https://pj-corridor.net/images/figure-gallery.png' />
 
-棒人間で解決できた課題もありましたが、ポージングすら面倒になり :-p 構造化したポーズデータの入出力とそれを使ったギャラリーを用意しました。イメージに近いものを探して少々整えるだけで目的の棒人間素材を入手できます。
+棒人間で素材探しの課題は解決できましたが、ポージングすら面倒になり :-p 構造化したポーズデータの入出力とそれを使ったギャラリーを用意しました。イメージに近いものを探して少々整えるだけで目的の棒人間素材を入手できます。
 
 - <a href='https://pj-corridor.net/stick-figure/gallery/index.html'>棒人間ギャラリー</a>
 
@@ -54,7 +54,7 @@
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/screenshot.gif' />
 
-<a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> や <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間</a> や <a href='https://pj-corridor.net/stick-figure/hand.html'>手</a> では決定したポーズの画像をクリップボードにコピーする screenshot 機能を実装しています。この機能で WebGLRenderer.domElement.toDataURL() を使っていますが、当初これが期待動作とならずに悩んでいました。
+<a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> や <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間</a> や <a href='https://pj-corridor.net/stick-figure/hand.html'>手</a> では決定したポーズの画像をクリップボードにコピーする screenshot 機能を実装しています。この機能で WebGLRenderer.domElement.toDataURL() を使っていますが、当初この処理が期待動作とならずに悩んでいました。
 
 例えばこのようなコードの場合
 
@@ -88,13 +88,13 @@ setTimeout(() => {
 }, 0);
 ```
 
-コメント (1) のタイミングでは toDataURL() で期待した出力が得られますが (2) のタイミングではうまくいきません。これは WebGLRenderer が各フレームのレンダリング後に自動的に描画バッファを消去するためです。試しに WebGLRenderingContext が描画バッファを消去しない設定に変更してみると
+コメント (1) のタイミングでは toDataURL() で期待した出力が得られますが (2) のタイミングではうまくいきません。これは WebGLRenderer が各フレームのレンダリング後に自動的に描画バッファを消去するためです。試しに描画バッファを保持すると
 
 ```
 const renderer = new THREE.WebGLRenderer({preserveDrawingBuffer : true});
 ```
 
-非同期的に呼び出される (2) のタイミングでも toDataURL() で期待した出力を得ることができました。ただし、メモリ使用量を最適化するためにはフレーム合成などの特定のユースケースを除いて<a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.preserveDrawingBuffer'>WebGLRenderer.preserveDrawingBuffer</a> はデフォルトの false を変更せず、代わりに toDataURL() の直前で再度レンダリングすることにします。
+非同期的に呼び出される (2) のタイミングでも toDataURL() で期待した出力を得ることができました。ただし、メモリ使用量を最適化するためにはフレーム合成などの特定のユースケースを除いて<a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.preserveDrawingBuffer'>WebGLRenderer.preserveDrawingBuffer</a> はデフォルトの false のままとして、代わりに toDataURL() の直前で再度レンダリングすることにします。
 
 ```
 setTimeout(() => {
@@ -111,20 +111,20 @@ Three.js アプリでは touch や mouse イベント発生時、オブジェク
 
 > Raycasting is used for mouse picking (working out what objects in the 3d space the mouse is over) amongst other things.
 
-そこで Raycasting に関連した失敗を幾つかご紹介します。
+そこで Raycasting に関連した 3 つの失敗をご紹介します。
 
 ### 1. でしゃばる AxesHelper
 
 <a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> や <a href='https://pj-corridor.net/cube3d/cube3d.html'>ルービックキューブ</a> では、touchstart や mousedown イベントが発生した座標からの Raycasting が …
 
-- Secen 内のオブジェクトと交点を持つ場合、オブジェクト自体を操作（例えばポーズの変更）する
-- Secen 内のオブジェクトと交点を持たない場合、その座標をドラッグしてオブジェクトを回転させる（実際にはオブジェクト自身の回転ではなく、オブジェクト方向に向けた PerspectiveCamera を球面上で移動）
+- Secen 内のオブジェクトと交点を持つ場合、オブジェクト自体を操作する（例えばポーズの変更）
+- Secen 内のオブジェクトと交点を持たない場合、その座標をドラッグしてオブジェクトを回転させる（実際にはオブジェクト自身の回転ではなく、オブジェクトの方向を lookAat() する PerspectiveCamera を球面上で移動する）
 
-… を共通の UI としていました。しかし、デバッグ目的で Scene に AxesHelper（軸を表す三色の線）を追加した際に何故だか期待動作となりません。
+… を共通の UX としていました。しかし、デバッグ目的で Scene に AxesHelper（軸を表す三色の線）を追加した際にどういうわけか謎の挙動となります。
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/AxesHelper.png' />
 
-この理由は AxesHelper 自身も <a href='https://threejs.org/docs/#api/en/core/Raycaster.intersectObject'>Raycaster.intersectObject()</a> の対象となるためでした。交点チェック時に対象を確認するか、その手前で AxesHelper の影響を排除しておきましょう。
+これは AxesHelper 自身も <a href='https://threejs.org/docs/#api/en/core/Raycaster.intersectObject'>Raycaster.intersectObject()</a> の対象となることが理由でした。交点チェック時にそれを考慮するか、その手前で AxesHelper の影響を排除しておきましょう。
 
 ```
 const children = scene.children.filter(in_child => !(in_child instanceof THREE.AxesHelper));
@@ -132,6 +132,9 @@ const intersects = raycaster.intersectObjects(children);
 ```
 
 ### 2. 消えた PlaneGeometry
+
+★
+
 
 <a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> のパーツを操作する際には、透明色の
 
