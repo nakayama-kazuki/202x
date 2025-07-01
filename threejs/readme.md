@@ -172,6 +172,8 @@ const circle = new THREE.Mesh(geometry, material);
 
 ### 3. 見た目と異なる SkinnedMesh
 
+<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/rubber-figure.gif' />
+
 <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間</a> や <a href='https://pj-corridor.net/stick-figure/hand.html'>手</a> では SkinnedMesh を使ってパーツを滑らかに曲げています。ここまではよいのですが、問題は曲げたパーツに対する Raycasting がうまくいかない点でした。
 
 <a href='https://threejs.org/docs/#api/en/objects/SkinnedMesh'>Three.js のドキュメント</a> からは関連情報を得られなかったので、フォーラムや <a href='https://github.com/mrdoob/three.js/blob/master/src/objects/SkinnedMesh.js'>SkinnedMesh の実装</a> などの調査で
@@ -300,8 +302,6 @@ CSS Transitions の shorthand と transition-property の開始値と終了値�
 
 ## おわりに
 
-ここまで読んでいただきどうもありがとうございます。見出しにはしませんでしたが、他にも幾つかの失敗がありました。例えば Three.js の多くのクラスには clone() メソッドが実装されていますが、クラスを継承した新しいクラスを実装した際、constructor の I/F を変更していたことが理由で clone() したインスタンスの怪しい挙動に悩まされたのは恥ずかしい限りです。
-
-実は見出しの内容以外にも細かな失敗がいろいろとありました。例えば Three.js の多くのクラスには clone() メソッドが実装されていますが、クラスを継承した新クラスを実装した際、constructor の I/F を変更していたことが理由で clone() したインスタンスの怪しい挙動に悩まされたのは恥ずかしい限りです。
+ここまで読んでいただきどうもありがとうございます。見出しにはしませんでしたが、他にも細かい失敗がいろいろとありました。例えば Three.js の多くのクラスには clone() メソッドが実装されていますが、クラスを継承した新しいクラスを実装した際、constructor の I/F を変更していたことが理由で clone() したインスタンスの怪しい挙動に悩まされた、などは恥ずかしい限りです。
 
 というわけで、私の Three.js アプリ開発を通じて得た気付き（失敗？）が皆さまにとって有益な情報になれば何よりです。
