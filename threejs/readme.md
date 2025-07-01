@@ -54,7 +54,7 @@
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/screenshot.gif' />
 
-<a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> や <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間</a> や <a href='https://pj-corridor.net/stick-figure/hand.html'>手</a> では決定したポーズの画像をクリップボードにコピーする screenshot 機能を実装しています。この機能で WebGLRenderer.domElement.toDataURL() を使っていますが、当初この処理がうまくいかずに悩んでいました。
+<a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> や <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間</a> や <a href='https://pj-corridor.net/stick-figure/hand.html'>手</a> では決定したポーズの画像をクリップボードにコピーする screenshot 機能を実装しています。この機能で WebGLRenderer.domElement.toDataURL() を使っていますが、当初この処理がうまくいかずに悩みました。
 
 例えばこのようなコードの場合
 
@@ -88,23 +88,23 @@ setTimeout(() => {
 }, 0);
 
 button.addEventListener('click', in_ev => {
-	// (3)
-	console.log(renderer.domElement.toDataURL('image/png'));
+    // (3)
+    console.log(renderer.domElement.toDataURL('image/png'));
 });
 
 ```
 
-コードの (1) のタイミングでは toDataURL() で期待した出力が得られますが (2) や (3) のタイミングではうまくいきません。これは WebGLRenderer が各フレームのレンダリング後に自動的に描画バッファを消去するためです。試しに <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.preserveDrawingBuffer'>WebGLRenderer.preserveDrawingBuffer</a> に描画バッファの保持を指定した場合
+コードの (1) のタイミングでは toDataURL() で期待した出力が得られますが (2) や (3) のタイミングではうまくいきません。これは WebGLRenderer が各フレームのレンダリング後に自動的に描画バッファを消去するためです。試しに <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.preserveDrawingBuffer'>WebGLRenderer.preserveDrawingBuffer</a> に描画バッファを保持するように設定すると
 
 ```
 const renderer = new THREE.WebGLRenderer({preserveDrawingBuffer : true});
 ```
 
-非同期的に呼び出される (2) や (3) のタイミングでも toDataURL() で期待した出力を得ることができました。ただし <a href='https://registry.khronos.org/webgl/specs/latest/1.0/'>WebGL Specification</a> によれば
+非同期的に呼び出される (2) や (3) のタイミングでも期待した出力を得ることができました。ただし <a href='https://registry.khronos.org/webgl/specs/latest/1.0/'>WebGL Specification</a> によれば
 
 > While it is sometimes desirable to preserve the drawing buffer, it can cause significant performance loss on some platforms. Whenever possible this flag should remain false and other techniques used.
 
-とあり、加えて過去には WebKit のバグも報告されていたため、描画バッファの設定は変更せずに toDataURL() の直前で再度レンダリングすることにします。
+なる non-normative があり、過去には WebKit の関連バグも報告されていたため、描画バッファの設定は変更せず toDataURL() の直前で再度レンダリングすることにします。
 
 ```
 setTimeout(() => {
@@ -114,12 +114,12 @@ setTimeout(() => {
 }, 0);
 
 button.addEventListener('click', in_ev => {
-	// (3)
+    // (3)
     renderer.render(scene, camera);
-	console.log(renderer.domElement.toDataURL('image/png'));
+    console.log(renderer.domElement.toDataURL('image/png'));
 });
 ```
-これで無事 screenshot 機能が実装できました（パワポスライドへの貼り付け、お試しください ^^）。
+これで無事 screenshot 機能が実装できましたので、パワポスライドへの貼り付けをお試しください。
 
 ## Raycasting の罠三選
 
@@ -134,7 +134,7 @@ Three.js アプリでは touch や mouse イベント発生時、オブジェク
 <a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> や <a href='https://pj-corridor.net/cube3d/cube3d.html'>ルービックキューブ</a> では、touchstart や mousedown イベントが発生した座標からの Raycasting が …
 
 - Secen 内のオブジェクトと交点を持つ場合、オブジェクト自体を操作する（例えばポーズの変更）
-- Secen 内のオブジェクトと交点を持たない場合、その座標をドラッグしてオブジェクトを回転させる（実際にはオブジェクト自身の回転ではなく、オブジェクトの方向を lookAat() し続ける PerspectiveCamera が touchmove や mousemove イベントの反対方向に移動する）
+- Secen 内のオブジェクトと交点を持たない場合、その座標をドラッグしてオブジェクトを回転させる（実際にはオブジェクト自身の回転ではなく、オブジェクトを lookAat() し続ける PerspectiveCamera が touchmove や mousemove イベントの反対方向に移動する）
 
 … を共通の UX としていました。しかし、デバッグ目的で Scene に AxesHelper（軸を表す三色の線）を追加した際にどういうわけか怪しい挙動となります。
 
@@ -147,20 +147,20 @@ const children = scene.children.filter(in_child => !(in_child instanceof THREE.A
 const intersects = raycaster.intersectObjects(children);
 ```
 
-### 2. 消えた CircleGeometry
+### 2. 消える CircleGeometry
 
 <a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> のパーツを操作する際には Scene に
 
 - 対象パーツの height と同じ半径を持つ SphereGeometry
 - その SphereGeometry の中心を通り法線ベクトルが PerspectiveCamera を向いた CircleGeometry
 
-を追加します。次いで touchmove や mousemove イベントが発生した座標からの Raycasting と、SphereGeometry および CircleGeometry との交点方向にドラッグしたパーツを <a href='https://threejs.org/docs/#api/en/core/Object3D.lookAt'>lookAt()</a> しています。こちらはデバッグ用に SphereGeometry と CircleGeometry を着色（通常は透明）し、棒人間の手を動かしている様子です。
+を追加します。次いで touchmove や mousemove イベントが発生した座標からの Raycasting と、SphereGeometry および CircleGeometry との交点をドラッグしたパーツが <a href='https://threejs.org/docs/#api/en/core/Object3D.lookAt'>lookAt()</a> します。こちらはデバッグ用に SphereGeometry と CircleGeometry を着色（通常は透明）し、棒人間の手を動かしている様子です。
 
-<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/CircleGeometry.png' />
+<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/CircleGeometry.gif' />
 
-空間内のパーツの位置に応じて PerspectiveCamera の反対方向から Raycasting する場合もあるのですが、この際にどういうわけか怪しい挙動となります。調べたところ SphereGeometry は背面からの Raycasting と交点を持たないことがわかりました。透明色かつ法線ベクトルが PerspectiveCamera を向いた交点判定目的の CircleGeometry だけに、結構悩みました ^^; 有識者にとっては常識かもしれませんが。
+空間内のパーツの位置に応じて PerspectiveCamera の反対方向から Raycasting する場合もあるのですが、この際にどういうわけか怪しい挙動となります。調べたところ SphereGeometry は背面からの Raycasting と交点を持たないことがわかりました。法線ベクトルが PerspectiveCamera を向いた CircleGeometry だけに結構悩みました ^^; 有識者にとっては常識なのかもしれませんが。
 
-この場合
+この場合、例えば
 
 ```
 const geometry = new THREE.CircleGeometry(100, 32);
