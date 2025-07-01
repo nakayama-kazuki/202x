@@ -170,16 +170,16 @@ const circle = new THREE.Mesh(geometry, material);
 
 のように両面のマテリアルを使用することで対応できます。
 
-### 3. 見た目と異なる SkinnedMesh（★）
+### 3. 見た目と異なる SkinnedMesh
 
 <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間</a> や <a href='https://pj-corridor.net/stick-figure/hand.html'>手</a> では SkinnedMesh を使ってパーツを滑らかに曲げています。ここまではよいのですが、問題は曲げたパーツに対する Raycasting がうまくいかない点でした。
 
-<a href='https://threejs.org/docs/#api/en/objects/SkinnedMesh'>Three.js のドキュメント</a> に関連情報はなく、フォーラムや <a href='https://github.com/mrdoob/three.js/blob/master/src/objects/SkinnedMesh.js'>SkinnedMesh の実装</a> などの調査で
+<a href='https://threejs.org/docs/#api/en/objects/SkinnedMesh'>Three.js のドキュメント</a> からは関連情報を得られなかったので、フォーラムや <a href='https://github.com/mrdoob/three.js/blob/master/src/objects/SkinnedMesh.js'>SkinnedMesh の実装</a> などの調査で
 
 - 頂点データは変更せずにボーンの影響を計算する
 - 変形は GPU 上で実行する（から速くてなめらか）
 
-ということは理解しました。そこで SkinnedMesh.skeleton.bones を使った ExtrudeGeometry を作り、それと Raycasting との交点をドラッグしてゴム人間を操作することができました。
+ということを理解しました。そこで SkinnedMesh.skeleton.bones を使った ExtrudeGeometry を作り、それと Raycasting との交点をドラッグしてゴム人間を操作することができました。
 
 ## AdSense で踏んだブラウザ互換問題
 
