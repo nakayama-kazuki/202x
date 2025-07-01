@@ -170,23 +170,16 @@ const circle = new THREE.Mesh(geometry, material);
 
 のように両面のマテリアルを使用することで対応できます。
 
-### 3. 見た目と異なる SkinnedMesh
+### 3. 見た目と異なる SkinnedMesh（★）
 
-★★
+<a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間</a> や <a href='https://pj-corridor.net/stick-figure/hand.html'>手</a> では SkinnedMesh を使ってパーツを滑らかに曲げています。ここまではよいのですが、問題は曲げたパーツに対する Raycasting がうまくいかない点でした。
 
-問題点: 曲げたあとに Raycasting をキャッチしない問題。
+<a href='https://threejs.org/docs/#api/en/objects/SkinnedMesh'>Three.js のドキュメント</a> に関連情報はなく、フォーラムや <a href='https://github.com/mrdoob/three.js/blob/master/src/objects/SkinnedMesh.js'>SkinnedMesh の実装</a> などの調査で
 
-解決策: SkinnedMesh のボーンを動かしても、geometry の頂点は更新されないため、正しくレイキャストをキャッチできません。この問題を解決するためには、レイキャスト用に簡略化した形状を別に用意し、それを使ってレイキャストを行います。
+- 頂点データは変更せずにボーンの影響を計算する
+- 変形は GPU 上で実行する（から速くてなめらか）
 
-vertices of SkinnedMesh.geometry will not be changed after moving bones.
-because of it, SkinnedMesh.geometry can't catch raycasting properly.
-so, to catch raycasting, rough formed geometry is attached.
-
-// スキンメッシュとは別に、シンプルなジオメトリを用意してレイキャストを行う
-const simplifiedGeometry = new THREE.BoxGeometry(1, 1, 1); // 例: ボックスジオメトリ
-const simplifiedMesh = new THREE.Mesh(simplifiedGeometry, someMaterial);
-scene.add(simplifiedMesh);
-
+ということは理解しました。そこで SkinnedMesh.skeleton.bones を使った ExtrudeGeometry を作り、それと Raycasting との交点をドラッグしてゴム人間を操作することができました。
 
 ## AdSense で踏んだブラウザ互換問題
 
@@ -307,27 +300,8 @@ CSS Transitions の shorthand と transition-property の開始値と終了値�
 
 ## おわりに
 
-恥ずかしくて見出しにしませんでしたが、他にもいろいろな失敗がありました。
+ここまで読んでいただきどうもありがとうございます。見出しにはしませんでしたが、他にも幾つかの失敗がありました。例えば Three.js の多くのクラスには clone() メソッドが実装されていますが、クラスを継承した新しいクラスを実装した際、constructor の I/F を変更していたことが理由で clone() したインスタンスの怪しい挙動に悩まされたのは恥ずかしい限りです。
 
-Three.js の多くのクラスには clone() メソッドが実装されていますが、
+実は見出しの内容以外にも細かな失敗がいろいろとありました。例えば Three.js の多くのクラスには clone() メソッドが実装されていますが、クラスを継承した新クラスを実装した際、constructor の I/F を変更していたことが理由で clone() したインスタンスの怪しい挙動に悩まされたのは恥ずかしい限りです。
 
-
-
-Three.js アプリ開発を通じて得た気付き
-
-失敗の数々
-
-継承 + clone()
-
-★コレの再確認
-クラス拡張でコンストラクタ引数を変更している場合の clone メソッド
-継承クラスから clone を使って失敗した
-https://github.com/mrdoob/three.js/blob/master/src/math/Vector2.js
-
-
-
-Three.js のクラスを継承して新しいクラスを作成する際、継承元クラスの constructor に新たなパラメータを追加することがあります。この場合、継承元の clone() メソッドをそのまま使用すると、新しいパラメータが正しく処理されない可能性があります。これを防ぐために、以下の方法を検討しましょう。
-
-パラメータの初期値を設定する: 継承先クラスの constructor において、追加したパラメータにデフォルト値を設定します。これにより、clone() メソッドが呼び出された際に、未定義のパラメータが原因でエラーが発生するのを防ぐことができます。
-
-継承先クラスに clone() メソッドを実装する: 継承先クラスで独自の clone() メソッドをオーバーライドし、新たに追加したパラメータも含めてクローンを作成するようにします。これにより、継承元クラスの clone() メソッドの動作を補完し、オブジェクトの完全な複製を保証できます。
+というわけで、私の Three.js アプリ開発を通じて得た気付き（失敗？）が皆さまにとって有益な情報になれば何よりです。
