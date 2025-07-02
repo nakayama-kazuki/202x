@@ -205,8 +205,8 @@ Three.js アプリは初期化時とウインドウのリサイズ時、適切�
 1. AdSense による広告自動挿入
 2. 上記に伴う iframe のリサイズ
 3. 上記に伴うイベントハンドラ処理
-	a. WebGLRenderer.domElement のリサイズ
-	b. 座標処理とレンダリングのための設定変更
+   a. WebGLRenderer.domElement のリサイズ
+   b. 座標処理とレンダリングのための設定変更
 
 のように対応することを考えました。
 
