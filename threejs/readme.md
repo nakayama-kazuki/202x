@@ -164,7 +164,7 @@ const intersects = raycaster.intersectObjects(children);
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/CircleGeometry.gif' />
 
-空間内のパーツの位置に応じて、オブジェクトの反対方向から Raycasting する場合もあるのですが、それらしき状況で怪しい挙動になります。調べたところ SphereGeometry は背面からの Raycasting と交点を持たないことがわかりました。常に PerspectiveCamera 側を向いている CircleGeometry だけに悩みました ^^;
+空間内のパーツの位置に応じて、オブジェクトの反対方向から Raycasting することもあるのですが、その状況で怪しい挙動になります。調べたところ SphereGeometry は背面からの Raycasting と交点を持たないことがわかりました。常に PerspectiveCamera 側を向いている CircleGeometry だけに悩みました ^^;
 
 この場合、例えば
 
@@ -186,7 +186,7 @@ const circle = new THREE.Mesh(geometry, material);
 
 ## AdSense で踏んだブラウザ互換問題
 
-Three.js アプリの体裁が整ったところで AdSense の導入を試してみました。しかし、サイトに AdSense を導入したところ iframe に関連したブラウザ互換問題に直面したので、その解消までの道のりをご紹介します。
+Three.js アプリの体裁が整ったところで、試しに AdSense を導入することにしました。ところが Three.js アプリと AdSense の共存で予想外のハードルに直面してしまいました。ここでは iframe に関連したブラウザ互換問題解消までの道のりをご紹介します。
 
 Three.js アプリは初期化時とウインドウのリサイズ時、適切な座標処理とレンダリングのための設定変更 …
 
@@ -269,7 +269,7 @@ setTimeout(() => {
 
 ## ぼくのかんがえたさいきょうのアニメーション関数
 
-AdSense の導入がうまくいったところ、最後に全体的に UX をブラッシュアップしたいと思います。Three.js アプリでの WebGLRenderer の描画は全体的にアニメーション表現を採用していますが、どうせなら通常の HTML 要素の描画（例えばダイアログ表示）でも同様の UX を採用したいですよね。とはいえ CSS の @keyframes 定義などアニメーションに関する記述を分散させたくありません。JavaScript コードのみでシンプルに一元的に管理できないかと考えた末の実装がこちらです。
+AdSense の導入がうまくいったところで、最後に全体的に UX をブラッシュアップしたいと思います。Three.js アプリでの WebGLRenderer の描画は全体的にアニメーション表現を採用していますが、どうせなら通常の HTML 要素の描画（例えばダイアログ表示）でも同様の UX を採用したいですよね。とはいえ CSS の @keyframes 定義などアニメーションに関する記述を分散させたくありません。JavaScript コードのみでシンプルに一元的に管理できないかと考えた末の実装がこちらです。
 
 ```
 function autoTransition1(in_elem, in_shorthand, in_start, in_end) {
