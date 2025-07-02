@@ -94,7 +94,7 @@ button.addEventListener('click', in_ev => {
 
 ```
 
-コードの (1) のタイミングでは toDataURL() で期待した出力が得られますが (2) や (3) のタイミングではうまくいきません。これは WebGLRenderer が、各フレームのレンダリング後に自動的に描画バッファを消去してしまうことが理由でした。試しに <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.preserveDrawingBuffer'>WebGLRenderer.preserveDrawingBuffer</a> で描画バッファを保持する設定にすると
+コードの (1) のタイミングでは toDataURL() で期待した出力が得られますが (2) や (3) のタイミングではうまくいきません。この理由は WebGLRenderer が、各フレームのレンダリング後に自動的に描画バッファを消去してしまうためでした。試しに <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.preserveDrawingBuffer'>WebGLRenderer.preserveDrawingBuffer</a> で描画バッファを保持する設定にしてみると
 
 ```
 const renderer = new THREE.WebGLRenderer({preserveDrawingBuffer : true});
@@ -104,7 +104,7 @@ const renderer = new THREE.WebGLRenderer({preserveDrawingBuffer : true});
 
 > While it is sometimes desirable to preserve the drawing buffer, it can cause significant performance loss on some platforms. Whenever possible this flag should remain false and other techniques used.
 
-との non-normative があり、過去には WebKit で関連するバグも報告されていたため、描画バッファの設定は変更せず toDataURL() の直前で再度レンダリングすることにします。
+との non-normative があり、過去には WebKit で関連するバグも報告されていたため、描画バッファの設定はデフォルト値 false を変更せず toDataURL() の直前で再度レンダリングすることにします。
 
 ```
 setTimeout(() => {
@@ -119,7 +119,7 @@ button.addEventListener('click', in_ev => {
     console.log(renderer.domElement.toDataURL('image/png'));
 });
 ```
-これで無事 screenshot 機能が実装できましたので、パワポスライドへの貼り付けをお試しください。
+これで無事 screenshot 機能が実装できました。パワポスライドへの貼り付けをお試しください。
 
 ## Raycasting の罠 3 選
 
@@ -127,7 +127,7 @@ Three.js アプリでは touch や mouse イベントが発生した座標と、
 
 > Raycasting is used for mouse picking (working out what objects in the 3d space the mouse is over) amongst other things.
 
-ここでは Raycasting 関連の 3 つの罠 … もしくは私の失敗 … をご紹介します。
+ここでは Raycasting 関連の 3 つの罠 … あるいは失敗 … をご紹介します。
 
 ### 1. でしゃばる AxesHelper
 
@@ -140,11 +140,11 @@ Three.js アプリでは touch や mouse イベントが発生した座標と、
    - その座標をドラッグする
    - touchmove や mousemove でオブジェクトを回転（実際にはオブジェクト自身の回転ではなく、オブジェクトを lookAat() し続ける PerspectiveCamera が touchmove や mousemove イベントの反対方向に移動する）
 
-… を共通の UX としています。しかし、デバッグ目的で Scene に AxesHelper（軸を表す三色の線）を追加した際にしばしば怪しい挙動 … 再現性が 100% ではないところが難儀 … になります。
+… を共通の UX としています。しかしデバッグ目的で Scene に AxesHelper（軸を表す三色の線）を追加した際、まれに怪しい挙動になります。
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/AxesHelper.png' />
 
-これは AxesHelper 自身も <a href='https://threejs.org/docs/#api/en/core/Raycaster.intersectObject'>Raycaster.intersectObject()</a> の対象となることが理由でした。それを考慮して交点をチェックするか、チェック手前で AxesHelper の影響を排除しておきましょう。
+この理由は AxesHelper 自身も <a href='https://threejs.org/docs/#api/en/core/Raycaster.intersectObject'>Raycaster.intersectObject()</a> の対象となるためでした。それを考慮して交点をチェックするか、チェック手前で AxesHelper の影響を排除しておきましょう。
 
 ```
 const children = scene.children.filter(in_child => !(in_child instanceof THREE.AxesHelper));
@@ -164,7 +164,7 @@ const intersects = raycaster.intersectObjects(children);
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/CircleGeometry.gif' />
 
-空間内のパーツの位置に応じて、オブジェクトの反対方向から Raycasting することもあるのですが、その状況で怪しい挙動になります。調べたところ SphereGeometry は背面からの Raycasting と交点を持たないことがわかりました。常に PerspectiveCamera 側を向いている CircleGeometry だけに悩みました ^^;
+空間内のパーツの位置に応じて、オブジェクトの反対方向から Raycasting することもあるのですが、その状況で怪しい挙動になります。調べたところ SphereGeometry は背面からの Raycasting と交点を持たないことがわかりました。常に PerspectiveCamera 側を向いている CircleGeometry だけに盲点でした ^^;
 
 この場合、例えば
 
@@ -186,7 +186,7 @@ const circle = new THREE.Mesh(geometry, material);
 
 ## AdSense で踏んだブラウザ互換問題
 
-Three.js アプリの体裁が整ったところで、試しに AdSense を導入することにしました。ところが Three.js アプリと AdSense の共存で予想外のハードルに直面してしまいました。ここでは iframe に関連したブラウザ互換問題解消までの道のりをご紹介します。
+Three.js アプリの体裁が整ってきたところで、試しに AdSense を導入することにしました。ところが Three.js アプリと AdSense の共存で予想外のハードルに直面してしまいました。ここでは iframe に関連したブラウザ互換問題解消までの道のりをご紹介します。
 
 Three.js アプリは初期化時とウインドウのリサイズ時、適切な座標処理とレンダリングのための設定変更 …
 
@@ -198,7 +198,7 @@ Three.js アプリは初期化時とウインドウのリサイズ時、適切�
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/adsense.gif' />
 
-ただし <a href='https://github.com/mrdoob/three.js/blob/master/src/renderers/WebGLRenderer.js'>WebGLRenderer.setSize() の実装</a> に <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.domElement'>WebGLRenderer.domElement</a> の width や height への書き込みがあるため、ResizeObserver のコールバック内で呼び出すのは少々危うい感じがします（ちなみに <a href='https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/resize_observer/resize_observer.cc'>Chromium の実装</a> では前回観察時からの要素サイズの変化を確認しているので、処理が無限ループに陥ることはないようです）
+ただし <a href='https://github.com/mrdoob/three.js/blob/master/src/renderers/WebGLRenderer.js'>WebGLRenderer.setSize() の実装</a> に <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.domElement'>WebGLRenderer.domElement</a> の width や height への書き込みがあるため、ResizeObserver のコールバック内で呼び出すのは少々危うい感じもします（ちなみに <a href='https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/resize_observer/resize_observer.cc'>Chromium の実装</a> では前回観察時からの要素サイズの変化を確認しているので、処理が無限ループに陥ることはないようです）
 
 そこで iframe 内に WebGLRenderer.domElement を配置することで
 
@@ -238,7 +238,7 @@ outerWin.addEventListener('resize', in_event => {
 
 > 3. If url matches about:blank and initialInsertion is true, then: Run the iframe load event steps given element.
 
-このイベントハンドラで試してみます。
+このタイミングはどうでしょうか。
 
 ```
 const outerWin = createOuterWindow(document);
@@ -265,11 +265,11 @@ setTimeout(() => {
 }, 0);
 ```
 
-これでようやく座標処理とレンダリングのための設定変更が広告自動挿入に追従できるようになりました。
+これでようやく座標処理とレンダリングのための設定変更 … が広告自動挿入に追従できるようになりました。
 
 ## ぼくのかんがえたさいきょうのアニメーション関数
 
-AdSense の導入がうまくいったところで、最後に全体的に UX をブラッシュアップしたいと思います。Three.js アプリでの WebGLRenderer の描画は全体的にアニメーション表現を採用していますが、どうせなら通常の HTML 要素の描画（例えばダイアログ表示）でも同様の UX を採用したいですよね。とはいえ CSS の @keyframes 定義などアニメーションに関する記述を分散させたくありません。JavaScript コードのみでシンプルに一元的に管理できないかと考えた末の実装がこちらです。
+AdSense の導入が一段落したところで、最後に全体的に UX をブラッシュアップしたいと思います。Three.js アプリでの WebGLRenderer の描画は全体的にアニメーション表現を採用していますが、どうせなら通常の HTML 要素の描画（例えばダイアログ表示）でも同様の UX を採用したいですよね。とはいえ CSS の @keyframes 定義などアニメーションに関する記述を分散させたくありません。JavaScript コードのみでシンプルに一元的に管理できないかと考えた末の実装がこちらです。
 
 ```
 function autoTransition1(in_elem, in_shorthand, in_start, in_end) {
@@ -300,6 +300,8 @@ autoTransition2(element, 'color 1.5s ease-out', 'blue', 'white');
 ```
 
 CSS Transitions の shorthand と transition-property の開始値と終了値を指定することで要素に関するアニメーションを実行します。
+
+<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/dialog.gif' />
 
 ## おわりに
 
