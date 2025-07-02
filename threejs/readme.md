@@ -94,17 +94,17 @@ button.addEventListener('click', in_ev => {
 
 ```
 
-コードの (1) のタイミングでは toDataURL() で期待した出力が得られますが (2) や (3) のタイミングではうまくいきません。これは WebGLRenderer が、各フレームのレンダリング後に自動的に描画バッファを消去してしまうことが理由でした。試しに <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.preserveDrawingBuffer'>WebGLRenderer.preserveDrawingBuffer</a> で描画バッファの保持を指定すると
+コードの (1) のタイミングでは toDataURL() で期待した出力が得られますが (2) や (3) のタイミングではうまくいきません。これは WebGLRenderer が、各フレームのレンダリング後に自動的に描画バッファを消去してしまうことが理由でした。試しに <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.preserveDrawingBuffer'>WebGLRenderer.preserveDrawingBuffer</a> で描画バッファを保持する設定にすると
 
 ```
 const renderer = new THREE.WebGLRenderer({preserveDrawingBuffer : true});
 ```
 
-非同期的に呼び出される (2) や (3) のタイミングでも期待した出力を得ることができました。ただし <a href='https://registry.khronos.org/webgl/specs/latest/1.0/'>WebGL Specification</a> によれば
+非同期的に呼び出される (2) や (3) のタイミングでも期待した出力を得ることができます。ただし <a href='https://registry.khronos.org/webgl/specs/latest/1.0/'>WebGL Specification</a> によれば
 
 > While it is sometimes desirable to preserve the drawing buffer, it can cause significant performance loss on some platforms. Whenever possible this flag should remain false and other techniques used.
 
-なる non-normative があり、過去には WebKit の関連するバグも報告されていたため、描画バッファの設定は変更せず toDataURL() の直前で再度レンダリングすることにします。
+との non-normative があり、過去には WebKit で関連するバグも報告されていたため、描画バッファの設定は変更せず toDataURL() の直前で再度レンダリングすることにします。
 
 ```
 setTimeout(() => {
@@ -140,11 +140,11 @@ Three.js アプリでは touch や mouse イベントが発生した座標と、
    - その座標をドラッグする
    - touchmove や mousemove でオブジェクトを回転（実際にはオブジェクト自身の回転ではなく、オブジェクトを lookAat() し続ける PerspectiveCamera が touchmove や mousemove イベントの反対方向に移動する）
 
-… を共通の UX としていました。しかし、デバッグ目的で Scene に AxesHelper（軸を表す三色の線）を追加した際にしばしば怪しい挙動 … そして再現性が 100% でないところが難儀 … となります。
+… を共通の UX としています。しかし、デバッグ目的で Scene に AxesHelper（軸を表す三色の線）を追加した際にしばしば怪しい挙動 … 再現性が 100% ではないところが難儀 … になります。
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/AxesHelper.png' />
 
-これは AxesHelper 自身も <a href='https://threejs.org/docs/#api/en/core/Raycaster.intersectObject'>Raycaster.intersectObject()</a> の対象となることが理由でした。交点チェック時にそのことを考慮するか、その手前で AxesHelper の影響を排除しておきましょう。
+これは AxesHelper 自身も <a href='https://threejs.org/docs/#api/en/core/Raycaster.intersectObject'>Raycaster.intersectObject()</a> の対象となることが理由でした。それを考慮して交点をチェックするか、チェック手前で AxesHelper の影響を排除しておきましょう。
 
 ```
 const children = scene.children.filter(in_child => !(in_child instanceof THREE.AxesHelper));
@@ -158,13 +158,13 @@ const intersects = raycaster.intersectObjects(children);
 1. パーツをドラッグしたタイミングで Scene に操作用のオブジェクトを追加
    - 対象パーツの height と同じ半径を持つ SphereGeometry
    - その SphereGeometry の中心を通り法線ベクトルが PerspectiveCamera を向いた CircleGeometry
-2. touchmove や mousemove イベントが発生した座標からの Raycasting と操作用のオブジェクトの交点方向を、パーツが <a href='https://threejs.org/docs/#api/en/core/Object3D.lookAt'>lookAt()</a> する
+2. touchmove や mousemove イベントが発生した座標からの Raycasting と操作用のオブジェクトの交点方向を、ドラッグしたパーツが <a href='https://threejs.org/docs/#api/en/core/Object3D.lookAt'>lookAt()</a> する
 
-のような仕組みになっています。こちらはデバッグ用に SphereGeometry と CircleGeometry を着色（通常は透明）し、棒人間の手を動かしている様子です。
+のような仕組みになっています。デバッグ用に操作用のオブジェクトを着色し、棒人間の手を動かしている様子をご覧ください。
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/CircleGeometry.gif' />
 
-空間内のパーツの位置に応じて、オブジェクトの反対方向から Raycasting する場合もあるのですが、この際にどういうわけか怪しい挙動となります。調べたところ SphereGeometry は背面からの Raycasting と交点を持たないことがわかりました。常に PerspectiveCamera 側を向いている CircleGeometry だけに結構悩みました ^^;
+空間内のパーツの位置に応じて、オブジェクトの反対方向から Raycasting する場合もあるのですが、それらしき状況で怪しい挙動になります。調べたところ SphereGeometry は背面からの Raycasting と交点を持たないことがわかりました。常に PerspectiveCamera 側を向いている CircleGeometry だけに悩みました ^^;
 
 この場合、例えば
 
@@ -178,11 +178,11 @@ const circle = new THREE.Mesh(geometry, material);
 
 ### 3. 見た目と異なる SkinnedMesh
 
+<a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間</a> や <a href='https://pj-corridor.net/stick-figure/hand.html'>手</a> では SkinnedMesh を使ってパーツを滑らかに曲げています。ここまではよいのですが、問題は曲げたパーツが Raycasting と交点を持たないことでした。それらしき情報は <a href='https://threejs.org/docs/#api/en/objects/SkinnedMesh'>ドキュメント</a> に記載がありませんが … 何故だろう。
+
+フォーラムや <a href='https://github.com/mrdoob/three.js/blob/master/src/objects/SkinnedMesh.js'>SkinnedMesh の実装</a> を調べ、実際の頂点データは変更せずにボーンの影響を計算～描画していることは理解できました。そこでラフな代替頂点データとして SkinnedMesh.skeleton.bones を使った ExtrudeGeometry を作り、それと Raycasting との交点をドラッグすることでゴム人間の操作を実現できました。
+
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/rubber-figure.gif' />
-
-<a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間</a> や <a href='https://pj-corridor.net/stick-figure/hand.html'>手</a> では SkinnedMesh を使ってパーツを滑らかに曲げています。ここまではよいのですが、問題は曲げたパーツが Raycasting と交点を持たないことでした。そんなこと <a href='https://threejs.org/docs/#api/en/objects/SkinnedMesh'>ドキュメント</a> には書いてないが … 何故だ！
-
-フォーラムや <a href='https://github.com/mrdoob/three.js/blob/master/src/objects/SkinnedMesh.js'>SkinnedMesh の実装</a> を調べ、実際の頂点データは変更せずにボーンの影響を計算していることは理解しました。そこでラフな頂点データとして SkinnedMesh.skeleton.bones を使った ExtrudeGeometry を作り、それと Raycasting との交点をドラッグすることでゴム人間の操作を実現できました。
 
 ## AdSense で踏んだブラウザ互換問題
 
