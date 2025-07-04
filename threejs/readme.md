@@ -119,6 +119,7 @@ button.addEventListener('click', in_ev => {
     console.log(renderer.domElement.toDataURL('image/png'));
 });
 ```
+
 これで無事 screenshot 機能が実装できました。パワポスライドへの貼り付けをお試しください。
 
 ## Raycasting の罠 3 選
@@ -138,7 +139,7 @@ Three.js アプリでは touch や mouse イベントが発生した座標と、
    - touchmove や mousemove でパーツを操作（例えばポーズの変更）
 2. Secen 内のオブジェクトと交点を持たない場合
    - その座標をドラッグする
-   - touchmove や mousemove でオブジェクトを回転（実際にはオブジェクト自身の回転ではなく、オブジェクトを lookAat() し続ける PerspectiveCamera が touchmove や mousemove イベントの反対方向に移動する）
+   - touchmove や mousemove でオブジェクトを回転（実際にはオブジェクト自身の回転ではなく、オブジェクトを lookAt() し続ける PerspectiveCamera が touchmove や mousemove イベントの反対方向に移動する）
 
 … を共通の UX としています。しかしデバッグ目的で Scene に AxesHelper（軸を表す三色の線）を追加した際、まれに怪しい挙動になります。
 
@@ -164,7 +165,7 @@ const intersects = raycaster.intersectObjects(children);
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/CircleGeometry.gif' />
 
-空間内のパーツの位置に応じて、オブジェクトの反対方向から Raycasting することもあるのですが、その状況で怪しい挙動になります。調べたところ SphereGeometry は背面からの Raycasting と交点を持たないことがわかりました。常に PerspectiveCamera 側を向いている CircleGeometry だけに盲点でした ^^;
+空間内のパーツの位置に応じて、オブジェクトの反対方向から Raycasting することもあるのですが、その状況で怪しい挙動になります。調べたところ SphereGeometry は背面からの Raycasting と交点を持たないことがわかりました。常に PerspectiveCamera 側を向いている CircleGeometry だけに、まさに盲点でした ^^;
 
 この場合、例えば
 
