@@ -126,7 +126,7 @@ button.addEventListener('click', in_ev => {
 
 ## Raycasting の罠 3 選
 
-Three.js アプリでは touch や mouse イベントが発生した座標と、オブジェクトとの交点を求めるために <a href='https://threejs.org/docs/#api/en/core/Raycaster'>Raycasting</a> を使います。
+Three.js アプリではタッチやマウスイベントが発生した座標と、オブジェクトとの交点を求めるために <a href='https://threejs.org/docs/#api/en/core/Raycaster'>Raycasting</a> を使います。
 
 > Raycasting is used for mouse picking (working out what objects in the 3d space the mouse is over) amongst other things.
 
