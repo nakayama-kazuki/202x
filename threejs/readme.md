@@ -56,7 +56,7 @@
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/screenshot.gif' />
 
-<a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> や <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間</a> や <a href='https://pj-corridor.net/stick-figure/hand.html'>手</a> では決定したポーズの画像をクリップボードにコピーする screenshot 機能を実装しています。この機能で `WebGLRenderer.domElement.toDataURL()` を使っていますが、当初描画した画像を取得できずに悩んでいました。
+<a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> や <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間</a> や <a href='https://pj-corridor.net/stick-figure/hand.html'>手</a> では決定したポーズの画像をクリップボードにコピーする screenshot 機能を実装しています。この機能で `WebGLRenderer.domElement`（<a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.domElement'>参照</a>）の `toDataURL()` を使っていますが、当初描画した画像を取得できずに悩んでいました。
 
 例えばこのようなコードの場合
 
@@ -141,7 +141,7 @@ Three.js アプリではタッチやマウスイベントが発生した座標�
    - `touchmove` や `mousemove` でパーツを操作（例えばポーズの変更）
 2. `Secen` 内のオブジェクトと交点を持たない場合
    - その座標をドラッグする
-   - `touchmove` や `mousemove` でオブジェクトを回転（実際にはオブジェクト自身の回転ではなく、オブジェクトを `lookAt()` し続ける `PerspectiveCamera` が `touchmove` や `mousemove` イベントの反対方向に移動する）
+   - `touchmove` や `mousemove` でオブジェクトを回転（実際にはオブジェクト自身の回転ではなく、オブジェクト方向を向き続ける `PerspectiveCamera` が `touchmove` や `mousemove` イベントの反対方向に移動する）
 
 … を共通の UX としています。しかしデバッグ目的で `Scene` に `AxesHelper`（軸を表す三色の線）を追加した際、まれに怪しい挙動になります。
 
@@ -201,7 +201,7 @@ Three.js アプリは初期化時とウインドウのリサイズ時、適切�
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/adsense.gif' />
 
-ただし `WebGLRenderer.setSize()` の <a href='https://github.com/mrdoob/three.js/blob/master/src/renderers/WebGLRenderer.js'>実装</a> に `WebGLRenderer.domElement`（<a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.domElement'>参照</a>）の `width` や `height` への書き込みがあるため、`ResizeObserver` のコールバック内で呼び出すのは少々危うい感じもします（ちなみに <a href='https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/resize_observer/resize_observer.cc'>Chromium の実装</a> では前回観察時からの要素サイズの変化を確認しているので、処理が無限ループに陥ることはないようです）
+ただし `WebGLRenderer.setSize()` の <a href='https://github.com/mrdoob/three.js/blob/master/src/renderers/WebGLRenderer.js'>実装</a> に `WebGLRenderer.domElement` の `width` や `height` への書き込みがあるため、`ResizeObserver` のコールバック内で呼び出すのは少々危うい感じもします（ちなみに <a href='https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/resize_observer/resize_observer.cc'>Chromium の実装</a> では前回観察時からの要素サイズの変化を確認しているので、処理が無限ループに陥ることはないようです）
 
 そこで `iframe` 内に `WebGLRenderer.domElement` を配置することで
 
