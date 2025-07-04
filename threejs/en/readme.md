@@ -56,7 +56,7 @@ Now, let\'s delve into the insights gained through Three.js app development.
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/screenshot.gif' />
 
-In <a href='https://pj-corridor.net/stick-figure/stick-figure.html'>Stick Figure</a>, <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>Rubber Figure</a>, and <a href='https://pj-corridor.net/stick-figure/hand.html'>Hand</a>, I implemented a screenshot feature that copies the image of the determined pose to the clipboard. This feature uses `WebGLRenderer.domElement.toDataURL()`, but initially, I struggled to capture the rendered image.
+In <a href='https://pj-corridor.net/stick-figure/stick-figure.html'>Stick Figure</a>, <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>Rubber Figure</a>, and <a href='https://pj-corridor.net/stick-figure/hand.html'>Hand</a>, I implemented a screenshot feature that copies the image of the determined pose to the clipboard. This feature uses `toDataURL()` on `WebGLRenderer.domElement` (<a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.domElement'>reference</a>), but initially, I struggled to capture the rendered image.
 
 For example, in the following code :
 
@@ -141,7 +141,7 @@ In <a href='https://pj-corridor.net/stick-figure/stick-figure.html'>Stick Figure
    - Use `touchmove` or `mousemove` to manipulate the part (e.g., change the pose)
 2. There is no intersection with an object in the scene :
    - Drag from that coordinate
-   - Use `touchmove` or `mousemove` to rotate the object (actually, the object itself does not rotate; the `PerspectiveCamera`, which continuously `lookAt()` the object, moves in the opposite direction of the `touchmove` or `mousemove` events)
+   - Use `touchmove` or `mousemove` to rotate the object (actually, the object itself does not rotate; the `PerspectiveCamera`, which continuously look at the object, moves in the opposite direction of the `touchmove` or `mousemove` events)
 
 This is the common UX. However, when I added an `AxesHelper` (three-colored lines representing axes) to the scene for debugging purposes, it sometimes behaved strangely.
 
