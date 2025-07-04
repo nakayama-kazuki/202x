@@ -4,7 +4,7 @@
 
 Hello, my name is Nakayama. I was previously an advertising engineer and am currently a data platform engineer. In this article, I will share insights gained through my hobby of developing Three.js applications, such as common pitfalls for beginners, browser compatibility issues, and their solutions. I would like to express my gratitude to TECHSCORE BLOG for kindly allowing me to publish this article, as we have collaborated before at SynergyMarketing. Thank you very much !
 
-Let's start by introducing the Three.js applications.
+Let\'s start by introducing the Three.js applications.
 
 ### A New Concept for Reversi
 
@@ -163,7 +163,7 @@ In <a href='https://pj-corridor.net/stick-figure/stick-figure.html'>Stick Figure
    - `CircleGeometry` that passes through the center of the `SphereGeometry` with its normal vector facing the `PerspectiveCamera`
 2. Use raycasting from the coordinates where `touchmove` or `mousemove` events occur to determine the intersection direction with the operation object, and have the dragged part `lookAt()` (<a href='https://threejs.org/docs/#api/en/core/Object3D.lookAt'>reference</a>) it
 
-Here's a demonstration with the operation object colored for debugging, showing how the stick figure's hand moves.
+Here\'s a demonstration with the operation object colored for debugging, showing how the stick figure\'s hand moves.
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/CircleGeometry.gif' />
 
@@ -195,16 +195,16 @@ During initialization and window resizing, Three.js apps require appropriate coo
 - Call `PerspectiveCamera.updateProjectionMatrix()` (<a href='https://threejs.org/docs/#api/en/cameras/PerspectiveCamera.updateProjectionMatrix'>reference</a>)
 - Call `WebGLRenderer.setSize()` (<a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.setSize'>reference</a>)
 
-Additionally, since <a href='https://support.google.com/adsense/answer/9190028'>AdSense code</a> may automatically insert ads, potentially changing the size of other elements, similar processing is needed at that timing. For example, the offsetHeight of elements is changed.
+Additionally, since <a href='https://support.google.com/adsense/answer/9190028'>AdSense code</a> may automatically insert ads, potentially changing the size of other elements, similar processing is needed at that timing. For example, the `offsetHeight` of elements is changed.
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/adsense.gif' />
 
-However, since there are writes to the `width` and `height` of `WebGLRenderer.domElement` in the <a href='https://github.com/mrdoob/three.js/blob/master/src/renderers/WebGLRenderer.js'>implementation</a>, calling it within the callback of `ResizeObserver` feels a bit risky (incidentally, in the <a href='https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/resize_observer/resize_observer.cc'>Chromium implementation</a>, it checks for changes in element size from the previous observation, so it doesn't fall into an infinite loop).
+However, since there are writes to the `width` and `height` of `WebGLRenderer.domElement` in the <a href='https://github.com/mrdoob/three.js/blob/master/src/renderers/WebGLRenderer.js'>implementation</a>, calling it within the callback of `ResizeObserver` feels a bit risky (incidentally, in the <a href='https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/resize_observer/resize_observer.cc'>Chromium implementation</a>, it checks for changes in element size from the previous observation, so it doesn\'t fall into an infinite loop).
 
-Therefore, by placing `WebGLRenderer.domElement` inside an iframe :
+Therefore, by placing `WebGLRenderer.domElement` inside an `iframe` :
 
 1. Automatic ad insertion by AdSense
-2. Resizing of the iframe due to the above
+2. Resizing of the `iframe` due to the above
 3. Event handler processing due to the above
    - Resize `width` and `height` of `WebGLRenderer.domElement`
    - Change settings for coordinate processing and rendering
@@ -235,11 +235,11 @@ outerWin.addEventListener('resize', in_event => {
 });
 ```
 
-However, while it worked as expected in Chrome (137.0), `WebGLRenderer.domElement` did not display in Firefox (139.0). So, I tried changing the processing timing. According to the <a href='https://html.spec.whatwg.org/#the-iframe-element'>specification of iframes</a>, iframes without src or srcdoc attributes load `about:blank` as a default, so :
+However, while it worked as expected in Chrome (137.0), `WebGLRenderer.domElement` did not display in Firefox (139.0). So, I tried changing the processing timing. According to the <a href='https://html.spec.whatwg.org/#the-iframe-element'>specification</a> of `iframe`, `iframe` without `src` or `srcdoc` attributes load `about:blank` as a default, so :
 
 > 3. If url matches about:blank and initialInsertion is true, then: Run the iframe load event steps given element.
 
-How about this timing?
+How about this timing ?
 
 ```
 const outerWin = createOuterWindow(document);
@@ -252,7 +252,7 @@ outerWin.addEventListener('load', () => {
 });
 ```
 
-This time, it worked as expected in Firefox, but the event did not execute in Chrome. Related discussions can be found in <a href='https://github.com/whatwg/html/issues/6863'>stop triggering navigations to `about:blank` on iframe insertion</a>, but by delaying the processing to the next event loop, I achieved the expected behavior in both browsers, so I decided to leave it at that for now and document it.
+This time, it worked as expected in Firefox, but the event did not execute in Chrome. Related discussions can be found in <a href='https://github.com/whatwg/html/issues/6863'>stop triggering navigations to about:blank on iframe insertion</a>, but by delaying the processing to the next event loop, I achieved the expected behavior in both browsers, so I decided to leave it at that for now and document it.
 
 ```
 const outerWin = createOuterWindow(document);
@@ -270,7 +270,7 @@ With this, I finally managed to keep up with automatic ad insertion for coordina
 
 ## My Super Special Duper Animation Function
 
-Now that AdSense implementation is settled, I want to brush up on the overall UX. In my Three.js apps, `WebGLRenderer` rendering adopts animation expressions overall, but I want to adopt similar UX for rendering regular HTML elements (such as dialog displays) as well. However, I don't want to disperse animation-related descriptions like CSS `@keyframes` definitions. Here's an implementation I came up with to manage it simply and centrally with JavaScript code only.
+Now that AdSense implementation is settled, I want to brush up on the overall UX. In my Three.js apps, `WebGLRenderer` rendering adopts animation expressions overall, but I want to adopt similar UX for rendering regular HTML elements (such as dialog displays) as well. However, I don\'t want to disperse animation-related descriptions like CSS `@keyframes` definitions. Here\'s an implementation I came up with to manage it simply and centrally with JavaScript code only.
 
 ```
 function autoTransition1(in_elem, in_shorthand, in_start, in_end) {
@@ -306,6 +306,6 @@ By specifying the shorthand of CSS Transitions and the start and end values of `
 
 ## Conclusion
 
-Thank you for reading this far. Although I didn't create headings for them, there were various minor failures as well. For example, many classes in Three.js have a `clone()` method implemented, but when I implemented a new class by inheriting a class, I struggled with suspicious behavior of cloned instances due to changing the constructor's interface, which is quite embarrassing.
+Thank you for reading this far. Although I didn\'t create headings for them, there were various minor failures as well. For example, many classes in Three.js have a `clone()` method implemented, but when I implemented a new class by inheriting a class, I struggled with suspicious behavior of cloned instances due to changing the constructor\'s interface, which is quite embarrassing.
 
 I hope that the insights (or failures ?) I gained through Three.js app development will be useful information for you.
