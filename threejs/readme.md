@@ -1,5 +1,7 @@
 # そんな時どうする Three.js アプリ開発
 
+[<a href='https://github.com/nakayama-kazuki/202x/tree/main/threejs/en'>English article</a>]
+
 こんにちは、以前は広告エンジニア、現在はデータプラットフォームエンジニアの中山です。この記事では趣味の Three.js アプリ開発を通じて得た気付き、例えば Three.js 初心者が陥りそうなトラブルやブラウザ互換問題、それらの解決方法についてご紹介させていただきます。なお、以前シナジーマーケティングでご一緒させて頂いたこともあり、TECHSCORE BLOG への記事掲載についてご快諾いただきました ^^ どうもありがとうございます。
 
 最初に Three.js アプリをご紹介します。
@@ -54,7 +56,7 @@
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/screenshot.gif' />
 
-<a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> や <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間</a> や <a href='https://pj-corridor.net/stick-figure/hand.html'>手</a> では決定したポーズの画像をクリップボードにコピーする screenshot 機能を実装しています。この機能で WebGLRenderer.domElement.toDataURL() を使っていますが、当初描画した画像を取得できずに悩んでいました。
+<a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> や <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間</a> や <a href='https://pj-corridor.net/stick-figure/hand.html'>手</a> では決定したポーズの画像をクリップボードにコピーする screenshot 機能を実装しています。この機能で `WebGLRenderer.domElement.toDataURL()` を使っていますが、当初描画した画像を取得できずに悩んでいました。
 
 例えばこのようなコードの場合
 
@@ -94,7 +96,7 @@ button.addEventListener('click', in_ev => {
 
 ```
 
-コードの (1) のタイミングでは toDataURL() で期待した出力が得られますが (2) や (3) のタイミングではうまくいきません。この理由は WebGLRenderer が、各フレームのレンダリング後に自動的に描画バッファを消去してしまうためでした。試しに <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.preserveDrawingBuffer'>WebGLRenderer.preserveDrawingBuffer</a> で描画バッファを保持する設定にしてみると
+コードの (1) のタイミングでは `toDataURL()` で期待した出力が得られますが (2) や (3) のタイミングではうまくいきません。この理由は `WebGLRenderer` が、各フレームのレンダリング後に自動的に描画バッファを消去してしまうためでした。試しに `WebGLRenderer.preserveDrawingBuffer`（<a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.preserveDrawingBuffer'>参照</a>）で描画バッファを保持する設定にしてみると
 
 ```
 const renderer = new THREE.WebGLRenderer({preserveDrawingBuffer : true});
@@ -104,7 +106,7 @@ const renderer = new THREE.WebGLRenderer({preserveDrawingBuffer : true});
 
 > While it is sometimes desirable to preserve the drawing buffer, it can cause significant performance loss on some platforms. Whenever possible this flag should remain false and other techniques used.
 
-との non-normative があり、過去には WebKit で関連するバグも報告されていたため、描画バッファの設定はデフォルト値 false を変更せず toDataURL() の直前で再度レンダリングすることにします。
+との non-normative があり、過去には WebKit で関連するバグも報告されていたため、描画バッファの設定はデフォルトの `false` を変更せず `toDataURL()` の直前で再度レンダリングすることにします。
 
 ```
 setTimeout(() => {
@@ -132,20 +134,20 @@ Three.js アプリでは touch や mouse イベントが発生した座標と、
 
 ### 1. でしゃばる AxesHelper
 
-<a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> や <a href='https://pj-corridor.net/cube3d/cube3d.html'>ルービックキューブ</a> では、touchstart や mousedown イベントが発生した座標からの Raycasting が …
+<a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> や <a href='https://pj-corridor.net/cube3d/cube3d.html'>ルービックキューブ</a> では、`touchstart` や `mousedown` イベントが発生した座標からの Raycasting が …
 
-1. Secen 内のオブジェクトと交点を持つ場合
+1. `Secen` 内のオブジェクトと交点を持つ場合
    - 交点を持つパーツをドラッグする
-   - touchmove や mousemove でパーツを操作（例えばポーズの変更）
-2. Secen 内のオブジェクトと交点を持たない場合
+   - `touchmove` や `mousemove` でパーツを操作（例えばポーズの変更）
+2. `Secen` 内のオブジェクトと交点を持たない場合
    - その座標をドラッグする
-   - touchmove や mousemove でオブジェクトを回転（実際にはオブジェクト自身の回転ではなく、オブジェクトを lookAt() し続ける PerspectiveCamera が touchmove や mousemove イベントの反対方向に移動する）
+   - `touchmove` や `mousemove` でオブジェクトを回転（実際にはオブジェクト自身の回転ではなく、オブジェクトを `lookAt()` し続ける `PerspectiveCamera` が `touchmove` や `mousemove` イベントの反対方向に移動する）
 
-… を共通の UX としています。しかしデバッグ目的で Scene に AxesHelper（軸を表す三色の線）を追加した際、まれに怪しい挙動になります。
+… を共通の UX としています。しかしデバッグ目的で `Scene` に `AxesHelper`（軸を表す三色の線）を追加した際、まれに怪しい挙動になります。
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/AxesHelper.png' />
 
-この理由は AxesHelper 自身も <a href='https://threejs.org/docs/#api/en/core/Raycaster.intersectObject'>Raycaster.intersectObject()</a> の対象となるためでした。それを考慮して交点をチェックするか、チェック手前で AxesHelper の影響を排除しておきましょう。
+この理由は `AxesHelper` 自身も `Raycaster.intersectObject()`（<a href='https://threejs.org/docs/#api/en/core/Raycaster.intersectObject'>参照</a>）の対象となるためでした。それを考慮して交点をチェックするか、チェック手前で `AxesHelper` の影響を排除しておきましょう。
 
 ```
 const children = scene.children.filter(in_child => !(in_child instanceof THREE.AxesHelper));
@@ -156,16 +158,16 @@ const intersects = raycaster.intersectObjects(children);
 
 <a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> のパーツ操作は
 
-1. パーツをドラッグしたタイミングで Scene に操作用のオブジェクトを追加
-   - 対象パーツの height と同じ半径を持つ SphereGeometry
-   - その SphereGeometry の中心を通り法線ベクトルが PerspectiveCamera を向いた CircleGeometry
-2. touchmove や mousemove イベントが発生した座標からの Raycasting と操作用のオブジェクトの交点方向を、ドラッグしたパーツが <a href='https://threejs.org/docs/#api/en/core/Object3D.lookAt'>lookAt()</a> する
+1. パーツをドラッグしたタイミングで `Scene` に操作用のオブジェクトを追加
+   - 対象パーツの height と同じ半径を持つ `SphereGeometry`
+   - その `SphereGeometry` の中心を通り法線ベクトルが `PerspectiveCamera` を向いた `CircleGeometry`
+2. `touchmove` や `mousemove` イベントが発生した座標からの Raycasting と操作用のオブジェクトの交点方向を、ドラッグしたパーツが `lookAt()`（<a href='https://threejs.org/docs/#api/en/core/Object3D.lookAt'>参照</a>）する
 
 のような仕組みになっています。デバッグ用に操作用のオブジェクトを着色し、棒人間の手を動かしている様子をご覧ください。
 
-<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/CircleGeometry.gif' />
+<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/`CircleGeometry`.gif' />
 
-空間内のパーツの位置に応じて、オブジェクトの反対方向から Raycasting することもあるのですが、その状況で怪しい挙動になります。調べたところ SphereGeometry は背面からの Raycasting と交点を持たないことがわかりました。常に PerspectiveCamera 側を向いている CircleGeometry だけに、まさに盲点でした ^^;
+空間内のパーツの位置に応じて、オブジェクトの反対方向から Raycasting することもあるのですが、その状況で怪しい挙動になります。調べたところ `SphereGeometry` は背面からの Raycasting と交点を持たないことがわかりました。常に `PerspectiveCamera` 側を向いている `CircleGeometry` だけに、まさに盲点でした ^^;
 
 この場合、例えば
 
@@ -179,34 +181,34 @@ const circle = new THREE.Mesh(geometry, material);
 
 ### 3. 見た目と異なる SkinnedMesh
 
-<a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間</a> や <a href='https://pj-corridor.net/stick-figure/hand.html'>手</a> では SkinnedMesh を使ってパーツを滑らかに曲げています。ここまではよいのですが、問題は曲げたパーツが Raycasting と交点を持たないことでした。それらしき情報は <a href='https://threejs.org/docs/#api/en/objects/SkinnedMesh'>ドキュメント</a> に記載がありませんが … 何故だろう。
+<a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間</a> や <a href='https://pj-corridor.net/stick-figure/hand.html'>手</a> では `SkinnedMesh` を使ってパーツを滑らかに曲げています。ここまではよいのですが、問題は曲げたパーツが Raycasting と交点を持たないことでした。それらしき情報は <a href='https://threejs.org/docs/#api/en/objects/SkinnedMesh'>ドキュメント</a> に記載がありませんが … 何故だろう。
 
-フォーラムや <a href='https://github.com/mrdoob/three.js/blob/master/src/objects/SkinnedMesh.js'>SkinnedMesh の実装</a> を調べ、実際の頂点データは変更せずにボーンの影響を計算～描画していることは理解できました。そこでラフな代替頂点データとして SkinnedMesh.skeleton.bones を使った ExtrudeGeometry を作り、それと Raycasting との交点をドラッグすることでゴム人間の操作を実現できました。
+フォーラムや `SkinnedMesh` の<a href='https://github.com/mrdoob/three.js/blob/master/src/objects/SkinnedMesh.js'>実装</a> を調べ、実際の頂点データは変更せずにボーンの影響を計算～描画していることは理解できました。そこでラフな代替頂点データとして `SkinnedMesh.skeleton.bones` を使った `ExtrudeGeometry` を作り、それと Raycasting との交点をドラッグすることでゴム人間の操作を実現できました。
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/rubber-figure.gif' />
 
 ## AdSense で踏んだブラウザ互換問題
 
-Three.js アプリの体裁が整ってきたところで、試しに AdSense を導入することにしました。ところが Three.js アプリと AdSense の共存で予想外のハードルに直面してしまいました。ここでは iframe に関連したブラウザ互換問題解消までの道のりをご紹介します。
+Three.js アプリの体裁が整ってきたところで、試しに AdSense を導入することにしました。ところが Three.js アプリと AdSense の共存で予想外のハードルに直面してしまいました。ここでは `iframe` に関連したブラウザ互換問題解消までの道のりをご紹介します。
 
 Three.js アプリは初期化時とウインドウのリサイズ時、適切な座標処理とレンダリングのための設定変更 …
 
-- <a href='https://threejs.org/docs/#api/en/cameras/PerspectiveCamera.aspect'>PerspectiveCamera.aspect</a> の変更
-- <a href='https://threejs.org/docs/#api/en/cameras/PerspectiveCamera.updateProjectionMatrix'>PerspectiveCamera.updateProjectionMatrix()</a> 呼び出し
-- <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.setSize'>WebGLRenderer.setSize()</a> 呼び出し
+- `PerspectiveCamera.aspect`（<a href='https://threejs.org/docs/#api/en/cameras/PerspectiveCamera.aspect'>参照</a>）の変更
+- `PerspectiveCamera.updateProjectionMatrix()`（<a href='https://threejs.org/docs/#api/en/cameras/PerspectiveCamera.updateProjectionMatrix'>参照</a>）の呼び出し
+- `WebGLRenderer.setSize()`（<a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.setSize'>参照</a>）の呼び出し
 
-が必要になります。加えて <a href='https://support.google.com/adsense/answer/9190028'>AdSense コード</a> を設置したサイトで、広告自動挿入時に他の要素のサイズが変更される可能性があるため、そのタイミングでも同様の処理が必要になります。例えばこれは要素の offsetHeight が変更されています。
+が必要になります。加えて <a href='https://support.google.com/adsense/answer/9190028'>AdSense コード</a> を設置したサイトで、広告自動挿入時に他の要素のサイズが変更される可能性があるため、そのタイミングでも同様の処理が必要になります。例えばこれは要素の `offsetHeight` が変更されています。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/adsense.gif' />
 
-ただし <a href='https://github.com/mrdoob/three.js/blob/master/src/renderers/WebGLRenderer.js'>WebGLRenderer.setSize() の実装</a> に <a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.domElement'>WebGLRenderer.domElement</a> の width や height への書き込みがあるため、ResizeObserver のコールバック内で呼び出すのは少々危うい感じもします（ちなみに <a href='https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/resize_observer/resize_observer.cc'>Chromium の実装</a> では前回観察時からの要素サイズの変化を確認しているので、処理が無限ループに陥ることはないようです）
+ただし `WebGLRenderer.setSize()` の <a href='https://github.com/mrdoob/three.js/blob/master/src/renderers/WebGLRenderer.js'>実装</a> に `WebGLRenderer.domElement`（<a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.domElement'>参照</a>）の `width` や `height` への書き込みがあるため、`ResizeObserver` のコールバック内で呼び出すのは少々危うい感じもします（ちなみに <a href='https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/resize_observer/resize_observer.cc'>Chromium の実装</a> では前回観察時からの要素サイズの変化を確認しているので、処理が無限ループに陥ることはないようです）
 
-そこで iframe 内に WebGLRenderer.domElement を配置することで
+そこで `iframe` 内に `WebGLRenderer.domElement` を配置することで
 
 1. AdSense による広告自動挿入
-2. 上記に伴う iframe のリサイズ
+2. 上記に伴う `iframe` のリサイズ
 3. 上記に伴うイベントハンドラ処理
-   - WebGLRenderer.domElement のリサイズ
+   - `WebGLRenderer.domElement` のリサイズ
    - 座標処理とレンダリングのための設定変更
 
 のように対応することを考えました。
@@ -235,7 +237,7 @@ outerWin.addEventListener('resize', in_event => {
 });
 ```
 
-ところが Chrome（137.0）では期待動作となるものの、Firefox（139.0）では WebGLRenderer.domElement が表示されません。そこで、処理タイミングを変えて試してみます。<a href='https://html.spec.whatwg.org/#the-iframe-element'>iframe の仕様</a> によれば src や srcdoc 属性のない iframe はデフォルトの about:blank をロードするので
+ところが Chrome（137.0）では期待動作となるものの、Firefox（139.0）では `WebGLRenderer.domElement` が表示されません。そこで、処理タイミングを変えて試してみます。`iframe` の<a href='https://html.spec.whatwg.org/#the-iframe-element'>仕様</a> によれば `src` や `srcdoc` 属性のない `iframe` はデフォルトの `about:blank` をロードするので
 
 > 3. If url matches about:blank and initialInsertion is true, then: Run the iframe load event steps given element.
 
@@ -270,7 +272,7 @@ setTimeout(() => {
 
 ## ぼくのかんがえたさいきょうのアニメーション関数
 
-AdSense の導入が一段落したところで、最後に全体的に UX をブラッシュアップしたいと思います。Three.js アプリでの WebGLRenderer の描画は全体的にアニメーション表現を採用していますが、どうせなら通常の HTML 要素の描画（例えばダイアログ表示）でも同様の UX を採用したいですよね。とはいえ CSS の @keyframes 定義などアニメーションに関する記述を分散させたくありません。JavaScript コードのみでシンプルに一元的に管理できないかと考えた末の実装がこちらです。
+AdSense の導入が一段落したところで、最後に全体的に UX をブラッシュアップしたいと思います。Three.js アプリでの `WebGLRenderer` の描画は全体的にアニメーション表現を採用していますが、どうせなら通常の HTML 要素の描画（例えばダイアログ表示）でも同様の UX を採用したいですよね。とはいえ CSS の `@keyframes` 定義などアニメーションに関する記述を分散させたくありません。JavaScript コードのみでシンプルに一元的に管理できないかと考えた末の実装がこちらです。
 
 ```
 function autoTransition1(in_elem, in_shorthand, in_start, in_end) {
@@ -300,12 +302,12 @@ function autoTransition2(in_elem, in_shorthand, in_start, in_end) {
 autoTransition2(element, 'color 1.5s ease-out', 'blue', 'white');
 ```
 
-CSS Transitions の shorthand と transition-property の開始値と終了値を指定することで要素に関するアニメーションを実行します。
+CSS Transitions の shorthand と `transition-property` の開始値と終了値を指定することで要素に関するアニメーションを実行します。
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/dialog.gif' />
 
 ## おわりに
 
-ここまで読んでいただきどうもありがとうございます。見出しにはしませんでしたが、他にも細かい失敗がいろいろとありました。例えば Three.js の多くのクラスには clone() メソッドが実装されていますが、クラスを継承した新しいクラスを実装した際、constructor の I/F を変更していたことが理由で clone() したインスタンスの怪しい挙動に悩まされた、などは恥ずかしい限りです。
+ここまで読んでいただきどうもありがとうございます。見出しにはしませんでしたが、他にも細かい失敗がいろいろとありました。例えば Three.js の多くのクラスには `clone()` メソッドが実装されていますが、クラスを継承した新しいクラスを実装した際、コンストラクタの I/F を変更していたことが理由で `clone()` したインスタンスの怪しい挙動に悩まされた、などは恥ずかしい限りです。
 
 というわけで、私の Three.js アプリ開発を通じて得た気付き（失敗？）が皆さまにとって有益な情報になれば何よりです。
