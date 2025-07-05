@@ -183,7 +183,7 @@ const circle = new THREE.Mesh(geometry, material);
 
 <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間</a> や <a href='https://pj-corridor.net/stick-figure/hand.html'>手</a> では `SkinnedMesh` を使ってパーツを滑らかに曲げています。ここまではよいのですが、問題は曲げたパーツが Raycasting と交点を持たないことでした。それらしき情報は <a href='https://threejs.org/docs/#api/en/objects/SkinnedMesh'>ドキュメント</a> に記載がありませんが … 何故だろう。
 
-フォーラムや `SkinnedMesh` の <a href='https://github.com/mrdoob/three.js/blob/master/src/objects/SkinnedMesh.js'>実装</a> を調べ、実際の頂点データは変更せずにボーンの影響を計算～描画していることは理解できました。そこでラフな代替頂点データとして `SkinnedMesh.skeleton.bones` を使った `ExtrudeGeometry` を作り、それと Raycasting との交点をドラッグすることでゴム人間の操作を実現できました。
+フォーラムや `SkinnedMesh` の <a href='https://github.com/mrdoob/three.js/blob/master/src/objects/SkinnedMesh.js'>実装</a> を調べ、実際の頂点データは変更せずにボーンの影響を計算～描画していることは理解できました。そこでラフな代替頂点データとして `SkinnedMesh.skeleton.bones` を使った `ExtrudeGeometry`（<a href='https://threejs.org/docs/#api/en/geometries/ExtrudeGeometry'>仕様</a>）を作り、それと Raycasting との交点をドラッグすることでゴム人間の操作を実現できました。
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/rubber-figure.gif' />
 
