@@ -167,7 +167,7 @@ Here\'s a demonstration with the operation object colored for debugging, showing
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/CircleGeometry.gif' />
 
-Sometimes, raycasting occurs from the opposite direction of the object in space, and in that situation, it behaves strangely. I found that `SphereGeometry` does not intersect with raycasting from the back. Since `CircleGeometry` always faces the `PerspectiveCamera`, this was a blind spot ! ^^;
+Sometimes, raycasting occurs from the opposite direction of the object in 3d space, and in that situation, it behaves strangely. I found that `SphereGeometry` does not intersect with raycasting from the back. Since `CircleGeometry` always faces the `PerspectiveCamera`, this was a blind spot ! ^^;
 
 In this case, you can use a material for both sides, for example :
 
