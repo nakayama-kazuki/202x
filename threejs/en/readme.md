@@ -181,7 +181,7 @@ const circle = new THREE.Mesh(geometry, material);
 
 In <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>Rubber Figure</a> and <a href='https://pj-corridor.net/stick-figure/hand.html'>Hand</a>, `SkinnedMesh` is used to smoothly bend parts. So far, so good, but the problem was that bent parts did not intersect with raycasting. While there was no information about this in the <a href='https://threejs.org/docs/#api/en/objects/SkinnedMesh'>documentation</a>, I wondered why.
 
-After researching forums and the <a href='https://github.com/mrdoob/three.js/blob/master/src/objects/SkinnedMesh.js'>implementation</a>, I understood that the actual vertex data is not changed, and the influence of bones is calculated and drawn. So, I created an `ExtrudeGeometry` using `SkinnedMesh.skeleton.bones` as rough alternative vertex data, and by dragging the intersection with raycasting, I was able to manipulate the rubber figure.
+After researching forums and the <a href='https://github.com/mrdoob/three.js/blob/master/src/objects/SkinnedMesh.js'>implementation</a>, I understood that the actual vertex data is not changed, and the influence of bones is calculated and drawn. So, I created an `ExtrudeGeometry`  (<a href='https://threejs.org/docs/#api/en/geometries/ExtrudeGeometry'>reference</a>) using `SkinnedMesh.skeleton.bones` as rough alternative vertex data, and by dragging the intersection with raycasting, I was able to manipulate the rubber figure.
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/rubber-figure.gif' />
 
