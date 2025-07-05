@@ -56,7 +56,7 @@
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/screenshot.gif' />
 
-<a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> や <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間</a> や <a href='https://pj-corridor.net/stick-figure/hand.html'>手</a> では決定したポーズの画像をクリップボードにコピーする screenshot 機能を実装しています。この機能で `WebGLRenderer.domElement`（<a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.domElement'>参照</a>）の `toDataURL()` を使っていますが、当初描画した画像を取得できずに悩んでいました。
+<a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> や <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間</a> や <a href='https://pj-corridor.net/stick-figure/hand.html'>手</a> では決定したポーズの画像をクリップボードにコピーする screenshot 機能を実装しています。この機能で `WebGLRenderer.domElement`（<a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.domElement'>仕様</a>）の `toDataURL()` を使っていますが、当初描画した画像を取得できずに悩んでいました。
 
 例えばこのようなコードの場合
 
@@ -96,7 +96,7 @@ button.addEventListener('click', in_ev => {
 
 ```
 
-コードの (1) のタイミングでは `toDataURL()` で期待した出力が得られますが (2) や (3) のタイミングではうまくいきません。この理由は `WebGLRenderer` が、各フレームのレンダリング後に自動的に描画バッファを消去してしまうためでした。試しに `WebGLRenderer.preserveDrawingBuffer`（<a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.preserveDrawingBuffer'>参照</a>）で描画バッファを保持する設定にしてみると
+コードの (1) のタイミングでは `toDataURL()` で期待した出力が得られますが (2) や (3) のタイミングではうまくいきません。この理由は `WebGLRenderer` が、各フレームのレンダリング後に自動的に描画バッファを消去してしまうためでした。試しに `WebGLRenderer.preserveDrawingBuffer`（<a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.preserveDrawingBuffer'>仕様</a>）で描画バッファを保持する設定にしてみると
 
 ```
 const renderer = new THREE.WebGLRenderer({preserveDrawingBuffer : true});
@@ -147,7 +147,7 @@ Three.js アプリではタッチやマウスイベントが発生した座標�
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/AxesHelper.png' />
 
-この理由は `AxesHelper` 自身も `Raycaster.intersectObject()`（<a href='https://threejs.org/docs/#api/en/core/Raycaster.intersectObject'>参照</a>）の対象となるためでした。それを考慮して交点をチェックするか、チェック手前で `AxesHelper` の影響を排除しておきましょう。
+この理由は `AxesHelper` 自身も `Raycaster.intersectObject()`（<a href='https://threejs.org/docs/#api/en/core/Raycaster.intersectObject'>仕様</a>）の対象となるためでした。それを考慮して交点をチェックするか、チェック手前で `AxesHelper` の影響を排除しておきましょう。
 
 ```
 const children = scene.children.filter(in_child => !(in_child instanceof THREE.AxesHelper));
@@ -161,11 +161,11 @@ const intersects = raycaster.intersectObjects(children);
 1. パーツをドラッグしたタイミングで `Scene` に操作用のオブジェクトを追加
    - 対象パーツの height と同じ半径を持つ `SphereGeometry`
    - その `SphereGeometry` の中心を通り法線ベクトルが `PerspectiveCamera` を向いた `CircleGeometry`
-2. `touchmove` や `mousemove` イベントが発生した座標からの Raycasting と操作用のオブジェクトの交点方向を、ドラッグしたパーツが `lookAt()`（<a href='https://threejs.org/docs/#api/en/core/Object3D.lookAt'>参照</a>）する
+2. `touchmove` や `mousemove` イベントが発生した座標からの Raycasting と操作用のオブジェクトの交点方向を、ドラッグしたパーツが `lookAt()`（<a href='https://threejs.org/docs/#api/en/core/Object3D.lookAt'>仕様</a>）する
 
 のような仕組みになっています。デバッグ用に操作用のオブジェクトを着色し、棒人間の手を動かしている様子をご覧ください。
 
-<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/`CircleGeometry`.gif' />
+<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/CircleGeometry.gif' />
 
 空間内のパーツの位置に応じて、オブジェクトの反対方向から Raycasting することもあるのですが、その状況で怪しい挙動になります。調べたところ `SphereGeometry` は背面からの Raycasting と交点を持たないことがわかりました。常に `PerspectiveCamera` 側を向いている `CircleGeometry` だけに、まさに盲点でした ^^;
 
@@ -183,7 +183,7 @@ const circle = new THREE.Mesh(geometry, material);
 
 <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間</a> や <a href='https://pj-corridor.net/stick-figure/hand.html'>手</a> では `SkinnedMesh` を使ってパーツを滑らかに曲げています。ここまではよいのですが、問題は曲げたパーツが Raycasting と交点を持たないことでした。それらしき情報は <a href='https://threejs.org/docs/#api/en/objects/SkinnedMesh'>ドキュメント</a> に記載がありませんが … 何故だろう。
 
-フォーラムや `SkinnedMesh` の<a href='https://github.com/mrdoob/three.js/blob/master/src/objects/SkinnedMesh.js'>実装</a> を調べ、実際の頂点データは変更せずにボーンの影響を計算～描画していることは理解できました。そこでラフな代替頂点データとして `SkinnedMesh.skeleton.bones` を使った `ExtrudeGeometry` を作り、それと Raycasting との交点をドラッグすることでゴム人間の操作を実現できました。
+フォーラムや `SkinnedMesh` の <a href='https://github.com/mrdoob/three.js/blob/master/src/objects/SkinnedMesh.js'>実装</a> を調べ、実際の頂点データは変更せずにボーンの影響を計算～描画していることは理解できました。そこでラフな代替頂点データとして `SkinnedMesh.skeleton.bones` を使った `ExtrudeGeometry` を作り、それと Raycasting との交点をドラッグすることでゴム人間の操作を実現できました。
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/rubber-figure.gif' />
 
@@ -193,9 +193,9 @@ Three.js アプリの体裁が整ってきたところで、試しに AdSense �
 
 Three.js アプリは初期化時とウインドウのリサイズ時、適切な座標処理とレンダリングのための設定変更 …
 
-- `PerspectiveCamera.aspect`（<a href='https://threejs.org/docs/#api/en/cameras/PerspectiveCamera.aspect'>参照</a>）の変更
-- `PerspectiveCamera.updateProjectionMatrix()`（<a href='https://threejs.org/docs/#api/en/cameras/PerspectiveCamera.updateProjectionMatrix'>参照</a>）の呼び出し
-- `WebGLRenderer.setSize()`（<a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.setSize'>参照</a>）の呼び出し
+- `PerspectiveCamera.aspect`（<a href='https://threejs.org/docs/#api/en/cameras/PerspectiveCamera.aspect'>仕様</a>）の変更
+- `PerspectiveCamera.updateProjectionMatrix()`（<a href='https://threejs.org/docs/#api/en/cameras/PerspectiveCamera.updateProjectionMatrix'>仕様</a>）の呼び出し
+- `WebGLRenderer.setSize()`（<a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.setSize'>仕様</a>）の呼び出し
 
 が必要になります。加えて <a href='https://support.google.com/adsense/answer/9190028'>AdSense コード</a> を設置したサイトで、広告自動挿入時に他の要素のサイズが変更される可能性があるため、そのタイミングでも同様の処理が必要になります。例えばこれは要素の `offsetHeight` が変更されています。
 
@@ -237,7 +237,7 @@ outerWin.addEventListener('resize', in_event => {
 });
 ```
 
-ところが Chrome（137.0）では期待動作となるものの、Firefox（139.0）では `WebGLRenderer.domElement` が表示されません。そこで、処理タイミングを変えて試してみます。`iframe` の<a href='https://html.spec.whatwg.org/#the-iframe-element'>仕様</a> によれば `src` や `srcdoc` 属性のない `iframe` はデフォルトの `about:blank` をロードするので
+ところが Chrome（137.0）では期待動作となるものの、Firefox（139.0）では `WebGLRenderer.domElement` が表示されません。そこで、処理タイミングを変えて試してみます。`iframe` の <a href='https://html.spec.whatwg.org/#the-iframe-element'>仕様</a> によれば `src` や `srcdoc` 属性のない `iframe` はデフォルトの `about:blank` をロードするので
 
 > 3. If url matches about:blank and initialInsertion is true, then: Run the iframe load event steps given element.
 
@@ -302,7 +302,7 @@ function autoTransition2(in_elem, in_shorthand, in_start, in_end) {
 autoTransition2(element, 'color 1.5s ease-out', 'blue', 'white');
 ```
 
-CSS Transitions の shorthand と `transition-property` の開始値と終了値を指定することで要素に関するアニメーションを実行します。
+CSS Transitions の shorthand と transition-property の開始値と終了値を指定することで要素に関するアニメーションを実行します。
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/dialog.gif' />
 
