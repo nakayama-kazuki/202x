@@ -300,7 +300,7 @@ function autoTransition2(in_elem, in_shorthand, in_start, in_end) {
 autoTransition2(element, 'color 1.5s ease-out', 'blue', 'white');
 ```
 
-By specifying the shorthand of CSS Transitions and the start and end values of `transition-property`, you can execute animations related to elements.
+By specifying the shorthand of CSS Transitions and the start and end values of transition-property, you can execute animations related to elements.
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/dialog.gif' />
 
