@@ -124,17 +124,17 @@ button.addEventListener('click', in_ev => {
 
 これで無事 screenshot 機能が実装できました。パワポスライドへの貼り付けをお試しください。
 
-## Raycasting の罠 3 選
+## レイキャストの罠 3 選
 
-Three.js アプリではタッチやマウスイベントが発生した座標と、オブジェクトとの交点を求めるために <a href='https://threejs.org/docs/#api/en/core/Raycaster'>Raycasting</a> を使います。
+Three.js アプリではタッチやマウスイベントが発生した座標と、オブジェクトとの交点を求めるために <a href='https://threejs.org/docs/#api/en/core/Raycaster'>レイキャスト</a> を使います。
 
 > Raycasting is used for mouse picking (working out what objects in the 3d space the mouse is over) amongst other things.
 
-ここでは Raycasting 関連の 3 つの罠 … あるいは失敗 … をご紹介します。
+ここではレイキャスト関連の 3 つの罠 … あるいは失敗 … をご紹介します。
 
 ### 1. でしゃばる AxesHelper
 
-<a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> や <a href='https://pj-corridor.net/cube3d/cube3d.html'>ルービックキューブ</a> では、`touchstart` や `mousedown` イベントが発生した座標からの Raycasting が …
+<a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> や <a href='https://pj-corridor.net/cube3d/cube3d.html'>ルービックキューブ</a> では、`touchstart` や `mousedown` イベントが発生した座標からのレイキャストが …
 
 1. `Secen` 内のオブジェクトと交点を持つ場合
    - 交点を持つパーツをドラッグする
@@ -161,13 +161,13 @@ const intersects = raycaster.intersectObjects(children);
 1. パーツをドラッグしたタイミングで `Scene` に操作用のオブジェクトを追加
    - 対象パーツの height と同じ半径を持つ `SphereGeometry`
    - その `SphereGeometry` の中心を通り法線ベクトルが `PerspectiveCamera` を向いた `CircleGeometry`
-2. `touchmove` や `mousemove` イベントが発生した座標からの Raycasting と操作用のオブジェクトの交点方向を、ドラッグしたパーツが `lookAt()`（<a href='https://threejs.org/docs/#api/en/core/Object3D.lookAt'>仕様</a>）する
+2. `touchmove` や `mousemove` イベントが発生した座標からのレイキャストと操作用のオブジェクトの交点方向を、ドラッグしたパーツが `lookAt()`（<a href='https://threejs.org/docs/#api/en/core/Object3D.lookAt'>仕様</a>）する
 
 のような仕組みになっています。デバッグ用に操作用のオブジェクトを着色し、棒人間の手を動かしている様子をご覧ください。
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/CircleGeometry.gif' />
 
-空間内のパーツの位置に応じて、オブジェクトの反対方向から Raycasting することもあるのですが、その状況で怪しい挙動になります。調べたところ `SphereGeometry` は背面からの Raycasting と交点を持たないことがわかりました。常に `PerspectiveCamera` 側を向いている `CircleGeometry` だけに、まさに盲点でした ^^;
+空間内のパーツの位置に応じて、オブジェクトの反対方向からレイキャストすることもあるのですが、その状況で怪しい挙動になります。調べたところ `SphereGeometry` は背面からのレイキャストと交点を持たないことがわかりました。常に `PerspectiveCamera` 側を向いている `CircleGeometry` だけに、まさに盲点でした ^^;
 
 この場合、例えば
 
@@ -181,9 +181,9 @@ const circle = new THREE.Mesh(geometry, material);
 
 ### 3. 見た目と異なる SkinnedMesh
 
-<a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間</a> や <a href='https://pj-corridor.net/stick-figure/hand.html'>手</a> では `SkinnedMesh` を使ってパーツを滑らかに曲げています。ここまではよいのですが、問題は曲げたパーツが Raycasting と交点を持たないことでした。それらしき情報は <a href='https://threejs.org/docs/#api/en/objects/SkinnedMesh'>ドキュメント</a> に記載がありませんが … 何故だろう。
+<a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間</a> や <a href='https://pj-corridor.net/stick-figure/hand.html'>手</a> では `SkinnedMesh` を使ってパーツを滑らかに曲げています。ここまではよいのですが、問題は曲げたパーツがレイキャストと交点を持たないことでした。それらしき情報は <a href='https://threejs.org/docs/#api/en/objects/SkinnedMesh'>仕様</a> に記載がありませんが … 何故だろう。
 
-フォーラムや `SkinnedMesh` の <a href='https://github.com/mrdoob/three.js/blob/master/src/objects/SkinnedMesh.js'>実装</a> を調べ、実際の頂点データは変更せずにボーンの影響を計算～描画していることは理解できました。そこでラフな代替頂点データとして `SkinnedMesh.skeleton.bones` を使った `ExtrudeGeometry`（<a href='https://threejs.org/docs/#api/en/geometries/ExtrudeGeometry'>仕様</a>）を作り、それと Raycasting との交点をドラッグすることでゴム人間の操作を実現できました。
+フォーラムや `SkinnedMesh` の <a href='https://github.com/mrdoob/three.js/blob/master/src/objects/SkinnedMesh.js'>実装</a> を調べ、実際の頂点データは変更せずにボーンの影響を計算～描画していることは理解できました。そこでラフな代替頂点データとして `SkinnedMesh.skeleton.bones` を使った `ExtrudeGeometry`（<a href='https://threejs.org/docs/#api/en/geometries/ExtrudeGeometry'>仕様</a>）を作り、それとレイキャストとの交点をドラッグすることでゴム人間の操作を実現できました。
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/rubber-figure.gif' />
 
