@@ -2,7 +2,7 @@
 
 [<a href='https://github.com/nakayama-kazuki/202x/tree/main/threejs'>Japanese article</a>]
 
-Hello, my name is Nakayama. I was previously an advertising engineer and am currently a data platform engineer. In this article, I will share insights gained through my hobby of developing Three.js applications, such as common pitfalls for beginners, browser compatibility issues, and their solutions. I would like to express my gratitude to TECHSCORE BLOG for kindly allowing me to publish this article, as we have collaborated before at SynergyMarketing. Thank you very much !
+Hello, my name is pj-corridor, previously an advertising engineer and currently a data platform engineer. In this article, I will share insights gained through my hobby of developing Three.js applications, such as common pitfalls for beginners, browser compatibility issues, and their solutions. BTW, I would like to express my gratitude to TECHSCORE BLOG for kindly allowing me to publish this article, as we have collaborated before at SynergyMarketing. Thank you very much !
 
 Let\'s start by introducing the Three.js applications.
 
@@ -124,7 +124,7 @@ button.addEventListener('click', in_ev => {
 
 This way, I successfully implemented the screenshot feature. Please try pasting it into PowerPoint slides.
 
-## Three Raycasting Traps, pun intended with Three.js !
+## Three Three.js Raycasting Traps
 
 In Three.js applications, <a href='https://threejs.org/docs/#api/en/core/Raycaster'>raycasting</a> is used to determine the intersection between the coordinates where touch or mouse events occur and objects.
 
