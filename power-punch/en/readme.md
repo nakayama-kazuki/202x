@@ -78,46 +78,43 @@ You can also use radial lines or background colors. In this case, having a set o
 
 ## 5. Insights from Change
 
-Things that are hard to notice only in snapshots can become apparent by demonstrating change, making it easier for participants to gain insights. This is a doodle used in discussions on real projects. With a doodle that omits several changes in a Before & After format, participants\' thoughts cannot keep up.
-
-★★★
-
-
-
+Things that are hard to notice only in snapshots can become apparent by demonstrating change, making it easier for participants to gain insights. This is a doodle used in discussions on real projects. With a doodle only Before & Afte, which omits several changes in process, participants\' thoughts cannot keep up.
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-006.gif' />
 
-By inserting ponchi★★★-e that express multiple changes in between, you can draw out more perspectives from participants, leading to early detection and improvement of issues.
+By inserting doodles that express several changes in between, you can draw out more perspectives from participants, leading to the early detection and improvement of issues.
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-007.gif' />
 
-For example, you might gain insights like this at each step:
+For example, you might gain insights like this at each step :
 
-1. Use flipbook-style animation to appeal to participants' mental models about "integration of A and B." Participants will then be concerned about attribute information or state conflicts linked to A and B and will demonstrate creativity to resolve them.
-2. Explain that C requires special treatment, including the background. Participants will then understand that this state is challenging to express in the UI.
-3. Explain the proposal that aligns the treatment of D and E with C, maintaining consistency overall. Participants will then deepen their understanding of the Before & After based on the background and simultaneously begin exploring better alternatives.
+1. In this step, presenter uses several changes to appeal to participants\' mental models about the "integration of A and B". Participants will then be concerned about attribute information or state conflicts linked to A and B and will demonstrate creativity to resolve them.
+2. In this step, presenter explains that C requires special treatment, including the background. Participants will then understand that this state is challenging to express in the UI.
+3. In this step, presenter explains proposal that aligns the treatment of D and E with C, maintaining consistency overall. Participants will then deepen their understanding of the Before & After based on the background and simultaneously begin exploring better alternatives.
 
-On a side note, when someone starts using the pen tool, other participants tend to wait (in a state of suspended thinking) while watching the screen until it's completed. Then, the finished modern art confuses participants anew.
+You can expect to draw out participants\' creativity in this way.
+
+On a side note, when someone starts using the pen tool of online meeting system, other participants tend to wait (in a state of suspended thinking) while watching the screen until it's completed. Then, the finished modern art confuses participants anew.
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/pen.png' />
 
-The pen tool promotes interactivity through visual stimulation, but it seems more effective when used simply, such as:
+The pen tool promotes interactivity through visual stimulation, but it seems more effective when used simply, such as :
 
 - Adding a few lines
-- Marking elements with "○" or "×"
+- Marking elements with "o" or "x"
 - Drawing one or two additional elements
 
-With ponchi★★★-e that express multiple states, you can easily select a base that matches the discussion point, maximizing the effect of the pen tool.
+With doodles that inlude several changes, you can easily select a base doodle that matches the discussion point, maximizing the effect of the pen tool.
 
 ## 6. Avoid Preconceptions
 
-Stimulating participants' creativity is one goal, but be mindful of preconceptions, misunderstandings, and distractions that hinder understanding. For example, if size is a discussion point, the ponchi★★★-e should represent size relationships without causing misunderstandings.
+As stimulating participants\' creativity is one goal, be mindful of preconceptions, misunderstandings, and distractions that hinder understanding. For example, if size is a discussion point, the doodle should represent size relationships without causing misunderstandings.
 
-Also, when expressing connections, minimize misunderstandings. In the following ponchi★★★-e, when connecting boxes with the same alphabet, the keyline connector is out of the question, and there is room for improvement with straight or curved lines.
+Also, when expressing connections, it\'s important to minimize misunderstandings. In the following doodle, when connecting boxes labeled with the same letter, using an elbow connector is not recommended. Instead, there is room for improvement by using straight or curved lines.
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-008.gif' />
 
-For example, how about visual separation of intersections using masks?
+For example, how about visual separation of intersections using masks ?
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-009.gif' />
 
@@ -125,33 +122,33 @@ Shifting the intersection itself might also work.
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-010.gif' />
 
-You can move connectors to the front or change the order of masks and connectors using "Format Shape" → "Selection Pane."
+You can move connectors to the front or change the order of masks and connectors using "Format Shape" + "Selection Pane".
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/layer.png' />
 
-Next, let's express the relationship of the vertices of an equilateral triangle with ponchi★★★-e. When positioning an equilateral triangle at the center of a slide according to PowerPoint guides, the center and centroid of the triangle do not align. Therefore, a ponchi★★★-e connecting each vertex from the center may give the impression that vertex A is a special entity, which is inappropriate for expressing equal relationships.
+Next, let's express the relationship of the vertices of an equilateral triangle with doodle. When positioning an equilateral triangle at the center of a slide according to PowerPoint guides, the center and centroid of the triangle do not align. Therefore, a doodle connecting each vertex from the center may give the impression that vertex A is a special entity, which is inappropriate for expressing equal relationships.
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-011.gif' />
 
-A ponchi★★★-e connecting each vertex from the centroid (intersection of perpendicular lines) of an equilateral triangle can clearly indicate the equal relationship of each vertex.
+A doodle connecting each vertex from the centroid of an equilateral triangle can clearly indicate the equal relationship of each vertex.
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-012.gif' />
 
-In the case of a regular pentagon, a ponchi★★★-e connecting each vertex from the center of the guide reveals the source of discomfort when rotated.
+In the case of a regular pentagon, a doodle connecting each vertex from the center of the guide reveals the source of discomfort when rotated.
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-013.gif' />
 
-A ponchi★★★-e connecting each vertex from the centroid maintains a beautiful regular pentagon even when rotated.
+A doodle connecting each vertex from the centroid maintains a beautiful regular pentagon even when rotated.
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-014.gif' />
 
-Next is a topic specific to concrete examples, but ponchi★★★-e often express API offerings or data exchanges. In this case, the direction of the HTTP request calling the API and the direction of data exchange may be the same or opposite. Be careful not to cause preconceptions or misunderstandings about what the arrows in the ponchi★★★-e intend.
+Next is a topic specific to concrete examples. A doodle often expresses API offerings or data exchanges. In this case, the direction of the HTTP request calling the API and the direction of data exchange may not only be the same but also opposite. Be careful not to cause preconceptions or misunderstandings about what the arrows in the doodle are intended to represent.
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-025.gif' />
 
-## 7. Which Storage?
+## 7. Which Preset Storage ?
 
-Ponchi-e often represents storage, but PowerPoint shapes include two types of cylinders that resemble storage. Cylinder A cannot adjust the shape of the bottom, resulting in awkward perspective when elongated. Which cylinder should be used?
+A doodle often represents storage, especially for system use, but PowerPoint has two types of preset storage. Cylinder A cannot adjust the shape of the bottom, resulting in awkward perspective when elongated. Which cylinder should be used ?
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-015.gif' />
 
@@ -159,19 +156,19 @@ Cylinder B allows for expressing data accumulation or proportions in storage by 
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-016.gif' />
 
-## 8. Ponchi-e in Tables
+## 8. Doodle in Tables
 
-There are times when you want to express the behavior for each use case using both tables and ponchi★★★-e. While separating tables and ponchi★★★-e into different slides makes the material tidy, you have to navigate between slides to understand what happens in each case.
+There are times when you want to express the behavior for each use case using both tables and doodles. While separating tables and doodles into different slides makes the material tidy, you have to navigate between slides to understand what happens in each case.
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-017.gif' />
 
-How about turning the entire table into a ponchi★★★-e? Although it may look cluttered, it succinctly expresses what happens in each case. It's also possible to embed the ponchi★★★-e part using Slide Zoom (though it can only be zoomed during slide shows).
+How about making a doodle into table ? Although it may look cluttered, it succinctly expresses what happens in each case. It's also possible to embed the doodle part using Slide Zoom.
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-018.png' />
 
 ## 9. You Can Draw Anything
 
-Generative AI improves accuracy with specific examples, but specific examples are beneficial when dealing with humans too. By providing specific examples as input, you can set expectations for the direction of arguments and feedback, enabling more targeted discussions. Finally, I'll share how to draw ponchi★★★-e with high flexibility.
+Like generative AI improves accuracy with specific examples, specific examples are beneficial when dealing with humans too. By providing specific examples as input, you can set expectations for the direction of arguments and feedback, enabling more targeted discussions. Finally, for your specific examples, I\'ll share how to draw doodles with high flexibility.
 
 For example, a diamond can be created by:
 
@@ -181,11 +178,11 @@ For example, a diamond can be created by:
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-019.gif' />
 
-Bags and wallets can be drawn easily. Reuse them in ponchi★★★-e showing advertisements or EC-specific examples.
+Bags and wallets can be drawn easily. Reuse them for advertisements or EC-specific examples.
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-020.png' />
 
-For more flexible ponchi★★★-e preparation, prepare a shape with rounded edges by surrounding a square with curves.
+For more flexible doodle preparation, prepare a shape with rounded edges by surrounding a square with curves.
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-021.gif' />
 
@@ -197,13 +194,17 @@ Connect and join these to create a stick figure.
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-023.gif' />
 
+When you'd like to use stick figures more easily, please check out my <a href='https://pj-corridor.net/stick-figure/gallery/index.html'>Stick Figure Gallery</a> made by Three.js. You can find something close to your image and make slight adjustments to obtain the desired stick figure material.
+
+<img width='300' src='https://pj-corridor.net/images/figure-gallery.png' />
+
 As a side note, PNG or JPG images can also be color-adjusted or have their backgrounds removed in PowerPoint. For example, when expressing multiple characters with PNG image icons, you can handle it with color adjustments without preparing different images.
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/img.png' />
 
 ## Conclusion
 
-Thank you for reading this far. In fact, PowerPonchi is still in the process of trial and error and improvement, and it is not yet systematically organized, with ongoing updates planned. The burden of drawing ponchi★★★-e remains a challenge. On the other hand, within the scope summarized in this article, we have been able to experience its effectiveness through actual work, and we hope that readers will try it as a means to improve online communication.
+Thank you for reading this far. In fact, my method using doodles is still in the process of trial and error and improvement, and it is not yet systematically organized, with ongoing updates planned. The burden of drawing doodle remains a challenge. On the other hand, within the scope summarized in this article, we have been able to experience its effectiveness through actual work, and we hope that readers will try it as a means to improve online communication.
 
 The PowerPoint file used in this article is available [here](https://github.com/nakayama-kazuki/2021/blob/master/pptx/power-punch-v2.pptx), so feel free to use it.
 
