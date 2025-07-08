@@ -28,7 +28,7 @@ I developed various puzzles by expanding on the classic Three.js study subject, 
 - <a href='https://pj-corridor.net/cube3d/caterpillar.html'>Cube with Anomalous Rotations</a>
 - <a href='https://pj-corridor.net/cube3d/diamond.html'>Diamond-Shaped Puzzle</a>
 - <a href='https://pj-corridor.net/cube3d/gemini.html'>Twin Cube</a>
-- <a href='https://pj-corridor.net/side-six/side-six.htmll'>Cylinder-Shaped Puzzle</a>
+- <a href='https://pj-corridor.net/side-six/side-six.html'>Cylinder-Shaped Puzzle</a>
 
 ### Stick Figures
 
@@ -60,7 +60,7 @@ In <a href='https://pj-corridor.net/stick-figure/stick-figure.html'>Stick Figure
 
 For example, in the following code :
 
-```
+```javascript
 const w = 400;
 const h = 400;
 
@@ -81,16 +81,16 @@ scene.add(box);
 
 renderer.render(scene, camera);
 
-// (1)
+// (1) capture the canvas image right after WebGLRenderer.render()
 console.log(renderer.domElement.toDataURL('image/png'));
 
 setTimeout(() => {
-    // (2)
+    // (2) capture the canvas image in a timer event handler
     console.log(renderer.domElement.toDataURL('image/png'));
 }, 0);
 
 button.addEventListener('click', in_ev => {
-    // (3)
+    // (3) capture the canvas image in a click event handler
     console.log(renderer.domElement.toDataURL('image/png'));
 });
 
@@ -98,7 +98,7 @@ button.addEventListener('click', in_ev => {
 
 At the timing of (1), `toDataURL()` provides the expected output, but at (2) and (3), it doesn\'t work. This is because the `WebGLRenderer` automatically clears the draw buffer after rendering each frame. By trying to set `WebGLRenderer.preserveDrawingBuffer` (<a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.preserveDrawingBuffer'>reference</a>) to retain the draw buffer :
 
-```
+```javascript
 const renderer = new THREE.WebGLRenderer({preserveDrawingBuffer : true});
 ```
 
@@ -108,15 +108,15 @@ You can obtain the expected output even at the asynchronous timings of (2) and (
 
 Given the non-normative note and past related bugs reported in WebKit, I decided not to change the default `false` for the drawing buffer setting and instead re-render just before `toDataURL()`.
 
-```
+```javascript
 setTimeout(() => {
-    // (2)
+    // (2) capture the canvas image in a timer event handler
     renderer.render(scene, camera);
     console.log(renderer.domElement.toDataURL('image/png'));
 }, 0);
 
 button.addEventListener('click', in_ev => {
-    // (3)
+    // (3) capture the canvas image in a click event handler
     renderer.render(scene, camera);
     console.log(renderer.domElement.toDataURL('image/png'));
 });
@@ -149,7 +149,7 @@ This is the common UX. However, when I added an `AxesHelper` (three-colored line
 
 The reason was that `AxesHelper` itself was a target for `Raycaster.intersectObject()` (<a href='https://threejs.org/docs/#api/en/core/Raycaster.intersectObject'>reference</a>). To address this, either consider intersections with it or exclude its influence before checking intersections, as shown below.
 
-```
+```javascript
 const children = scene.children.filter(in_child => !(in_child instanceof THREE.AxesHelper));
 const intersects = raycaster.intersectObjects(children);
 ```
@@ -171,7 +171,7 @@ Sometimes, raycasting occurs from the opposite direction of the object in 3d spa
 
 In this case, you can use a material for both sides, for example :
 
-```
+```javascript
 const geometry = new THREE.CircleGeometry(100, 32);
 const material = new THREE.MeshNormalMaterial({side : THREE.DoubleSide});
 const circle = new THREE.Mesh(geometry, material);
@@ -211,7 +211,7 @@ Therefore, by placing `WebGLRenderer.domElement` inside an `iframe` :
 
 I considered addressing it like this.
 
-```
+```javascript
 function createOuterWindow(in_document) {
     const iframe = in_document.createElement('iframe');
     Object.assign(iframe.style, {
@@ -241,7 +241,7 @@ However, while it worked as expected in Chrome (137.0), `WebGLRenderer.domElemen
 
 How about this timing ?
 
-```
+```javascript
 const outerWin = createOuterWindow(document);
 
 outerWin.addEventListener('load', () => {
@@ -254,7 +254,7 @@ outerWin.addEventListener('load', () => {
 
 This time, it worked as expected in Firefox, but the event did not execute in Chrome. Related discussions can be found in <a href='https://github.com/whatwg/html/issues/6863'>stop triggering navigations to about:blank on iframe insertion</a>, but by delaying the processing to the next event loop, I achieved the expected behavior in both browsers, so I decided to leave it at that for now and document it.
 
-```
+```javascript
 const outerWin = createOuterWindow(document);
 
 // asynchronous process for Firefox
@@ -272,7 +272,7 @@ With this, I finally managed to keep up with automatic ad insertion for coordina
 
 Now that AdSense implementation is settled, I want to brush up on the overall UX. In my Three.js apps, `WebGLRenderer` rendering adopts animation expressions overall, but I want to adopt similar UX for rendering regular HTML elements (such as dialog displays) as well. However, I don\'t want to disperse animation-related descriptions like CSS `@keyframes` definitions. Here\'s an implementation I came up with to manage it simply and centrally with JavaScript code only.
 
-```
+```javascript
 function autoTransition1(in_elem, in_shorthand, in_start, in_end) {
     return new Promise(in_resolve => {
         let [prop,,, delay = '0s'] = in_shorthand.split(/\s+/);
