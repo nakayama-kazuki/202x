@@ -28,7 +28,7 @@
 - <a href='https://pj-corridor.net/cube3d/caterpillar.html'>ピースの回転が変則的なキューブ</a>
 - <a href='https://pj-corridor.net/cube3d/diamond.html'>ダイヤモンド型のパズル</a>
 - <a href='https://pj-corridor.net/cube3d/gemini.html'>双子のキューブ</a>
-- <a href='https://pj-corridor.net/side-six/side-six.htmll'>シリンダ型のパズル</a>
+- <a href='https://pj-corridor.net/side-six/side-six.html'>シリンダ型のパズル</a>
 
 ### 棒人間
 
@@ -60,7 +60,7 @@
 
 例えばこのようなコードの場合
 
-```
+```javascript
 const w = 400;
 const h = 400;
 
@@ -81,16 +81,16 @@ scene.add(box);
 
 renderer.render(scene, camera);
 
-// (1)
+// (1) capture the canvas image right after WebGLRenderer.render()
 console.log(renderer.domElement.toDataURL('image/png'));
 
 setTimeout(() => {
-    // (2)
+    // (2) capture the canvas image in a timer event handler
     console.log(renderer.domElement.toDataURL('image/png'));
 }, 0);
 
 button.addEventListener('click', in_ev => {
-    // (3)
+    // (3) capture the canvas image in a click event handler
     console.log(renderer.domElement.toDataURL('image/png'));
 });
 
@@ -98,7 +98,7 @@ button.addEventListener('click', in_ev => {
 
 コードの (1) のタイミングでは `toDataURL()` で期待した出力が得られますが (2) や (3) のタイミングではうまくいきません。この理由は `WebGLRenderer` が、各フレームのレンダリング後に自動的に描画バッファを消去してしまうためでした。試しに `WebGLRenderer.preserveDrawingBuffer`（<a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.preserveDrawingBuffer'>仕様</a>）で描画バッファを保持する設定にしてみると
 
-```
+```javascript
 const renderer = new THREE.WebGLRenderer({preserveDrawingBuffer : true});
 ```
 
@@ -108,15 +108,15 @@ const renderer = new THREE.WebGLRenderer({preserveDrawingBuffer : true});
 
 との non-normative があり、過去には WebKit で関連するバグも報告されていたため、描画バッファの設定はデフォルトの `false` を変更せず `toDataURL()` の直前で再度レンダリングすることにします。
 
-```
+```javascript
 setTimeout(() => {
-    // (2)
+    // (2) capture the canvas image in a timer event handler
     renderer.render(scene, camera);
     console.log(renderer.domElement.toDataURL('image/png'));
 }, 0);
 
 button.addEventListener('click', in_ev => {
-    // (3)
+    // (3) capture the canvas image in a click event handler
     renderer.render(scene, camera);
     console.log(renderer.domElement.toDataURL('image/png'));
 });
@@ -136,10 +136,10 @@ Three.js アプリではタッチやマウスイベントが発生した座標�
 
 <a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> や <a href='https://pj-corridor.net/cube3d/cube3d.html'>ルービックキューブ</a> では、`touchstart` や `mousedown` イベントが発生した座標からのレイキャストが …
 
-1. `Secen` 内のオブジェクトと交点を持つ場合
+1. `Scene` 内のオブジェクトと交点を持つ場合
    - 交点を持つパーツをドラッグする
    - `touchmove` や `mousemove` でパーツを操作（例えばポーズの変更）
-2. `Secen` 内のオブジェクトと交点を持たない場合
+2. `Scene` 内のオブジェクトと交点を持たない場合
    - その座標をドラッグする
    - `touchmove` や `mousemove` でオブジェクトを回転（実際にはオブジェクト自身の回転ではなく、オブジェクト方向を向き続ける `PerspectiveCamera` が `touchmove` や `mousemove` イベントの反対方向に移動する）
 
@@ -149,7 +149,7 @@ Three.js アプリではタッチやマウスイベントが発生した座標�
 
 この理由は `AxesHelper` 自身も `Raycaster.intersectObject()`（<a href='https://threejs.org/docs/#api/en/core/Raycaster.intersectObject'>仕様</a>）の対象となるためでした。それを考慮して交点をチェックするか、チェック手前で `AxesHelper` の影響を排除しておきましょう。
 
-```
+```javascript
 const children = scene.children.filter(in_child => !(in_child instanceof THREE.AxesHelper));
 const intersects = raycaster.intersectObjects(children);
 ```
@@ -171,7 +171,7 @@ const intersects = raycaster.intersectObjects(children);
 
 この場合、例えば
 
-```
+```javascript
 const geometry = new THREE.CircleGeometry(100, 32);
 const material = new THREE.MeshNormalMaterial({side : THREE.DoubleSide});
 const circle = new THREE.Mesh(geometry, material);
@@ -213,7 +213,7 @@ Three.js アプリは初期化時とウインドウのリサイズ時、適切�
 
 のように対応することを考えました。
 
-```
+```javascript
 function createOuterWindow(in_document) {
     const iframe = in_document.createElement('iframe');
     Object.assign(iframe.style, {
@@ -243,7 +243,7 @@ outerWin.addEventListener('resize', in_event => {
 
 このタイミングはどうでしょうか。
 
-```
+```javascript
 const outerWin = createOuterWindow(document);
 
 outerWin.addEventListener('load', () => {
@@ -256,7 +256,7 @@ outerWin.addEventListener('load', () => {
 
 今度は Firefox では期待動作となるものの、Chrome ではイベントが実行されません。関連議論が <a href='https://github.com/whatwg/html/issues/6863'>stop triggering navigations to about:blank on iframe insertion</a> にありますが、処理を次回イベントループまで遅延させることで両ブラウザともに期待動作に至ったため、いったんはこれで良しとしてコメントを残しておきます。
 
-```
+```javascript
 const outerWin = createOuterWindow(document);
 
 // asynchronous process for Firefox
@@ -274,7 +274,7 @@ setTimeout(() => {
 
 AdSense の導入が一段落したところで、最後に全体的に UX をブラッシュアップしたいと思います。Three.js アプリでの `WebGLRenderer` の描画は全体的にアニメーション表現を採用していますが、どうせなら通常の HTML 要素の描画（例えばダイアログ表示）でも同様の UX を採用したいですよね。とはいえ CSS の `@keyframes` 定義などアニメーションに関する記述を分散させたくありません。JavaScript コードのみでシンプルに一元的に管理できないかと考えた末の実装がこちらです。
 
-```
+```javascript
 function autoTransition1(in_elem, in_shorthand, in_start, in_end) {
     return new Promise(in_resolve => {
         let [prop,,, delay = '0s'] = in_shorthand.split(/\s+/);
