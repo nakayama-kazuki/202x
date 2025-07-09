@@ -2,9 +2,9 @@
 
 [<a href='https://github.com/nakayama-kazuki/202x/tree/main/threejs'>Japanese article</a>]
 
-Hello, my name is pj-corridor, previously an advertising engineer and currently a data platform engineer. In this article, I will share insights gained through my hobby of developing Three.js applications, such as common pitfalls for beginners, browser compatibility issues, and their solutions. BTW, I would like to express my gratitude to TECHSCORE BLOG for kindly allowing me to publish this article, as we have collaborated before at SynergyMarketing. Thank you very much !
+Hello, my name is pj-corridor, previously an advertising engineer and currently a data platform engineer. In this article, I will share insights gained through my hobby of developing Three.js applications, such as common beginner pitfalls, browser-compatibility issues, and their solutions. BTW, I would like to express my gratitude to TECHSCORE BLOG for kindly allowing me to publish this article, as we have collaborated before at SynergyMarketing. Thank you very much !
 
-Let\'s start by introducing the Three.js applications.
+Let\'s start by introducing some of my Three.js applications.
 
 ### A New Concept for Reversi
 
@@ -21,7 +21,7 @@ You might wonder, Is Three.js necessary for Reversi ? But with a 3D board that l
 
 <img width='300' src='https://pj-corridor.net/images/ix-cube1.png' />
 
-I developed various puzzles by expanding on the classic Three.js study subject, the Rubik\'s Cube. However, compared to <a href='https://www.youtube.com/@Z3Cubing'>Z3Cubing</a>, there\'s not enough. In the future, I aim to explore directions that cannot be realized with physical gadgets (such as <a href='https://pj-corridor.net/cube3d/caterpillar.html'>Cube with Anomalous Rotations</a>).
+I developed various puzzles by expanding on the classic Three.js study subject, the Rubik\'s Cube. However, my collection still pales in comparison to <a href='https://www.youtube.com/@Z3Cubing'>Z3Cubing</a>. In the future, I aim to explore directions that cannot be realized with physical gadgets (such as <a href='https://pj-corridor.net/cube3d/caterpillar.html'>Cube with Anomalous Rotations</a>).
 
 - <a href='https://pj-corridor.net/cube3d/cube3d.html'>Standard Rubik\'s Cube</a>
 - <a href='https://pj-corridor.net/cube3d/cube3d.html?level=3'>Cube with Anomalous Piece Shapes</a>
@@ -34,7 +34,7 @@ I developed various puzzles by expanding on the classic Three.js study subject, 
 
 <img width='300' src='https://pj-corridor.net/images/ix-figure.png' />
 
-I often create PowerPoint slides using a lot of simple illustration (<a href='https://lydesign.jp/n/n3aa55611b347'>This is a blog article</a> written in Japanese about simple illustration), but finding copyright-free stick figure materials to paste on slides can be a hassle. So, I decided to develop my own. Feel free to use them in your slides as well.
+I often create document using a lot of simple illustrations in PowerPoint slides (<a href='https://lydesign.jp/n/n3aa55611b347'>This is a blog article</a> written in Japanese about simple illustration), but finding copyright-free stick figure materials to paste on slides can be a hassle. So, I decided to develop my own. Feel free to use them in your slides as well.
 
 - <a href='https://pj-corridor.net/stick-figure/stick-figure.html'>Stick Figure (Joint Operation Posing)</a>
 - <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>Rubber Figure (Bend and Stretch Posing)</a>
@@ -128,7 +128,7 @@ This way, I successfully implemented the screenshot feature. Please try pasting 
 
 In Three.js applications, <a href='https://threejs.org/docs/#api/en/core/Raycaster'>raycasting</a> is used to determine the intersection between the coordinates where touch or mouse events occur and objects.
 
-> Raycasting is used for mouse picking (working out what objects in the 3d space the mouse is over) amongst other things.
+> Raycasting is used for mouse picking (working out what objects in the 3D space the mouse is over) amongst other things.
 
 Here, I will introduce three traps (or failures) related to raycasting.
 
@@ -167,7 +167,7 @@ Here\'s a demonstration with the operation object colored for debugging, showing
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/CircleGeometry.gif' />
 
-Sometimes, raycasting occurs from the opposite direction of the object in 3d space, and in that situation, it behaves strangely. I found that `SphereGeometry` does not intersect with raycasting from the back. Since `CircleGeometry` always faces the `PerspectiveCamera`, this was a blind spot ! ^^;
+Sometimes, raycasting occurs from the opposite direction of the object in 3D space, and in that case the hit-test behaves unexpectedly. I found that `SphereGeometry` does not intersect with raycasting from the back. Since `CircleGeometry` always faces the `PerspectiveCamera`, this was a blind spot ! ^^;
 
 In this case, you can use a material for both sides, for example :
 
@@ -179,7 +179,7 @@ const circle = new THREE.Mesh(geometry, material);
 
 ### 3. Why Do Bent SkinnedMeshes Lack Vertices ?
 
-In <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>Rubber Figure</a> and <a href='https://pj-corridor.net/stick-figure/hand.html'>Hand</a>, `SkinnedMesh` is used to smoothly bend parts. So far, so good, but the problem was that bent parts did not intersect with raycasting. While there was no information about this in the <a href='https://threejs.org/docs/#api/en/objects/SkinnedMesh'>documentation</a>, I wondered why.
+In <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>Rubber Figure</a> and <a href='https://pj-corridor.net/stick-figure/hand.html'>Hand</a>, `SkinnedMesh` is used to smoothly bend parts. That worked nicely, except that bent parts no longer hit in ray-casting. While there was no information about this in the <a href='https://threejs.org/docs/#api/en/objects/SkinnedMesh'>documentation</a>, I wondered why.
 
 After researching forums and the <a href='https://github.com/mrdoob/three.js/blob/master/src/objects/SkinnedMesh.js'>implementation</a>, I understood that the actual vertex data is not changed, and the influence of bones is calculated and drawn. So, I created an `ExtrudeGeometry`  (<a href='https://threejs.org/docs/#api/en/geometries/ExtrudeGeometry'>reference</a>) using `SkinnedMesh.skeleton.bones` as rough alternative vertex data, and by dragging the intersection with raycasting, I was able to manipulate the rubber figure.
 
@@ -209,7 +209,7 @@ Therefore, by placing `WebGLRenderer.domElement` inside an `iframe` :
    - Resize `width` and `height` of `WebGLRenderer.domElement`
    - Change settings for coordinate processing and rendering
 
-I considered addressing it like this.
+I tried the following approach.
 
 ```javascript
 function createOuterWindow(in_document) {
