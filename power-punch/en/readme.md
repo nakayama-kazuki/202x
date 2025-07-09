@@ -27,9 +27,9 @@ While using existing materials is rational from the perspective of reducing prep
 
 ## 2. Increase the Number of Pages
 
-First, don\'t hesitate to increasing the number of pages. However, increasing the number of pages is not the same as overwhelming participants with voluminous materials. The goal is to enhance the quality of online communication.
+First, don\'t hesitate to increase the number of pages. However, increasing the number of pages is not the same as overwhelming participants with voluminous materials. The goal is to enhance the quality of online communication.
 
-For example, having participants navigate back and forth between slides or transitioning to linked content to reference specific information can hinder understanding and discussion. If you want to repeatedly refer to the same slide, it should be reinserted each time. If you are concerned about omissions due to copying, you can manage slides that are repeatedly referenced as a slide master layout.
+For example, having participants navigate back and forth between slides or transitioning to linked content to reference specific information can hinder understanding and discussion. If you want to repeatedly refer to the same slide, it should be reinserted each time. If you are concerned about maintenance errors caused by copying, you can manage slides that need to be reused as slide-master layouts.
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/slide-master-1.png' />
 
@@ -41,7 +41,7 @@ Now, let's increase the number of pages further. With that mindset, let me intro
 
 ## 3. Where We Are Now
 
-Participants may feel stressed about leaving inconsistencies or unclear points unresolved, even if they don't want to interrupt the conversation with trivial questions. Therefore, insert slides that clearly indicate when the topic changes (in this case, I reccomend to use slides with inverted brightness) and visualize the progress at the same time.
+Participants may feel stressed about leaving inconsistencies or unclear points unresolved, even if they don't want to interrupt the conversation with trivial questions. Therefore, insert slides that clearly indicate when the topic changes (in this case, I recommend to use slides with inverted brightness) and visualize the progress at the same time.
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-001.png' />
 
@@ -68,7 +68,7 @@ The slide created using these steps looks like this :
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-003.gif' />
 
-By overlaying a dark color, for exapmle, 50% transparency black, it looks like this :
+By overlaying a dark color, for example, 50% transparency black, it looks like this :
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-004.gif' />
 
@@ -78,7 +78,7 @@ You can also use radial lines or background colors. In this case, having a set o
 
 ## 5. Insights from Change
 
-Things that are hard to notice only in snapshots can become apparent by demonstrating change, making it easier for participants to gain insights. This is a doodle used in discussions on real projects. With a doodle only Before & Afte, which omits several changes in process, participants\' thoughts cannot keep up.
+Things that are hard to notice only in snapshots can become apparent by demonstrating change, making it easier for participants to gain insights. This is a doodle used in discussions on real projects. With a doodle only Before & After, which omits several changes in process, participants\' thoughts cannot keep up.
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-006.gif' />
 
@@ -104,7 +104,7 @@ The pen tool promotes interactivity through visual stimulation, but it seems mor
 - Marking elements with "o" or "x"
 - Drawing one or two additional elements
 
-With doodles that inlude several changes, you can easily select a base doodle that matches the discussion point, maximizing the effect of the pen tool.
+With doodles that include several changes, you can easily select a base doodle that matches the discussion point, maximizing the effect of the pen tool.
 
 ## 6. Avoid Preconceptions
 
@@ -162,7 +162,7 @@ There are times when you want to express the behavior for each use case using bo
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-017.gif' />
 
-How about making a doodle into table ? Although it may look cluttered, it succinctly expresses what happens in each case. It's also possible to embed the doodle part using Slide Zoom.
+How about making a doodle into a table ? Although it may look cluttered, it succinctly expresses what happens in each case. It's also possible to embed the doodle part using Slide Zoom.
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-018.png' />
 
@@ -204,7 +204,7 @@ As a side note, PNG or JPG images can also be color-adjusted or have their backg
 
 ## Conclusion
 
-Thank you for reading this far. In fact, my method using doodles is still in the process of trial and error and improvement, and it is not yet systematically organized, with ongoing updates planned. The burden of drawing doodle remains a challenge. On the other hand, within the scope summarized in this article, we have been able to experience its effectiveness through actual work, and we hope that readers will try it as a means to improve online communication.
+Thank you for reading this far. In fact, my method using doodles is still in the process of trial and error and improvement, and it is not yet systematically organized, with ongoing updates planned. The burden of drawing doodles remains a challenge. On the other hand, within the scope summarized in this article, we have been able to experience its effectiveness through actual work, and we hope that readers will try it as a means to improve online communication.
 
 The PowerPoint file used in this article is available [here](https://github.com/nakayama-kazuki/2021/blob/master/pptx/power-punch-v2.pptx), so feel free to use it.
 
