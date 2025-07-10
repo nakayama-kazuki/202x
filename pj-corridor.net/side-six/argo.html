@@ -635,6 +635,20 @@ class cReversi {
 		[+1,  0],
 		[+1, +1]
 	];
+	static #directionPairs = (() => {
+		const pairs = [];
+		for (let i = 0; i < cReversi.#directions.length; i++) {
+			for (let j = i + 1; j < cReversi.#directions.length; j++) {
+				let [ax, ay] = cReversi.#directions[i];
+				let [bx, by] = cReversi.#directions[j];
+				// if the cross product is zero, the vectors are collinear
+				if ((ax * by - ay * bx) === 0) {
+					pairs.push([i, j])
+				}
+			}
+		}
+		return pairs;
+	})();
 	static #ignore = Symbol();
 	#area = {
 		items : [],
@@ -767,12 +781,10 @@ class cReversi {
 					}
 					towards.push(this.#posToIndex(currRow, currCol));
 				}
-				if (towards.length > 0) {
-					radiating.push(towards);
-				}
+				radiating.push(towards);
 			}
 		}
-		const argoArr = ['spiteful', 'balance', 'greedy', 'learner', 'classic', 'beginner', 'monkey'];
+		const argoArr = ['spiteful', 'balance', 'safety', 'greedy', 'learner', 'classic', 'beginner', 'monkey'];
 		for (let i = 0; i < argoArr.length; i++) {
 			this.#npcArgoPriority.push((argoArr.slice(0, i + 1))[arrRand]());
 		}
@@ -781,9 +793,11 @@ class cReversi {
 	#updateOptions(in_ix) {
 		const radiating = this.#conf.indexes.radiating[in_ix];
 		radiating.forEach(in_towards => {
-			const aroundIx = in_towards[0];
-			if (this.#getItemByIndex(aroundIx) === cReversi.#empty) {
-				this.#area.options.add(aroundIx);
+			if (in_towards.length > 0) {
+				const aroundIx = in_towards[0];
+				if (this.#getItemByIndex(aroundIx) === cReversi.#empty) {
+					this.#area.options.add(aroundIx);
+				}
 			}
 		});
 		// in_ix should be new occupied position
@@ -1304,6 +1318,48 @@ class cReversi {
 		(rollback)();
 		return count;
 	}
+	#isSafe(in_ix) {
+		const player = this.#getItemByIndex(in_ix);
+		const firstNeighbor = (in_arr, in_player) => {
+			for (let i = 0; i < in_arr.length; i++) {
+				const neighbor = this.#getItemByIndex(in_arr[i]);
+				if (neighbor !== in_player) {
+					return neighbor;
+				}
+			}
+			return null;
+		}
+		const radiating = this.#conf.indexes.radiating[in_ix];
+		return cReversi.#directionPairs.some(in_pair => {
+			const L = firstNeighbor(radiating[in_pair[0]], player);
+			const R = firstNeighbor(radiating[in_pair[1]], player);
+			// player reachs all the way to the board edge
+			if ((L === null) || (R === null)) {
+				return true;
+			}
+			// player reachs all the way to the DMZ
+			if ((L === cReversi.#dmz) || (R === cReversi.#dmz)) {
+				return true;
+			}
+			// both sides are bordered by the same object
+			if (L === R) {
+				return true;
+			}
+			return false;
+		});
+	}
+	#countNextOwnedSafeArea(in_player, in_ix) {
+		const rollback = this.#createRollback();
+		this.#flip(in_player, in_ix);
+		let count = 0;
+		for (let ix = 0; ix < this.#area.items.length; ix++) {
+			if (this.#getItemByIndex(ix) === in_player) {
+				count += this.#isSafe(ix) ? 1 : 0;
+			}
+		}
+		(rollback)();
+		return count;
+	}
 	#countNextOwnedArea(in_player, in_ix) {
 		const rollback = this.#createRollback();
 		this.#flip(in_player, in_ix);
@@ -1340,6 +1396,16 @@ class cReversi {
 		}
 		const evaluator = (in_player, in_ix) => {
 			return this.#evaluate(in_player, in_ix) + this.#countNextOption(in_player, in_ix);
+		};
+		const narrowedArr = cReversi.#maximize(evaluator, in_player, in_candArr);
+		return this.#npc_score_spot(in_player, narrowedArr);
+	}
+	#npc_max_owned_safe_area(in_player, in_candArr) {
+		if (this.#history.length < cReversi.#randomizeCnt) {
+			return this.#npc_random(in_player, in_candArr);
+		}
+		const evaluator = (in_player, in_ix) => {
+			return this.#evaluate(in_player, in_ix) + this.#countNextOwnedSafeArea(in_player, in_ix);
 		};
 		const narrowedArr = cReversi.#maximize(evaluator, in_player, in_candArr);
 		return this.#npc_score_spot(in_player, narrowedArr);
@@ -1384,6 +1450,7 @@ class cReversi {
 	#npcSet = {
 		spiteful : this.#npc_min_enemy_option,
 		balance : this.#npc_max_option,
+		safety : this.#npc_max_owned_safe_area,
 		greedy : this.#npc_max_owned_area,
 		learner : this.#npc_score_smart,
 		classic : this.#npc_score_total,
