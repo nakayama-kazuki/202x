@@ -31,7 +31,7 @@ First, don\'t hesitate to increase the number of pages. However, increasing the 
 
 For example, having participants navigate back and forth between slides or transitioning to linked content to reference specific information can hinder understanding and discussion. If you want to repeatedly refer to the same slide, it should be reinserted each time. If you are concerned about maintenance errors caused by copying, you can manage slides that need to be reused as slide-master layouts.
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/slide-master-1.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/slide-master-1-en.png' />
 
 Now, let's increase the number of pages further. With that mindset, let me introduce :
 
@@ -43,7 +43,7 @@ Now, let's increase the number of pages further. With that mindset, let me intro
 
 Participants may feel stressed about leaving inconsistencies or unclear points unresolved, even if they don't want to interrupt the conversation with trivial questions. Therefore, insert slides that clearly indicate when the topic changes (in this case, I recommend to use slides with inverted brightness) and visualize the progress at the same time.
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-001.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-001-en.png' />
 
 By doing this, you can expect effects such as :
 
@@ -124,7 +124,7 @@ Shifting the intersection itself might also work.
 
 You can move connectors to the front or change the order of masks and connectors using "Format Shape" + "Selection Pane".
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/layer.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/layer-en.png' />
 
 Next, let's express the relationship of the vertices of an equilateral triangle with doodle. When positioning an equilateral triangle at the center of a slide according to PowerPoint guides, the center and centroid of the triangle do not align. Therefore, a doodle connecting each vertex from the center may give the impression that vertex A is a special entity, which is inappropriate for expressing equal relationships.
 
@@ -200,7 +200,7 @@ When you'd like to use stick figures more easily, please check out my <a href='h
 
 As a side note, PNG or JPG images can also be color-adjusted or have their backgrounds removed in PowerPoint. For example, when expressing multiple characters with PNG image icons, you can handle it with color adjustments without preparing different images.
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/img.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/img-en.png' />
 
 ## Conclusion
 
