@@ -689,134 +689,160 @@ export class cCyclicValues extends Array {
 
 export const arrRand = Symbol();
 
-Array.prototype[arrRand] = function() {
-	return this[Math.floor(Math.random() * this.length)];
-};
+Object.defineProperty(Array.prototype, arrRand, {
+	value : function () {
+		return this[Math.floor(Math.random() * this.length)];
+	},
+	writable : true,
+	configurable : true,
+	enumerable : false
+});
 
 export const arrTrim = Symbol();
 
-Array.prototype[arrTrim] = function(in_value) {
-	let start = 0;
-	let end = this.length;
-	for (let i = 0; i < this.length; i++) {
-		if (this[i] === in_value) {
-			start++;
-		} else {
-			break;
+Object.defineProperty(Array.prototype, arrTrim, {
+	value : function (in_value) {
+		let start = 0;
+		let end = this.length;
+		for (let i = 0; i < this.length; i++) {
+			if (this[i] === in_value) {
+				start++;
+			} else {
+				break;
+			}
 		}
-	}
-	for (let i = this.length - 1; i >= start; i--) {
-		if (this[i] === in_value) {
-			end--;
-		} else {
-			break;
+		for (let i = this.length - 1; i >= start; i--) {
+			if (this[i] === in_value) {
+				end--;
+			} else {
+				break;
+			}
 		}
-	}
-	return this.slice(start, end);
-};
+		return this.slice(start, end);
+	},
+	writable : true,
+	configurable : true,
+	enumerable : false
+});
 
 export const forEachCombination = Symbol();
 
-Array.prototype[forEachCombination] = function(in_n, in_callback) {
-	const combine = (in_args, in_start, in_decrement) => {
-		if (in_decrement === 0) {
-			return (in_callback)(...in_args);
-		} else {
-			for (let i = in_start; i <= this.length - in_decrement; i++) {
-				in_args.push(this[i]);
-				if (combine(in_args, i + 1, in_decrement - 1)) {
-					return true;
-				} else {
-					in_args.pop();
+Object.defineProperty(Array.prototype, forEachCombination, {
+	value : function (in_n, in_callback) {
+		const combine = (in_args, in_start, in_decrement) => {
+			if (in_decrement === 0) {
+				return (in_callback)(...in_args);
+			} else {
+				for (let i = in_start; i <= this.length - in_decrement; i++) {
+					in_args.push(this[i]);
+					if (combine(in_args, i + 1, in_decrement - 1)) {
+						return true;
+					} else {
+						in_args.pop();
+					}
 				}
 			}
+			return false;
 		}
-		return false;
-	}
-	return (combine)([], 0, in_n);
-};
+		return (combine)([], 0, in_n);
+	},
+	writable : true,
+	configurable : true,
+	enumerable : false
+});
 
 export const clipArea = Symbol();
 
-HTMLCanvasElement.prototype[clipArea] = function(in_margin, in_callback) {
-	const w = this.width;
-	const h = this.height;
-	let ctx = this.getContext('2d');
-	if (!ctx) {
-		/*
-			*** NOTE ***
-			sometimes can't get 2D context ( ex. Three.js ).
-			so, to get it, copy bitmap to alternative canvas.
-		*/
-		const alternative = document.createElement('canvas');
-		alternative.width = w;
-		alternative.height = h;
-		ctx = alternative.getContext('2d');
-		ctx.drawImage(this, 0, 0);
-	}
-	const rgba = (ctx.getImageData(0, 0, w, h)).data;
-	let l = Number.POSITIVE_INFINITY;
-	let t = Number.POSITIVE_INFINITY;
-	let r = Number.NEGATIVE_INFINITY;
-	let b = Number.NEGATIVE_INFINITY;
-	for (let y = 0; y < h; y++) {
-		for (let x = 0; x < w; x++) {
-			const pt = (y * w + x) * 4;
-			if (!(in_callback)(rgba[pt + 0], rgba[pt + 1], rgba[pt + 2], rgba[pt + 3])) {
-				continue;
-			}
-			if (x < l) {
-				l = x;
-			}
-			if (y < t) {
-				t = y;
-			}
-			if (x > r) {
-				r = x;
-			}
-			if (y > b) {
-				b = y;
+Object.defineProperty(HTMLCanvasElement.prototype, clipArea, {
+	value : function (in_margin, in_callback) {
+		const w = this.width;
+		const h = this.height;
+		let ctx = this.getContext('2d');
+		if (!ctx) {
+			// in case of WebGLRenderer.domElement, 'webgl' instead of '2d'
+			const alternative = document.createElement('canvas');
+			alternative.width = w;
+			alternative.height = h;
+			ctx = alternative.getContext('2d');
+			ctx.drawImage(this, 0, 0);
+		}
+		const rgba = (ctx.getImageData(0, 0, w, h)).data;
+		let l = Number.POSITIVE_INFINITY;
+		let t = Number.POSITIVE_INFINITY;
+		let r = Number.NEGATIVE_INFINITY;
+		let b = Number.NEGATIVE_INFINITY;
+		for (let y = 0; y < h; y++) {
+			for (let x = 0; x < w; x++) {
+				const pt = (y * w + x) * 4;
+				if (!(in_callback)(rgba[pt + 0], rgba[pt + 1], rgba[pt + 2], rgba[pt + 3])) {
+					continue;
+				}
+				if (x < l) {
+					l = x;
+				}
+				if (y < t) {
+					t = y;
+				}
+				if (x > r) {
+					r = x;
+				}
+				if (y > b) {
+					b = y;
+				}
 			}
 		}
-	}
-	l = Math.max(l - in_margin, 0);
-	t = Math.max(t - in_margin, 0);
-	r = Math.min(r + in_margin, w - 1);
-	b = Math.min(b + in_margin, h - 1);
-	return {
-		l : l,
-		t : t,
-		r : r,
-		b : b,
-		w : r - l + 1,
-		h : b - t + 1
-	};
-};
+		l = Math.max(l - in_margin, 0);
+		t = Math.max(t - in_margin, 0);
+		r = Math.min(r + in_margin, w - 1);
+		b = Math.min(b + in_margin, h - 1);
+		return {
+			l : l,
+			t : t,
+			r : r,
+			b : b,
+			w : r - l + 1,
+			h : b - t + 1
+		};
+	},
+	writable : true,
+	configurable : true,
+	enumerable : false
+});
 
 export const clipClearArea = Symbol();
 
-HTMLCanvasElement.prototype[clipClearArea] = function(in_margin) {
-	return this[clipArea](in_margin, (in_r, in_g, in_b, in_a) => {
-		return (in_a > 0);
-	});
-}
+Object.defineProperty(HTMLCanvasElement.prototype, clipClearArea, {
+	value : function (in_margin) {
+		return this[clipArea](in_margin, (in_r, in_g, in_b, in_a) => {
+			return (in_a > 0);
+		});
+	},
+	writable : true,
+	configurable : true,
+	enumerable : false
+});
 
 export const fillRoundRect = Symbol();
 
-CanvasRenderingContext2D.prototype[fillRoundRect] = function(x, y, w, h, r) {
-	this.beginPath();
-	this.moveTo(x + r, y);
-	this.lineTo(x + w - r, y);
-	this.arc(x + w - r, y + r, r, Math.PI * (3 / 2), 0, false);
-	this.lineTo(x + w, y + h - r);
-	this.arc(x + w - r, y + h - r, r, 0, Math.PI * (1 / 2), false);
-	this.lineTo(x + r, y + h);
-	this.arc(x + r, y + h - r, r, Math.PI * (1 / 2), Math.PI, false);
-	this.lineTo(x, y + r);
-	this.arc(x + r, y + r, r, Math.PI, Math.PI * (3 / 2), false);
-	this.closePath();
-	this.fill();
-}
+Object.defineProperty(CanvasRenderingContext2D.prototype, fillRoundRect, {
+	value : function (x, y, w, h, r) {
+		this.beginPath();
+		this.moveTo(x + r, y);
+		this.lineTo(x + w - r, y);
+		this.arc(x + w - r, y + r, r, Math.PI * (3 / 2), 0, false);
+		this.lineTo(x + w, y + h - r);
+		this.arc(x + w - r, y + h - r, r, 0, Math.PI * (1 / 2), false);
+		this.lineTo(x + r, y + h);
+		this.arc(x + r, y + h - r, r, Math.PI * (1 / 2), Math.PI, false);
+		this.lineTo(x, y + r);
+		this.arc(x + r, y + r, r, Math.PI, Math.PI * (3 / 2), false);
+		this.closePath();
+		this.fill();
+	},
+	writable : true,
+	configurable : true,
+	enumerable : false
+});
 
 /*
 	(2) utilities related to Three.js
