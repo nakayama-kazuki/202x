@@ -769,9 +769,9 @@ class cReversi {
 	}
 	#neighborIndexes(in_ix) {
 		const pos = this.#indexToPos(in_ix);
-		return this.#neighborsPositions(pos.row, pos.col).map(([in_row, in_col]) => this.#posToIndex(in_row, in_col));
+		return this.#neighborPositions(pos.row, pos.col).map(([in_row, in_col]) => this.#posToIndex(in_row, in_col));
 	}
-	#neighborsPositions(in_row, in_col) {
+	#neighborPositions(in_row, in_col) {
 		const directions = this.#getDirSet(in_row, in_col);
 		const neighbor = [];
 		const sizeRow = this.#conf.row.size;
@@ -895,6 +895,7 @@ class cReversi {
 		const pairs = Array.from(this.#conf.dirSet.pair.values());
 		for (let ix = 0; ix < this.#area.items.length; ix++) {
 			const radiating = this.#conf.tagIxSet.radiating[ix];
+			// (2-1) corner
 			const isCorner = pairs.every(([in_pos, in_neg]) => {
 				const P = radiating[in_pos];
 				const N = radiating[in_neg];
@@ -904,12 +905,15 @@ class cReversi {
 				if ((N.length === 0) || (this.#getItemByIndex(N[0]) === cReversi.#dmz)) {
 					return true;
 				}
+				// both sides are available
 				return false;
 			});
 			if (!isCorner) {
 				continue;
+			} else {
+				this.#conf.tagIxSet.corner.push(ix);
 			}
-			this.#conf.tagIxSet.corner.push(ix);
+			// (2-2) xInside
 			const aroundCorner = this.#neighborIndexes(ix);
 			aroundCorner.forEach(in_around_ix => {
 				const candidates = this.#neighborIndexes(in_around_ix);
@@ -917,7 +921,9 @@ class cReversi {
 					return;
 				}
 				if (candidates.every(in_cand_ix => this.#getItemByIndex(in_cand_ix) === cReversi.#empty)) {
-					this.#conf.tagIxSet.xInside.push(in_around_ix);
+					if (!this.#conf.tagIxSet.xInside.includes(in_around_ix)) {
+						this.#conf.tagIxSet.xInside.push(in_around_ix);
+					}
 				}
 			});
 		}
@@ -1001,10 +1007,20 @@ class cReversi {
 		}
 	}
 	#fixedRowIndexes(in_row) {
-		return this.#lineIndexes(this.#posToIndex(in_row, 0), 90, this.#conf.col.edge);
+		const angleForFixedRow = 90;
+		if (this.#conf.dirSet.pair.has(angleForFixedRow)) {
+			return this.#lineIndexes(this.#posToIndex(in_row, 0), angleForFixedRow, this.#conf.col.edge);
+		} else {
+			return [];
+		}
 	}
 	#fixedColIndexes(in_col) {
-		return this.#lineIndexes(this.#posToIndex(0, in_col), 0, this.#conf.row.edge);
+		const angleForFixedCol = 0;
+		if (this.#conf.dirSet.pair.has(angleForFixedCol)) {
+			return this.#lineIndexes(this.#posToIndex(0, in_col), angleForFixedCol, this.#conf.row.edge);
+		} else {
+			return [];
+		}
 	}
 	#rotateItems(in_indexes, in_delta) {
 		const shifted = cReversi.#rotateArray(in_indexes, in_delta);
@@ -1268,7 +1284,7 @@ class cReversi {
 		};
 		registerStats('total');
 		const pos = this.#indexToPos(in_ix);
-		const corner_x4 = this.#conf.row.edge && this.#conf.col.edge;
+		const noLoop = this.#conf.row.edge && this.#conf.col.edge;
 		const ixIsEdge = in_dir => ((this.#conf[in_dir].edge) && ((pos[in_dir] === this.#conf[in_dir].size - 1) || (pos[in_dir] === 0)));
 		const ixIsRowEdge = ixIsEdge('row');
 		const ixIsColEdge = ixIsEdge('col');
@@ -1278,14 +1294,14 @@ class cReversi {
 		*/
 		const check = {
 			e : {
-				indexes : null,
+				indexes : [],
 				currItems : [],
 				nextItems : [],
 				currParsed : {},
 				nextParsed : {}
 			},
 			x : {
-				indexes : null,
+				indexes : [],
 				currItems : [],
 				nextItems : [],
 				increased : false
@@ -1303,13 +1319,13 @@ class cReversi {
 			if (ixIsColEdge) {
 				check.e.indexes = this.#fixedColIndexes(pos.col);
 			} else {
-				if (!corner_x4) {
-					registerStats('inside & without xInside');
+				if (!noLoop) {
+					registerStats('inside & loop = without xInside');
 					return 0;
 				}
 			}
 		}
-		if (corner_x4) {
+		if (noLoop) {
 			check.x.indexes = [];
 			for (let i = 0; i < tagIxSet.corner.length; i++) {
 				if (tagIxSet.corner[i] === in_player) {
@@ -1320,20 +1336,20 @@ class cReversi {
 				}
 			}
 		}
-		if (check.e.indexes) {
+		if (check.e.indexes.length > 0) {
 			check.e.currItems = this.#items(check.e.indexes);
 		}
-		if (check.x.indexes) {
+		if (check.x.indexes.length > 0) {
 			check.x.currItems = this.#items(check.x.indexes);
 		}
 		const rollback = this.#createRollback();
 		this.#flip(in_player, in_ix);
-		if (check.e.indexes) {
+		if (check.e.indexes.length > 0) {
 			check.e.nextItems = this.#items(check.e.indexes);
-			check.e.currParsed = cLineParser.parse(check.e.currItems, in_player, !corner_x4);
-			check.e.nextParsed = cLineParser.parse(check.e.nextItems, in_player, !corner_x4);
+			check.e.currParsed = cLineParser.parse(check.e.currItems, in_player, !noLoop);
+			check.e.nextParsed = cLineParser.parse(check.e.nextItems, in_player, !noLoop);
 		}
-		if (check.x.indexes) {
+		if (check.x.indexes.length > 0) {
 			check.x.nextItems = this.#items(check.x.indexes);
 			check.x.increased = !check.x.nextItems.every((in_item, in_ix) => in_item === check.x.currItems[in_ix]);
 		}
@@ -1661,6 +1677,43 @@ class cReversi {
 			console.log(in_key + ' : ' + taking);
 		});
 	}
+	_snapshot() {
+		const bg = new Map([
+			[0, 'red'],
+			[1, 'blue'],
+			[2, 'green'],
+			[3, 'yellow'],
+			[cReversi.#empty, 'silver']
+		]);
+		const rightMargin = 10;
+		const cellSize = 20;
+		const cellMargin = 5;
+		for (let row = 0; row < this.#conf.row.size; row++) {
+			for (let col = 0; col < this.#conf.col.size; col++) {
+				const item = this.#getItemByPos(row, col);
+				const cell = document.createElement('DIV');
+				let l = rightMargin + (cellSize + cellMargin) * col;
+				let t = rightMargin + (cellSize + cellMargin) * row;
+				const pair = this.#conf.dirSet.pair;
+				if (pair.has(90) && !pair.has(0)) {
+					l += (row % 2 === this.#conf.offset ? (cellSize + cellMargin) / 2 : 0);
+				}
+				if (!pair.has(90) && pair.has(0)) {
+					t += (col % 2 === this.#conf.offset ? (cellSize + cellMargin) / 2 : 0);
+				}
+				Object.assign(cell.style, {
+					width : cellSize + 'px',
+					height : cellSize + 'px',
+					background : bg.get(item),
+					border : 'solid gray 1px',
+					position : 'absolute',
+					left : l + 'px',
+					top : t + 'px'
+				});
+				document.body.appendChild(cell);
+			}
+		}
+	}
 	_debug(in_stop = true) {
 		const sources = {
 			default : this.#area.scores.default,
@@ -1835,20 +1888,7 @@ class cReversi {
 	}
 }
 
-const table1 = [
-	[9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
-	[9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
-	[9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
-	[9, 9, 9, 0, 1, 1, 9, 9, 9, 9],
-	[9, 9, 9, 0, 8, 0, 9, 9, 9, 9],
-	[9, 9, 9, 1, 1, 0, 9, 9, 9, 9],
-	[9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
-	[9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
-	[9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
-	[9, 9, 9, 9, 9, 9, 9, 9, 9, 9]
-];
-
-const table2 = [
+const TABLE = [
 	[9, 9, 9, 9, 9, 9, 9, 9],
 	[9, 9, 9, 9, 9, 9, 9, 9],
 	[9, 9, 9, 9, 9, 9, 9, 9],
@@ -1859,47 +1899,34 @@ const table2 = [
 	[9, 9, 9, 9, 9, 9, 9, 9]
 ];
 
-const table3 = [
-	[9, 9, 9, 9, 9, 9, 9],
-	[9, 9, 9, 9, 9, 9, 9],
-	[9, 9, 1, 0, 0, 9, 9],
-	[9, 9, 1, 8, 1, 9, 9],
-	[9, 9, 0, 0, 1, 9, 9],
-	[9, 9, 9, 9, 9, 9, 9],
-	[9, 9, 9, 9, 9, 9, 9]
-];
+let SIMULATION = false;
+//SIMULATION = true;
 
-const game = new cReversi(table2, true, true);
-console.time('_simulation');
-game._simulation();
-console.timeEnd('_simulation');
+if (SIMULATION) {
+	const game = new cReversi(TABLE, true, true);
+	console.time('_simulation');
+	game._simulation();
+	console.timeEnd('_simulation');
+}
 
-/*
+let ONEBYONE = false;
+ONEBYONE = true;
 
-const table = [
-	[9, 9, 9, 9, 9, 9, 9, 9],
-	[9, 9, 9, 9, 9, 9, 9, 9],
-	[9, 9, 9, 9, 9, 9, 9, 9],
-	[9, 9, 9, 0, 1, 9, 9, 9],
-	[9, 9, 9, 1, 0, 9, 9, 9],
-	[9, 9, 9, 9, 9, 9, 9, 9],
-	[9, 9, 9, 9, 9, 9, 9, 9],
-	[9, 9, 9, 9, 9, 9, 9, 9]
-];
+if (ONEBYONE) {
+//	const game = new cReversi(TABLE, true, true);
+//	const game = new cReversi(TABLE, true, true, 'hexFlatTopped', 0);
+//	const game = new cReversi(TABLE, true, true, 'hexFlatTopped', 1);
+	const game = new cReversi(TABLE, true, true, 'hexPointyTopped', 0);
+//	const game = new cReversi(TABLE, true, true, 'hexPointyTopped', 1);
 
-const game = new cReversi(table, true, true);
-game._debug();
-
-*/
-
-//const game = new cReversi(table, true, true);
-//game.ut(0, 48);
-//game.npc(0);
-//game.npc(1);
-//game.npc(0);
-//game.npc(1);
-//console.log(game.getTable());
-//console.log(game.getCurrentCondition());
+	const turnCnt = 15;
+	for (let i = 0; i < turnCnt; i++) {
+		game.npc(0);
+		game.npc(1);
+	}
+	game._snapshot();
+	console.log(game.getCurrentCondition());
+}
 
 </script>
 </body>
