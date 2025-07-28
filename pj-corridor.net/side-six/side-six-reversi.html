@@ -2100,10 +2100,40 @@ const gMeshLevelMap = ((in_diameter) => {
 	const E = EMPTYCOLOR;
 	let shellInfo;
 	switch (getParam('type')) {
+	case '3-loop-hex' :
+		shellInfo = [
+			{
+				name : '14x7x3',
+				loop : true,
+				format : 'hexPointyTopped',
+				offsetCol : 1,
+				table : [
+					[E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E],
+					[E,E,E,B,E,E,E],
+					[E,E,R,B,R,E,E],
+					[E,E,R,B,R,E,E],
+					[E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E],
+
+					[E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E]
+				]
+			}
+		];
+		break;
 	case '4-loop' :
 		shellInfo = [
 			{
-				name : '12x6x4-loop',
+				name : '12x6x4',
+				loop : true,
+				format : 'square',
+				offsetCol : 1,
 				table : [
 					[E,E,E,E,E,E],
 					[E,E,E,E,E,E],
@@ -2121,7 +2151,10 @@ const gMeshLevelMap = ((in_diameter) => {
 				]
 			},
 			{
-				name : '18x6x4-loop',
+				name : '18x6x4',
+				loop : true,
+				format : 'square',
+				offsetCol : 1,
 				table : [
 					[E,E,E,E,E,E],
 					[E,E,E,E,E,E],
@@ -2146,7 +2179,10 @@ const gMeshLevelMap = ((in_diameter) => {
 				]
 			},
 			{
-				name : '16x8x4-loop',
+				name : '16x8x4',
+				loop : true,
+				format : 'square',
+				offsetCol : 1,
 				table : [
 					[E,E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E],
@@ -2168,7 +2204,10 @@ const gMeshLevelMap = ((in_diameter) => {
 				]
 			},
 			{
-				name : '20x10x4-loop',
+				name : '20x10x4',
+				loop : true,
+				format : 'square',
+				offsetCol : 1,
 				table : [
 					[E,E,E,E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E,E,E],
@@ -2198,7 +2237,10 @@ const gMeshLevelMap = ((in_diameter) => {
 	case '2-loop' :
 		shellInfo = [
 			{
-				name : '12x6x2-loop',
+				name : '12x6x2',
+				loop : true,
+				format : 'square',
+				offsetCol : 1,
 				table : [
 					[E,E,E,E,E,E],
 					[E,E,E,E,E,E],
@@ -2216,7 +2258,10 @@ const gMeshLevelMap = ((in_diameter) => {
 				]
 			},
 			{
-				name : '18x6x2-loop',
+				name : '18x6x2',
+				loop : true,
+				format : 'square',
+				offsetCol : 1,
 				table : [
 					[E,E,E,E,E,E],
 					[E,E,E,E,E,E],
@@ -2241,7 +2286,10 @@ const gMeshLevelMap = ((in_diameter) => {
 				]
 			},
 			{
-				name : '16x8x2-loop',
+				name : '16x8x2',
+				loop : true,
+				format : 'square',
+				offsetCol : 1,
 				table : [
 					[E,E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E],
@@ -2263,7 +2311,10 @@ const gMeshLevelMap = ((in_diameter) => {
 				]
 			},
 			{
-				name : '20x10x2-loop',
+				name : '20x10x2',
+				loop : true,
+				format : 'square',
+				offsetCol : 1,
 				table : [
 					[E,E,E,E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E,E,E],
@@ -2294,6 +2345,9 @@ const gMeshLevelMap = ((in_diameter) => {
 		shellInfo = [
 			{
 				name : '6x6x4',
+				loop : false,
+				format : 'square',
+				offsetCol : 1,
 				table : [
 					[E,E,E,E,E,E],
 					[E,E,E,Y,E,E],
@@ -2319,6 +2373,9 @@ const gMeshLevelMap = ((in_diameter) => {
 			},
 			{
 				name : '12x6x4',
+				loop : false,
+				format : 'square',
+				offsetCol : 1,
 				table : [
 					[E,E,E,E,E,E],
 					[E,E,E,E,E,E],
@@ -2344,6 +2401,9 @@ const gMeshLevelMap = ((in_diameter) => {
 			},
 			{
 				name : '8x8x4',
+				loop : false,
+				format : 'square',
+				offsetCol : 1,
 				table : [
 					[E,E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E],
@@ -2366,6 +2426,9 @@ const gMeshLevelMap = ((in_diameter) => {
 			},
 			{
 				name : '10x10x4',
+				loop : false,
+				format : 'square',
+				offsetCol : 1,
 				table : [
 					[E,E,E,E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E,E,E],
@@ -2397,6 +2460,9 @@ const gMeshLevelMap = ((in_diameter) => {
 		shellInfo = [
 			{
 				name : '6x6x2',
+				loop : false,
+				format : 'square',
+				offsetCol : 1,
 				table : [
 					[E,E,E,E,E,E],
 					[E,E,E,E,E,E],
@@ -2422,6 +2488,9 @@ const gMeshLevelMap = ((in_diameter) => {
 			},
 			{
 				name : '12x6x2',
+				loop : false,
+				format : 'square',
+				offsetCol : 1,
 				table : [
 					[E,E,E,E,E,E],
 					[E,E,E,E,E,E],
@@ -2447,6 +2516,9 @@ const gMeshLevelMap = ((in_diameter) => {
 			},
 			{
 				name : '8x8x2',
+				loop : false,
+				format : 'square',
+				offsetCol : 1,
 				table : [
 					[E,E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E],
@@ -2469,6 +2541,9 @@ const gMeshLevelMap = ((in_diameter) => {
 			},
 			{
 				name : '10x10x2',
+				loop : false,
+				format : 'square',
+				offsetCol : 1,
 				table : [
 					[E,E,E,E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E,E,E],
@@ -2518,7 +2593,11 @@ const gMeshLevelMap = ((in_diameter) => {
 				const pivot = new THREE.Object3D();
 				pivot.add(piece);
 				piece.position.copy(VEC3(x, y, 0));
-				pivot.rotateX(unitAngle * row);
+				if ((in_shell.format === 'hexPointyTopped') && (col % 2 === in_shell.offsetCol)) {
+					pivot.rotateX(unitAngle * (row + 0.5));
+				} else {
+					pivot.rotateX(unitAngle * row);
+				}
 				/*
 					*** NOTE ***
 					you can use matrix,
@@ -2530,7 +2609,13 @@ const gMeshLevelMap = ((in_diameter) => {
 				pieces.push(piece);
 			}
 		}
-		map.set(in_shell.name, pieces);
+		const level_key = {
+			name : in_shell.name,
+			loop : in_shell.loop,
+			format : in_shell.format,
+			offset : in_shell.offsetCol
+		};
+		map.set(level_key, pieces);
 	});
 	return map;
 })(COLONY_SIZE);
@@ -2984,14 +3069,16 @@ const gOrderChar = (() => {
 
 function initializeByLevel() {
 	const curr = gMeshLevelMap.currItemByOrder();
-	const [level, loop] = curr.k.split('-');
-	const rowEdge = !loop;
-	const [rows, cols, players] = level.split('x');
+	const [rows, cols, players] = curr.k.name.split('x');
+	const edge = {
+		row : !(curr.k.loop),
+		col : true
+	};
 	const pc = 0;
 	gController = new cGameController(players, pc);
 	gController.setTableSize(rows, cols);
 	const table = gController.convertColonyTable(gColony);
-	gReversi = new cReversi(table, rowEdge, true);
+	gReversi = new cReversi(table, edge.row, edge.col, curr.k.format, curr.k.offset);
 	gController.setTurnHook(async (in_player, in_color, in_pc) => {
 		gOrderChar.style.visibility = 'visible';
 		gOrderChar.src = RES.get(in_color);
@@ -3029,13 +3116,13 @@ async function updateLevel() {
 	const color = 0x000000;
 	await gWorld.motionFog(color, 0, 100);
 	gColony.removePieces();
-	const current = gMeshLevelMap.currItemByOrder();
-	gColony.addPieces(current.v);
+	const curr = gMeshLevelMap.currItemByOrder();
+	gColony.setupAllPieces(curr.v);
 	await gWorld.motionFog(color, 100, 0);
 	const prev = gMeshLevelMap.prevItemByOrder();
 	const next = gMeshLevelMap.nextItemByOrder();
-	document.getElementById(ID_PREV_LEVEL).innerText = prev.k;
-	document.getElementById(ID_NEXT_LEVEL).innerText = next.k;
+	document.getElementById(ID_PREV_LEVEL).innerText = prev.k.name;
+	document.getElementById(ID_NEXT_LEVEL).innerText = next.k.name;
 	resetFocus();
 	initializeByLevel();
 }

@@ -77,7 +77,7 @@ class cColonyCore extends THREE.Object3D {
 		});
 		this.userData.currentSettingKey = null;
 	}
-	addPieces(in_pieces) {
+	setupAllPieces(in_pieces) {
 		this.removePieces();
 		const uuids = [];
 		const posCntOnSameX = new Map();

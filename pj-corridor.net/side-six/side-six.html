@@ -271,8 +271,8 @@ const gMeshLevelMap = ((in_diameter) => {
 */
 
 class cColonyPuzzle extends cColony {
-	addPieces(in_pieces) {
-		super.addPieces(in_pieces);
+	setupAllPieces(in_pieces) {
+		super.setupAllPieces(in_pieces);
 		if (this.settingVal.initialized) {
 			return;
 		}
@@ -519,7 +519,7 @@ async function updateLevel() {
 	await gWorld.motionFog(color, 0, 100);
 	gColony.removePieces();
 	const current = gMeshLevelMap.currItemByOrder();
-	gColony.addPieces(current.v);
+	gColony.setupAllPieces(current.v);
 	await gWorld.motionFog(color, 100, 0);
 	const prev = gMeshLevelMap.prevItemByOrder();
 	const next = gMeshLevelMap.nextItemByOrder();
