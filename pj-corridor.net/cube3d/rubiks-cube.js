@@ -94,7 +94,7 @@ export class cRubiksCube extends THREE.Object3D {
 		});
 		this.userData.currentSettingKey = null;
 	}
-	addPieces(in_pieces) {
+	setupAllPieces(in_pieces) {
 		this.removePieces();
 		const uuids = [];
 		in_pieces.forEach(in_piece => {

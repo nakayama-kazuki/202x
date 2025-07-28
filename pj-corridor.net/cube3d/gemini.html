@@ -552,7 +552,7 @@ async function updateLevel() {
 	await gWorld.motionFog(color, 0, 100);
 	gCube.removePieces();
 	const current = gMeshLevelMap.currItemByOrder();
-	gCube.addPieces(current.v);
+	gCube.setupAllPieces(current.v);
 	await gWorld.motionFog(color, 100, 0);
 	const prev = gMeshLevelMap.prevItemByOrder();
 	const next = gMeshLevelMap.nextItemByOrder();
