@@ -844,17 +844,17 @@ class cReversi {
 			return [pos.row, pos.col];
 		});
 	}
-	constructor(in_table, in_rowEdge, in_colEdge, in_format = 'square', in_offset = 0) {
+	constructor(in_table, in_rowEdge, in_colEdge, in_format = 'square', in_offset = 1) {
 		const sizeRow = in_table.length;
 		const sizeCol = in_table.reduce((in_maxLen, in_row) => {
 			return Math.max(in_maxLen, in_row.length);
 		}, 0);
 		if (cReversi.#dirSet.hasOwnProperty(in_format)) {
 			if (!in_rowEdge && (sizeRow % 2 === 1) && (in_format === 'hexPointyTopped')) {
-				throw new Error('invalid input');
+				throw new Error('invalid rows (' + sizeRow + ') for row-loop of ' + in_format);
 			}
 			if (!in_colEdge && (sizeCol % 2 === 1) && (in_format === 'hexFlatTopped')) {
-				throw new Error('invalid input');
+				throw new Error('invalid cols (' + sizeRow + ') for col-loop of ' + in_format);
 			}
 		} else {
 			throw new Error('invalid input');
@@ -869,6 +869,7 @@ class cReversi {
 				edge : in_colEdge
 			},
 			dirSet : cReversi.#dirSet[in_format],
+			// square can accommodate any offset
 			offset : (in_offset % 2),
 			rotatable : {},
 			tagIxSet : {
@@ -2103,25 +2104,27 @@ const gMeshLevelMap = ((in_diameter) => {
 	case '3-loop-hex' :
 		shellInfo = [
 			{
-				name : '14x7x3',
+				name : '15x7x3',
 				loop : true,
-				format : 'hexPointyTopped',
+				format : 'hexFlatTopped',
 				offsetCol : 1,
 				table : [
 					[E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E],
-					[E,E,E,B,E,E,E],
-					[E,E,R,B,R,E,E],
-					[E,E,R,B,R,E,E],
-					[E,E,E,E,E,E,E],
+					[E,E,E,Y,E,E,E],
+					[E,E,R,Y,B,E,E],
+					[E,E,R,Y,B,E,E],
 					[E,E,E,E,E,E,E],
 
 					[E,E,E,E,E,E,E],
+					[E,E,E,R,E,E,E],
+					[E,E,B,R,Y,E,E],
+					[E,E,B,R,Y,E,E],
 					[E,E,E,E,E,E,E],
+
 					[E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E],
+					[E,E,E,B,E,E,E],
+					[E,E,Y,B,R,E,E],
+					[E,E,Y,B,R,E,E],
 					[E,E,E,E,E,E,E]
 				]
 			}
@@ -2133,7 +2136,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				name : '12x6x4',
 				loop : true,
 				format : 'square',
-				offsetCol : 1,
+				offsetCol : -1,
 				table : [
 					[E,E,E,E,E,E],
 					[E,E,E,E,E,E],
@@ -2154,7 +2157,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				name : '18x6x4',
 				loop : true,
 				format : 'square',
-				offsetCol : 1,
+				offsetCol : -1,
 				table : [
 					[E,E,E,E,E,E],
 					[E,E,E,E,E,E],
@@ -2182,7 +2185,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				name : '16x8x4',
 				loop : true,
 				format : 'square',
-				offsetCol : 1,
+				offsetCol : -1,
 				table : [
 					[E,E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E],
@@ -2207,7 +2210,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				name : '20x10x4',
 				loop : true,
 				format : 'square',
-				offsetCol : 1,
+				offsetCol : -1,
 				table : [
 					[E,E,E,E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E,E,E],
@@ -2240,7 +2243,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				name : '12x6x2',
 				loop : true,
 				format : 'square',
-				offsetCol : 1,
+				offsetCol : -1,
 				table : [
 					[E,E,E,E,E,E],
 					[E,E,E,E,E,E],
@@ -2261,7 +2264,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				name : '18x6x2',
 				loop : true,
 				format : 'square',
-				offsetCol : 1,
+				offsetCol : -1,
 				table : [
 					[E,E,E,E,E,E],
 					[E,E,E,E,E,E],
@@ -2289,7 +2292,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				name : '16x8x2',
 				loop : true,
 				format : 'square',
-				offsetCol : 1,
+				offsetCol : -1,
 				table : [
 					[E,E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E],
@@ -2314,7 +2317,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				name : '20x10x2',
 				loop : true,
 				format : 'square',
-				offsetCol : 1,
+				offsetCol : -1,
 				table : [
 					[E,E,E,E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E,E,E],
@@ -2347,7 +2350,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				name : '6x6x4',
 				loop : false,
 				format : 'square',
-				offsetCol : 1,
+				offsetCol : -1,
 				table : [
 					[E,E,E,E,E,E],
 					[E,E,E,Y,E,E],
@@ -2375,7 +2378,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				name : '12x6x4',
 				loop : false,
 				format : 'square',
-				offsetCol : 1,
+				offsetCol : -1,
 				table : [
 					[E,E,E,E,E,E],
 					[E,E,E,E,E,E],
@@ -2403,7 +2406,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				name : '8x8x4',
 				loop : false,
 				format : 'square',
-				offsetCol : 1,
+				offsetCol : -1,
 				table : [
 					[E,E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E],
@@ -2428,7 +2431,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				name : '10x10x4',
 				loop : false,
 				format : 'square',
-				offsetCol : 1,
+				offsetCol : -1,
 				table : [
 					[E,E,E,E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E,E,E],
@@ -2462,7 +2465,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				name : '6x6x2',
 				loop : false,
 				format : 'square',
-				offsetCol : 1,
+				offsetCol : -1,
 				table : [
 					[E,E,E,E,E,E],
 					[E,E,E,E,E,E],
@@ -2490,7 +2493,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				name : '12x6x2',
 				loop : false,
 				format : 'square',
-				offsetCol : 1,
+				offsetCol : -1,
 				table : [
 					[E,E,E,E,E,E],
 					[E,E,E,E,E,E],
@@ -2518,7 +2521,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				name : '8x8x2',
 				loop : false,
 				format : 'square',
-				offsetCol : 1,
+				offsetCol : -1,
 				table : [
 					[E,E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E],
@@ -2543,7 +2546,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				name : '10x10x2',
 				loop : false,
 				format : 'square',
-				offsetCol : 1,
+				offsetCol : -1,
 				table : [
 					[E,E,E,E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E,E,E],
@@ -2574,26 +2577,30 @@ const gMeshLevelMap = ((in_diameter) => {
 	shellInfo.forEach(in_shell => {
 		const radius = in_diameter / 2;
 		const circumf = in_diameter * Math.PI;
-		const unitSize = circumf / in_shell.table.length;
+		const rows = in_shell.table.length;
+		const cols = Math.max(...in_shell.table.map(row => row.length));
+		const unitSize = circumf / rows;
 		const unitThick = unitSize * 0.3;
-		const unitAngle = Math.PI * 2 / in_shell.table.length;
+		const unitAngle = Math.PI * 2 / rows;
 		const geometry = shellGeometryFactory.create(unitSize, ((radius - unitThick) / radius), unitThick);
 		const pieces = [];
-		const cols = in_shell.table.reduce((in_maxLen, in_row) => {
-			return Math.max(in_maxLen, in_row.length);
-		}, 0);
-		for (let col = 0; col < cols; col++) {
-			let x = unitSize * col - unitSize * (cols - 1) / 2;
-			let y = (in_diameter / 2 - unitThick) * 1.2;
-			for (let row = 0; row < in_shell.table.length; row++) {
-				const color = in_shell.table[row][col];
+		/*
+			create a cylinder oriented around the x-axis
+				row : a position along the circumference of the cylinder
+				col : a position along the height of the cylinder
+		*/
+		for (let row = 0; row < rows; row++) {
+			for (let col = 0; col < cols; col++) {
+				let x = unitSize * col - unitSize * (cols - 1) / 2;
+				let y = (in_diameter / 2 - unitThick) * 1.2;
+				const color = in_shell.table[row][col] ?? E;
 				const materials = shellMaterials(unitSize, color, BGCOLOR, (color === D));
 				materials.push(edgeMaterial);
 				const piece = new THREE.Mesh(geometry, materials);
 				const pivot = new THREE.Object3D();
 				pivot.add(piece);
 				piece.position.copy(VEC3(x, y, 0));
-				if ((in_shell.format === 'hexPointyTopped') && (col % 2 === in_shell.offsetCol)) {
+				if ((in_shell.format === 'hexFlatTopped') && (col % 2 === in_shell.offsetCol)) {
 					pivot.rotateX(unitAngle * (row + 0.5));
 				} else {
 					pivot.rotateX(unitAngle * row);
@@ -2628,8 +2635,19 @@ class cColonyBoard extends cColony {
 	#makeRotationX(in_rad) {
 		return this.settingVal.origin.clone().applyMatrix4((new THREE.Matrix4()).makeRotationX(in_rad));
 	}
+	setupAllPieces(in_pieces, in_offsetCol = -1) {
+		super.setupAllPieces(in_pieces);
+		this.settingVal.offset = in_offsetCol;
+		if (this.settingVal.offset >= 0) {
+			this.settingVal.offset %= 2;
+		}
+	}
 	indexToPiece(in_row, in_col) {
-		const vec3 = this.#makeRotationX(this.settingVal.unitAngle * in_row);
+		let row = in_row;
+		if ((this.settingVal.offset >= 0) && (in_col % 2 === this.settingVal.offset)) {
+			row += 0.5;
+		}
+		const vec3 = this.#makeRotationX(this.settingVal.unitAngle * row);
 		vec3.x += this.settingVal.unitDelta * in_col;
 		const piece = this.children.find(in_child => XYZ.every(in_xyz => Math.abs(in_child.position[in_xyz] - vec3[in_xyz]) < cColony.error));
 		if (!piece) {
@@ -2640,34 +2658,22 @@ class cColonyBoard extends cColony {
 	}
 	pieceToIndex(in_piece) {
 		const pos = in_piece.position;
-		const ret = {
-			row : -1,
-			col : -1
-		};
-		for (ret.row = 0; ret.row < this.settingVal.rowsForCircle; ret.row++) {
-			const vec3 = this.#makeRotationX(this.settingVal.unitAngle * ret.row);
-			if (Math.abs(vec3.y - pos.y) > cColony.error) {
-				continue;
-			}
-			if (Math.abs(vec3.z - pos.z) > cColony.error) {
-				continue;
-			}
-			ret.col = Math.round((pos.x - vec3.x) / this.settingVal.unitDelta);
-			break;
+		const col = Math.round((pos.x - this.settingVal.origin.x) / this.settingVal.unitDelta);
+		let offset = 0;
+		if ((this.settingVal.offset >= 0) && (col % 2 === this.settingVal.offset)) {
+			offset = 0.5;
 		}
-		const max = {
-			row : this.settingVal.rowsForCircle - 1,
-			col : this.settingVal.colsForLength - 1
-		};
-		if ((ret.row < 0) || (max.row < ret.row) || (ret.col < 0) || (max.col < ret.col)) {
-			console.log('pieceToIndex failed : ', in_piece, ret);
-			throw new Error('');
+		for (let row = 0; row < this.settingVal.rowsForCircle; row++) {
+			const vec3 = this.#makeRotationX(this.settingVal.unitAngle * (row + offset));
+			if ((Math.abs(pos.y - vec3.y) < cColony.error) && (Math.abs(pos.z - vec3.z) < cColony.error)) {
+				return {row : row, col : col};
+			}
 		}
-		return ret;
+		throw new Error('pieceToIndex failed');
 	}
 	getColorTable() {
 		const table = [];
-		for (let row = 0; row <  this.settingVal.rowsForCircle; row++) {
+		for (let row = 0; row < this.settingVal.rowsForCircle; row++) {
 			table[row] = [];
 			for (let col = 0; col < this.settingVal.colsForLength; col++) {
 				const piece = this.indexToPiece(row, col);
@@ -3076,9 +3082,17 @@ function initializeByLevel() {
 	};
 	const pc = 0;
 	gController = new cGameController(players, pc);
+	/*
+		setTableSize() enables separation between the reversi logic (with edge/DMZ)
+		and the visual structure defined in gMeshLevelMap
+	*/
 	gController.setTableSize(rows, cols);
 	const table = gController.convertColonyTable(gColony);
-	gReversi = new cReversi(table, edge.row, edge.col, curr.k.format, curr.k.offset);
+	if (curr.k.offset >= 0) {
+		gReversi = new cReversi(table, edge.row, edge.col, curr.k.format, curr.k.offset);
+	} else {
+		gReversi = new cReversi(table, edge.row, edge.col, curr.k.format);
+	}
 	gController.setTurnHook(async (in_player, in_color, in_pc) => {
 		gOrderChar.style.visibility = 'visible';
 		gOrderChar.src = RES.get(in_color);
@@ -3117,7 +3131,11 @@ async function updateLevel() {
 	await gWorld.motionFog(color, 0, 100);
 	gColony.removePieces();
 	const curr = gMeshLevelMap.currItemByOrder();
-	gColony.setupAllPieces(curr.v);
+	if (curr.k.offset >= 0) {
+		gColony.setupAllPieces(curr.v, curr.k.offset);
+	} else {
+		gColony.setupAllPieces(curr.v);
+	}
 	await gWorld.motionFog(color, 100, 0);
 	const prev = gMeshLevelMap.prevItemByOrder();
 	const next = gMeshLevelMap.nextItemByOrder();

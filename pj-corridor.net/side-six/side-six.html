@@ -273,14 +273,12 @@ const gMeshLevelMap = ((in_diameter) => {
 class cColonyPuzzle extends cColony {
 	setupAllPieces(in_pieces) {
 		super.setupAllPieces(in_pieces);
-		if (this.settingVal.initialized) {
-			return;
+		if (!this.settingVal.initialized) {
+			this.settingVal.completeCallback = null;
+			this.settingVal.shuffleCount = 0;
+			this.settingVal.shuffled = false;
+			this.settingVal.initialized = true;
 		}
-		// extended for cColonyPuzzle
-		this.settingVal.completeCallback = null;
-		this.settingVal.shuffleCount = 0;
-		this.settingVal.shuffled = false;
-		this.settingVal.initialized = true;
 	}
 	registerCompleteCallback(in_callback) {
 		this.settingVal.completeCallback = in_callback;

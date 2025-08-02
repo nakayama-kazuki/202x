@@ -813,17 +813,17 @@ class cReversi {
 			return [pos.row, pos.col];
 		});
 	}
-	constructor(in_table, in_rowEdge, in_colEdge, in_format = 'square', in_offset = 0) {
+	constructor(in_table, in_rowEdge, in_colEdge, in_format = 'square', in_offset = 1) {
 		const sizeRow = in_table.length;
 		const sizeCol = in_table.reduce((in_maxLen, in_row) => {
 			return Math.max(in_maxLen, in_row.length);
 		}, 0);
 		if (cReversi.#dirSet.hasOwnProperty(in_format)) {
 			if (!in_rowEdge && (sizeRow % 2 === 1) && (in_format === 'hexPointyTopped')) {
-				throw new Error('invalid input');
+				throw new Error('invalid rows (' + sizeRow + ') for row-loop of ' + in_format);
 			}
 			if (!in_colEdge && (sizeCol % 2 === 1) && (in_format === 'hexFlatTopped')) {
-				throw new Error('invalid input');
+				throw new Error('invalid cols (' + sizeRow + ') for col-loop of ' + in_format);
 			}
 		} else {
 			throw new Error('invalid input');
@@ -838,6 +838,7 @@ class cReversi {
 				edge : in_colEdge
 			},
 			dirSet : cReversi.#dirSet[in_format],
+			// square can accommodate any offset
 			offset : (in_offset % 2),
 			rotatable : {},
 			tagIxSet : {
