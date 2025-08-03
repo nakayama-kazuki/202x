@@ -686,6 +686,11 @@ class cReversi {
 		},
 		hexPointyTopped : {
 			onehand : {
+				/*
+					@@
+					@+@
+					@@
+				*/
 				regular : [
 					[-1, -1],
 					[-1,  0],
@@ -694,6 +699,11 @@ class cReversi {
 					[+1, -1],
 					[ 0, -1]
 				],
+				/*
+					 @@
+					@+@
+					 @@
+				*/
 				offset : [
 					[-1,  0],
 					[-1, +1],
@@ -711,6 +721,11 @@ class cReversi {
 		},
 		hexFlatTopped : {
 			onehand : {
+				/*
+					@@@
+					@+@
+					 @
+				*/
 				regular : [
 					[-1, -1],
 					[-1,  0],
@@ -719,13 +734,18 @@ class cReversi {
 					[+1,  0],
 					[ 0, -1]
 				],
+				/*
+					 @
+					@+@
+					@@@
+				*/
 				offset : [
+					[ 0, -1],
 					[-1,  0],
 					[ 0, +1],
 					[+1, +1],
 					[+1,  0],
-					[+1, -1],
-					[ 0, -1]
+					[+1, -1]
 				]
 			},
 			pair : new Map([
@@ -1691,8 +1711,15 @@ class cReversi {
 		const cellMargin = 5;
 		for (let row = 0; row < this.#conf.row.size; row++) {
 			for (let col = 0; col < this.#conf.col.size; col++) {
-				const item = this.#getItemByPos(row, col);
-				const cell = document.createElement('DIV');
+				const color = bg.get(this.#getItemByPos(row, col));
+				const id = '_' + row + 'x' + col;
+				let cell = document.getElementById(id);
+				if (cell) {
+					cell.style.backgroundColor = color;
+					continue;
+				} else {
+					cell = document.createElement('DIV');
+				}
 				let l = rightMargin + (cellSize + cellMargin) * col;
 				let t = rightMargin + (cellSize + cellMargin) * row;
 				const pair = this.#conf.dirSet.pair;
@@ -1703,9 +1730,10 @@ class cReversi {
 					t += (col % 2 === this.#conf.offset ? (cellSize + cellMargin) / 2 : 0);
 				}
 				Object.assign(cell.style, {
+					id : id,
 					width : cellSize + 'px',
 					height : cellSize + 'px',
-					background : bg.get(item),
+					backgroundColor : color,
 					border : 'solid gray 1px',
 					position : 'absolute',
 					left : l + 'px',
@@ -1920,13 +1948,19 @@ if (ONEBYONE) {
 	const game = new cReversi(TABLE, true, true, 'hexPointyTopped', 0);
 //	const game = new cReversi(TABLE, true, true, 'hexPointyTopped', 1);
 
-	const turnCnt = 15;
-	for (let i = 0; i < turnCnt; i++) {
-		game.npc(0);
-		game.npc(1);
-	}
-	game._snapshot();
-	console.log(game.getCurrentCondition());
+	let turnCnt = 40;
+	const ms = 1000;
+	turnProc = () => {
+		const player = turnCnt % 2;
+		game.npc(player);
+		game._snapshot();
+		if (turnCnt-- > 0) {
+			setTimeout(turnProc, ms);
+		} else {
+			console.log(game.getCurrentCondition());
+		}
+	};
+	(turnProc)();
 }
 
 </script>

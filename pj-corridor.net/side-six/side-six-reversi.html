@@ -717,6 +717,11 @@ class cReversi {
 		},
 		hexPointyTopped : {
 			onehand : {
+				/*
+					@@
+					@+@
+					@@
+				*/
 				regular : [
 					[-1, -1],
 					[-1,  0],
@@ -725,6 +730,11 @@ class cReversi {
 					[+1, -1],
 					[ 0, -1]
 				],
+				/*
+					 @@
+					@+@
+					 @@
+				*/
 				offset : [
 					[-1,  0],
 					[-1, +1],
@@ -742,6 +752,11 @@ class cReversi {
 		},
 		hexFlatTopped : {
 			onehand : {
+				/*
+					@@@
+					@+@
+					 @
+				*/
 				regular : [
 					[-1, -1],
 					[-1,  0],
@@ -750,13 +765,18 @@ class cReversi {
 					[+1,  0],
 					[ 0, -1]
 				],
+				/*
+					 @
+					@+@
+					@@@
+				*/
 				offset : [
+					[ 0, -1],
 					[-1,  0],
 					[ 0, +1],
 					[+1, +1],
 					[+1,  0],
-					[+1, -1],
-					[ 0, -1]
+					[+1, -1]
 				]
 			},
 			pair : new Map([
@@ -1722,8 +1742,15 @@ class cReversi {
 		const cellMargin = 5;
 		for (let row = 0; row < this.#conf.row.size; row++) {
 			for (let col = 0; col < this.#conf.col.size; col++) {
-				const item = this.#getItemByPos(row, col);
-				const cell = document.createElement('DIV');
+				const color = bg.get(this.#getItemByPos(row, col));
+				const id = '_' + row + 'x' + col;
+				let cell = document.getElementById(id);
+				if (cell) {
+					cell.style.backgroundColor = color;
+					continue;
+				} else {
+					cell = document.createElement('DIV');
+				}
 				let l = rightMargin + (cellSize + cellMargin) * col;
 				let t = rightMargin + (cellSize + cellMargin) * row;
 				const pair = this.#conf.dirSet.pair;
@@ -1734,9 +1761,10 @@ class cReversi {
 					t += (col % 2 === this.#conf.offset ? (cellSize + cellMargin) / 2 : 0);
 				}
 				Object.assign(cell.style, {
+					id : id,
 					width : cellSize + 'px',
 					height : cellSize + 'px',
-					background : bg.get(item),
+					backgroundColor : color,
 					border : 'solid gray 1px',
 					position : 'absolute',
 					left : l + 'px',
@@ -2104,6 +2132,29 @@ const gMeshLevelMap = ((in_diameter) => {
 	case '3-loop-hex' :
 		shellInfo = [
 			{
+				name : '14x7x4',
+				loop : true,
+				format : 'hexFlatTopped',
+				offsetCol : 1,
+				table : [
+					[E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E],
+					[E,E,E,B,E,E,E],
+					[E,E,R,D,B,E,E],
+					[E,E,R,R,B,E,E],
+					[E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E],
+
+					[E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E],
+					[E,E,E,G,E,E,E],
+					[E,E,Y,D,G,E,E],
+					[E,E,Y,Y,G,E,E],
+					[E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E]
+				]
+			},
+			{
 				name : '15x7x3',
 				loop : true,
 				format : 'hexFlatTopped',
@@ -2126,6 +2177,58 @@ const gMeshLevelMap = ((in_diameter) => {
 					[E,E,Y,B,R,E,E],
 					[E,E,Y,B,R,E,E],
 					[E,E,E,E,E,E,E]
+				]
+			},
+			{
+				name : '16x8x4',
+				loop : true,
+				format : 'hexFlatTopped',
+				offsetCol : 1,
+				table : [
+					[E,E,E,R,B,E,E,E],
+					[E,E,E,B,R,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,Y,G,E,E,E],
+					[E,E,E,G,Y,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+
+					[E,E,E,B,R,E,E,E],
+					[E,E,E,R,B,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,G,Y,E,E,E],
+					[E,E,E,Y,G,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E]
+				]
+			},
+			{
+				name : '16x9x4',
+				loop : true,
+				format : 'hexFlatTopped',
+				offsetCol : 1,
+				table : [
+					[E,E,E,E,E,E,E,E,E],
+					[E,E,E,Y,B,G,E,E,E],
+					[E,E,E,E,R,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E],
+
+					[E,E,E,E,E,E,E,E,E],
+					[E,E,E,R,G,Y,E,E,E],
+					[E,E,E,E,B,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E],
+
+					[E,E,E,E,E,E,E,E,E],
+					[E,E,E,B,Y,R,E,E,E],
+					[E,E,E,E,G,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E],
+
+					[E,E,E,E,E,E,E,E,E],
+					[E,E,E,G,R,B,E,E,E],
+					[E,E,E,E,Y,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E]
 				]
 			}
 		];
