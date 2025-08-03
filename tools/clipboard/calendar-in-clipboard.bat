@@ -9,11 +9,10 @@ if ($args.Count -gt 0 -and ($args[0] -match '^\d+$')) {
 }
 
 $calendarDate = (Get-Date).AddMonths($offsetMonth)
-$Y = $calendarDate.Year
-$M = $calendarDate.Month
-$D_1 = Get-Date -Year $Y -Month $M -Day 1
-$D_E = $D_1.AddMonths(1).AddDays(-1)
-$W_1 = [int]$D_1.DayOfWeek
+$D_S = Get-Date "$($calendarDate.ToString('yyyy-MM'))-01"
+$D_E = $D_S.AddMonths(1).AddDays(-1)
+$W_S = [int]$D_S.DayOfWeek
+$W_E = [int]$D_E.DayOfWeek
 
 $calendar = @()
 
@@ -30,12 +29,12 @@ while ($day -le $D_E.Day) {
 				$day++
 			} else {
 				# next month
-				$line += "<td>$($D_1.AddDays($i - 1).Day)</td>"
+				$line += "<td>$($D_S.AddDays($i - $W_E - 1).Day)</td>"
 			}
 		} else {
-			if ($i -lt $W_1) {
+			if ($i -lt $W_S) {
 				# prev month
-				$line += "<td>$($D_1.AddDays($i - $W_1 + 1).Day)</td>"
+				$line += "<td>$($D_S.AddDays($i - $W_S).Day)</td>"
 			} else {
 				# start
 				$day = 1
