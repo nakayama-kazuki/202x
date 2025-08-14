@@ -653,7 +653,23 @@ class cReversi {
 		}
 		return arr;
 	})();
-	static #dirSet = {
+	static #addUniqueSet(in_newSet, in_arr) {
+		const duplicated = in_arr.some(in_addedSet => {
+			if (in_newSet.size !== in_addedSet.size) {
+				return false;
+			}
+			for (const item of in_newSet) {
+				if (!in_addedSet.has(item)) {
+					return false;
+				}
+			}
+			return true;
+		});
+		if (!duplicated) {
+			in_arr.push(in_newSet);
+		}
+	}
+	static #dirStyle = {
 		square : {
 			onehand : {
 				regular : [
@@ -755,7 +771,6 @@ class cReversi {
 			])
 		}
 	};
-	static #ignore = Symbol();
 	#area = {
 		items : [],
 		options : new Set(),
@@ -768,10 +783,10 @@ class cReversi {
 	#history = [];
 	#conf = null;
 	#rotations = null;
-	#getDirSet(in_row, in_col) {
-		const dirSet = this.#conf.dirSet;
+	#getDirections(in_row, in_col) {
+		const dirStyle = this.#conf.dirStyle;
 		let useOffset = false;
-		if (dirSet.pair.get(0)) {
+		if (dirStyle.pair.get(0)) {
 			// square or hexFlatTopped
 			useOffset = (in_col % 2 === this.#conf.offset);
 		} else {
@@ -779,21 +794,21 @@ class cReversi {
 			useOffset = (in_row % 2 === this.#conf.offset);
 		}
 		if (useOffset) {
-			return dirSet.onehand.offset;
+			return dirStyle.onehand.offset;
 		} else {
-			return dirSet.onehand.regular;
+			return dirStyle.onehand.regular;
 		}
 	}
-	#getDir(in_row, in_col, in_dirIx) {
-		return this.#getDirSet(in_row, in_col)[in_dirIx];
+	#getDirection(in_row, in_col, in_dirIx) {
+		return this.#getDirections(in_row, in_col)[in_dirIx];
 	}
-	#neighborIndexes(in_ix) {
+	#aroundIndexes(in_ix) {
 		const pos = this.#indexToPos(in_ix);
-		return this.#neighborPositions(pos.row, pos.col).map(([in_row, in_col]) => this.#posToIndex(in_row, in_col));
+		return this.#aroundPositions(pos.row, pos.col).map(([in_row, in_col]) => this.#posToIndex(in_row, in_col));
 	}
-	#neighborPositions(in_row, in_col) {
-		const directions = this.#getDirSet(in_row, in_col);
-		const neighbor = [];
+	#aroundPositions(in_row, in_col) {
+		const directions = this.#getDirections(in_row, in_col);
+		const aroundPos = [];
 		const sizeRow = this.#conf.row.size;
 		const sizeCol = this.#conf.col.size;
 		directions.forEach(([in_dr, in_dc]) => {
@@ -813,32 +828,24 @@ class cReversi {
 					col = (sizeCol + col) % sizeCol;
 				}
 			}
-			neighbor.push([row, col]);
+			aroundPos.push([row, col]);
 		});
-		return neighbor;
+		return aroundPos;
 	}
-	#sameAngleIndexes(in_ix, in_angle) {
-		const angle = (in_angle + 180) % 180;
-		const pair = this.#conf.dirSet.pair.get(angle);
-		if (!pair) {
-			throw new Error('invalid in_angle');
+	#indexesUntil(in_indexes, in_item) {
+		const toItem = in_indexes.findIndex(in_ix => this.#getItemByIndex(in_ix) === in_item);
+		if (toItem < 0) {
+			return in_indexes;
+		} else {
+			return in_indexes.slice(0, toItem);
 		}
-		const radiating = this.#conf.tagIxSet.radiating[in_ix];
-		return [...radiating[pair[0]], ...radiating[pair[1]]];
-	}
-	#sameAnglePositions(in_row, in_col, in_angle) {
-		const ix = this.#posToIndex(in_row, in_col);
-		return this.#sameAngleIndexes(ix, in_angle).map(in_ix => {
-			const pos = this.#indexToPos(in_ix);
-			return [pos.row, pos.col];
-		});
 	}
 	constructor(in_table, in_rowEdge, in_colEdge, in_format = 'square', in_offset = 1) {
 		const sizeRow = in_table.length;
 		const sizeCol = in_table.reduce((in_maxLen, in_row) => {
 			return Math.max(in_maxLen, in_row.length);
 		}, 0);
-		if (cReversi.#dirSet.hasOwnProperty(in_format)) {
+		if (cReversi.#dirStyle.hasOwnProperty(in_format)) {
 			if (!in_rowEdge && (sizeRow % 2 === 1) && (in_format === 'hexPointyTopped')) {
 				throw new Error('invalid rows (' + sizeRow + ') for row-loop of ' + in_format);
 			}
@@ -848,6 +855,7 @@ class cReversi {
 		} else {
 			throw new Error('invalid input');
 		}
+		const dirStyle = cReversi.#dirStyle[in_format];
 		this.#conf = {
 			row : {
 				size : sizeRow,
@@ -857,33 +865,45 @@ class cReversi {
 				size : sizeCol,
 				edge : in_colEdge
 			},
-			dirSet : cReversi.#dirSet[in_format],
+			dirStyle : dirStyle,
 			// square can accommodate any offset
 			offset : (in_offset % 2),
-			rotatable : {},
-			tagIxSet : {
+			rotatable : {
+				fixedCol : !in_rowEdge && dirStyle.pair.has(0),
+				fixedRow : !in_colEdge && dirStyle.pair.has(90)
+			},
+			tagIndexes : {
 				radiating : [],
-				corner : [],
-				xInside : []
+				edgeSetArr : [],
+				cornerSet : new Set(),
+				xInsideSet : new Set()
 			}
 		};
-		this.#conf.rotatable.fixedCol = !in_rowEdge && this.#conf.dirSet.pair.has(0);
-		this.#conf.rotatable.fixedRow = !in_colEdge && this.#conf.dirSet.pair.has(90);
 		this.setTable(in_table);
-		// (1) tagIxSet.radiating
-		for (let ix = 0; ix < this.#area.items.length; ix++) {
-			const {row : initRow, col : initCol} = this.#indexToPos(ix);
-			const radiating = this.#conf.tagIxSet.radiating[ix] = [];
-			const dirSet = this.#getDirSet(initRow, initCol);
-			for (let dirIx = 0; dirIx < dirSet.length; dirIx++) {
+		this.#initTagIndexes();
+		this.#initScore();
+		const argoArr = ['spiteful', 'balance', 'safety', 'greedy', 'learner', 'classic', 'beginner', 'monkey'];
+		for (let i = 0; i < argoArr.length; i++) {
+			this.#npcArgoPriority.push((argoArr.slice(0, i + 1))[arrRand]());
+		}
+		this.#updateOptionsAll();
+		// console.log(this.#conf.tagIndexes);
+	}
+	#initTagIndexesRadiating() {
+		const tagIndexes = this.#conf.tagIndexes;
+		for (let areaIx = 0; areaIx < this.#area.items.length; areaIx++) {
+			const {row : initRow, col : initCol} = this.#indexToPos(areaIx);
+			const radiating = tagIndexes.radiating[areaIx] = [];
+			const dirStyle = this.#getDirections(initRow, initCol);
+			for (let dirIx = 0; dirIx < dirStyle.length; dirIx++) {
 				const towards = [];
 				let currRow = initRow;
 				let currCol = initCol;
 				while (true) {
-					const [dr, dc] = this.#getDir(currRow, currCol, dirIx);
+					const [dr, dc] = this.#getDirection(currRow, currCol, dirIx);
 					currRow += dr;
-					if (in_rowEdge) {
-						if ((currRow < 0) || (sizeRow - 1 < currRow)) {
+					if (this.#conf.row.edge) {
+						if ((currRow < 0) || (this.#conf.row.size - 1 < currRow)) {
 							// out of range
 							break;
 						}
@@ -895,8 +915,8 @@ class cReversi {
 						}
 					}
 					currCol += dc;
-					if (in_colEdge) {
-						if ((currCol < 0) || (sizeCol - 1 < currCol)) {
+					if (this.#conf.col.edge) {
+						if ((currCol < 0) || (this.#conf.col.size - 1 < currCol)) {
 							// out of range
 							break;
 						}
@@ -912,11 +932,39 @@ class cReversi {
 				radiating.push(towards);
 			}
 		}
-		// (2) tagIxSet.corner, tagIxSet.xInside
-		const pairs = Array.from(this.#conf.dirSet.pair.values());
-		for (let ix = 0; ix < this.#area.items.length; ix++) {
-			const radiating = this.#conf.tagIxSet.radiating[ix];
-			// (2-1) corner
+	}
+	#initTagIndexes() {
+		this.#initTagIndexesRadiating();
+		const pairs = Array.from(this.#conf.dirStyle.pair.values());
+		const edgeAdhocMinLength = 6;
+		const tagIndexes = this.#conf.tagIndexes;
+		for (let areaIx = 0; areaIx < this.#area.items.length; areaIx++) {
+			if (this.#getItemByIndex(areaIx) === cReversi.#dmz) {
+				continue;
+			}
+			const radiating = tagIndexes.radiating[areaIx];
+			// (1) edgeSetArr
+			pairs.forEach(([in_pos, in_neg]) => {
+				const pos = this.#indexesUntil(radiating[in_pos], cReversi.#dmz);
+				const neg = this.#indexesUntil(radiating[in_neg], cReversi.#dmz);
+				const edgeSet = new Set([...pos, areaIx, ...neg]);
+				if (edgeSet.size < edgeAdhocMinLength) {
+					return;
+				}
+				const isEdge = Array.from(edgeSet).every(edgeIx => {
+					const aroundArr = this.#aroundIndexes(edgeIx);
+					if (aroundArr.length < pairs.length * 2) {
+						return true;
+					}
+					return aroundArr.some(in_aroundIx => {
+						return (this.#getItemByIndex(in_aroundIx) === cReversi.#dmz);
+					});
+				});
+				if (isEdge) {
+					cReversi.#addUniqueSet(edgeSet, tagIndexes.edgeSetArr);
+				}
+			});
+			// (2) corner
 			const isCorner = pairs.every(([in_pos, in_neg]) => {
 				const P = radiating[in_pos];
 				const N = radiating[in_neg];
@@ -932,60 +980,20 @@ class cReversi {
 			if (!isCorner) {
 				continue;
 			} else {
-				this.#conf.tagIxSet.corner.push(ix);
+				tagIndexes.cornerSet.add(areaIx);
 			}
-			// (2-2) xInside
-			const aroundCorner = this.#neighborIndexes(ix);
-			aroundCorner.forEach(in_around_ix => {
-				const candidates = this.#neighborIndexes(in_around_ix);
-				if (candidates.length < pairs.length * 2) {
+			// (3) xInsideSet, when areaIx is corner
+			const aroundArr = this.#aroundIndexes(areaIx);
+			aroundArr.forEach(in_aroundIx => {
+				const testArr = this.#aroundIndexes(in_aroundIx);
+				if (testArr.length < pairs.length * 2) {
 					return;
 				}
-				if (candidates.every(in_cand_ix => this.#getItemByIndex(in_cand_ix) === cReversi.#empty)) {
-					if (!this.#conf.tagIxSet.xInside.includes(in_around_ix)) {
-						this.#conf.tagIxSet.xInside.push(in_around_ix);
-					}
+				if (testArr.every(in_testIx => this.#getItemByIndex(in_testIx) === cReversi.#empty)) {
+					tagIndexes.xInsideSet.add(in_aroundIx);
 				}
 			});
 		}
-		this.#initAreaScores();
-		const argoArr = ['spiteful', 'balance', 'safety', 'greedy', 'learner', 'classic', 'beginner', 'monkey'];
-		for (let i = 0; i < argoArr.length; i++) {
-			this.#npcArgoPriority.push((argoArr.slice(0, i + 1))[arrRand]());
-		}
-		this.#updateOptionsAll();
-	}
-	#updateOptions(in_ix) {
-		const radiating = this.#conf.tagIxSet.radiating[in_ix];
-		radiating.forEach(in_towards => {
-			if (in_towards.length > 0) {
-				const aroundIx = in_towards[0];
-				if (this.#getItemByIndex(aroundIx) === cReversi.#empty) {
-					this.#area.options.add(aroundIx);
-				}
-			}
-		});
-		// in_ix should be new occupied position
-		this.#area.options.delete(in_ix);
-	}
-	#updateOptionsAll() {
-		this.#area.options.clear();
-		for (let ix = 0; ix < this.#area.items.length; ix++) {
-			if (this.#getItemByIndex(ix) === cReversi.#empty) {
-				continue;
-			}
-			this.#updateOptions(ix);
-		}
-	}
-	#createRollback() {
-		const backup = {
-			items : [...this.#area.items],
-			options : [...this.#area.options]
-		};
-		return () => {
-			this.#area.items = [...backup.items];
-			this.#area.options = new Set(backup.options);
-		};
 	}
 	#indexToPos(in_ix) {
 		return {
@@ -1015,34 +1023,6 @@ class cReversi {
 		});
 		return items;
 	}
-	#lineIndexes(in_ix, in_angle, in_edge = true) {
-		const radiating = this.#conf.tagIxSet.radiating[in_ix];
-		const pair = this.#conf.dirSet.pair.get(in_angle);
-		if (!pair) {
-			return [];
-		}
-		if (in_edge) {
-			return [...radiating[pair[0]], in_ix, ...radiating[pair[1]]];
-		} else {
-			return [...radiating[pair[0]], in_ix];
-		}
-	}
-	#fixedRowIndexes(in_row) {
-		const angleForFixedRow = 90;
-		if (this.#conf.dirSet.pair.has(angleForFixedRow)) {
-			return this.#lineIndexes(this.#posToIndex(in_row, 0), angleForFixedRow, this.#conf.col.edge);
-		} else {
-			return [];
-		}
-	}
-	#fixedColIndexes(in_col) {
-		const angleForFixedCol = 0;
-		if (this.#conf.dirSet.pair.has(angleForFixedCol)) {
-			return this.#lineIndexes(this.#posToIndex(0, in_col), angleForFixedCol, this.#conf.row.edge);
-		} else {
-			return [];
-		}
-	}
 	#rotateItems(in_indexes, in_delta) {
 		const shifted = cReversi.#rotateArray(in_indexes, in_delta);
 		const copy = [...this.#area.items];
@@ -1055,22 +1035,22 @@ class cReversi {
 			this.#setItemByIndex(in_indexes[i], copy[shifted[i]]);
 		}
 	}
-	#rotateSameRowItems(in_targetRow, in_deltaCol) {
-		const ix = this.#posToIndex(in_targetRow, 0);
-		const radiating = this.#conf.tagIxSet.radiating[ix];
+	#rotateSameRowItems(in_fixedRow, in_deltaCol) {
+		const ix = this.#posToIndex(in_fixedRow, 0);
+		const radiating = this.#conf.tagIndexes.radiating[ix];
 		// in case of loop, forward and backward include the same indexes
-		const [forward, backward] = this.#conf.dirSet.pair.get(90);
+		const [forward, backward] = this.#conf.dirStyle.pair.get(90);
 		this.#rotateItems([ix, ...radiating[forward]], in_deltaCol);
 	}
-	#rotateSameColItems(in_targetCol, in_deltaRow) {
-		const ix = this.#posToIndex(0, in_targetCol);
-		const radiating = this.#conf.tagIxSet.radiating[ix];
+	#rotateSameColItems(in_fixedCol, in_deltaRow) {
+		const ix = this.#posToIndex(0, in_fixedCol);
+		const radiating = this.#conf.tagIndexes.radiating[ix];
 		// in case of loop, forward and backward include the same indexes
-		const [forward, backward] = this.#conf.dirSet.pair.get(0);
+		const [forward, backward] = this.#conf.dirStyle.pair.get(0);
 		this.#rotateItems([ix, ...radiating[forward]], in_deltaRow);
 	}
-	#flip(in_player, in_ix, in_test = false) {
-		const radiating = this.#conf.tagIxSet.radiating[in_ix];
+	#flip(in_player, in_ix, in_dryRun = false) {
+		const radiating = this.#conf.tagIndexes.radiating[in_ix];
 		let flipped = false;
 		for (let i = 0; i < radiating.length; i++) {
 			const towards = radiating[i];
@@ -1081,7 +1061,8 @@ class cReversi {
 				const item = this.#getItemByIndex(ix);
 				if (item === in_player) {
 					if (enemyAppears) {
-						if (in_test) {
+						if (in_dryRun) {
+							// the same as Array.some() for dry run
 							return true;
 						} else {
 							flipped = true;
@@ -1102,31 +1083,13 @@ class cReversi {
 		if (flipped) {
 			this.#setItemByIndex(in_ix, in_player);
 			this.#updateOptions(in_ix);
+			this.#updateScore();
 			return true;
 		} else {
 			return false;
 		}
 	}
-	#flippable(in_player, in_ix) {
-		const isTest = true;
-		return this.#flip(in_player, in_ix, isTest);
-	}
-	#choose(in_player, in_ix) {
-		// in_ix must be choosable
-		this.#flip(in_player, in_ix);
-		this.#updatePlayersAreaScores(in_player, in_ix);
-		const pos = this.#indexToPos(in_ix);
-		this.#history.push({
-			who : in_player,
-			action : 'choose-item',
-			row : pos.row,
-			col : pos.col,
-			target : -1,
-			delta : -1
-		});
-		// this._debug();
-	}
-	#npcTryRotate(in_player, in_dir) {
+	#tryRotation(in_player, in_action) {
 		// step1 : find rows/cols where in_player owns at least one cell
 		const rowSet = new Set();
 		const colSet = new Set();
@@ -1139,33 +1102,31 @@ class cReversi {
 			rowSet.add(row);
 			colSet.add(col);
 		}
-		// step2 : test to rotate for in_dir. this algorithm can be improved
+		// step2 : test for in_action. this algorithm can be improved
 		const setting = {
-			row : {
-				action : 'npc-col-fixed-rotate',
+			'fixed-row-rotate' : {
 				targetArr : Array.from(rowSet),
 				rotateFunc : this.#rotateSameRowItems.bind(this),
 				maxCnt : this.#conf.col.size
 			},
-			col : {
-				action : 'npc-row-fixed-rotate',
+			'fixed-col-rotate' : {
 				targetArr : Array.from(colSet),
 				rotateFunc : this.#rotateSameColItems.bind(this),
 				maxCnt : this.#conf.row.size
 			}
 		}
-		const {action, targetArr, rotateFunc, maxCnt} = setting[in_dir];
-		let target, delta;
+		const {targetArr, rotateFunc, maxCnt} = setting[in_action];
+		const result = {target : -1, delta : -1};
 		const rollback = this.#createRollback();
-		let rotated = targetArr.some(in_target => {
-			target = in_target;
+		const rotated = targetArr.some(in_target => {
+			result.target = in_target;
 			let rest = maxCnt;
 			while (--rest > 0) {
 				// rotate +1 (maxCnt - 1) times
 				(rotateFunc)(in_target, 1);
 				const cand = this.#searchCandidates(in_player);
 				if (cand.length > 0) {
-					delta = maxCnt - rest;
+					result.delta = maxCnt - rest;
 					return true;
 				}
 			}
@@ -1173,17 +1134,10 @@ class cReversi {
 			return false;
 		});
 		if (rotated) {
-			this.#updateOptionsAll();
-			this.#history.push({
-				who : in_player,
-				action : action,
-				row : -1,
-				col : -1,
-				target : target,
-				delta : delta
-			});
+			return result;
+		} else {
+			return null;
 		}
-		return rotated;
 	}
 	#count(in_player) {
 		const items = this.#area.items.filter(in_el => in_el === in_player);
@@ -1194,105 +1148,130 @@ class cReversi {
 	}
 	#searchCandidates(in_player) {
 		const candidates = [];
+		const asDryRun = true;
 		this.#area.options.forEach(in_empty_ix => {
-			if (this.#flippable(in_player, in_empty_ix)) {
+			if (this.#flip(in_player, in_empty_ix, asDryRun)) {
 				candidates.push(in_empty_ix);
 			}
 		});
 		return candidates;
 	}
+	#updateOptions(in_ix) {
+		const radiating = this.#conf.tagIndexes.radiating[in_ix];
+		radiating.forEach(in_towards => {
+			if (in_towards.length > 0) {
+				const aroundIx = in_towards[0];
+				if (this.#getItemByIndex(aroundIx) === cReversi.#empty) {
+					this.#area.options.add(aroundIx);
+				}
+			}
+		});
+		// in_ix should be new occupied position
+		this.#area.options.delete(in_ix);
+	}
+	#updateOptionsAll() {
+		this.#area.options.clear();
+		for (let ix = 0; ix < this.#area.items.length; ix++) {
+			if (this.#getItemByIndex(ix) === cReversi.#empty) {
+				continue;
+			}
+			this.#updateOptions(ix);
+		}
+	}
 	#getAreaScore(in_player, in_ix) {
 		return this.#area.scores.players[in_player][in_ix];
 	}
-	#initAreaScores() {
+	#initScore() {
+		this.#initScore_forDefault();
+		this.#initScore_forPlayers();
+	}
+	#initScore_forDefault() {
 		const attenuation = 5;
 		this.#area.scores.default = new Array(this.#area.items.length).fill(0);
 		let loopCnt = 3;
 		while (loopCnt-- > 0) {
 			const buff = [];
-			for (let ix = 0; ix < this.#area.items.length; ix++) {
-				const radiating = this.#conf.tagIxSet.radiating[ix];
-				let score = 0;
-				radiating.forEach(in_towards => {
-					if (in_towards.length === 0) {
+			for (let areaIx = 0; areaIx < this.#area.items.length; areaIx++) {
+				const aroundArr = this.#aroundIndexes(areaIx);
+				let score = this.#conf.dirStyle.pair.size * 2 - aroundArr.length;
+				aroundArr.forEach(in_aroundIx => {
+					if (this.#area.items[in_aroundIx] === cReversi.#dmz) {
 						score++;
 					} else {
-						const neighbor = in_towards[0];
-						if (this.#area.items[neighbor] === cReversi.#dmz) {
-							score++;
-						} else {
-							// a cell adjacent to a high-score cell should have its score reduced
-							score -= Math.floor(this.#area.scores.default[neighbor] / attenuation);
-						}
+						// a cell adjacent to a high-score cell should have its score reduced
+						score -= Math.floor(this.#area.scores.default[in_aroundIx] / attenuation);
 					}
 				});
-				buff[ix] = score;
+				buff[areaIx] = score;
 			}
-			for (let ix = 0; ix < this.#area.scores.default.length; ix++) {
-				this.#area.scores.default[ix] += buff[ix];
+			for (let areaIx = 0; areaIx < this.#area.scores.default.length; areaIx++) {
+				this.#area.scores.default[areaIx] += buff[areaIx];
 			}
 		}
+	}
+	#initScore_forPlayers() {
 		// each player has own score based on owned area
 		for (let player = 0; player < cReversi.#maxPlayers; player++) {
 			this.#area.scores.players[player] = [...this.#area.scores.default];
 		}
 	}
-	#updatePlayersAreaScores(in_player, in_ix) {
-		const tagIxSet = this.#conf.tagIxSet;
-		if (this.#conf.row.edge && this.#conf.col.edge) {
-			if (tagIxSet.corner.some(in_corner_ix => in_corner_ix === in_ix)) {
-				const radiating = tagIxSet.radiating[in_ix];
-				radiating.forEach(in_towards => {
-					if (in_towards.length === 0) {
-						return;
-					}
-					const neighbor = in_towards[0];
-					this.#area.scores.players[in_player][neighbor] = this.#area.scores.default[in_ix];
-				});
-			}
-		} else {
-			const pos = this.#indexToPos(in_ix);
-			let edge, repl;
- 			if (this.#conf.row.edge) {
-				if (pos.row === 0) {
-					edge = this.#fixedRowIndexes(pos.row);
-					repl = this.#fixedRowIndexes(pos.row + 1);
-				} else if (pos.row === this.#conf.row.size - 1) {
-					edge = this.#fixedRowIndexes(pos.row);
-					repl = this.#fixedRowIndexes(pos.row - 1);
-				} else {
-					// in_ix is not on the row-edge
-					return;
-				}
-			}
-			if (this.#conf.col.edge) {
-				if (pos.col === 0) {
-					edge = this.#fixedColIndexes(pos.col);
-					repl = this.#fixedColIndexes(pos.col + 1);
-				} else if (pos.col === this.#conf.col.size - 1) {
-					edge = this.#fixedColIndexes(pos.col);
-					repl = this.#fixedColIndexes(pos.col - 1);
-				} else {
-					// in_ix is not on the col-edge
-					return;
-				}
-			}
-			if (!edge) {
+	#updateScore() {
+		this.#updateScore_forPlayersCorner();
+		this.#updateScore_forPlayersEdge();
+	}
+	#updateScore_forPlayersCorner() {
+		for (const cornerIx of this.#conf.tagIndexes.cornerSet) {
+			const owner = this.#getItemByIndex(cornerIx);
+			if ((owner === cReversi.#empty) || (owner === cReversi.#dmz)) {
 				return;
 			}
-			for (let i = 0; i < edge.length; i++) {
-				const score1 = this.#area.scores.default[edge[i]];
-				const score2 = this.#area.scores.default[repl[i]];
-				const owner = this.#getItemByIndex(edge[i]);
-				for (let player = 0; player < cReversi.#maxPlayers; player++) {
-					if (player === owner) {
-						this.#area.scores.players[player][repl[i]] = score1;
-					} else {
-						this.#area.scores.players[player][repl[i]] = score2;
-					}
-				}
-			}
+			const aroundArr = this.#aroundIndexes(cornerIx);
+			const newScore = this.#area.scores.default[cornerIx];
+			aroundArr.forEach(in_aroundIx => this.#area.scores.players[owner][in_aroundIx] = newScore);
 		}
+	}
+	#updateScore_forPlayersEdge() {
+		const tagIndexes = this.#conf.tagIndexes;
+		tagIndexes.edgeSetArr.forEach(in_edgeSet => {
+			for (const edgeIx of in_edgeSet) {
+				const owner = this.#getItemByIndex(edgeIx);
+				if ((owner === cReversi.#dmz) || (owner === cReversi.#empty)) {
+					// edge is not owned
+					return;
+				}
+				const aroundArr = this.#aroundIndexes(edgeIx);
+				aroundArr.forEach(in_aroundIx => {
+					// edgeSetArr should be removed
+					if (in_edgeSet.has(in_aroundIx)) {
+						return;
+					}
+					// xInsideSet should be removed
+					if (tagIndexes.xInsideSet.has(in_aroundIx)) {
+						return;
+					}
+					for (let player = 0; player < cReversi.#maxPlayers; player++) {
+						let update = this.#area.scores.default[in_aroundIx];
+						if (player === owner) {
+							update = this.#area.scores.default[edgeIx];
+						}
+						this.#area.scores.players[player][in_aroundIx] = update;
+					}
+				});
+			}
+		});
+	}
+	#createRollback() {
+		const backup = {
+			items : [...this.#area.items],
+			options : [...this.#area.options],
+			players : this.#area.scores.players.map(in_arr => [...in_arr]) 
+		};
+		return () => {
+			const area = this.#area;
+			area.items = [...backup.items];
+			area.options = new Set(backup.options);
+			area.scores.players = backup.players.map(in_arr => [...in_arr]);
+		};
 	}
 	static #evaluateStats = {};
 	#evaluate(in_player, in_ix) {
@@ -1304,11 +1283,7 @@ class cReversi {
 			}
 		};
 		registerStats('total');
-		const pos = this.#indexToPos(in_ix);
-		const noLoop = this.#conf.row.edge && this.#conf.col.edge;
-		const ixIsEdge = in_dir => ((this.#conf[in_dir].edge) && ((pos[in_dir] === this.#conf[in_dir].size - 1) || (pos[in_dir] === 0)));
-		const ixIsRowEdge = ixIsEdge('row');
-		const ixIsColEdge = ixIsEdge('col');
+		const loop = !this.#conf.row.edge || !this.#conf.col.edge;
 		/*
 			1. e (= edge) : check if area of edge is safe
 			2. x (= xInside) : check if xInside positions will be not changed
@@ -1328,32 +1303,35 @@ class cReversi {
 				increased : false
 			}
 		};
-		const tagIxSet = this.#conf.tagIxSet;
-		if (ixIsRowEdge) {
-			if (ixIsColEdge) {
-				registerStats('corner');
-				return +999;
+		const tagIndexes = this.#conf.tagIndexes;
+		if (tagIndexes.cornerSet.has(in_ix)) {
+			registerStats('corner');
+			return +999;
+		}
+		const ixInEdge = tagIndexes.edgeSetArr.some(in_edgeSet => {
+			if (in_edgeSet.has(in_ix)) {
+				check.e.indexes = [...in_edgeSet];
+				return true;
 			} else {
-				check.e.indexes = this.#fixedRowIndexes(pos.row);
+				return false;
+			}
+		});
+		if (loop) {
+			if (!ixInEdge) {
+				registerStats('inside & loop = without xInside');
+				return 0;
 			}
 		} else {
-			if (ixIsColEdge) {
-				check.e.indexes = this.#fixedColIndexes(pos.col);
-			} else {
-				if (!noLoop) {
-					registerStats('inside & loop = without xInside');
-					return 0;
+			const riskCornerSet = new Set();
+			for (const cornerIx of tagIndexes.cornerSet) {
+				if (this.#getItemByIndex(cornerIx) === cReversi.#empty) {
+					riskCornerSet.add(cornerIx);
 				}
 			}
-		}
-		if (noLoop) {
-			check.x.indexes = [];
-			for (let i = 0; i < tagIxSet.corner.length; i++) {
-				if (tagIxSet.corner[i] === in_player) {
-					// does not need to check x
-					continue;
-				} else {
-					check.x.indexes.push(tagIxSet.xInside[i]);
+			for (const xInsideIx of tagIndexes.xInsideSet) {
+				const aroundArr = this.#aroundIndexes(xInsideIx);
+				if (aroundArr.some(in_aroundIx => riskCornerSet.has(in_aroundIx))) {
+					check.x.indexes.push(xInsideIx);
 				}
 			}
 		}
@@ -1367,8 +1345,8 @@ class cReversi {
 		this.#flip(in_player, in_ix);
 		if (check.e.indexes.length > 0) {
 			check.e.nextItems = this.#items(check.e.indexes);
-			check.e.currParsed = cLineParser.parse(check.e.currItems, in_player, !noLoop);
-			check.e.nextParsed = cLineParser.parse(check.e.nextItems, in_player, !noLoop);
+			check.e.currParsed = cLineParser.parse(check.e.currItems, in_player, loop);
+			check.e.nextParsed = cLineParser.parse(check.e.nextItems, in_player, loop);
 		}
 		if (check.x.indexes.length > 0) {
 			check.x.nextItems = this.#items(check.x.indexes);
@@ -1454,37 +1432,38 @@ class cReversi {
 		const rollback = this.#createRollback();
 		this.#flip(in_player, in_ix);
 		let count = 0;
-		for (let ix = 0; ix < this.#area.items.length; ix++) {
-			if (this.#getItemByIndex(ix) === in_player) {
-				const firstNeighbor = in_arr => {
-					for (let i = 0; i < in_arr.length; i++) {
-						const neighbor = this.#getItemByIndex(in_arr[i]);
-						if (neighbor !== in_player) {
-							return neighbor;
-						}
-					}
-					return null;
+		const findNeighbor = in_arr => {
+			for (let i = 0; i < in_arr.length; i++) {
+				const neighbor = this.#getItemByIndex(in_arr[i]);
+				if (neighbor !== in_player) {
+					return neighbor;
 				}
-				const radiating = this.#conf.tagIxSet.radiating[in_ix];
-				const pairs = Array.from(this.#conf.dirSet.pair.values());
-				const isSafe = pairs.every(in_pair => {
-					const P = firstNeighbor(radiating[in_pair[0]]);
-					const N = firstNeighbor(radiating[in_pair[1]]);
-					// player reachs all the way to the board edge, or to the DMZ
-					if ((P === null) || (P === cReversi.#dmz)) {
-						return true;
-					}
-					if ((N === null) || (N === cReversi.#dmz)) {
-						return true;
-					}
-					// both sides are bordered by the same object
-					if (P === N) {
-						return true;
-					}
-					return false;
-				});
-				count += isSafe ? 1 : 0;
 			}
+			return null;
+		}
+		const pairs = Array.from(this.#conf.dirStyle.pair.values());
+		for (let ix = 0; ix < this.#area.items.length; ix++) {
+			if (this.#getItemByIndex(ix) !== in_player) {
+				continue;
+			}
+			const radiating = this.#conf.tagIndexes.radiating[in_ix];
+			const isSafe = pairs.every(([in_pos, in_neg])  => {
+				const P = findNeighbor(radiating[in_pos]);
+				const N = findNeighbor(radiating[in_neg]);
+				// player reachs all the way to the board edge, or to the DMZ
+				if ((P === null) || (P === cReversi.#dmz)) {
+					return true;
+				}
+				if ((N === null) || (N === cReversi.#dmz)) {
+					return true;
+				}
+				// both sides are bordered by the same object
+				if (P === N) {
+					return true;
+				}
+				return false;
+			});
+			count += isSafe ? 1 : 0;
 		}
 		(rollback)();
 		return count;
@@ -1596,7 +1575,7 @@ class cReversi {
 			while (true) {
 				const resultArr = [];
 				for (let i = 0; i < in_argoArr.length; i++) {
-					resultArr[i] = this.npc(i, in_argoArr[i]);
+					resultArr[i] = this.playAutomatically(i, in_argoArr[i]);
 				}
 				if (resultArr.some(in_result => in_result)) {
 					if (cnt-- === 0) {
@@ -1637,7 +1616,7 @@ class cReversi {
 						if (test(players) === 0) {
 							win++;
 						}
-						this.#initAreaScores();
+						this.#initScore();
 						this.#history.length = 0;
 						(rollback)();
 					} else {
@@ -1645,7 +1624,7 @@ class cReversi {
 					}
 				}
 				row.push(truncateDecimal(win / in_repeat, 2));
-				this.#initAreaScores();
+				this.#initScore();
 				this.#history.length = 0;
 				(rollback)();
 			});
@@ -1722,7 +1701,7 @@ class cReversi {
 				}
 				let l = rightMargin + (cellSize + cellMargin) * col;
 				let t = rightMargin + (cellSize + cellMargin) * row;
-				const pair = this.#conf.dirSet.pair;
+				const pair = this.#conf.dirStyle.pair;
 				if (pair.has(90) && !pair.has(0)) {
 					l += (row % 2 === this.#conf.offset ? (cellSize + cellMargin) / 2 : 0);
 				}
@@ -1767,19 +1746,34 @@ class cReversi {
 			throw new Error();
 		}
 	}
-	pc(in_player, in_row, in_col) {
+	playResetTable(in_player, in_action, in_table) {
+		this.setTable(in_table);
+		this.#history.push({
+			who : in_player,
+			action : in_action,
+			row : -1,
+			col : -1,
+			delta : -1
+		});
+	}
+	playSetPosition(in_player, in_row, in_col) {
 		const ix = this.#posToIndex(in_row, in_col);
 		if (this.#getItemByIndex(ix) !== cReversi.#empty) {
 			return false;
 		}
-		if (this.#flippable(in_player, ix)) {
-			this.#choose(in_player, ix);
-			return true;
-		} else {
-			return false;
+		const flipped = this.#flip(in_player, ix);
+		if (flipped) {
+			this.#history.push({
+				who : in_player,
+				action : 'choose-item',
+				row : in_row,
+				col : in_col,
+				delta : -1
+			});
 		}
+		return flipped;
 	}
-	npc(in_player, in_argo = null) {
+	playAutomatically(in_player, in_argo = null) {
 		let npcAlive = false;
 		let playerCnt = 0;
 		for (let player = 0; player < cReversi.#maxPlayers; player++) {
@@ -1812,28 +1806,51 @@ class cReversi {
 		// console.log(in_player, npcAlive, playerCnt, npcArgo);
 		const candidates = this.#searchCandidates(in_player);
 		if (candidates.length > 0) {
-			const index = (this.#npcSet[npcArgo].bind(this))(in_player, candidates);
-			this.#choose(in_player, index);
+			const ix = (this.#npcSet[npcArgo].bind(this))(in_player, candidates);
+			this.#flip(in_player, ix);
+			const pos = this.#indexToPos(ix);
+			this.#history.push({
+				who : in_player,
+				action : 'choose-item',
+				row : pos.row,
+				col : pos.col,
+				delta : -1
+			});
 			return true;
 		} else {
-			if (this.#conf.rotatable.fixedCol) {
-				return this.#npcTryRotate(in_player, 'row');
+			let action, result = null;
+			if (!result && this.#conf.rotatable.fixedCol) {
+				action = 'fixed-col-rotate';
+				result = this.#tryRotation(in_player, action);
 			}
-			if (this.#conf.rotatable.fixedRow) {
-				return this.#npcTryRotate(in_player, 'col');
+			if (!result && this.#conf.rotatable.fixedRow) {
+				action = 'fixed-row-rotate';
+				result = this.#tryRotation(in_player, action);
 			}
-			// can not do anything
-			return false;
+			if (result) {
+				this.#updateOptionsAll();
+				this.#history.push({
+					who : in_player,
+					action : action,
+					row : (action === 'fixed-row-rotate' ? result.target : -1),
+					col : (action === 'fixed-col-rotate' ? result.target : -1),
+					delta : result.delta
+				});
+				return true;
+			} else {
+				// can not do anything
+				return false;
+			}
 		}
 	}
-	canRowWiseLoop() {
-		return !this.#conf.row.edge;
+	rotatableFixedCol() {
+		return this.#conf.rotatable.fixedCol;
 	}
-	canColWiseLoop() {
-		return !this.#conf.col.edge;
+	rotatableFixedRol() {
+		return this.#conf.rotatable.fixedRow;
 	}
 	getLast(in_conditions = {}) {
-		// in_conditions : {who, action, row, col, target, delta}
+		// in_conditions : {who, action, row, col, delta}
 		for (let i = this.#history.length - 1; i >= 0; i--) {
 			const last = this.#history[i];
 			if (Object.keys(in_conditions).some(in_key => in_conditions[in_key] !== last[in_key])) {
@@ -1867,23 +1884,12 @@ class cReversi {
 			}
 		}
 	}
-	setActionResult(in_player, in_action, in_table) {
-		this.setTable(in_table);
-		this.#history.push({
-			who : in_player,
-			action : in_action,
-			row : -1,
-			col : -1,
-			target : -1,
-			delta : -1
-		});
-	}
 	getCurrentCondition() {
 		const condition = {
 			finished : false,
 			players : []
 		};
-		const canRotate = !(this.#conf.row.edge && this.#conf.col.edge);
+		const canRotate = this.#conf.rotatable.fixedCol || this.#conf.rotatable.fixedRow;
 		const cnt = {
 			activePlayer : 0,
 			frozenPlayer : 0
@@ -1929,7 +1935,7 @@ const TABLE = [
 ];
 
 let SIMULATION = false;
-//SIMULATION = true;
+SIMULATION = true;
 
 if (SIMULATION) {
 	const game = new cReversi(TABLE, true, true);
@@ -1939,7 +1945,7 @@ if (SIMULATION) {
 }
 
 let ONEBYONE = false;
-ONEBYONE = true;
+//ONEBYONE = true;
 
 if (ONEBYONE) {
 //	const game = new cReversi(TABLE, true, true);
@@ -1952,7 +1958,7 @@ if (ONEBYONE) {
 	const ms = 1000;
 	turnProc = () => {
 		const player = turnCnt % 2;
-		game.npc(player);
+		game.playAutomatically(player);
 		game._snapshot();
 		if (turnCnt-- > 0) {
 			setTimeout(turnProc, ms);
