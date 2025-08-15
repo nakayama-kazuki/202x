@@ -882,7 +882,7 @@ class cReversi {
 		this.setTable(in_table);
 		this.#initTagIndexes();
 		this.#initScore();
-		const argoArr = ['spiteful', 'balance', 'safety', 'greedy', 'learner', 'classic', 'beginner', 'monkey'];
+		const argoArr = ['safety', 'spiteful', 'balance', 'greedy', 'learner', 'classic', 'beginner', 'monkey'];
 		for (let i = 0; i < argoArr.length; i++) {
 			this.#npcArgoPriority.push((argoArr.slice(0, i + 1))[arrRand]());
 		}
@@ -908,7 +908,7 @@ class cReversi {
 							break;
 						}
 					} else {
-						currRow = (currRow + sizeRow) % sizeRow;
+						currRow = (currRow + this.#conf.row.size) % this.#conf.row.size;
 						if ((currRow === initRow) && (dr !== 0)) {
 							// cyclic
 							break;
@@ -921,7 +921,7 @@ class cReversi {
 							break;
 						}
 					} else {
-						currCol = (currCol + sizeCol) % sizeCol;
+						currCol = (currCol + this.#conf.col.size) % this.#conf.col.size;
 						if ((currCol === initCol) && (dc !== 0)) {
 							// cyclic
 							break;
@@ -1157,13 +1157,10 @@ class cReversi {
 		return candidates;
 	}
 	#updateOptions(in_ix) {
-		const radiating = this.#conf.tagIndexes.radiating[in_ix];
-		radiating.forEach(in_towards => {
-			if (in_towards.length > 0) {
-				const aroundIx = in_towards[0];
-				if (this.#getItemByIndex(aroundIx) === cReversi.#empty) {
-					this.#area.options.add(aroundIx);
-				}
+		const aroundArr = this.#aroundIndexes(in_ix);
+		aroundArr.forEach(in_aroundIx => {
+			if (this.#getItemByIndex(in_aroundIx) === cReversi.#empty) {
+				this.#area.options.add(in_aroundIx);
 			}
 		});
 		// in_ix should be new occupied position
@@ -1172,7 +1169,8 @@ class cReversi {
 	#updateOptionsAll() {
 		this.#area.options.clear();
 		for (let ix = 0; ix < this.#area.items.length; ix++) {
-			if (this.#getItemByIndex(ix) === cReversi.#empty) {
+			const item = this.#getItemByIndex(ix);
+			if ((item === cReversi.#empty) || (item === cReversi.#dmz)) {
 				continue;
 			}
 			this.#updateOptions(ix);
@@ -1556,9 +1554,9 @@ class cReversi {
 		return in_candArr[arrRand]();
 	}
 	#npcSet = {
+		safety : this.#npc_max_owned_safe_area,
 		spiteful : this.#npc_min_enemy_option,
 		balance : this.#npc_max_option,
-		safety : this.#npc_max_owned_safe_area,
 		greedy : this.#npc_max_owned_area,
 		learner : this.#npc_score_smart,
 		classic : this.#npc_score_total,
@@ -1755,6 +1753,8 @@ class cReversi {
 			col : -1,
 			delta : -1
 		});
+		this.#updateOptionsAll();
+		this.#updateScore();
 	}
 	playSetPosition(in_player, in_row, in_col) {
 		const ix = this.#posToIndex(in_row, in_col);
@@ -1828,7 +1828,6 @@ class cReversi {
 				result = this.#tryRotation(in_player, action);
 			}
 			if (result) {
-				this.#updateOptionsAll();
 				this.#history.push({
 					who : in_player,
 					action : action,
@@ -1836,6 +1835,8 @@ class cReversi {
 					col : (action === 'fixed-col-rotate' ? result.target : -1),
 					delta : result.delta
 				});
+				this.#updateOptionsAll();
+				this.#updateScore();
 				return true;
 			} else {
 				// can not do anything
