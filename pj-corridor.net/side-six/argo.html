@@ -641,7 +641,7 @@ class cReversi {
 	static #rotateArray(in_array, in_delta) {
 		const len = in_array.length;
 		const delta = ((in_delta % len) + len) % len;
-		return in_array.slice(delta * -1).concat(in_array.slice(0, delta * -1));
+		return in_array.slice(delta).concat(in_array.slice(0, delta));
 	}
 	static #dmz = 8;
 	static #empty = 9;
@@ -1084,10 +1084,8 @@ class cReversi {
 			this.#setItemByIndex(in_ix, in_player);
 			this.#updateOptions(in_ix);
 			this.#updateScore();
-			return true;
-		} else {
-			return false;
 		}
+		return flipped;
 	}
 	#tryRotation(in_player, in_action) {
 		// step1 : find rows/cols where in_player owns at least one cell
@@ -1130,12 +1128,12 @@ class cReversi {
 					return true;
 				}
 			}
-			(rollback)();
 			return false;
 		});
 		if (rotated) {
 			return result;
 		} else {
+			(rollback)();
 			return null;
 		}
 	}
