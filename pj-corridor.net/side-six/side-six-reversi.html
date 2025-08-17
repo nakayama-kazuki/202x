@@ -2137,7 +2137,7 @@ const gMeshLevelMap = ((in_diameter) => {
 	case 'hex' :
 		shellInfo = [
 			{
-				name : '14x7x4',
+				boardSize : '14x7',
 				loop : true,
 				format : 'hexFlatTopped',
 				offsetCol : 1,
@@ -2160,7 +2160,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				]
 			},
 			{
-				name : '15x7x3',
+				boardSize : '15x7',
 				loop : true,
 				format : 'hexFlatTopped',
 				offsetCol : 1,
@@ -2185,7 +2185,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				]
 			},
 			{
-				name : '16x8x4',
+				boardSize : '16x8',
 				loop : true,
 				format : 'hexFlatTopped',
 				offsetCol : 1,
@@ -2210,7 +2210,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				]
 			},
 			{
-				name : '16x9x4',
+				boardSize : '16x9',
 				loop : true,
 				format : 'hexFlatTopped',
 				offsetCol : 1,
@@ -2237,28 +2237,29 @@ const gMeshLevelMap = ((in_diameter) => {
 				]
 			},
 			{
-				name : '24x12x3',
-				loop : true,
+				boardSize : '24x12',
+				loop : false,
 				format : 'hexFlatTopped',
 				offsetCol : 1,
 				table : [
-					[D,D,D,D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D,D,D,D],
+
 					[D,D,D,D,D,E,D,D,D,D,D],
 					[D,D,D,E,E,E,E,E,D,D,D],
 					[D,E,E,E,E,E,E,E,E,E,D],
 					[E,E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,B,E,E,E,E,E],
+					[E,E,E,Y,E,B,E,B,E,E,E],
 					[E,E,E,E,Y,D,B,E,E,E,E],
-
 					[E,E,E,E,Y,R,R,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,R,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E,E,E,E],
 					[D,D,E,E,E,E,E,E,E,D,D],
 					[D,D,D,D,E,E,E,D,D,D,D],
+
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
 					[D,D,D,D,D,D,D,D,D,D,D],
 					[D,D,D,D,D,D,D,D,D,D,D],
 					[D,D,D,D,D,D,D,D,D,D,D],
@@ -2272,7 +2273,7 @@ const gMeshLevelMap = ((in_diameter) => {
 	case '4-loop' :
 		shellInfo = [
 			{
-				name : '12x6x4',
+				boardSize : '12x6',
 				loop : true,
 				format : 'square',
 				offsetCol : -1,
@@ -2293,7 +2294,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				]
 			},
 			{
-				name : '18x6x4',
+				boardSize : '18x6',
 				loop : true,
 				format : 'square',
 				offsetCol : -1,
@@ -2321,7 +2322,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				]
 			},
 			{
-				name : '16x8x4',
+				boardSize : '16x8',
 				loop : true,
 				format : 'square',
 				offsetCol : -1,
@@ -2346,7 +2347,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				]
 			},
 			{
-				name : '20x10x4',
+				boardSize : '20x10',
 				loop : true,
 				format : 'square',
 				offsetCol : -1,
@@ -2379,7 +2380,7 @@ const gMeshLevelMap = ((in_diameter) => {
 	case '2-loop' :
 		shellInfo = [
 			{
-				name : '12x6x2',
+				boardSize : '12x6',
 				loop : true,
 				format : 'square',
 				offsetCol : -1,
@@ -2400,7 +2401,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				]
 			},
 			{
-				name : '18x6x2',
+				boardSize : '18x6',
 				loop : true,
 				format : 'square',
 				offsetCol : -1,
@@ -2428,7 +2429,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				]
 			},
 			{
-				name : '16x8x2',
+				boardSize : '16x8',
 				loop : true,
 				format : 'square',
 				offsetCol : -1,
@@ -2453,7 +2454,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				]
 			},
 			{
-				name : '20x10x2',
+				boardSize : '20x10',
 				loop : true,
 				format : 'square',
 				offsetCol : -1,
@@ -2486,7 +2487,7 @@ const gMeshLevelMap = ((in_diameter) => {
 	case '4-non-loop' :
 		shellInfo = [
 			{
-				name : '6x6x4',
+				boardSize : '6x6',
 				loop : false,
 				format : 'square',
 				offsetCol : -1,
@@ -2514,7 +2515,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				]
 			},
 			{
-				name : '12x6x4',
+				boardSize : '12x6',
 				loop : false,
 				format : 'square',
 				offsetCol : -1,
@@ -2542,7 +2543,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				]
 			},
 			{
-				name : '8x8x4',
+				boardSize : '8x8',
 				loop : false,
 				format : 'square',
 				offsetCol : -1,
@@ -2567,7 +2568,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				]
 			},
 			{
-				name : '10x10x4',
+				boardSize : '10x10',
 				loop : false,
 				format : 'square',
 				offsetCol : -1,
@@ -2601,7 +2602,7 @@ const gMeshLevelMap = ((in_diameter) => {
 	default :
 		shellInfo = [
 			{
-				name : '6x6x2',
+				boardSize : '6x6',
 				loop : false,
 				format : 'square',
 				offsetCol : -1,
@@ -2629,7 +2630,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				]
 			},
 			{
-				name : '12x6x2',
+				boardSize : '12x6',
 				loop : false,
 				format : 'square',
 				offsetCol : -1,
@@ -2657,7 +2658,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				]
 			},
 			{
-				name : '8x8x2',
+				boardSize : '8x8',
 				loop : false,
 				format : 'square',
 				offsetCol : -1,
@@ -2682,7 +2683,7 @@ const gMeshLevelMap = ((in_diameter) => {
 				]
 			},
 			{
-				name : '10x10x2',
+				boardSize : '10x10',
 				loop : false,
 				format : 'square',
 				offsetCol : -1,
@@ -2755,8 +2756,11 @@ const gMeshLevelMap = ((in_diameter) => {
 				pieces.push(piece);
 			}
 		}
+		const playerSet = new Set(in_shell.table.flat());
+		playerSet.delete(D);
+		playerSet.delete(E);
 		const level_key = {
-			name : in_shell.name,
+			name : in_shell.boardSize + 'x' + playerSet.size,
 			loop : in_shell.loop,
 			format : in_shell.format,
 			offset : in_shell.offsetCol
@@ -2887,14 +2891,15 @@ let gReversi = null;
 class cGameController {
 	static #UNUSED = -1;
 	static PC = BLUE;
-	static #NPC = [
-		RED,
-		YELLOW,
-		GREEN,
-		ORANGE,
-		LIGHTBLUE,
-		LIGHTGREEN
-	];
+	static #YOU = 'you';
+	static #NPC = new Map([
+		[RED, 'safety'],
+		[YELLOW, 'spiteful'],
+		[GREEN, 'balance'],
+		[ORANGE, 'greedy'],
+		[LIGHTBLUE, 'learner'],
+		[LIGHTGREEN, 'classic']
+	]);
 	#mapping = new Array(10).fill(cGameController.#UNUSED);
 	#turnHook = () => {};
 	#curIndex = 0;
@@ -2902,7 +2907,7 @@ class cGameController {
 	enableHandler = false;
 	// cGameController knows the internal structure of cColonyBoard, cReversi and cSphericalWorld
 	constructor(in_playerCnt, in_pc = 0) {
-		const colors = Array.from(cGameController.#NPC);
+		const colors = Array.from(cGameController.#NPC.keys());
 		for (let i = 0; i < in_playerCnt; i++) {
 			let color;
 			if (i === in_pc) {
@@ -2916,6 +2921,9 @@ class cGameController {
 		this.#mapping[8] = DMZCOLOR;
 		this.#mapping[9] = EMPTYCOLOR;
 		this.setTableSize(-1, -1);
+	}
+	curNPCStrategy() {
+		return cGameController.#NPC.get(this.#mapping[this.#curIndex]) ?? cGameController.#YOU;
 	}
 	setTableSize(in_rows, in_cols) {
 		// as cColonyBoard and cReversi may not have the same rows and cols, in_rows and in_cols are needed.
@@ -3070,7 +3078,7 @@ class cGameController {
 		}
 	}
 	async npc(in_reversi, in_colony, in_world) {
-		if (in_reversi.playAutomatically(this.#curIndex)) {
+		if (in_reversi.playAutomatically(this.#curIndex, this.curNPCStrategy())) {
 			await this.#playLastAction(in_reversi, in_colony, in_world);
 			return true;
 		} else {
@@ -3165,7 +3173,7 @@ function warpViewProgress(in_canvas, in_lineCount) {
 
 function complete(in_player) {
 	gController.end();
-	gOrderChar.style.visibility = 'hidden';
+	gFigure.hide();
 	const progress = warpViewProgress(gBackgroundCanvas, 50);
 	gWorld.addAnimationHook(progress);
 	const duration = 2000;
@@ -3197,30 +3205,55 @@ function complete(in_player) {
 	}, duration);
 }
 
-const gOrderChar = (() => {
-	const elem = document.createElement('IMG');
+const gFigure = (() => {
 	const maxInt = 2 ** 31 - 1;
-	Object.assign(elem.style, {
+	const closure = {};
+	closure.outer = document.createElement('DIV');
+	Object.assign(closure.outer.style, {
 		position : 'absolute',
 		bottom : '20px',
 		right : '20px',
-		width : '100px',
-		height : 'auto',
+		textAlign : 'center',
 		zIndex : maxInt
 	});
-	document.body.appendChild(elem);
-	return elem;
+	closure.image = document.createElement('IMG');
+	Object.assign(closure.image.style, {
+		width : '100px',
+		height : 'auto',
+		display : 'block',
+		margin : '0 auto'
+	});
+	closure.outer.appendChild(closure.image);
+	closure.label = document.createElement('SPAN');
+	Object.assign(closure.label.style, {
+		display : 'inline-block',
+		marginTop : '6px',
+		fontFamily : 'cursive',
+		color : 'silver'
+	});
+	closure.outer.appendChild(closure.label);
+	document.body.appendChild(closure.outer);
+	return {
+		show(in_src, in_text) {
+			closure.outer.style.visibility = 'visible';
+			closure.image.src = in_src;
+			closure.label.textContent = in_text;
+		},
+		hide() {
+			closure.outer.style.visibility = 'hidden';
+		}
+	};
 })();
 
 function initializeByLevel() {
 	const curr = gMeshLevelMap.currItemByOrder();
-	const [rows, cols, players] = curr.k.name.split('x');
+	const [rows, cols, playerCnt] = curr.k.name.split('x');
 	const edge = {
 		row : !(curr.k.loop),
 		col : true
 	};
 	const pc = 0;
-	gController = new cGameController(players, pc);
+	gController = new cGameController(playerCnt, pc);
 	/*
 		setTableSize() enables separation between the reversi logic (with edge/DMZ)
 		and the visual structure defined in gMeshLevelMap
@@ -3233,8 +3266,7 @@ function initializeByLevel() {
 		gReversi = new cReversi(table, edge.row, edge.col, curr.k.format);
 	}
 	gController.setTurnHook(async (in_player, in_color, in_pc) => {
-		gOrderChar.style.visibility = 'visible';
-		gOrderChar.src = RES.get(in_color);
+		gFigure.show(RES.get(in_color), gController.curNPCStrategy());
 		if (in_pc) {
 			const last = gReversi.getLast({who : pc, action : 'choose-item'});
 			if (last) {
@@ -3243,7 +3275,7 @@ function initializeByLevel() {
 			}
 			return;
 		}
-		const acted = await gController.npc(gReversi, gColony, gWorld);
+		await gController.npc(gReversi, gColony, gWorld);
 		const winner = gController.endTurn(gReversi);
 		if (winner < 0) {
 			return;
@@ -3686,10 +3718,10 @@ async function chooseHere(in_ev) {
 		'mouseout' : stop,
 		'mouseup' : stop
 	};
-	for (let [name, func] of Object.entries(handlers)) {
-		gWorld.canvas.addEventListener(name, in_ev => {
+	for (let [eventName, closure] of Object.entries(handlers)) {
+		gWorld.canvas.addEventListener(eventName, in_ev => {
 			if (gController && gController.enableHandler) {
-				(func.bind(this))(in_ev);
+				(closure.bind(this))(in_ev);
 			}
 		});
 	}
