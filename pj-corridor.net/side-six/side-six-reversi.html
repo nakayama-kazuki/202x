@@ -7,8 +7,8 @@
 <script type='importmap'>
 {
 	"imports" : {
-		"three" : "https://cdn.jsdelivr.net/npm/three@0.177.0/build/three.module.min.js",
-		"utils" : "https://cdn.jsdelivr.net/npm/three@0.177.0/examples/jsm/utils/BufferGeometryUtils.js",
+		"three" : "https://cdn.jsdelivr.net/npm/three@0.179.0/build/three.module.min.js",
+		"utils" : "https://cdn.jsdelivr.net/npm/three@0.179.0/examples/jsm/utils/BufferGeometryUtils.js",
 		"basic" : "./basic-functions.js",
 		"side6" : "./side-six.js",
 		"s6res" : "./side-six-reversi-res.js",
@@ -676,7 +676,7 @@ class cReversi {
 	}
 	static #dmz = 8;
 	static #empty = 9;
-	static #maxPlayers = 4;
+	static #maxPlayers = 6;
 	static #validData = (() => {
 		const arr = [cReversi.#dmz, cReversi.#empty];
 		for (let player = 0; player < cReversi.#maxPlayers; player++) {
@@ -926,11 +926,13 @@ class cReversi {
 			const {row : initRow, col : initCol} = this.#indexToPos(areaIx);
 			const radiating = tagIndexes.radiating[areaIx] = [];
 			const dirStyle = this.#getDirections(initRow, initCol);
+			// don't need radiating which starts from dmz
+			const wouldScan = (this.#getItemByIndex(areaIx) !== cReversi.#dmz);
 			for (let dirIx = 0; dirIx < dirStyle.length; dirIx++) {
 				const towards = [];
 				let currRow = initRow;
 				let currCol = initCol;
-				while (true) {
+				while (wouldScan) {
 					const [dr, dc] = this.#getDirection(currRow, currCol, dirIx);
 					currRow += dr;
 					if (this.#conf.row.edge) {
@@ -1250,7 +1252,7 @@ class cReversi {
 		for (const cornerIx of this.#conf.tagIndexes.cornerSet) {
 			const owner = this.#getItemByIndex(cornerIx);
 			if ((owner === cReversi.#empty) || (owner === cReversi.#dmz)) {
-				return;
+				continue;
 			}
 			const aroundArr = this.#aroundIndexes(cornerIx);
 			const newScore = this.#area.scores.default[cornerIx];
@@ -1264,7 +1266,7 @@ class cReversi {
 				const owner = this.#getItemByIndex(edgeIx);
 				if ((owner === cReversi.#dmz) || (owner === cReversi.#empty)) {
 					// edge is not owned
-					return;
+					continue;
 				}
 				const aroundArr = this.#aroundIndexes(edgeIx);
 				aroundArr.forEach(in_aroundIx => {
@@ -1473,7 +1475,7 @@ class cReversi {
 			if (this.#getItemByIndex(ix) !== in_player) {
 				continue;
 			}
-			const radiating = this.#conf.tagIndexes.radiating[in_ix];
+			const radiating = this.#conf.tagIndexes.radiating[ix];
 			const isSafe = pairs.every(([in_pos, in_neg])  => {
 				const P = findNeighbor(radiating[in_pos]);
 				const N = findNeighbor(radiating[in_neg]);
@@ -1592,7 +1594,7 @@ class cReversi {
 		beginner : this.#npc_score_spot,
 		monkey : this.#npc_random
 	}
-	_simulation(in_repeat = 13) {
+	_simulation(in_repeat = 17) {
 		const truncateDecimal = (in_value, in_digit) => {
 			const order = 10 ** in_digit;
 			return Math.floor(in_value * order) / order;
@@ -2108,148 +2110,273 @@ const GRAY2 = 0x444444;
 const GRAY3 = 0x666666;
 
 const BGCOLOR = GRAY1;
-const DMZCOLOR = GRAY2;
-const EMPTYCOLOR = GRAY3;
 
-const ORANGE = 0xFFAA00;
-const RED = 0xFF0000;
-const WHITE = 0xFFFFFF;
-const YELLOW = 0xFFFF00;
-const BLUE = 0x3333FF;
-const GREEN = 0x118811;
-const LIGHTBLUE = 0x5588FF;
-const LIGHTGREEN = 0x55CC55;
+const ORANGE = 0xFFAA00, O = ORANGE;
+const RED = 0xFF0000, R = RED;
+const WHITE = 0xFFFFFF, W = WHITE;
+const YELLOW = 0xFFFF00, Y = YELLOW;
+const BLUE = 0x3333FF, B = BLUE;
+const GREEN = 0x118811, G = GREEN;
+const SKYBLUE = 0x5588FF, S = SKYBLUE;
+const LIME = 0x55CC55, L = LIME;
+const DMZCOLOR = GRAY2, D = DMZCOLOR;
+const EMPTYCOLOR = GRAY3, E = EMPTYCOLOR;
 
 const edgeMaterial = new THREE.MeshLambertMaterial({color : BGCOLOR});
 
 const COLONY_SIZE = 400;
 
-const gMeshLevelMap = ((in_diameter) => {
-	const map = new cCyclicMap();
-	const B = BLUE;
-	const R = RED;
-	const Y = YELLOW;
-	const G = GREEN;
-	const D = DMZCOLOR;
-	const E = EMPTYCOLOR;
-	let shellInfo;
-	switch (getParam('type')) {
-	case 'hex' :
-		shellInfo = [
-			{
-				boardSize : '14x7',
-				loop : true,
-				format : 'hexFlatTopped',
-				offsetCol : 1,
-				table : [
-					[E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E],
-					[E,E,E,B,E,E,E],
-					[E,E,R,D,B,E,E],
-					[E,E,R,R,B,E,E],
-					[E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E],
+const gColoredArgo = new Map([
+	[RED, 'safety'],
+	[YELLOW, 'spiteful'],
+	[GREEN, 'greedy'],
+	[ORANGE, 'balance'],
+	[SKYBLUE, 'learner'],
+	[LIME, 'classic']
+]);
 
-					[E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E],
-					[E,E,E,G,E,E,E],
-					[E,E,Y,D,G,E,E],
-					[E,E,Y,Y,G,E,E],
-					[E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E]
+const BOARD_DB = [
+	{
+		type : 'traditional',
+		desc : '2 players reversi using 8x8 square',
+		levels : [
+			{
+				format : 'square',
+				offsetCol : -1,
+				table : [
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,B,G,E,E,E],
+					[E,E,E,G,B,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D]
 				]
 			},
 			{
-				boardSize : '15x7',
-				loop : true,
-				format : 'hexFlatTopped',
-				offsetCol : 1,
+				format : 'square',
+				offsetCol : -1,
 				table : [
-					[E,E,E,E,E,E,E],
-					[E,E,E,Y,E,E,E],
-					[E,E,R,Y,B,E,E],
-					[E,E,R,Y,B,E,E],
-					[E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,G,B,E,E,E],
+					[E,E,E,B,G,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
 
-					[E,E,E,E,E,E,E],
-					[E,E,E,R,E,E,E],
-					[E,E,B,R,Y,E,E],
-					[E,E,B,R,Y,E,E],
-					[E,E,E,E,E,E,E],
-
-					[E,E,E,E,E,E,E],
-					[E,E,E,B,E,E,E],
-					[E,E,Y,B,R,E,E],
-					[E,E,Y,B,R,E,E],
-					[E,E,E,E,E,E,E]
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D]
 				]
 			},
 			{
-				boardSize : '16x8',
-				loop : true,
-				format : 'hexFlatTopped',
-				offsetCol : 1,
+				format : 'square',
+				offsetCol : -1,
 				table : [
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,B,Y,E,E,E],
+					[E,E,E,Y,B,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D]
+				]
+			},
+			{
+				format : 'square',
+				offsetCol : -1,
+				table : [
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,Y,B,E,E,E],
+					[E,E,E,B,Y,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D]
+				]
+			},
+			{
+				format : 'square',
+				offsetCol : -1,
+				table : [
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,B,R,E,E,E],
+					[E,E,E,R,B,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D]
+				]
+			},
+			{
+				format : 'square',
+				offsetCol : -1,
+				table : [
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
 					[E,E,E,R,B,E,E,E],
 					[E,E,E,B,R,E,E,E],
 					[E,E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E],
-					[E,E,E,Y,G,E,E,E],
-					[E,E,E,G,Y,E,E,E],
-					[E,E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E],
 
-					[E,E,E,B,R,E,E,E],
-					[E,E,E,R,B,E,E,E],
-					[E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E],
-					[E,E,E,G,Y,E,E,E],
-					[E,E,E,Y,G,E,E,E],
-					[E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E]
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D]
 				]
-			},
+			}
+		]
+	},
+	{
+		type : 'hexmap',
+		desc : 'multiplayers reversi using hexmap',
+		levels : [
 			{
-				boardSize : '16x9',
-				loop : true,
 				format : 'hexFlatTopped',
 				offsetCol : 1,
 				table : [
-					[E,E,E,E,E,E,E,E,E],
-					[E,E,E,Y,B,G,E,E,E],
-					[E,E,E,E,R,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E],
-
-					[E,E,E,E,E,E,E,E,E],
-					[E,E,E,R,G,Y,E,E,E],
-					[E,E,E,E,B,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E],
-
-					[E,E,E,E,E,E,E,E,E],
-					[E,E,E,B,Y,R,E,E,E],
-					[E,E,E,E,G,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E],
-
-					[E,E,E,E,E,E,E,E,E],
-					[E,E,E,G,R,B,E,E,E],
-					[E,E,E,E,Y,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E]
-				]
-			},
-			{
-				boardSize : '24x12',
-				loop : false,
-				format : 'hexFlatTopped',
-				offsetCol : 1,
-				table : [
-
 					[D,D,D,D,D,E,D,D,D,D,D],
 					[D,D,D,E,E,E,E,E,D,D,D],
 					[D,E,E,E,E,E,E,E,E,E,D],
+					[E,E,E,E,E,B,E,E,E,E,E],
+					[E,E,E,E,E,B,E,E,E,E,E],
+					[E,E,E,B,G,E,G,G,E,E,E],
+					[E,E,E,E,B,G,B,E,E,E,E],
+					[E,E,E,E,E,G,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,Y,E,B,E,B,E,E,E],
-					[E,E,E,E,Y,D,B,E,E,E,E],
-					[E,E,E,E,Y,R,R,E,E,E,E],
+					[D,D,E,E,E,E,E,E,E,D,D],
+					[D,D,D,D,E,E,E,D,D,D,D],
+
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D]
+				]
+			},
+			{
+				format : 'hexFlatTopped',
+				offsetCol : 1,
+				table : [
+					[D,D,D,D,D,E,D,D,D,D,D],
+					[D,D,D,E,E,E,E,E,D,D,D],
+					[D,E,E,E,E,E,E,E,E,E,D],
+					[E,E,E,E,E,B,E,E,E,E,E],
+					[E,E,E,E,E,B,E,E,E,E,E],
+					[E,E,E,B,Y,E,Y,Y,E,E,E],
+					[E,E,E,E,B,Y,B,E,E,E,E],
+					[E,E,E,E,E,Y,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E],
+					[D,D,E,E,E,E,E,E,E,D,D],
+					[D,D,D,D,E,E,E,D,D,D,D],
+
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D]
+				]
+			},
+			{
+				format : 'hexFlatTopped',
+				offsetCol : 1,
+				table : [
+					[D,D,D,D,D,E,D,D,D,D,D],
+					[D,D,D,E,E,E,E,E,D,D,D],
+					[D,E,E,E,E,E,E,E,E,E,D],
+					[E,E,E,E,E,B,E,E,E,E,E],
+					[E,E,E,E,E,B,E,E,E,E,E],
+					[E,E,E,B,R,E,R,R,E,E,E],
+					[E,E,E,E,B,R,B,E,E,E,E],
 					[E,E,E,E,E,R,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E,E,E,E],
 					[D,D,E,E,E,E,E,E,E,D,D],
@@ -2268,70 +2395,158 @@ const gMeshLevelMap = ((in_diameter) => {
 					[D,D,D,D,D,D,D,D,D,D,D]
 				]
 			},
-		];
-		break;
-	case '4-loop' :
-		shellInfo = [
 			{
-				boardSize : '12x6',
-				loop : true,
+				format : 'hexFlatTopped',
+				offsetCol : 1,
+				table : [
+					[D,D,D,D,D,E,D,D,D,D,D],
+					[D,D,D,E,E,E,E,E,D,D,D],
+					[D,E,E,E,E,E,E,E,E,E,D],
+					[E,E,E,E,E,B,E,E,E,E,E],
+					[E,E,E,S,Y,E,G,R,E,E,E],
+					[E,E,E,R,E,B,E,O,E,E,E],
+					[E,E,E,O,E,E,E,Y,E,E,E],
+					[E,E,E,E,B,G,S,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E],
+					[D,D,E,E,E,E,E,E,E,D,D],
+					[D,D,D,D,E,E,E,D,D,D,D],
+
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D]
+				]
+			}
+		]
+	},
+	{
+		type : 'variety',
+		desc : 'variety rectangle formats using dmz',
+		levels : [
+			{
 				format : 'square',
 				offsetCol : -1,
 				table : [
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E],
-					[E,E,R,B,E,E],
-					[E,E,B,R,E,E],
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E],
+					[E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E],
+					[E,E,R,R,B,E,E],
+					[E,E,B,D,B,E,E],
+					[E,E,B,R,R,E,E],
+					[E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E],
 
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E],
-					[E,E,G,Y,E,E],
-					[E,E,Y,G,E,E],
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E]
+					[D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D]
 				]
 			},
 			{
-				boardSize : '18x6',
-				loop : true,
 				format : 'square',
 				offsetCol : -1,
 				table : [
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E],
-					[E,E,E,Y,E,E],
-					[E,G,R,B,E,E],
-					[E,E,Y,G,R,E],
+					[E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E],
+					[E,E,R,G,Y,E,E],
+					[E,E,Y,D,B,E,E],
+					[E,E,B,R,G,E,E],
+					[E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E],
 
-					[E,E,B,E,E,E],
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E],
-					[E,E,E,G,E,E],
-
-					[E,B,Y,R,E,E],
-					[E,E,G,B,Y,E],
-					[E,E,R,E,E,E],
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E]
+					[D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D]
 				]
 			},
 			{
-				boardSize : '16x8',
-				loop : true,
+				format : 'square',
+				offsetCol : -1,
+				table : [
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,B,E,E,E,E],
+					[E,E,D,B,B,B,E,E],
+					[E,E,R,R,R,D,E,E],
+					[E,E,E,E,R,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D]
+				]
+			},
+			{
+				format : 'square',
+				offsetCol : -1,
+				table : [
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,G,G,E,E,E],
+					[E,E,R,D,D,B,E,E],
+					[E,E,R,D,D,B,E,E],
+					[E,E,E,Y,Y,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D]
+				]
+			}
+		]
+	},
+	{
+		type : 'loop',
+		desc : 'reversi using looped board',
+		levels : [
+			{
 				format : 'square',
 				offsetCol : -1,
 				table : [
 					[E,E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E],
-					[E,E,E,R,B,E,E,E],
 					[E,E,E,B,R,E,E,E],
+					[E,E,E,R,B,E,E,E],
 					[E,E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E],
@@ -2339,381 +2554,101 @@ const gMeshLevelMap = ((in_diameter) => {
 					[E,E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E],
-					[E,E,E,G,Y,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E]
+				]
+			},
+			{
+				format : 'square',
+				offsetCol : -1,
+				table : [
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,B,R,E,E,E],
+					[E,E,E,R,B,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
 					[E,E,E,Y,G,E,E,E],
+					[E,E,E,G,Y,E,E,E],
 					[E,E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E]
 				]
 			},
 			{
-				boardSize : '20x10',
-				loop : true,
-				format : 'square',
-				offsetCol : -1,
+				format : 'hexFlatTopped',
+				offsetCol : 1,
 				table : [
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,R,E,E,B,E,E,E],
-					[E,E,E,E,R,B,E,E,E,E],
-					[E,E,E,E,Y,G,E,E,E,E],
-					[E,E,E,Y,E,E,G,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,R,E,E,B,E,E,E],
-					[E,E,E,E,R,B,E,E,E,E],
-					[E,E,E,E,Y,G,E,E,E,E],
-					[E,E,E,Y,E,E,G,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E]
-				]
-			}
-		];
-		break;
-	case '2-loop' :
-		shellInfo = [
-			{
-				boardSize : '12x6',
-				loop : true,
-				format : 'square',
-				offsetCol : -1,
-				table : [
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E],
-					[E,E,R,B,E,E],
-					[E,E,B,R,E,E],
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E],
-
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E],
-					[E,E,B,R,E,E],
-					[E,E,R,B,E,E],
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E]
-				]
-			},
-			{
-				boardSize : '18x6',
-				loop : true,
-				format : 'square',
-				offsetCol : -1,
-				table : [
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E],
-					[E,E,R,D,E,E],
-					[E,E,R,R,E,E],
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E],
-
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E],
-					[E,E,R,B,E,E],
-					[E,E,B,R,E,E],
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E],
-
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E],
-					[E,E,B,B,E,E],
-					[E,E,D,B,E,E],
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E]
-				]
-			},
-			{
-				boardSize : '16x8',
-				loop : true,
-				format : 'square',
-				offsetCol : -1,
-				table : [
+					[E,E,E,B,R,E,E,E],
+					[E,E,E,R,B,E,E,E],
 					[E,E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+
 					[E,E,E,R,B,E,E,E],
 					[E,E,E,B,R,E,E,E],
 					[E,E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E],
-
-					[E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E],
-					[E,E,E,B,R,E,E,E],
-					[E,E,E,R,B,E,E,E],
 					[E,E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E]
 				]
 			},
 			{
-				boardSize : '20x10',
-				loop : true,
-				format : 'square',
-				offsetCol : -1,
+				format : 'hexFlatTopped',
+				offsetCol : 1,
 				table : [
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,R,E,E,B,E,E,E],
-					[E,E,E,E,R,B,E,E,E,E],
-					[E,E,E,E,B,R,E,E,E,E],
-					[E,E,E,B,E,E,R,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,B,Y,E,E,E],
+					[E,E,E,R,G,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,B,Y,E,E,E],
+					[E,E,E,R,G,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
 
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,B,E,E,R,E,E,E],
-					[E,E,E,E,B,R,E,E,E,E],
-					[E,E,E,E,R,B,E,E,E,E],
-					[E,E,E,R,E,E,B,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E]
-				]
-			}
-		];
-		break;
-	case '4-non-loop' :
-		shellInfo = [
-			{
-				boardSize : '6x6',
-				loop : false,
-				format : 'square',
-				offsetCol : -1,
-				table : [
-					[E,E,E,E,E,E],
-					[E,E,E,Y,E,E],
-					[E,G,R,B,E,E],
-					[E,E,Y,G,R,E],
-					[E,E,B,E,E,E],
-					[E,E,E,E,E,E],
-
-					[D,D,D,D,D,D],
-					[D,D,D,D,D,D],
-					[D,D,D,D,D,D],
-					[D,D,D,D,D,D],
-					[D,D,D,D,D,D],
-					[D,D,D,D,D,D],
-
-					[D,D,D,D,D,D],
-					[D,D,D,D,D,D],
-					[D,D,D,D,D,D],
-					[D,D,D,D,D,D],
-					[D,D,D,D,D,D],
-					[D,D,D,D,D,D]
+					[E,E,E,Y,B,E,E,E],
+					[E,E,E,G,R,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,Y,B,E,E,E],
+					[E,E,E,G,R,E,E,E],
+					[E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E]
 				]
 			},
-			{
-				boardSize : '12x6',
-				loop : false,
-				format : 'square',
-				offsetCol : -1,
-				table : [
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E],
-					[E,E,R,B,E,E],
-					[E,E,Y,G,E,E],
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E],
-
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E],
-					[E,E,R,B,E,E],
-					[E,E,Y,G,E,E],
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E],
-
-					[D,D,D,D,D,D],
-					[D,D,D,D,D,D],
-					[D,D,D,D,D,D],
-					[D,D,D,D,D,D],
-					[D,D,D,D,D,D],
-					[D,D,D,D,D,D]
-				]
-			},
-			{
-				boardSize : '8x8',
-				loop : false,
-				format : 'square',
-				offsetCol : -1,
-				table : [
-					[E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E],
-					[E,E,B,E,Y,G,E,E],
-					[E,E,G,R,B,E,E,E],
-					[E,E,E,Y,G,R,E,E],
-					[E,E,R,B,E,Y,E,E],
-					[E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E],
-
-					[D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D]
-				]
-			},
-			{
-				boardSize : '10x10',
-				loop : false,
-				format : 'square',
-				offsetCol : -1,
-				table : [
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,Y,E,E,E,E],
-					[E,E,E,G,R,B,E,E,E,E],
-					[E,E,E,E,Y,G,R,E,E,E],
-					[E,E,E,E,B,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-
-					[D,D,D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D,D,D]
-				]
-			}
-		];
-		break;
-	case '2-non-loop' :
-	default :
-		shellInfo = [
-			{
-				boardSize : '6x6',
-				loop : false,
-				format : 'square',
-				offsetCol : -1,
-				table : [
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E],
-					[E,E,R,B,E,E],
-					[E,E,B,R,E,E],
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E],
-
-					[D,D,D,D,D,D],
-					[D,D,D,D,D,D],
-					[D,D,D,D,D,D],
-					[D,D,D,D,D,D],
-					[D,D,D,D,D,D],
-					[D,D,D,D,D,D],
-
-					[D,D,D,D,D,D],
-					[D,D,D,D,D,D],
-					[D,D,D,D,D,D],
-					[D,D,D,D,D,D],
-					[D,D,D,D,D,D],
-					[D,D,D,D,D,D]
-				]
-			},
-			{
-				boardSize : '12x6',
-				loop : false,
-				format : 'square',
-				offsetCol : -1,
-				table : [
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E],
-					[E,E,B,R,E,E],
-					[E,E,R,B,E,E],
-
-					[E,E,B,R,E,E],
-					[E,E,R,B,E,E],
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E],
-					[E,E,E,E,E,E],
-
-					[D,D,D,D,D,D],
-					[D,D,D,D,D,D],
-					[D,D,D,D,D,D],
-					[D,D,D,D,D,D],
-					[D,D,D,D,D,D],
-					[D,D,D,D,D,D]
-				]
-			},
-			{
-				boardSize : '8x8',
-				loop : false,
-				format : 'square',
-				offsetCol : -1,
-				table : [
-					[E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E],
-					[E,E,E,R,B,E,E,E],
-					[E,E,E,B,R,E,E,E],
-					[E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E],
-
-					[D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D]
-				]
-			},
-			{
-				boardSize : '10x10',
-				loop : false,
-				format : 'square',
-				offsetCol : -1,
-				table : [
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,R,E,D,B,E,E,E],
-					[E,E,E,D,R,B,E,E,E,E],
-					[E,E,E,E,B,R,D,E,E,E],
-					[E,E,E,B,D,E,R,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-
-					[D,D,D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D,D,D],
-					[D,D,D,D,D,D,D,D,D,D]
-				]
-			}
-		];
-		break;
+		]
 	}
+];
+
+let gTypeIsInvalid = false;
+
+const gCyclicLevels = ((in_diameter) => {
+	const values = new cCyclicValues();
+	const shellInfo = (in_type => {
+		const board = BOARD_DB.find(in_board => in_board.type === in_type);
+		if (!board) {
+			gTypeIsInvalid = true;
+			const defaultIndex = 0;
+			return BOARD_DB[defaultIndex].levels;
+		} else {
+			return board.levels;
+		}
+	})(getParam('type'));
+	const uniqueNameSet = new Set();
 	shellInfo.forEach(in_shell => {
 		const radius = in_diameter / 2;
 		const circumf = in_diameter * Math.PI;
@@ -2756,18 +2691,38 @@ const gMeshLevelMap = ((in_diameter) => {
 				pieces.push(piece);
 			}
 		}
-		const playerSet = new Set(in_shell.table.flat());
-		playerSet.delete(D);
-		playerSet.delete(E);
-		const level_key = {
-			name : in_shell.boardSize + 'x' + playerSet.size,
-			loop : in_shell.loop,
+		const colorSet = new Set(in_shell.table.flat());
+		colorSet.delete(D);
+		colorSet.delete(E);
+		const emptyCnt = in_shell.table.flat().filter(in_color => in_color === E).length;
+		let name = 'vs ';
+		if (colorSet.size > 2) {
+			name += (colorSet.size - 1) + 'NPC';
+		} else {
+			let argo;
+			for (const color of colorSet) {
+				if (color !== B) {
+					argo = gColoredArgo.get(color);
+				}
+			}
+			name += argo.charAt(0).toUpperCase() + argo.slice(1);
+		}
+		name += ' (' + emptyCnt + ')';
+		if (uniqueNameSet.has(name)) {
+			name += ' mirrored';
+		}
+		uniqueNameSet.add(name);
+		const dmzRow = in_shell.table.some(in_row => in_row.every(in_color => in_color === D));
+		values.push({
+			name : name,
+			loop : !dmzRow,
 			format : in_shell.format,
-			offset : in_shell.offsetCol
-		};
-		map.set(level_key, pieces);
+			offset : in_shell.offsetCol,
+			colorArr : Array.from(colorSet),
+			pieces : pieces
+		});
 	});
-	return map;
+	return values;
 })(COLONY_SIZE);
 
 /*
@@ -2864,7 +2819,7 @@ class cColonyBoard extends cColony {
 		|
 		+-- gColony (cColonyBoard)
 			|
-			+-- gColony.children <--- gMeshLevelMap
+			+-- gColony.children <--- gCyclicLevels[n].pieces
 
 	gController (cGameController) : knows the internal structure of the following instances
 		|
@@ -2890,54 +2845,31 @@ let gReversi = null;
 
 class cGameController {
 	static #UNUSED = -1;
-	static PC = BLUE;
-	static #YOU = 'you';
-	static #NPC = new Map([
-		[RED, 'safety'],
-		[YELLOW, 'spiteful'],
-		[GREEN, 'balance'],
-		[ORANGE, 'greedy'],
-		[LIGHTBLUE, 'learner'],
-		[LIGHTGREEN, 'classic']
-	]);
-	#mapping = new Array(10).fill(cGameController.#UNUSED);
+	#mapping;
 	#turnHook = () => {};
 	#curIndex = 0;
-	#tableSize;
+	#pcColor;
 	enableHandler = false;
 	// cGameController knows the internal structure of cColonyBoard, cReversi and cSphericalWorld
-	constructor(in_playerCnt, in_pc = 0) {
-		const colors = Array.from(cGameController.#NPC.keys());
-		for (let i = 0; i < in_playerCnt; i++) {
-			let color;
-			if (i === in_pc) {
-				color = cGameController.PC;
-			} else {
-				color = colors.shift();
-			}
-			this.#mapping[i] = color;
+	constructor(in_colorArr, in_pcColor) {
+		this.#pcColor = in_pcColor;
+		this.#mapping = new Array(10).fill(cGameController.#UNUSED);
+		for (let i = 0; i < in_colorArr.length; i++) {
+			this.#mapping[i] = in_colorArr[i];
 		}
 		// 8, 9 are declared as follows in cReversi
 		this.#mapping[8] = DMZCOLOR;
 		this.#mapping[9] = EMPTYCOLOR;
-		this.setTableSize(-1, -1);
 	}
 	curNPCStrategy() {
-		return cGameController.#NPC.get(this.#mapping[this.#curIndex]) ?? cGameController.#YOU;
-	}
-	setTableSize(in_rows, in_cols) {
-		// as cColonyBoard and cReversi may not have the same rows and cols, in_rows and in_cols are needed.
-		this.#tableSize = {
-			rows : in_rows,
-			cols : in_cols
-		};
+		return gColoredArgo.get(this.#mapping[this.#curIndex]);
 	}
 	setTurnHook(in_hook) {
 		this.#turnHook = in_hook;
 	}
 	#execTurnHook() {
 		const color = this.#mapping[this.#curIndex];
-		this.enableHandler = (color === cGameController.PC);
+		this.enableHandler = (color === this.#pcColor);
 		(this.#turnHook)(this.#curIndex, color, this.enableHandler);
 	}
 	#incrementIndex() {
@@ -3039,10 +2971,6 @@ class cGameController {
 			reverse[in_value] = in_ix;
 		});
 		let table = in_colony.getColorTable();
-		if ((this.#tableSize.rows > 0) && (this.#tableSize.cols > 0)) {
-			// resize to #tableSize
-			table = table.slice(0, this.#tableSize.rows).map(in_row => in_row.slice(0, this.#tableSize.cols));
-		}
 		return table.map(in_row => in_row.map(in_cell => reverse[in_cell]));
 	}
 	async moveViewTo(in_piece, in_world) {
@@ -3245,30 +3173,27 @@ const gFigure = (() => {
 	};
 })();
 
+const PC_COLOR = BLUE;
+
 function initializeByLevel() {
-	const curr = gMeshLevelMap.currItemByOrder();
-	const [rows, cols, playerCnt] = curr.k.name.split('x');
+	const curr = gCyclicLevels.currValue();
 	const edge = {
-		row : !(curr.k.loop),
+		row : !(curr.loop),
 		col : true
 	};
-	const pc = 0;
-	gController = new cGameController(playerCnt, pc);
-	/*
-		setTableSize() enables separation between the reversi logic (with edge/DMZ)
-		and the visual structure defined in gMeshLevelMap
-	*/
-	gController.setTableSize(rows, cols);
+	gController = new cGameController(curr.colorArr, PC_COLOR);
+	const pcIndex = curr.colorArr.indexOf(PC_COLOR);
 	const table = gController.convertColonyTable(gColony);
-	if (curr.k.offset >= 0) {
-		gReversi = new cReversi(table, edge.row, edge.col, curr.k.format, curr.k.offset);
+	if (curr.offset >= 0) {
+		gReversi = new cReversi(table, edge.row, edge.col, curr.format, curr.offset);
 	} else {
-		gReversi = new cReversi(table, edge.row, edge.col, curr.k.format);
+		gReversi = new cReversi(table, edge.row, edge.col, curr.format);
 	}
 	gController.setTurnHook(async (in_player, in_color, in_pc) => {
-		gFigure.show(RES.get(in_color), gController.curNPCStrategy());
+		const name = gController.curNPCStrategy() ?? 'you';
+		gFigure.show(RES.get(in_color), name);
 		if (in_pc) {
-			const last = gReversi.getLast({who : pc, action : 'choose-item'});
+			const last = gReversi.getLast({who : pcIndex, action : 'choose-item'});
 			if (last) {
 				const piece = gColony.indexToPiece(last.row, last.col);
 				await gController.moveViewTo(piece, gWorld);
@@ -3284,39 +3209,34 @@ function initializeByLevel() {
 	});
 	gController.reversiToColony(gReversi, gColony);
 	gController.start();
-}
-
-(in_level => {
-	if (in_level === false) {
-		gMeshLevelMap.setOrder(2);
-	} else {
-		gMeshLevelMap.setOrder(in_level);
+	if (gTypeIsInvalid) {
+		// alert(1);
+		gTypeIsInvalid = false;
 	}
-})(getParam('level'));
+}
 
 const ID_PREV_LEVEL = randomString();
 const ID_NEXT_LEVEL = randomString();
 
-async function updateLevel() {
+async function updateLevel(in_curr) {
 	const color = 0x000000;
 	await gWorld.motionFog(color, 0, 100);
 	gColony.removePieces();
-	const curr = gMeshLevelMap.currItemByOrder();
-	if (curr.k.offset >= 0) {
-		gColony.setupAllPieces(curr.v, curr.k.offset);
+	if (in_curr.offset >= 0) {
+		gColony.setupAllPieces(in_curr.pieces, in_curr.offset);
 	} else {
-		gColony.setupAllPieces(curr.v);
+		gColony.setupAllPieces(in_curr.pieces);
 	}
 	await gWorld.motionFog(color, 100, 0);
-	const prev = gMeshLevelMap.prevItemByOrder();
-	const next = gMeshLevelMap.nextItemByOrder();
-	document.getElementById(ID_PREV_LEVEL).innerText = prev.k.name;
-	document.getElementById(ID_NEXT_LEVEL).innerText = next.k.name;
+	const prev = gCyclicLevels.prevValue();
+	const next = gCyclicLevels.nextValue();
+	document.getElementById(ID_PREV_LEVEL).innerText = prev.name;
+	document.getElementById(ID_NEXT_LEVEL).innerText = next.name;
 	resetFocus();
 	initializeByLevel();
 }
 
-updateLevel();
+updateLevel(gCyclicLevels.currValue());
 
 /*
 	*** NOTE ***
@@ -3398,16 +3318,14 @@ async function prevLevel(in_sound = true) {
 	if (in_sound) {
 		SE_BEEP.play();
 	}
-	gMeshLevelMap.shiftOrder(-1);
-	await updateLevel();
+	await updateLevel(gCyclicLevels.decrementedValue());
 }
 
 async function nextLevel(in_sound = true) {
 	if (in_sound) {
 		SE_BEEP.play();
 	}
-	gMeshLevelMap.shiftOrder(+1);
-	await updateLevel();
+	await updateLevel(gCyclicLevels.incrementedValue());
 }
 
 (in_settings => {
@@ -3671,9 +3589,9 @@ async function chooseHere(in_ev) {
 		resetFocus();
 		closure.x = in_ev.clientX;
 		closure.y = in_ev.clientY;
-		// can drag only cGameController.PC
+		// can drag only PC_COLOR
 		const drag = intersects[0].object
-		if (gReversi.rotatableFixedCol() && (getShellColor(drag) === cGameController.PC)) {
+		if (gReversi.rotatableFixedCol() && (getShellColor(drag) === PC_COLOR)) {
 			gColony.uiSetInitPosition(intersects[0].point, ndcToAbs(ndc));
 		}
 	};

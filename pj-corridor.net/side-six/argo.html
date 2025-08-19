@@ -645,7 +645,7 @@ class cReversi {
 	}
 	static #dmz = 8;
 	static #empty = 9;
-	static #maxPlayers = 4;
+	static #maxPlayers = 6;
 	static #validData = (() => {
 		const arr = [cReversi.#dmz, cReversi.#empty];
 		for (let player = 0; player < cReversi.#maxPlayers; player++) {
@@ -895,11 +895,13 @@ class cReversi {
 			const {row : initRow, col : initCol} = this.#indexToPos(areaIx);
 			const radiating = tagIndexes.radiating[areaIx] = [];
 			const dirStyle = this.#getDirections(initRow, initCol);
+			// don't need radiating which starts from dmz
+			const wouldScan = (this.#getItemByIndex(areaIx) !== cReversi.#dmz);
 			for (let dirIx = 0; dirIx < dirStyle.length; dirIx++) {
 				const towards = [];
 				let currRow = initRow;
 				let currCol = initCol;
-				while (true) {
+				while (wouldScan) {
 					const [dr, dc] = this.#getDirection(currRow, currCol, dirIx);
 					currRow += dr;
 					if (this.#conf.row.edge) {
@@ -1219,7 +1221,7 @@ class cReversi {
 		for (const cornerIx of this.#conf.tagIndexes.cornerSet) {
 			const owner = this.#getItemByIndex(cornerIx);
 			if ((owner === cReversi.#empty) || (owner === cReversi.#dmz)) {
-				return;
+				continue;
 			}
 			const aroundArr = this.#aroundIndexes(cornerIx);
 			const newScore = this.#area.scores.default[cornerIx];
@@ -1233,7 +1235,7 @@ class cReversi {
 				const owner = this.#getItemByIndex(edgeIx);
 				if ((owner === cReversi.#dmz) || (owner === cReversi.#empty)) {
 					// edge is not owned
-					return;
+					continue;
 				}
 				const aroundArr = this.#aroundIndexes(edgeIx);
 				aroundArr.forEach(in_aroundIx => {
@@ -1442,7 +1444,7 @@ class cReversi {
 			if (this.#getItemByIndex(ix) !== in_player) {
 				continue;
 			}
-			const radiating = this.#conf.tagIndexes.radiating[in_ix];
+			const radiating = this.#conf.tagIndexes.radiating[ix];
 			const isSafe = pairs.every(([in_pos, in_neg])  => {
 				const P = findNeighbor(radiating[in_pos]);
 				const N = findNeighbor(radiating[in_neg]);
@@ -1561,7 +1563,7 @@ class cReversi {
 		beginner : this.#npc_score_spot,
 		monkey : this.#npc_random
 	}
-	_simulation(in_repeat = 13) {
+	_simulation(in_repeat = 17) {
 		const truncateDecimal = (in_value, in_digit) => {
 			const order = 10 ** in_digit;
 			return Math.floor(in_value * order) / order;
