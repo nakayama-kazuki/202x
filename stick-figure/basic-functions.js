@@ -666,24 +666,38 @@ export class cCyclicValues extends Array {
 		super(...args);
 		this.#currIndex = 0;
 	}
-	get #nextIndex() {
-		return (this.#currIndex + 1) % this.length;
+	#normalizedIndex(in_index) {
+		const len = this.length;
+		return ((in_index % len) + len) % len;
+	}
+	#offsetIndex(in_offset) {
+		return this.#normalizedIndex(this.#currIndex + in_offset);
 	}
 	#increment() {
-		this.#currIndex = this.#nextIndex;
+		this.#currIndex = this.#offsetIndex(+1);
+	}
+	#decrement() {
+		this.#currIndex = this.#offsetIndex(-1);
 	}
 	currValue() {
 		return this[this.#currIndex];
 	}
 	nextValue() {
-		return this[this.#nextIndex];
+		return this[this.#offsetIndex(+1)];
+	}
+	prevValue() {
+		return this[this.#offsetIndex(-1)];
 	}
 	incrementedValue() {
 		this.#increment();
 		return this.currValue();
 	}
+	decrementedValue() {
+		this.#decrement();
+		return this.currValue();
+	}
 	setCurrentIndex(in_index) {
-		this.#currIndex = in_index % this.length;
+		this.#currIndex = this.#normalizedIndex(in_index);
 	}
 }
 
