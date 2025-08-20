@@ -3258,6 +3258,12 @@ function initializeByLevel() {
 	}
 }
 
+(in_level => {
+	if (typeof in_level === 'number') {
+		gCyclicLevels.setCurrentIndex(in_level);
+	}
+})(getParam('level'));
+
 const ID_PREV_LEVEL = randomString();
 const ID_NEXT_LEVEL = randomString();
 
