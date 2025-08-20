@@ -2531,7 +2531,30 @@ const BOARD_DB = [
 					[D,D,D,D,D,D,D,D],
 					[D,D,D,D,D,D,D,D]
 				]
-			}
+			},
+			{
+				format : 'square',
+				offsetCol : -1,
+				table : [
+					[D,D,D,D,D,E,E,E,E,E,E,E],
+					[D,D,D,D,D,E,E,E,E,E,E,E],
+					[D,D,D,D,D,E,E,B,E,E,E,E],
+					[D,D,D,D,D,E,E,R,B,E,E,E],
+					[D,D,D,D,D,E,E,B,R,B,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,R,B,R,E,E,D,D,D,D,D],
+					[E,E,E,R,B,E,E,D,D,D,D,D],
+					[E,E,E,E,R,E,E,D,D,D,D,D],
+					[E,E,E,E,E,E,E,D,D,D,D,D],
+					[E,E,E,E,E,E,E,D,D,D,D,D],
+
+					[D,D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D,D]
+				]
+			},
 		]
 	},
 	{
@@ -3175,6 +3198,26 @@ const gFigure = (() => {
 
 const PC_COLOR = BLUE;
 
+function menu() {
+	const dialog = document.createElement('div');
+	Object.assign(dialog.style, {
+		width : 'auto',
+		height : 'auto',
+		background : 'white',
+		borderRadius : '1em',
+		padding : '1em'
+	});
+	dialog.innerHTML += "<div>information :</div>\n<br />\n";
+	let no = 1;
+	BOARD_DB.forEach(in_board => {
+		const url = location.pathname + "?type=" + in_board.type;
+		dialog.innerHTML += "<div>" + (no++) + ". <a href='" + url + "'>" + in_board.type + "</a></div>\n";
+		dialog.innerHTML += "<div style='margin-left:1em;'>" + in_board.desc + "</div>\n";
+	});
+	dialog.innerHTML += "</ul>\n";
+	startDialog(dialog);
+}
+
 function initializeByLevel() {
 	const curr = gCyclicLevels.currValue();
 	const edge = {
@@ -3210,7 +3253,7 @@ function initializeByLevel() {
 	gController.reversiToColony(gReversi, gColony);
 	gController.start();
 	if (gTypeIsInvalid) {
-		// alert(1);
+		menu();
 		gTypeIsInvalid = false;
 	}
 }
