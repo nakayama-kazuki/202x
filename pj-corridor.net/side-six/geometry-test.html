@@ -1,0 +1,91 @@
+<html>
+<head>
+<!-- MIT License Copyright (c) 2024 pj-corridor.net -->
+<meta name='viewport' content='width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1' />
+<meta charset='utf-8' />
+<script type='importmap'>
+{
+	"imports" : {
+		"three" : "https://cdn.jsdelivr.net/npm/three@0.179.0/build/three.module.min.js",
+		"utils" : "https://cdn.jsdelivr.net/npm/three@0.179.0/examples/jsm/utils/BufferGeometryUtils.js",
+		"basic" : "./basic-functions.js"
+	}
+}
+</script>
+</head>
+<body>
+<script type='module'>
+
+import * as THREE from 'three';
+import * as UTILS from 'utils';
+import {
+	getResource,
+	postResource,
+	getParam,
+	DEBUG,
+	randomString,
+	snapToNotch,
+	snapToPI,
+	snapTo05PI,
+	createPeriodicSin,
+	createPeriodicCos,
+	pseudoMessageDigest1,
+	pseudoMessageDigest2,
+	beep,
+	isEmulated,
+	throttling,
+	thresholding,
+	debouncing,
+	nonReentrantAsync,
+	autoTransition,
+	startDialog,
+	factoryBuilder,
+	arrRand,
+	arrTrim,
+	cEase,
+	cApproximateMap,
+	cApproximateSet,
+	cCyclicMap,
+	cCyclicValues,
+	forEachCombination,
+	clipArea,
+	clipClearArea,
+	fillRoundRect,
+	XYZ,
+	VEC3,
+	DIRECTION,
+	ndcFromEvent,
+	ndcToAbs,
+	getWorldVec3,
+	getWorldUp,
+	instanceInAncestor,
+	lookAtWithoutRotation,
+	safeMergeGeometry,
+	makeTrapezoidGeometryParts,
+	trapezoidGeometryUtil,
+	roundBoxGeometry,
+	roundRegularBoxGeometry,
+	roundTrapezoidGeometry,
+	capsuleConfigure,
+	customCapsuleGeometry,
+	cSphericalWorld
+} from 'basic';
+
+const WORLD_RADIUS = 1000;
+
+const gWorld = new cSphericalWorld(WORLD_RADIUS);
+gWorld.resize(window.innerWidth, window.innerHeight);
+document.body.appendChild(gWorld.canvas);
+document.body.style.margin = 0;
+
+gWorld.add((() => {
+	const geometry = new THREE.BoxGeometry(100, 100, 100);
+	const material = new THREE.MeshPhongMaterial({color: 0xFF0000});
+	return new THREE.Mesh(geometry, material);
+})());
+
+gWorld.start();
+
+</script>
+</body>
+</html>
