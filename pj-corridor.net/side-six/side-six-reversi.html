@@ -2106,13 +2106,18 @@ function chamferedHexShape(in_r, in_taper = 0.05) {
 
 const hexmapGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickness) => {
 	const hexSideLen = in_size / (3 ** 0.5);
-	// 1. ExtrudeGeometry
-	const shape = chamferedHexShape(hexSideLen);
+	// 1. merged ExtrudeGeometry
 	const extrudeSettings = {
 		depth : in_thickness,
 		bevelEnabled : false
 	};
-	const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+	const parts = [];
+	const shape1 = chamferedHexShape(hexSideLen * 0.95);
+	parts.push(new THREE.ExtrudeGeometry(shape1, extrudeSettings));
+	const shape2 = chamferedHexShape(hexSideLen);
+	parts.push((new THREE.ExtrudeGeometry(shape2, extrudeSettings)).translate(0, 0, 1));
+	const geometry = safeMergeGeometry(parts);
+	geometry.parameters = {size : in_size};
 	// 2. transform & make two groups (surface + the other)
 	const pos = geometry.attributes.position;
 	const err = 1e-6;
