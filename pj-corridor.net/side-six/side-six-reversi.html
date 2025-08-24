@@ -2050,7 +2050,7 @@ const textureFactory = factoryBuilder((in_w, in_h, in_dmz = false) => {
 	return (new THREE.TextureLoader()).load(canvas.toDataURL());
 });
 
-const surfaceFactory = factoryBuilder((in_color, in_size, in_type) => {
+const materialFactory = factoryBuilder((in_color, in_size, in_type) => {
 	const material = new THREE.MeshLambertMaterial();
 	material.color = new THREE.Color(in_color);
 	switch (in_type) {
@@ -2067,31 +2067,86 @@ const surfaceFactory = factoryBuilder((in_color, in_size, in_type) => {
 	return material;
 });
 
-const SHELL_COLOR_INDEX = 2;
-
-function shellMaterials(in_size, in_color_main, in_color_back, in_dmz) {
-	const materials = [];
-	for (let i = 0; i < Object.keys(DIRECTION).length; i++) {
-		if (i === SHELL_COLOR_INDEX) {
-			const texture = in_dmz ? 'dmz-texture' : 'normal-texture';
-			materials.push(surfaceFactory.create(in_color_main, in_size, texture));
-		} else {
-			materials.push(surfaceFactory.create(in_color_back, in_size, 'no-texture'));
-		}
-	}
-	return materials;
-}
+const SHELL_HEXMAP_SURFACE_IX = 0;
+const SHELL_SQUARE_SURFACE_IX = 2;
 
 function getShellColor(in_object) {
-	return in_object.material[SHELL_COLOR_INDEX].color.getHex();
+	const index = in_object.geometry.userData.surfaceIx;
+	return in_object.material[index].color.getHex();
 }
 
 function setShellColor(in_object, in_color) {
-	const setting = in_object.geometry.parameters;
-	return in_object.material[SHELL_COLOR_INDEX] = surfaceFactory.create(in_color, setting.size);
+	const index = in_object.geometry.userData.surfaceIx;
+	const size = in_object.geometry.parameters.size;
+	return in_object.material[index] = materialFactory.create(in_color, size);
 }
 
-const shellGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickness) => {
+const hexmapGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickness) => {
+	const hexSideLen = in_size / (3 ** 0.5);
+	// 1. ExtrudeGeometry
+	const r = hexSideLen;
+	const shape = new THREE.Shape();
+	for (let i = 0; i < 6; i++) {
+		const angle = (Math.PI / 3) * i;
+		const x = r * Math.cos(angle);
+		const y = r * Math.sin(angle);
+		if (i === 0) {
+			shape.moveTo(x, y);
+		} else {
+			shape.lineTo(x, y);
+		}
+	}
+	shape.closePath();
+	const extrudeSettings = {
+		depth : in_thickness,
+		bevelEnabled : false
+	};
+	const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+	// 2. transform & make two groups (surface + the other)
+	const pos = geometry.attributes.position;
+	const err = 1e-6;
+	const combinedArr = new Uint16Array(pos.count);
+	let headIndex = 0;
+	let tailIndex = combinedArr.length;
+	for (let t = 0; t < pos.count / 3; t++) {
+		const triMap = new Map([
+			[3 * t + 0, pos.getZ(3 * t + 0)],
+			[3 * t + 1, pos.getZ(3 * t + 1)],
+			[3 * t + 2, pos.getZ(3 * t + 2)]
+		]);
+		let triIsSurface = true;
+		for (const [ix, z] of triMap) {
+			if (Math.abs(z - in_thickness) < err) {
+				pos.setX(ix, pos.getX(ix) * in_innerRatio);
+				pos.setY(ix, pos.getY(ix) * in_innerRatio);
+			}
+			if (Math.abs(z) > err) {
+				triIsSurface = false;
+			}
+		}
+		let index;
+		if (triIsSurface) {
+			index = headIndex;
+			headIndex += 3;
+		} else {
+			tailIndex -= 3;
+			index = tailIndex;
+		}
+		Array.from(triMap.keys()).forEach((ix, delta) => combinedArr[index + delta] = ix);
+	}
+	geometry.setIndex(new THREE.BufferAttribute(combinedArr, 1));
+	geometry.clearGroups();
+	geometry.addGroup(0, headIndex, SHELL_HEXMAP_SURFACE_IX);
+	geometry.addGroup(headIndex, combinedArr.length - headIndex, 1);
+	geometry.userData.surfaceIx = SHELL_HEXMAP_SURFACE_IX;
+	// 3. reset
+	pos.needsUpdate = true;
+	geometry.computeVertexNormals();
+	geometry.rotateX(Math.PI / 2);
+	return geometry;
+});
+
+const squareGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickness) => {
 	const radian = 6;
 	const outerLen = in_size - radian * 2;
 	const innerLen = outerLen * in_innerRatio;
@@ -2102,6 +2157,7 @@ const shellGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thicknes
 		innerRatio : in_innerRatio,
 		thickness : in_thickness
 	};
+	geometry.userData.surfaceIx = SHELL_SQUARE_SURFACE_IX;
 	return geometry;
 });
 
@@ -2680,7 +2736,13 @@ const gCyclicLevels = ((in_diameter) => {
 		const unitSize = circumf / rows;
 		const unitThick = unitSize * 0.3;
 		const unitAngle = Math.PI * 2 / rows;
-		const geometry = shellGeometryFactory.create(unitSize, ((radius - unitThick) / radius), unitThick);
+		let geometry;
+		const ratio = ((radius - unitThick) / radius);
+		if (in_shell.format === 'hexFlatTopped') {
+			geometry = hexmapGeometryFactory.create(unitSize, ratio, unitThick);
+		} else {
+			geometry = squareGeometryFactory.create(unitSize, ratio, unitThick);
+		}
 		const pieces = [];
 		/*
 			create a cylinder oriented around the x-axis
@@ -2692,9 +2754,25 @@ const gCyclicLevels = ((in_diameter) => {
 				let x = unitSize * col - unitSize * (cols - 1) / 2;
 				let y = (in_diameter / 2 - unitThick) * 1.2;
 				const color = in_shell.table[row][col] ?? E;
-				const materials = shellMaterials(unitSize, color, BGCOLOR, (color === D));
-				materials.push(edgeMaterial);
-				const piece = new THREE.Mesh(geometry, materials);
+				const texture = (color === D) ? 'dmz-texture' : 'normal-texture';
+				let piece;
+				const materials = [];
+				if (in_shell.format === 'hexFlatTopped') {
+					// material x2
+					materials.push(materialFactory.create(color, unitSize, texture));
+					materials.push(materialFactory.create(BGCOLOR, unitSize, 'no-texture'));
+					piece = new THREE.Mesh(geometry, materials);
+				} else {
+					// material x7
+					materials.push(materialFactory.create(BGCOLOR, unitSize, 'no-texture'));
+					materials.push(materialFactory.create(BGCOLOR, unitSize, 'no-texture'));
+					materials.push(materialFactory.create(color, unitSize, texture));
+					materials.push(materialFactory.create(BGCOLOR, unitSize, 'no-texture'));
+					materials.push(materialFactory.create(BGCOLOR, unitSize, 'no-texture'));
+					materials.push(materialFactory.create(BGCOLOR, unitSize, 'no-texture'));
+					materials.push(edgeMaterial);
+					piece = new THREE.Mesh(geometry, materials);
+				}
 				const pivot = new THREE.Object3D();
 				pivot.add(piece);
 				piece.position.copy(VEC3(x, y, 0));
