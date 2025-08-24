@@ -110,7 +110,7 @@ export class cColony extends cColonyCore {
 		y : VEC3(0, 1, 0),
 		z : VEC3(0, 0, 1)
 	};
-	static #axisComponent(in_axis, in_match = true) {
+	static axisComponent(in_axis, in_match = true) {
 		const props = Object.keys(cColony.axes).filter(in_key => {
 			const equal = cColony.axes[in_key].equals(in_axis);
 			return in_match ? equal : !equal;
@@ -213,7 +213,7 @@ export class cColony extends cColonyCore {
 	}
 	// public because of customizing
 	rotate(in_group, in_axis, in_rad) {
-		in_group.rotation[cColony.#axisComponent(in_axis)] = in_rad;
+		in_group.rotation[cColony.axisComponent(in_axis)] = in_rad;
 	}
 	makeAnimationProgress(in_group, in_axis, in_startAmount, in_finalAmount, in_callback) {
 		const amount = Math.abs(in_finalAmount - in_startAmount);
