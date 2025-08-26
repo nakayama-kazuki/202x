@@ -1155,8 +1155,7 @@ class cReversi {
 			while (--rest > 0) {
 				// rotate +1 (maxCnt - 1) times
 				(rotateFunc)(in_target, 1);
-				const cand = this.#searchCandidates(in_player);
-				if (cand.length > 0) {
+				if (this.flippable(in_player)) {
 					result.delta = maxCnt - rest;
 					return true;
 				}
@@ -1916,6 +1915,9 @@ class cReversi {
 			}
 		}
 	}
+	flippable(in_player) {
+		return ((this.#searchCandidates(in_player)).length > 0);
+	}
 	getCurrentCondition() {
 		const condition = {
 			finished : false,
@@ -1933,8 +1935,7 @@ class cReversi {
 			if (dead) {
 				frozen = true;
 			} else {
-				const candidates = (this.#searchCandidates(player)).length;
-				if ((candidates > 0) || canRotate) {
+				if (this.flippable(player) || canRotate) {
 					cnt.activePlayer++;
 					frozen = false;
 				} else {
@@ -1994,7 +1995,7 @@ class cTurnController {
 */
 
 const textureFactory = factoryBuilder((in_w, in_h, in_dmz = false) => {
-	const gradationCnt = 4
+	const gradationCnt = 3
 	// gradationCnt (from black to white)
 	const maxDepth = 255;
 	const rgbArr = [];
@@ -2475,10 +2476,39 @@ const BOARD_DB = [
 					[D,D,D,E,E,E,E,E,D,D,D],
 					[D,E,E,E,E,E,E,E,E,E,D],
 					[E,E,E,E,E,B,E,E,E,E,E],
-					[E,E,E,S,Y,E,G,R,E,E,E],
-					[E,E,E,R,E,B,E,O,E,E,E],
-					[E,E,E,O,E,E,E,Y,E,E,E],
-					[E,E,E,E,B,G,S,E,E,E,E],
+					[E,E,E,R,E,B,E,Y,E,E,E],
+					[E,E,E,E,R,E,Y,E,E,E,E],
+					[E,E,E,S,S,O,G,G,E,E,E],
+					[E,E,E,E,R,O,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E],
+					[D,D,E,E,E,E,E,E,E,D,D],
+					[D,D,D,D,E,E,E,D,D,D,D],
+
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D]
+				]
+			},
+			{
+				format : 'hexFlatTopped',
+				offsetCol : 1,
+				table : [
+					[D,D,D,D,D,E,D,D,D,D,D],
+					[D,D,D,E,E,E,E,E,D,D,D],
+					[D,E,E,E,E,E,E,E,E,E,D],
+					[E,E,E,E,E,B,E,E,E,E,E],
+					[E,E,E,R,E,B,E,Y,E,E,E],
+					[E,E,E,E,R,D,Y,E,E,E,E],
+					[E,E,E,S,S,O,G,G,E,E,E],
+					[E,E,E,E,R,O,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E,E,E,E],
 					[D,D,E,E,E,E,E,E,E,D,D],
 					[D,D,D,D,E,E,E,D,D,D,D],
@@ -2508,9 +2538,9 @@ const BOARD_DB = [
 				table : [
 					[E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E],
-					[E,E,R,R,B,E,E],
-					[E,E,B,D,B,E,E],
-					[E,E,B,R,R,E,E],
+					[E,E,B,B,E,E,E],
+					[E,B,B,D,R,R,E],
+					[E,E,E,R,R,E,E],
 					[E,E,E,E,E,E,E],
 					[E,E,E,E,E,E,E],
 
@@ -2531,11 +2561,11 @@ const BOARD_DB = [
 				offsetCol : -1,
 				table : [
 					[E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E],
-					[E,E,R,G,Y,E,E],
-					[E,E,Y,D,B,E,E],
-					[E,E,B,R,G,E,E],
-					[E,E,E,E,E,E,E],
+					[E,E,E,G,E,E,E],
+					[E,E,Y,G,B,E,E],
+					[E,B,B,D,R,R,E],
+					[E,E,R,Y,G,E,E],
+					[E,E,E,Y,E,E,E],
 					[E,E,E,E,E,E,E],
 
 					[D,D,D,D,D,D,D],
@@ -2621,6 +2651,14 @@ const BOARD_DB = [
 					[E,E,E,E,E,E,E,D,D,D,D,D],
 					[E,E,E,E,E,E,E,D,D,D,D,D],
 
+					[D,D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D,D],
 					[D,D,D,D,D,D,D,D,D,D,D,D],
 					[D,D,D,D,D,D,D,D,D,D,D,D],
 					[D,D,D,D,D,D,D,D,D,D,D,D],
@@ -3329,6 +3367,11 @@ function menu() {
 	startDialog(dialog);
 }
 
+function showHint(in_text) {
+	//adjust text
+	//autoTransition
+}
+
 function initializeByLevel() {
 	const curr = gCyclicLevels.currValue();
 	const edge = {
@@ -3351,6 +3394,9 @@ function initializeByLevel() {
 			if (last) {
 				const piece = gColony.indexToPiece(last.row, last.col);
 				await gController.moveViewTo(piece, gWorld);
+			}
+			if (!gReversi.flippable(in_player)) {
+				showHint('you can rotate');
 			}
 			return;
 		}
