@@ -78,7 +78,8 @@ import {
 	cColony
 } from 'side6';
 import {
-	RES
+	FIGURES,
+	FUKIDASHI
 } from 's6res';
 import * as SOUND from 'sound';
 
@@ -3291,7 +3292,7 @@ function complete(in_player) {
 		});
 		([
 			'<div>Winner is ...</div>',
-			'<div style="text-align:center"><img src="' + RES.get(in_player) + '" /></div>',
+			'<div style="text-align:center"><img src="' + FIGURES.get(in_player) + '" /></div>',
 			'<div>Thanks to your wisdom, peace in the universe has been preserved.</div>',
 			'<div>Click to go next stage.</div>',
 		]).forEach(in_fragment => {
@@ -3306,41 +3307,97 @@ function complete(in_player) {
 }
 
 const gFigure = (() => {
+	// 1. container
 	const maxInt = 2 ** 31 - 1;
-	const closure = {};
-	closure.outer = document.createElement('DIV');
-	Object.assign(closure.outer.style, {
+	const outerArr = ['figure', 'fukidashi'];
+	const closure = {}
+	outerArr.forEach(in_item => {
+		closure[in_item] = document.createElement('DIV');
+		closure[in_item].style.visibility = 'hidden';
+		document.body.appendChild(closure[in_item]);
+	});
+	const figure_r = 20;
+	const figure_b = 20;
+	const figure_w = 100;
+	const offset = 10;
+	const fukidashi_w = 150;
+	const fukidashi_b = 100;
+	Object.assign(closure.figure.style, {
 		position : 'absolute',
-		bottom : '20px',
-		right : '20px',
+		right : figure_r + 'px',
+		bottom : figure_b + 'px',
+		width : figure_w + 'px',
+		height : 'auto',
 		textAlign : 'center',
 		zIndex : maxInt
 	});
-	closure.image = document.createElement('IMG');
-	Object.assign(closure.image.style, {
-		width : '100px',
-		height : 'auto',
-		display : 'block',
-		margin : '0 auto'
-	});
-	closure.outer.appendChild(closure.image);
-	closure.label = document.createElement('SPAN');
-	Object.assign(closure.label.style, {
-		display : 'inline-block',
-		marginTop : '6px',
-		fontFamily : 'cursive',
-		color : 'silver'
-	});
-	closure.outer.appendChild(closure.label);
-	document.body.appendChild(closure.outer);
+	const image = new Image();
+	image.src = FUKIDASHI;
+	image.onload = () => {
+		const fukidashi_h = image.naturalHeight * fukidashi_w / image.naturalWidth;
+		Object.assign(closure.fukidashi.style, {
+			position : 'absolute',
+			right : figure_r + figure_w + offset + 'px',
+			bottom : fukidashi_b + 'px',
+			width : fukidashi_w + 'px',
+			height : fukidashi_h + 'px',
+			display : 'grid',
+			placeItems : 'center',
+			textAlign : 'center',
+			backgroundPosition : 'center center',
+			backgroundSize : 'contain',
+			backgroundRepeat : 'no-repeat',
+			backgroundImage : 'url(' + image.src + ')',
+			zIndex : maxInt
+		});
+	}
+	// 2. figure image
+	closure.figure.appendChild((() => {
+		const elem = document.createElement('IMG');
+		Object.assign(elem.style, {
+			width : 'auto',
+			height : '150px',
+			display : 'block',
+			margin : '0 auto'
+		});
+		return elem;
+	})());
+	// 3. figure label
+	closure.figure.appendChild((() => {
+		const elem = document.createElement('SPAN');
+		Object.assign(elem.style, {
+			display : 'inline-block',
+			marginTop : '6px',
+			fontFamily : 'cursive',
+			color : 'silver'
+		});
+		return elem;
+	})());
+	// 4. text when speaking
+	closure.fukidashi.appendChild((() => {
+		const elem = document.createElement('SPAN');
+		Object.assign(elem.style, {
+			width : '80%',
+			fontFamily : 'cursive',
+			color : 'black'
+		});
+		return elem;
+	})());
+	// 5. methods
 	return {
 		show(in_src, in_text) {
-			closure.outer.style.visibility = 'visible';
-			closure.image.src = in_src;
-			closure.label.textContent = in_text;
+			closure.fukidashi.style.visibility = 'hidden';
+			closure.figure.style.visibility = 'visible';
+			closure.figure.querySelector('IMG').src = in_src;
+			closure.figure.querySelector('SPAN').textContent = in_text;
 		},
 		hide() {
-			closure.outer.style.visibility = 'hidden';
+			closure.figure.style.visibility = 'hidden';
+			closure.fukidashi.style.visibility = 'hidden';
+		},
+		speak(in_text) {
+			closure.fukidashi.style.visibility = 'visible';
+			closure.fukidashi.querySelector('SPAN').textContent = in_text;
 		}
 	};
 })();
@@ -3367,11 +3424,6 @@ function menu() {
 	startDialog(dialog);
 }
 
-function showHint(in_text) {
-	//adjust text
-	//autoTransition
-}
-
 function initializeByLevel() {
 	const curr = gCyclicLevels.currValue();
 	const edge = {
@@ -3388,7 +3440,7 @@ function initializeByLevel() {
 	}
 	gController.setTurnHook(async (in_player, in_color, in_pc) => {
 		const name = gController.curNPCStrategy() ?? 'you';
-		gFigure.show(RES.get(in_color), name);
+		gFigure.show(FIGURES.get(in_color), name);
 		if (in_pc) {
 			const last = gReversi.getLast({who : pcIndex, action : 'choose-item'});
 			if (last) {
@@ -3396,7 +3448,7 @@ function initializeByLevel() {
 				await gController.moveViewTo(piece, gWorld);
 			}
 			if (!gReversi.flippable(in_player)) {
-				showHint('you can rotate');
+				gFigure.speak('I can rotate cylinder !!');
 			}
 			return;
 		}
