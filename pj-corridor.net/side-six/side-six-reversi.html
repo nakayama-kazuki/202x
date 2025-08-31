@@ -1161,12 +1161,12 @@ class cReversi {
 					return true;
 				}
 			}
+			(rollback)();
 			return false;
 		});
 		if (rotated) {
 			return result;
 		} else {
-			(rollback)();
 			return null;
 		}
 	}
@@ -1995,76 +1995,87 @@ class cTurnController {
 	the cColony class related functions provide the ability to create cylinder-shaped threejs objects.
 */
 
-const textureFactory = factoryBuilder((in_w, in_h, in_dmz = false) => {
-	const gradationCnt = 3
-	// gradationCnt (from black to white)
-	const maxDepth = 255;
-	const rgbArr = [];
-	for (let i = 0; i < gradationCnt; i++) {
-		const depth = Math.ceil(maxDepth / gradationCnt * (i + 1));
-		rgbArr[i] = 'rgb(' + depth + ',' + depth + ',' + depth + ')';
+function drawCross(in_ctx, in_length, in_width, in_color, in_angle) {
+	const drawLine = () => {
+		in_ctx.beginPath();
+		in_ctx.moveTo(in_length / 2 * -1, 0);
+		in_ctx.lineTo(in_length / 2 * +1, 0);
+		in_ctx.stroke();
+	};
+	const w = in_ctx.canvas.width / 2;
+	const h = in_ctx.canvas.height / 2;
+	// common
+	in_ctx.lineCap = 'round';
+	in_ctx.lineWidth = in_width;
+	in_ctx.strokeStyle = in_color;
+	// 1st line
+	in_ctx.save();
+	in_ctx.translate(w, h);
+	in_ctx.rotate(in_angle);
+	drawLine();
+	// 2nd line
+	in_ctx.save();
+	in_ctx.rotate(Math.PI / 2);
+	drawLine();
+	in_ctx.restore();
+	in_ctx.restore();
+}
+
+function gray(in_ratio) {
+	const ratio = Math.min(1, Math.max(0, in_ratio));
+	const level = Math.round(255 * ratio);
+	return 'rgb(' + level + ',' + level + ',' + level + ')';
+}
+
+function drawGradCross(in_ctx, in_length, in_width, in_angle) {
+	in_ctx.fillStyle = 'white';
+	in_ctx.fillRect(0, 0, in_ctx.canvas.width, in_ctx.canvas.height);
+	in_ctx.globalCompositeOperation = 'multiply';
+	const steps = Math.floor(in_width / 2);
+	for (let i = 0; i < steps; i++) {
+		const color = gray(1 - i / (steps - 1));
+		drawCross(in_ctx, in_length - i * 2, in_width - i * 2, color, in_angle);
 	}
-	// draw and convert using toDataUR
+}
+
+const textureFactory = factoryBuilder((in_w, in_h, in_type) => {
 	const canvas = document.createElement('CANVAS');
 	canvas.width = in_w;
 	canvas.height = in_h;
 	const ctx = canvas.getContext('2d');
-	for (let i = 0; i < gradationCnt; i++) {
-		if (in_dmz) {
-			ctx.strokeStyle = rgbArr[gradationCnt - i - 1];
-			ctx.fillStyle = rgbArr[gradationCnt - i - 1];
-			if (i > 0) {
-				ctx.lineWidth = (gradationCnt - i) * 2 - 1;
-				ctx.beginPath();
-				ctx.moveTo(0, 0);
-				ctx.lineTo(in_w, in_h);
-				ctx.stroke();
-				ctx.beginPath();
-				ctx.moveTo(in_w, 0);
-				ctx.lineTo(0, in_h);
-				ctx.stroke();
-			} else {
-				ctx.fillRect(0, 0, in_w, in_h);
-			}
-		} else {
-			/*
-				Rect           RoundRect      RoundRect
-
-				##########     ##########     ##########
-				##########     ##******##     ##******##
-				##########     #********#     #**++++**#
-				##########     #********#     #*++++++*#
-				########## --> #********# --> #*++++++*# --> ...
-				##########     #********#     #*++++++*#
-				##########     #********#     #**++++**#
-				##########     ##******##     ##******##
-				##########     ##########     ##########
-			*/
-			const radius = gradationCnt + 2;
-			ctx.fillStyle = rgbArr[i];
-			if (i > 0) {
-				ctx[fillRoundRect](i, i, in_w - i * 2, in_h - i * 2, radius - i);
-			} else {
-				ctx.fillRect(i, i, in_w - i * 2, in_h - i * 2);
-			}
-		}
+	let l, w, a;
+	switch (in_type) {
+	case 'square-dmz' :
+		l = Math.min(in_w, in_h) * 0.7;
+		w = 6;
+		a = Math.PI * 0.25;
+		drawGradCross(ctx, l, w, a);
+		break;
+	case 'hexmap-dmz' :
+		l = Math.min(in_w, in_h) * 0.5
+		w = 6;
+		a = Math.PI * 0.5;
+		drawGradCross(ctx, l, w, a);
+		break;
+	default :
+		break;
 	}
 	return (new THREE.TextureLoader()).load(canvas.toDataURL());
 });
 
-const materialFactory = factoryBuilder((in_color, in_size, in_type) => {
+const materialFactory = factoryBuilder((in_color, in_size, in_type = null) => {
 	const material = new THREE.MeshLambertMaterial();
 	material.color = new THREE.Color(in_color);
-	switch (in_type) {
-	case 'normal-texture' :
-		material.map = textureFactory.create(in_size, in_size, false);
-		break;
-	case 'dmz-texture' :
-		material.map = textureFactory.create(in_size, in_size, true);
-		break;
-	case 'no-texture' :
-	default :
-		break;
+	if (in_type) {
+		material.map = textureFactory.create(in_size, in_size, in_type);
+		// adhoc !!
+		if (in_type === 'hexmap-dmz') {
+			const tx = material.map;
+			tx.wrapS = tx.wrapT = THREE.ClampToEdgeWrapping;
+			tx.repeat.set(0.02, 0.02);
+			tx.offset.set(0.5, 0.5);
+			tx.needsUpdate = true;
+		}
 	}
 	return material;
 });
@@ -2390,9 +2401,9 @@ const BOARD_DB = [
 					[D,D,D,E,E,E,E,E,D,D,D],
 					[D,E,E,E,E,E,E,E,E,E,D],
 					[E,E,E,E,E,B,E,E,E,E,E],
-					[E,E,E,E,E,B,E,E,E,E,E],
-					[E,E,E,B,G,E,G,G,E,E,E],
-					[E,E,E,E,B,G,B,E,E,E,E],
+					[E,E,E,G,E,B,E,G,E,E,E],
+					[E,E,E,E,G,E,G,E,E,E,E],
+					[E,E,E,B,B,G,B,B,E,E,E],
 					[E,E,E,E,E,G,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E,E,E,E],
 					[D,D,E,E,E,E,E,E,E,D,D],
@@ -2419,9 +2430,9 @@ const BOARD_DB = [
 					[D,D,D,E,E,E,E,E,D,D,D],
 					[D,E,E,E,E,E,E,E,E,E,D],
 					[E,E,E,E,E,B,E,E,E,E,E],
-					[E,E,E,E,E,B,E,E,E,E,E],
-					[E,E,E,B,Y,E,Y,Y,E,E,E],
-					[E,E,E,E,B,Y,B,E,E,E,E],
+					[E,E,E,Y,E,B,E,Y,E,E,E],
+					[E,E,E,E,Y,E,Y,E,E,E,E],
+					[E,E,E,B,B,Y,B,B,E,E,E],
 					[E,E,E,E,E,Y,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E,E,E,E],
 					[D,D,E,E,E,E,E,E,E,D,D],
@@ -2448,10 +2459,39 @@ const BOARD_DB = [
 					[D,D,D,E,E,E,E,E,D,D,D],
 					[D,E,E,E,E,E,E,E,E,E,D],
 					[E,E,E,E,E,B,E,E,E,E,E],
-					[E,E,E,E,E,B,E,E,E,E,E],
-					[E,E,E,B,R,E,R,R,E,E,E],
-					[E,E,E,E,B,R,B,E,E,E,E],
+					[E,E,E,R,E,B,E,R,E,E,E],
+					[E,E,E,E,R,E,R,E,E,E,E],
+					[E,E,E,B,B,R,B,B,E,E,E],
 					[E,E,E,E,E,R,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E],
+					[D,D,E,E,E,E,E,E,E,D,D],
+					[D,D,D,D,E,E,E,D,D,D,D],
+
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D],
+					[D,D,D,D,D,D,D,D,D,D,D]
+				]
+			},
+			{
+				format : 'hexFlatTopped',
+				offsetCol : 1,
+				table : [
+					[D,D,D,D,D,E,D,D,D,D,D],
+					[D,D,D,E,E,E,E,E,D,D,D],
+					[D,E,E,E,E,E,E,E,E,E,D],
+					[E,E,E,E,E,B,E,E,E,E,E],
+					[E,E,E,G,E,B,E,R,E,E,E],
+					[E,E,E,E,G,E,R,E,E,E,E],
+					[E,E,E,R,R,B,G,G,E,E,E],
+					[E,E,E,E,E,B,E,E,E,E,E],
 					[E,E,E,E,E,E,E,E,E,E,E],
 					[D,D,E,E,E,E,E,E,E,D,D],
 					[D,D,D,D,E,E,E,D,D,D,D],
@@ -2813,18 +2853,19 @@ const gCyclicLevels = ((in_diameter) => {
 				const materials = [];
 				if (in_shell.format === 'hexFlatTopped') {
 					// material x2
-					materials.push(materialFactory.create(color, unitSize, 'no-texture'));
-					materials.push(materialFactory.create(BGCOLOR, unitSize, 'no-texture'));
+					const texture = (color === D) ? 'hexmap-dmz' : null;
+					materials.push(materialFactory.create(color, unitSize, texture));
+					materials.push(materialFactory.create(BGCOLOR, unitSize));
 					piece = new THREE.Mesh(geometry, materials);
 				} else {
 					// material x7
-					materials.push(materialFactory.create(BGCOLOR, unitSize, 'no-texture'));
-					materials.push(materialFactory.create(BGCOLOR, unitSize, 'no-texture'));
-					const texture = (color === D) ? 'dmz-texture' : 'normal-texture';
+					materials.push(materialFactory.create(BGCOLOR, unitSize));
+					materials.push(materialFactory.create(BGCOLOR, unitSize));
+					const texture = (color === D) ? 'square-dmz' : null;
 					materials.push(materialFactory.create(color, unitSize, texture));
-					materials.push(materialFactory.create(BGCOLOR, unitSize, 'no-texture'));
-					materials.push(materialFactory.create(BGCOLOR, unitSize, 'no-texture'));
-					materials.push(materialFactory.create(BGCOLOR, unitSize, 'no-texture'));
+					materials.push(materialFactory.create(BGCOLOR, unitSize));
+					materials.push(materialFactory.create(BGCOLOR, unitSize));
+					materials.push(materialFactory.create(BGCOLOR, unitSize));
 					materials.push(edgeMaterial);
 					piece = new THREE.Mesh(geometry, materials);
 				}
@@ -3386,6 +3427,7 @@ const gFigure = (() => {
 	// 5. methods
 	return {
 		show(in_src, in_text) {
+			closure.fukidashi.style.opacity = '0';
 			closure.fukidashi.style.visibility = 'hidden';
 			closure.figure.style.visibility = 'visible';
 			closure.figure.querySelector('IMG').src = in_src;
@@ -3396,8 +3438,9 @@ const gFigure = (() => {
 			closure.fukidashi.style.visibility = 'hidden';
 		},
 		speak(in_text) {
-			closure.fukidashi.style.visibility = 'visible';
 			closure.fukidashi.querySelector('SPAN').textContent = in_text;
+			closure.fukidashi.style.visibility = 'visible';
+			autoTransition(closure.fukidashi, 'opacity 1s ease-out', '0', '1');
 		}
 	};
 })();
@@ -3448,7 +3491,7 @@ function initializeByLevel() {
 				await gController.moveViewTo(piece, gWorld);
 			}
 			if (!gReversi.flippable(in_player)) {
-				gFigure.speak('I can rotate cylinder !!');
+				gFigure.speak('I can rotate cylinder.');
 			}
 			return;
 		}
