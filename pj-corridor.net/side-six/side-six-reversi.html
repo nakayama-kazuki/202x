@@ -2038,77 +2038,59 @@ function drawGradCross(in_ctx, in_length, in_width, in_angle) {
 	}
 }
 
-const textureFactory = factoryBuilder((in_w, in_h, in_type) => {
+const textureFactory = factoryBuilder((in_w, in_h) => {
 	const canvas = document.createElement('CANVAS');
 	canvas.width = in_w;
 	canvas.height = in_h;
 	const ctx = canvas.getContext('2d');
-	let l, w, a;
-	switch (in_type) {
-	case 'square-dmz' :
-		l = Math.min(in_w, in_h) * 0.7;
-		w = 6;
-		a = Math.PI * 0.25;
-		drawGradCross(ctx, l, w, a);
-		break;
-	case 'hexmap-dmz' :
-		l = Math.min(in_w, in_h) * 0.5
-		w = 6;
-		a = Math.PI * 0.5;
-		drawGradCross(ctx, l, w, a);
-		break;
-	default :
-		break;
-	}
+	const length = Math.min(in_w, in_h) * 0.7;
+	const width = 6;
+	const angle = Math.PI;
+	drawGradCross(ctx, length, width, angle);
 	return (new THREE.TextureLoader()).load(canvas.toDataURL());
 });
 
-const materialFactory = factoryBuilder((in_color, in_size, in_type = null) => {
+const materialFactory = factoryBuilder((in_color, in_size, in_dmz) => {
 	const material = new THREE.MeshLambertMaterial();
 	material.color = new THREE.Color(in_color);
-	if (in_type) {
-		material.map = textureFactory.create(in_size, in_size, in_type);
-		// adhoc !!
-		if (in_type === 'hexmap-dmz') {
-			const tx = material.map;
-			tx.wrapS = tx.wrapT = THREE.ClampToEdgeWrapping;
-			tx.repeat.set(0.02, 0.02);
-			tx.offset.set(0.5, 0.5);
-			tx.needsUpdate = true;
-		}
+	if (in_dmz) {
+		material.map = textureFactory.create(in_size, in_size);
+		material.map.wrapS = THREE.ClampToEdgeWrapping;
+		material.map.wrapT = THREE.ClampToEdgeWrapping;
+		material.map.repeat.set(0.02, 0.02);
+		material.map.offset.set(0.5, 0.5);
 	}
 	return material;
 });
 
-const SHELL_HEXMAP_SURFACE_IX = 0;
-const SHELL_SQUARE_SURFACE_IX = 2;
+const SHELL_SURFACE_IX = 0;
 
 function getShellColor(in_object) {
-	const index = in_object.geometry.userData.surfaceIx;
-	return in_object.material[index].color.getHex();
+	return in_object.material[SHELL_SURFACE_IX].color.getHex();
 }
 
 function setShellColor(in_object, in_color) {
-	const index = in_object.geometry.userData.surfaceIx;
 	const size = in_object.geometry.parameters.size;
-	return in_object.material[index] = materialFactory.create(in_color, size);
+	return in_object.material[SHELL_SURFACE_IX] = materialFactory.create(in_color, size);
 }
 
-function chamferedHexShape(in_r, in_taper = 0.05) {
+function chamferedShape(in_n, in_edgeLength, in_taper = 0.05) {
+	const r = in_edgeLength / (2 * Math.sin(Math.PI / in_n)); 
+	const unitAngle = 2 * Math.PI / in_n;
 	const v = [];
-	for (let i = 0; i < 6; i++) {
-		const angle = (Math.PI / 3) * i;
-		v.push(new THREE.Vector2(in_r * Math.cos(angle), in_r * Math.sin(angle)));
+	for (let i = 0; i < in_n; i++) {
+		const angle = unitAngle * i;
+		v.push(new THREE.Vector2(r * Math.cos(angle), r * Math.sin(angle)));
 	}
 	const prev = [];
 	const next = [];
-	for (let i = 0; i < 6; i++) {
-		prev[i] = v[i].clone().lerp(v[(i + 5) % 6], in_taper);
-		next[i] = v[i].clone().lerp(v[(i + 1) % 6], in_taper);
+	for (let i = 0; i < in_n; i++) {
+		prev[i] = v[i].clone().lerp(v[(i + in_n - 1) % in_n], in_taper);
+		next[i] = v[i].clone().lerp(v[(i + 1) % in_n], in_taper);
 	}
 	const shape = new THREE.Shape();
 	shape.moveTo(next[0].x, next[0].y);
-	for (let i = 1; i < 6; i++) {
+	for (let i = 1; i < in_n; i++) {
 		shape.lineTo(prev[i].x, prev[i].y);
 		shape.lineTo(next[i].x, next[i].y);
 	}
@@ -2117,23 +2099,25 @@ function chamferedHexShape(in_r, in_taper = 0.05) {
 	return shape;
 }
 
-const hexmapGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickness) => {
-	const hexSideLen = in_size / (3 ** 0.5);
+function chamferedGeometry(in_n, in_edgeLength, in_innerRatio, in_thickness) {
+	const err = 1e-6;
+	const taper = 0.05;
+
 	// 1. merged ExtrudeGeometry
 	const extrudeSettings = {
 		depth : in_thickness,
-		bevelEnabled : false
+		bevelEnabled : true,
+		bevelThickness : in_edgeLength * taper,
+		bevelSize : in_edgeLength * taper,
+		bevelOffset : in_edgeLength * taper * -1,
+		bevelSegments : 1,
+		steps: 1
 	};
-	const parts = [];
-	const shape1 = chamferedHexShape(hexSideLen * 0.95);
-	parts.push(new THREE.ExtrudeGeometry(shape1, extrudeSettings));
-	const shape2 = chamferedHexShape(hexSideLen);
-	parts.push((new THREE.ExtrudeGeometry(shape2, extrudeSettings)).translate(0, 0, 1));
-	const geometry = safeMergeGeometry(parts);
-	geometry.parameters = {size : in_size};
+	const shape = chamferedShape(in_n, in_edgeLength, taper);
+	const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+
 	// 2. transform & make two groups (surface + the other)
 	const pos = geometry.attributes.position;
-	const err = 1e-6;
 	const combinedArr = new Uint16Array(pos.count);
 	let headIndex = 0;
 	let tailIndex = combinedArr.length;
@@ -2143,18 +2127,18 @@ const hexmapGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickne
 			[3 * t + 1, pos.getZ(3 * t + 1)],
 			[3 * t + 2, pos.getZ(3 * t + 2)]
 		]);
-		let triIsSurface = true;
+		let triInSurface = true;
 		for (const [ix, z] of triMap) {
-			if (Math.abs(z - in_thickness) < err) {
+			if (z > in_thickness / 2) {
 				pos.setX(ix, pos.getX(ix) * in_innerRatio);
 				pos.setY(ix, pos.getY(ix) * in_innerRatio);
 			}
-			if (Math.abs(z) > err) {
-				triIsSurface = false;
+			if (z > err * -1) {
+				triInSurface = false;
 			}
 		}
 		let index;
-		if (triIsSurface) {
+		if (triInSurface) {
 			index = headIndex;
 			headIndex += 3;
 		} else {
@@ -2165,28 +2149,28 @@ const hexmapGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickne
 	}
 	geometry.setIndex(new THREE.BufferAttribute(combinedArr, 1));
 	geometry.clearGroups();
-	geometry.addGroup(0, headIndex, SHELL_HEXMAP_SURFACE_IX);
+	geometry.addGroup(0, headIndex, SHELL_SURFACE_IX);
 	geometry.addGroup(headIndex, combinedArr.length - headIndex, 1);
-	geometry.userData.surfaceIx = SHELL_HEXMAP_SURFACE_IX;
+
 	// 3. reset
 	pos.needsUpdate = true;
 	geometry.computeVertexNormals();
 	geometry.rotateX(Math.PI / 2);
 	return geometry;
+}
+
+const hexmapGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickness) => {
+	const edgeLength = in_size / (3 ** 0.5);
+	const geometry = chamferedGeometry(6, edgeLength, in_innerRatio, in_thickness);
+	geometry.parameters = {size : in_size};
+	return geometry;
 });
 
 const squareGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickness) => {
-	const radian = 6;
-	const outerLen = in_size - radian * 2;
-	const innerLen = outerLen * in_innerRatio;
-	const thickness = in_thickness - radian * 2;
-	const geometry = trapezoidGeometryUtil(outerLen, outerLen, outerLen, innerLen, thickness, radian);
-	geometry.parameters = {
-		size : in_size,
-		innerRatio : in_innerRatio,
-		thickness : in_thickness
-	};
-	geometry.userData.surfaceIx = SHELL_SQUARE_SURFACE_IX;
+	const edgeLength = in_size;
+	const geometry = chamferedGeometry(4, edgeLength, in_innerRatio, in_thickness);
+	geometry.rotateY(Math.PI / 4);
+	geometry.parameters = {size : in_size};
 	return geometry;
 });
 
@@ -2848,27 +2832,15 @@ const gCyclicLevels = ((in_diameter) => {
 			for (let col = 0; col < cols; col++) {
 				let x = unitSize * col - unitSize * (cols - 1) / 2;
 				let y = (in_diameter / 2 - unitThick) * 1.2;
-				const color = in_shell.table[row][col] ?? E;
-				let piece;
+				const color = in_shell.table[row][col];
 				const materials = [];
-				if (in_shell.format === 'hexFlatTopped') {
-					// material x2
-					const texture = (color === D) ? 'hexmap-dmz' : null;
-					materials.push(materialFactory.create(color, unitSize, texture));
-					materials.push(materialFactory.create(BGCOLOR, unitSize));
-					piece = new THREE.Mesh(geometry, materials);
+				if (color === D) {
+					materials.push(materialFactory.create(color, unitSize, true));
 				} else {
-					// material x7
-					materials.push(materialFactory.create(BGCOLOR, unitSize));
-					materials.push(materialFactory.create(BGCOLOR, unitSize));
-					const texture = (color === D) ? 'square-dmz' : null;
-					materials.push(materialFactory.create(color, unitSize, texture));
-					materials.push(materialFactory.create(BGCOLOR, unitSize));
-					materials.push(materialFactory.create(BGCOLOR, unitSize));
-					materials.push(materialFactory.create(BGCOLOR, unitSize));
-					materials.push(edgeMaterial);
-					piece = new THREE.Mesh(geometry, materials);
+					materials.push(materialFactory.create(color, unitSize, false));
 				}
+				materials.push(materialFactory.create(BGCOLOR, unitSize, false));
+				const piece = new THREE.Mesh(geometry, materials);
 				const pivot = new THREE.Object3D();
 				pivot.add(piece);
 				piece.position.copy(VEC3(x, y, 0));
