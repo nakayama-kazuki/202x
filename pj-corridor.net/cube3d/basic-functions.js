@@ -1470,6 +1470,9 @@ export class cSphericalWorld {
 	getCameraPos() {
 		return this.#camera.getWorldPosition(VEC3());
 	}
+	getCameraUp() {
+		return this.#camera[getWorldUp]();
+	}
 	static #encode = false;
 	getViewCode() {
 		const wrapper = cSphericalWorld.#encode ? btoa : in_data => in_data;
