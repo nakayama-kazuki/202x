@@ -809,6 +809,7 @@ class cReversi {
 	};
 	#area = {
 		items : [],
+		initialItems : [],
 		options : new Set(),
 		scores : {
 			default : [],
@@ -914,7 +915,8 @@ class cReversi {
 				xInsideSet : new Set()
 			}
 		};
-		this.setTable(in_table);
+		this.#setTable(in_table);
+		this.#area.initialItems = [...this.#area.items];
 		this.#initTagIndexes();
 		this.#initScore();
 		const argoArr = ['safety', 'spiteful', 'balance', 'greedy', 'learner', 'classic', 'beginner', 'monkey'];
@@ -1782,9 +1784,52 @@ class cReversi {
 		});
 		this.#updateScore();
 	}
-	playResetTable(in_player, in_action, in_table) {
-		this.setTable(in_table);
-		this.#commit(in_player, in_action, -1, -1, -1, -1);
+	playUndo(in_player) {
+		const last = this.getLast({who : in_player});
+		if (!last) {
+			return false;
+		}
+		const history = [...this.#history];
+		this.#history.length = 0;
+		this.#area.items = [...this.#area.initialItems];
+		this.#initScore();
+		this.#updateOptionsAll();
+		for (let i = 0; i < history.length - 1; i++) {
+			const curr = history[i];
+			if (curr === last) {
+				break;
+			}
+			switch (curr.action) {
+			case 'choose-item':
+				this.playSetPosition(curr.who, curr.row, curr.col);
+				break;
+			case 'fixed-col-rotate':
+				this.playRotate(curr.who, curr.action, curr.col, curr.delta);
+				break;
+			case 'fixed-row-rotate':
+				this.playRotate(curr.who, curr.action, curr.row, curr.delta);
+				break;
+			default :
+				throw new Error('invalid history');
+				break;
+			}
+		}
+		return true;
+	}
+	playRotate(in_player, in_action, in_target, in_delta) {
+		switch (in_action) {
+		case 'fixed-col-rotate' :
+			this.#rotateSameColItems(in_target, in_delta);
+			this.#commit(in_player, in_action, -1, -1, in_target, in_delta);
+			break;
+		case 'fixed-row-rotate' :
+			this.#rotateSameRowItems(in_target, in_delta);
+			this.#commit(in_player, in_action, -1, in_target, -1, in_delta);
+			break;
+		default :
+			throw new Error('invalid history');
+			break;
+		}
 	}
 	playSetPosition(in_player, in_row, in_col) {
 		const ix = this.#posToIndex(in_row, in_col);
@@ -1874,18 +1919,7 @@ class cReversi {
 		}
 		return null;
 	}
-	getTable() {
-		const table = [];
-		for (let ix = 0; ix < this.#area.items.length; ix++) {
-			const pos = this.#indexToPos(ix);
-			if (!table[pos.row]) {
-				table[pos.row] = [];
-			}
-			table[pos.row][pos.col] = parseInt(this.#getItemByIndex(ix));
-		}
-		return table;
-	}
-	setTable(in_table) {
+	#setTable(in_table) {
 		for (let row = 0; row < in_table.length; row++) {
 			for (let col = 0; col < in_table[row].length; col++) {
 				const item = in_table[row][col];
@@ -1896,6 +1930,17 @@ class cReversi {
 				}
 			}
 		}
+	}
+	getTable() {
+		const table = [];
+		for (let ix = 0; ix < this.#area.items.length; ix++) {
+			const pos = this.#indexToPos(ix);
+			if (!table[pos.row]) {
+				table[pos.row] = [];
+			}
+			table[pos.row][pos.col] = parseInt(this.#getItemByIndex(ix));
+		}
+		return table;
 	}
 	flippable(in_player) {
 		return ((this.#searchCandidates(in_player)).length > 0);
@@ -3194,8 +3239,26 @@ class cGameController {
 		return result;
 	}
 	pcRotate(in_reversi, in_colony) {
-		const table = this.convertColonyTable(in_colony);
-		in_reversi.playResetTable(this.#curIndex, 'fixed-col-rotate', table);
+		const tblPrev = in_reversi.getTable();
+		const tblNext = this.convertColonyTable(in_colony);
+		// find rotated col
+		const col = tblPrev[0].findIndex((in_val, in_col) => tblPrev.some((in_arr, in_row) => in_arr[in_col] !== tblNext[in_row][in_col]));
+		const arrPrev = tblPrev.map(in_arr => in_arr[col]);
+		const arrNext = tblNext.map(in_arr => in_arr[col]);
+		// decide delta
+		const delta = (arrNext.join('') + arrNext.join('')).indexOf(arrPrev.join(''));
+		in_reversi.playRotate(this.#curIndex, 'fixed-col-rotate', col, delta);
+	}
+	async pcUndo(in_reversi, in_colony, in_world) {
+		if (!this.enableHandler) {
+			return false;
+		}
+		if (in_reversi.playUndo(this.#curIndex)) {
+			await this.reversiToColonyDynamic(in_reversi, in_colony, in_world);
+			return true;
+		} else {
+			return false;
+		}
 	}
 }
 
@@ -3517,6 +3580,14 @@ SOUND.ERROR.then(in_decompress => {
 	SE_ERROR = new Audio('data:audio/mpeg;base64,' + in_decompress);
 });
 
+async function uiUndo() {
+	if (await gController.pcUndo(gReversi, gColony, gWorld)) {
+		gFigure.speak('I am back.');
+	} else {
+		knock();
+	}
+}
+
 function uiHelp() {
 	const url = {
 		ver : './version.txt',
@@ -3612,6 +3683,10 @@ async function nextLevel(in_sound = true) {
 		container.appendChild(button);
 	});
 })([
+	{
+		text : 'undo',
+		func : uiUndo
+	},
 	{
 		id : ID_PREV_LEVEL,
 		text : '(Prev)',
