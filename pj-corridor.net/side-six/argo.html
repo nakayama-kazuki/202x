@@ -638,10 +638,14 @@ class cReversi {
 		}
 		return max.indexes;
 	}
-	static #rotateArray(in_array, in_delta) {
+	static #rotateArray(in_array, in_shiftCnt, in_shiftRight = true) {
 		const len = in_array.length;
-		const delta = ((in_delta % len) + len) % len;
-		return in_array.slice(delta).concat(in_array.slice(0, delta));
+		let shiftCnt = ((in_shiftCnt % len) + len) % len;
+		if (in_shiftRight) {
+			// reverse
+			shiftCnt = (len - shiftCnt) % len;
+		}
+		return in_array.slice(shiftCnt).concat(in_array.slice(0, shiftCnt));
 	}
 	static #dmz = 8;
 	static #empty = 9;
@@ -782,7 +786,6 @@ class cReversi {
 	#npcArgoPriority = [];
 	#history = [];
 	#conf = null;
-	#rotations = null;
 	#getDirections(in_row, in_col) {
 		const dirStyle = this.#conf.dirStyle;
 		let useOffset = false;
@@ -946,10 +949,10 @@ class cReversi {
 			}
 			const radiating = tagIndexes.radiating[areaIx];
 			// (1) edgeSetArr
-			pairs.forEach(([in_pos, in_neg]) => {
-				const pos = this.#indexesUntil(radiating[in_pos], cReversi.#dmz);
+			pairs.forEach(([in_neg, in_pos]) => {
 				const neg = this.#indexesUntil(radiating[in_neg], cReversi.#dmz);
-				const edgeSet = new Set([...pos, areaIx, ...neg]);
+				const pos = this.#indexesUntil(radiating[in_pos], cReversi.#dmz);
+				const edgeSet = new Set([...neg, areaIx, ...pos]);
 				if (edgeSet.size < edgeAdhocMinLength) {
 					return;
 				}
@@ -967,13 +970,13 @@ class cReversi {
 				}
 			});
 			// (2) corner
-			const isCorner = pairs.every(([in_pos, in_neg]) => {
-				const P = radiating[in_pos];
+			const isCorner = pairs.every(([in_neg, in_pos]) => {
 				const N = radiating[in_neg];
-				if ((P.length === 0) || (this.#getItemByIndex(P[0]) === cReversi.#dmz)) {
+				const P = radiating[in_pos];
+				if ((N.length === 0) || (this.#getItemByIndex(N[0]) === cReversi.#dmz)) {
 					return true;
 				}
-				if ((N.length === 0) || (this.#getItemByIndex(N[0]) === cReversi.#dmz)) {
+				if ((P.length === 0) || (this.#getItemByIndex(P[0]) === cReversi.#dmz)) {
 					return true;
 				}
 				// both sides are available
@@ -1025,38 +1028,31 @@ class cReversi {
 		});
 		return items;
 	}
-	#rotateItems(in_indexes, in_delta) {
-		const shifted = cReversi.#rotateArray(in_indexes, in_delta);
-		const copy = [...this.#area.items];
-		for (let i = 0; i < in_indexes.length; i++) {
-			/*
-				for example ...
-				src = 5, 6, 7, 8
-				dst = 8, 5, 6, 7
-			*/
-			this.#setItemByIndex(in_indexes[i], copy[shifted[i]]);
-		}
+	#rotateItems(in_indexes, in_rightShiftCnt) {
+		const initialItems = in_indexes.map(in_ix => this.#getItemByIndex(in_ix));
+		const rotatedItems = cReversi.#rotateArray(initialItems, in_rightShiftCnt);
+		rotatedItems.forEach((in_item, in_order) => this.#setItemByIndex(in_indexes[in_order], in_item));
 	}
 	#rotateSameRowItems(in_fixedRow, in_deltaCol) {
 		const ix = this.#posToIndex(in_fixedRow, 0);
 		const radiating = this.#conf.tagIndexes.radiating[ix];
-		// in case of loop, forward and backward include the same indexes
-		const [forward, backward] = this.#conf.dirStyle.pair.get(90);
-		this.#rotateItems([ix, ...radiating[forward]], in_deltaCol);
+		// in case of loop, neg and pos include the same indexes
+		const [neg, pos] = this.#conf.dirStyle.pair.get(90);
+		this.#rotateItems([ix, ...radiating[pos]], in_deltaCol);
 	}
 	#rotateSameColItems(in_fixedCol, in_deltaRow) {
 		const ix = this.#posToIndex(0, in_fixedCol);
 		const radiating = this.#conf.tagIndexes.radiating[ix];
-		// in case of loop, forward and backward include the same indexes
-		const [forward, backward] = this.#conf.dirStyle.pair.get(0);
-		this.#rotateItems([ix, ...radiating[forward]], in_deltaRow);
+		// in case of loop, neg and pos include the same indexes
+		const [neg, pos] = this.#conf.dirStyle.pair.get(0);
+		this.#rotateItems([ix, ...radiating[pos]], in_deltaRow);
 	}
 	#flip(in_player, in_ix, in_dryRun = false) {
 		const radiating = this.#conf.tagIndexes.radiating[in_ix];
 		let flipped = false;
 		for (let i = 0; i < radiating.length; i++) {
 			const towards = radiating[i];
-			const ixArr = [];
+			const ixArr = [in_ix];
 			let enemyAppears = false;
 			for (let j = 0; j < towards.length; j++) {
 				const ix = towards[j];
@@ -1082,11 +1078,6 @@ class cReversi {
 				}
 			}
 		}
-		if (flipped) {
-			this.#setItemByIndex(in_ix, in_player);
-			this.#updateOptions(in_ix);
-			this.#updateScore();
-		}
 		return flipped;
 	}
 	#tryRotation(in_player, in_action) {
@@ -1106,12 +1097,12 @@ class cReversi {
 		const setting = {
 			'fixed-row-rotate' : {
 				targetArr : Array.from(rowSet),
-				rotateFunc : this.#rotateSameRowItems.bind(this),
+				rotateFunc : this.#rotateSameRowItems,
 				maxCnt : this.#conf.col.size
 			},
 			'fixed-col-rotate' : {
 				targetArr : Array.from(colSet),
-				rotateFunc : this.#rotateSameColItems.bind(this),
+				rotateFunc : this.#rotateSameColItems,
 				maxCnt : this.#conf.row.size
 			}
 		}
@@ -1123,19 +1114,18 @@ class cReversi {
 			let rest = maxCnt;
 			while (--rest > 0) {
 				// rotate +1 (maxCnt - 1) times
-				(rotateFunc)(in_target, 1);
-				const cand = this.#searchCandidates(in_player);
-				if (cand.length > 0) {
+				rotateFunc.call(this, in_target, 1);
+				if (this.flippable(in_player)) {
 					result.delta = maxCnt - rest;
 					return true;
 				}
 			}
+			(rollback)();
 			return false;
 		});
 		if (rotated) {
 			return result;
 		} else {
-			(rollback)();
 			return null;
 		}
 	}
@@ -1411,24 +1401,21 @@ class cReversi {
 		registerStats('can not evaluate');
 		return 0;
 	}
-	#countNextEnemyOption(in_player, in_ix) {
+	#scoringByFlip(in_player, in_ix, in_callback) {
 		const rollback = this.#createRollback();
 		this.#flip(in_player, in_ix);
+		const score = in_callback.call(this, in_player); 
+		(rollback)();
+		return score;
+	}
+	#countNextEnemyOption(in_player) {
 		const player = (in_player + 1 + cReversi.#maxPlayers) % cReversi.#maxPlayers;
-		const count = this.#searchCandidates(player).length;
-		(rollback)();
-		return count;
+		return this.#searchCandidates(player).length;
 	}
-	#countNextOption(in_player, in_ix) {
-		const rollback = this.#createRollback();
-		this.#flip(in_player, in_ix);
-		const count = this.#searchCandidates(in_player).length;
-		(rollback)();
-		return count;
+	#countNextOption(in_player) {
+		return this.#searchCandidates(in_player).length;
 	}
-	#countNextOwnedSafeArea(in_player, in_ix) {
-		const rollback = this.#createRollback();
-		this.#flip(in_player, in_ix);
+	#countNextOwnedSafeArea(in_player) {
 		let count = 0;
 		const findNeighbor = in_arr => {
 			for (let i = 0; i < in_arr.length; i++) {
@@ -1445,14 +1432,14 @@ class cReversi {
 				continue;
 			}
 			const radiating = this.#conf.tagIndexes.radiating[ix];
-			const isSafe = pairs.every(([in_pos, in_neg])  => {
-				const P = findNeighbor(radiating[in_pos]);
+			const isSafe = pairs.every(([in_neg, in_pos])  => {
 				const N = findNeighbor(radiating[in_neg]);
+				const P = findNeighbor(radiating[in_pos]);
 				// player reachs all the way to the board edge, or to the DMZ
-				if ((P === null) || (P === cReversi.#dmz)) {
+				if ((N === null) || (N === cReversi.#dmz)) {
 					return true;
 				}
-				if ((N === null) || (N === cReversi.#dmz)) {
+				if ((P === null) || (P === cReversi.#dmz)) {
 					return true;
 				}
 				// both sides are bordered by the same object
@@ -1463,26 +1450,18 @@ class cReversi {
 			});
 			count += isSafe ? 1 : 0;
 		}
-		(rollback)();
 		return count;
 	}
-	#countNextOwnedArea(in_player, in_ix) {
-		const rollback = this.#createRollback();
-		this.#flip(in_player, in_ix);
-		const count = this.#count(in_player);
-		(rollback)();
-		return count;
+	#countNextOwnedArea(in_player) {
+		return this.#count(in_player);
 	}
-	#calculateNextScore(in_player, in_ix) {
-		const rollback = this.#createRollback();
-		this.#flip(in_player, in_ix);
+	#calculateNextScore(in_player) {
 		let score = 0;
 		for (let ix = 0; ix < this.#area.items.length; ix++) {
 			if (this.#getItemByIndex(ix) === in_player) {
 				score += this.#getAreaScore(in_player, ix);
 			}
 		}
-		(rollback)();
 		return score;
 	}
 	static #randomizeCnt = 5;
@@ -1491,7 +1470,8 @@ class cReversi {
 			return this.#npc_random(in_player, in_candArr);
 		}
 		const evaluator = (in_player, in_ix) => {
-			return this.#evaluate(in_player, in_ix) + this.#countNextEnemyOption(in_player, in_ix) * -1;
+			const score = this.#scoringByFlip(in_player, in_ix, this.#countNextEnemyOption);
+			return this.#evaluate(in_player, in_ix) + score * -1;
 		};
 		const narrowedArr = cReversi.#maximize(evaluator, in_player, in_candArr);
 		return this.#npc_score_spot(in_player, narrowedArr);
@@ -1501,7 +1481,8 @@ class cReversi {
 			return this.#npc_random(in_player, in_candArr);
 		}
 		const evaluator = (in_player, in_ix) => {
-			return this.#evaluate(in_player, in_ix) + this.#countNextOption(in_player, in_ix);
+			const score = this.#scoringByFlip(in_player, in_ix, this.#countNextOption);
+			return this.#evaluate(in_player, in_ix) + score;
 		};
 		const narrowedArr = cReversi.#maximize(evaluator, in_player, in_candArr);
 		return this.#npc_score_spot(in_player, narrowedArr);
@@ -1511,7 +1492,8 @@ class cReversi {
 			return this.#npc_random(in_player, in_candArr);
 		}
 		const evaluator = (in_player, in_ix) => {
-			return this.#evaluate(in_player, in_ix) + this.#countNextOwnedSafeArea(in_player, in_ix);
+			const score = this.#scoringByFlip(in_player, in_ix, this.#countNextOwnedSafeArea);
+			return this.#evaluate(in_player, in_ix) + score;
 		};
 		const narrowedArr = cReversi.#maximize(evaluator, in_player, in_candArr);
 		return this.#npc_score_spot(in_player, narrowedArr);
@@ -1521,7 +1503,8 @@ class cReversi {
 			return this.#npc_random(in_player, in_candArr);
 		}
 		const evaluator = (in_player, in_ix) => {
-			return this.#evaluate(in_player, in_ix) + this.#countNextOwnedArea(in_player, in_ix);
+			const score = this.#scoringByFlip(in_player, in_ix, this.#countNextOwnedArea);
+			return this.#evaluate(in_player, in_ix) + score;
 		};
 		const narrowedArr = cReversi.#maximize(evaluator, in_player, in_candArr);
 		return this.#npc_score_spot(in_player, narrowedArr);
@@ -1531,14 +1514,16 @@ class cReversi {
 			return this.#npc_random(in_player, in_candArr);
 		}
 		const evaluator = (in_player, in_ix) => {
-			return this.#evaluate(in_player, in_ix) + this.#getAreaScore(in_player, in_ix);
+			const score = this.#getAreaScore(in_player, in_ix);
+			return this.#evaluate(in_player, in_ix) + score;
 		};
 		const narrowedArr = cReversi.#maximize(evaluator, in_player, in_candArr);
 		return this.#npc_random(in_player, narrowedArr);
 	}
 	#npc_score_total(in_player, in_candArr) {
 		const evaluator = (in_player, in_ix) => {
-			return this.#calculateNextScore(in_player, in_ix);
+			const score = this.#scoringByFlip(in_player, in_ix, this.#calculateNextScore);
+			return score;
 		};
 		const narrowedArr = cReversi.#maximize(evaluator, in_player, in_candArr);
 		return this.#npc_random(in_player, narrowedArr);
@@ -1744,17 +1729,30 @@ class cReversi {
 			throw new Error();
 		}
 	}
-	playResetTable(in_player, in_action, in_table) {
-		this.setTable(in_table);
+	#commit(in_player, in_action, in_ix, in_row, in_col, in_delta) {
+		let row, col;
+		if (in_ix < 0) {
+			this.#updateOptionsAll();
+			row = in_row;
+			col = in_col;
+		} else {
+			this.#updateOptions(in_ix);
+			const pos = this.#indexToPos(in_ix);
+			row = pos.row;
+			col = pos.col;
+		}
 		this.#history.push({
 			who : in_player,
 			action : in_action,
-			row : -1,
-			col : -1,
-			delta : -1
+			row : row,
+			col : col,
+			delta : in_delta
 		});
-		this.#updateOptionsAll();
 		this.#updateScore();
+	}
+	playResetTable(in_player, in_action, in_table) {
+		this.setTable(in_table);
+		this.#commit(in_player, in_action, -1, -1, -1, -1);
 	}
 	playSetPosition(in_player, in_row, in_col) {
 		const ix = this.#posToIndex(in_row, in_col);
@@ -1763,13 +1761,7 @@ class cReversi {
 		}
 		const flipped = this.#flip(in_player, ix);
 		if (flipped) {
-			this.#history.push({
-				who : in_player,
-				action : 'choose-item',
-				row : in_row,
-				col : in_col,
-				delta : -1
-			});
+			this.#commit(in_player, 'choose-item', ix, -1, -1, -1);
 		}
 		return flipped;
 	}
@@ -1806,48 +1798,36 @@ class cReversi {
 		// console.log(in_player, npcAlive, playerCnt, npcArgo);
 		const candidates = this.#searchCandidates(in_player);
 		if (candidates.length > 0) {
-			const ix = (this.#npcSet[npcArgo].bind(this))(in_player, candidates);
+			const ix = this.#npcSet[npcArgo].call(this, in_player, candidates); 
 			this.#flip(in_player, ix);
-			const pos = this.#indexToPos(ix);
-			this.#history.push({
-				who : in_player,
-				action : 'choose-item',
-				row : pos.row,
-				col : pos.col,
-				delta : -1
-			});
+			this.#commit(in_player, 'choose-item', ix, -1, -1, -1);
 			return true;
 		} else {
-			let action, result = null;
-			if (!result && this.#conf.rotatable.fixedCol) {
+			let action, result;
+			if (this.#conf.rotatable.fixedCol) {
 				action = 'fixed-col-rotate';
 				result = this.#tryRotation(in_player, action);
+				if (result) {
+					this.#commit(in_player, action, -1, -1, result.target, result.delta);
+					return true;
+				}
 			}
-			if (!result && this.#conf.rotatable.fixedRow) {
+			if (this.#conf.rotatable.fixedRow) {
 				action = 'fixed-row-rotate';
 				result = this.#tryRotation(in_player, action);
+				if (result) {
+					this.#commit(in_player, action, -1, result.target, -1, result.delta);
+					return true;
+				}
 			}
-			if (result) {
-				this.#history.push({
-					who : in_player,
-					action : action,
-					row : (action === 'fixed-row-rotate' ? result.target : -1),
-					col : (action === 'fixed-col-rotate' ? result.target : -1),
-					delta : result.delta
-				});
-				this.#updateOptionsAll();
-				this.#updateScore();
-				return true;
-			} else {
-				// can not do anything
-				return false;
-			}
+			// can not do anything
+			return false;
 		}
 	}
 	rotatableFixedCol() {
 		return this.#conf.rotatable.fixedCol;
 	}
-	rotatableFixedRol() {
+	rotatableFixedRow() {
 		return this.#conf.rotatable.fixedRow;
 	}
 	getLast(in_conditions = {}) {
@@ -1885,6 +1865,9 @@ class cReversi {
 			}
 		}
 	}
+	flippable(in_player) {
+		return ((this.#searchCandidates(in_player)).length > 0);
+	}
 	getCurrentCondition() {
 		const condition = {
 			finished : false,
@@ -1902,8 +1885,7 @@ class cReversi {
 			if (dead) {
 				frozen = true;
 			} else {
-				const candidates = (this.#searchCandidates(player)).length;
-				if ((candidates > 0) || canRotate) {
+				if (this.flippable(player) || canRotate) {
 					cnt.activePlayer++;
 					frozen = false;
 				} else {
