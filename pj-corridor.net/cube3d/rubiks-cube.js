@@ -30,6 +30,7 @@ import {
 	cCyclicMap,
 	cCyclicValues,
 	forEachCombination,
+	cChart,
 	clipArea,
 	clipClearArea,
 	fillRoundRect,
