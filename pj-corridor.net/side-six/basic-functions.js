@@ -765,6 +765,116 @@ Object.defineProperty(Array.prototype, forEachCombination, {
 	enumerable : false
 });
 
+export class cChart {
+	static #defaultDuration = 500;
+	#prevColors = {};
+	#drawChart = () => {};
+	constructor(in_w, in_h, in_style = 'horizontal') {
+		this.canvas = document.createElement('CANVAS');
+		this.canvas.width = in_w;
+		this.canvas.height = in_h;
+		const styles = {
+			horizontal : this.#drawChartA(true),
+			vertical : this.#drawChartA(false),
+			circle : this.#drawChartB
+		};
+		if (Object.hasOwn(styles, in_style)) {
+			this.#drawChart = styles[in_style].bind(this);
+		} else {
+			throw new Error('invalid style');
+		}
+	}
+	#drawChartA(in_horizontal) {
+		const w = this.canvas.width;
+		const h = this.canvas.height;
+		const ctx = this.canvas.getContext('2d');
+		ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+		ctx.lineWidth = 1;
+		return in_colors => {
+			ctx.clearRect(0, 0, w, h);
+			let current = in_horizontal ? 0 : h;
+			for (const [colorName, ratio] of Object.entries(in_colors)) {
+				ctx.fillStyle = colorName;
+				let amount;
+				if (in_horizontal) {
+					amount = w * ratio;
+					ctx.fillRect(current, 0, amount, h);
+					ctx.strokeRect(current, 0, amount, h)
+					current += amount;
+				} else {
+					amount = h * ratio;
+					ctx.fillRect(0, current - amount, w, amount);
+					ctx.strokeRect(0, current - amount, w, amount);
+					current -= amount;
+				}
+			}
+		};
+	}
+	#drawChartB(in_colors) {
+		const w = this.canvas.width;
+		const h = this.canvas.height;
+		const center = {
+			x : w / 2,
+			y : h / 2
+		};
+		const r = Math.min(w, h) / 2;
+		const ctx = this.canvas.getContext('2d');
+		ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+		ctx.lineWidth = 1;
+		ctx.clearRect(0, 0, w, h);
+		let start = Math.PI / 2 * -1;
+		for (const [colorName, ratio] of Object.entries(in_colors)) {
+			const angle = ratio * Math.PI * 2;
+			const end = start + angle;
+			ctx.beginPath();
+			ctx.moveTo(center.x, center.y);
+			ctx.arc(center.x, center.y, r, start, end);
+			ctx.closePath();
+			ctx.fillStyle = colorName;
+			ctx.fill();
+			ctx.stroke();
+			start = end;
+		}
+	}
+	#animationChart(in_colors, in_duration) {
+		const easing = in_t => in_t * in_t;
+		const start = performance.now();
+		const callback = in_now => {
+			const ratio = easing(Math.min(1, (in_now - start) / in_duration));
+			const colors = {};
+			for (const [colorName, e] of Object.entries(in_colors)) {
+				colors[colorName] = e.prev + (e.next - e.prev) * ratio;
+			}
+			this.#drawChart(colors);
+			if (ratio < 1) {
+				requestAnimationFrame(callback);
+			}
+		};
+		requestAnimationFrame(callback);
+	}
+	update(in_nextColors, in_duration = cChart.#defaultDuration) {
+		const sum = in_colors => Object.values(in_colors).reduce((in_acc, in_cur) => in_acc + in_cur, 0);
+		const merged = [...new Set([...Object.keys(this.#prevColors), ...Object.keys(in_nextColors)])];
+		const prevSum = sum(this.#prevColors);
+		const nextSum = sum(in_nextColors);
+		const colors = {};
+		merged.forEach(in_colorName => {
+			colors[in_colorName] = {prev : 0, next : 0};
+			if (Object.hasOwn(this.#prevColors, in_colorName) && (prevSum > 0)) {
+				colors[in_colorName].prev = this.#prevColors[in_colorName] / prevSum;
+			}
+			if (Object.hasOwn(in_nextColors, in_colorName) && (nextSum > 0)) {
+				colors[in_colorName].next = in_nextColors[in_colorName] / nextSum;
+			}
+			if ((colors[in_colorName].prev === 0) && (colors[in_colorName].next === 0)) {
+				delete colors[in_colorName];
+			}
+		});
+		this.#animationChart(colors, in_duration);
+		this.#prevColors = {...in_nextColors};
+	}
+}
+
 export const clipArea = Symbol();
 
 Object.defineProperty(HTMLCanvasElement.prototype, clipArea, {

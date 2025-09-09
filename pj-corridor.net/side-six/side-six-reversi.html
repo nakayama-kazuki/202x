@@ -7,8 +7,8 @@
 <script type='importmap'>
 {
 	"imports" : {
-		"three" : "https://cdn.jsdelivr.net/npm/three@0.179.0/build/three.module.min.js",
-		"utils" : "https://cdn.jsdelivr.net/npm/three@0.179.0/examples/jsm/utils/BufferGeometryUtils.js",
+		"three" : "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.min.js",
+		"utils" : "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/utils/BufferGeometryUtils.js",
 		"basic" : "./basic-functions.js",
 		"side6" : "./side-six.js",
 		"s6res" : "./side-six-reversi-res.js",
@@ -52,6 +52,7 @@ import {
 	cCyclicMap,
 	cCyclicValues,
 	forEachCombination,
+	cChart,
 	clipArea,
 	clipClearArea,
 	fillRoundRect,
@@ -3332,11 +3333,14 @@ function warpViewProgress(in_canvas, in_lineCount) {
 function complete(in_player) {
 	gController.end();
 	gFigure.hide();
+	gChart.hide();
 	const progress = warpViewProgress(gBackgroundCanvas, 50);
 	gWorld.addAnimationHook(progress);
 	const duration = 2000;
 	gWorld.motionZoom2(WORLD_RADIUS * 1.5, duration * 0.9);
 	setTimeout(() => {
+		const {players} = gReversi.getCurrentCondition();
+		let scores = players.filter(in_player => in_player.score > 0).map(in_player => in_player.score);
 		gWorld.removeAnimationHook(progress);
 		const dialog = document.createElement('div');
 		Object.assign(dialog.style, {
@@ -3350,6 +3354,7 @@ function complete(in_player) {
 		([
 			'<div>Winner is ...</div>',
 			'<div style="text-align:center"><img src="' + FIGURES.get(in_player) + '" /></div>',
+			'<div>The result is ' + scores.join(' vs ') + '.</div>',
 			'<div>Thanks to your wisdom, peace in the universe has been preserved.</div>',
 			'<div>Click to go next stage.</div>',
 		]).forEach(in_fragment => {
@@ -3362,6 +3367,8 @@ function complete(in_player) {
 		});
 	}, duration);
 }
+
+
 
 const gFigure = (() => {
 	// 1. container
@@ -3490,6 +3497,7 @@ function initializeByLevel() {
 		col : true
 	};
 	gController = new cGameController(curr.colorArr, PC_COLOR);
+	gChart.initialize(curr.colorArr);
 	const pcIndex = curr.colorArr.indexOf(PC_COLOR);
 	const table = gController.convertColonyTable(gColony);
 	if (curr.offset >= 0) {
@@ -3500,6 +3508,20 @@ function initializeByLevel() {
 	gController.setTurnHook(async (in_player, in_color, in_pc) => {
 		const name = gController.curNPCStrategy() ?? 'you';
 		gFigure.show(FIGURES.get(in_color), name);
+		const colors = {};
+		const table = gColony.getColorTable();
+		table.flat().forEach(in_color => {
+			if (in_color === DMZCOLOR) {
+				return;
+			}
+			const colorName = '#' + in_color.toString(16).padStart(6, '0');
+			if (Object.hasOwn(colors, colorName)) {
+				colors[colorName]++;
+			} else {
+				colors[colorName] = 1;
+			}
+		});
+		gChart.update(colors);
 		if (in_pc) {
 			const last = gReversi.getLast({who : pcIndex, action : 'choose-item'});
 			if (last) {
@@ -3582,7 +3604,7 @@ SOUND.ERROR.then(in_decompress => {
 
 async function uiUndo() {
 	if (await gController.pcUndo(gReversi, gColony, gWorld)) {
-		gFigure.speak('I am back.');
+		gFigure.speak('I shall return.');
 	} else {
 		knock();
 	}
@@ -3658,6 +3680,43 @@ async function nextLevel(in_sound = true) {
 	await updateLevel(gCyclicLevels.incrementedValue());
 }
 
+class cOcupiedChart extends cChart {
+	static #r = 50;
+	#colorsOrder = [];
+	constructor() {
+		const w = cOcupiedChart.#r * 2, h = w;
+		super(w, h, 'circle');
+	}
+	initialize(in_playerColors) {
+		const chartColors = [...in_playerColors, EMPTYCOLOR];
+		this.#colorsOrder = chartColors.map(in_color => '#' + in_color.toString(16).padStart(6, '0'));
+		const empty = this.#colorsOrder[this.#colorsOrder.length - 1];
+		const initColors = {};
+		initColors[empty] = 1;
+		this.update(initColors);
+	}
+	hide() {
+		this.canvas.style.visibility = 'hidden';
+	}
+	show() {
+		this.canvas.style.visibility = 'visible';
+	}
+	update(in_nextColors) {
+		const colors = {};
+		this.#colorsOrder.forEach(in_color => {
+			if (Object.hasOwn(in_nextColors, in_color)) {
+				colors[in_color] = in_nextColors[in_color];
+			} else {
+				colors[in_color] = 0;
+			}
+		});
+		super.update(colors);
+		this.show();
+ 	}
+}
+
+const gChart = new cOcupiedChart();
+
 (in_settings => {
 	let container = document.createElement('div');
 	Object.assign(container.style, {
@@ -3682,6 +3741,9 @@ async function nextLevel(in_sound = true) {
 		});
 		container.appendChild(button);
 	});
+	container.appendChild(document.createElement('br'));
+	gChart.canvas.style.margin = '1em';
+	container.appendChild(gChart.canvas);
 })([
 	{
 		text : 'undo',
