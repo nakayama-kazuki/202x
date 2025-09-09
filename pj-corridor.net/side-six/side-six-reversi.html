@@ -3490,6 +3490,23 @@ function menu() {
 	startDialog(dialog);
 }
 
+function updateChart() {
+	const colorNames = {};
+	const table = gColony.getColorTable();
+	table.flat().forEach(in_colorNum => {
+		if (in_colorNum === DMZCOLOR) {
+			return;
+		}
+		const colorName = '#' + in_colorNum.toString(16).padStart(6, '0');
+		if (Object.hasOwn(colorNames, colorName)) {
+			colorNames[colorName]++;
+		} else {
+			colorNames[colorName] = 1;
+		}
+	});
+	gChart.update(colorNames);
+}
+
 function initializeByLevel() {
 	const curr = gCyclicLevels.currValue();
 	const edge = {
@@ -3508,20 +3525,7 @@ function initializeByLevel() {
 	gController.setTurnHook(async (in_player, in_color, in_pc) => {
 		const name = gController.curNPCStrategy() ?? 'you';
 		gFigure.show(FIGURES.get(in_color), name);
-		const colors = {};
-		const table = gColony.getColorTable();
-		table.flat().forEach(in_color => {
-			if (in_color === DMZCOLOR) {
-				return;
-			}
-			const colorName = '#' + in_color.toString(16).padStart(6, '0');
-			if (Object.hasOwn(colors, colorName)) {
-				colors[colorName]++;
-			} else {
-				colors[colorName] = 1;
-			}
-		});
-		gChart.update(colors);
+		updateChart();
 		if (in_pc) {
 			const last = gReversi.getLast({who : pcIndex, action : 'choose-item'});
 			if (last) {
@@ -3604,7 +3608,8 @@ SOUND.ERROR.then(in_decompress => {
 
 async function uiUndo() {
 	if (await gController.pcUndo(gReversi, gColony, gWorld)) {
-		gFigure.speak('I shall return.');
+		updateChart();
+		gFigure.speak('I have returned.');
 	} else {
 		knock();
 	}
@@ -3681,19 +3686,19 @@ async function nextLevel(in_sound = true) {
 }
 
 class cOcupiedChart extends cChart {
-	static #r = 50;
-	#colorsOrder = [];
+	static #r = 45;
+	#colorNamesOrder = [];
 	constructor() {
 		const w = cOcupiedChart.#r * 2, h = w;
 		super(w, h, 'circle');
 	}
-	initialize(in_playerColors) {
-		const chartColors = [...in_playerColors, EMPTYCOLOR];
-		this.#colorsOrder = chartColors.map(in_color => '#' + in_color.toString(16).padStart(6, '0'));
-		const empty = this.#colorsOrder[this.#colorsOrder.length - 1];
-		const initColors = {};
-		initColors[empty] = 1;
-		this.update(initColors);
+	initialize(in_playerColorNums) {
+		const chartColorNums = [...in_playerColorNums, EMPTYCOLOR];
+		this.#colorNamesOrder = chartColorNums.map(in_color => '#' + in_color.toString(16).padStart(6, '0'));
+		const empty = this.#colorNamesOrder[this.#colorNamesOrder.length - 1];
+		const initColorNames = {};
+		initColorNames[empty] = 1;
+		this.update(initColorNames);
 	}
 	hide() {
 		this.canvas.style.visibility = 'hidden';
@@ -3701,16 +3706,16 @@ class cOcupiedChart extends cChart {
 	show() {
 		this.canvas.style.visibility = 'visible';
 	}
-	update(in_nextColors) {
-		const colors = {};
-		this.#colorsOrder.forEach(in_color => {
-			if (Object.hasOwn(in_nextColors, in_color)) {
-				colors[in_color] = in_nextColors[in_color];
+	update(in_nextColorNums) {
+		const colorNames = {};
+		this.#colorNamesOrder.forEach(in_colorName => {
+			if (Object.hasOwn(in_nextColorNums, in_colorName)) {
+				colorNames[in_colorName] = in_nextColorNums[in_colorName];
 			} else {
-				colors[in_color] = 0;
+				colorNames[in_colorName] = 0;
 			}
 		});
-		super.update(colors);
+		super.update(colorNames);
 		this.show();
  	}
 }
@@ -3742,7 +3747,7 @@ const gChart = new cOcupiedChart();
 		container.appendChild(button);
 	});
 	container.appendChild(document.createElement('br'));
-	gChart.canvas.style.margin = '1em';
+	gChart.canvas.style.margin = '2em 1em';
 	container.appendChild(gChart.canvas);
 })([
 	{
