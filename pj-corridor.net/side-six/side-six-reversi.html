@@ -1985,40 +1985,6 @@ class cReversi {
 }
 
 /*
-	the cTurnController class is designed to manage turns in turn-based games like reversi.
-*/
-
-class cTurnController {
-	#players = new cCyclicValues();
-	#active = false;
-	#turns = 0;
-	registerPlayer(in_turnHook, in_playerId = randomString()) {
-		this.#players.push({
-			turnHook : in_turnHook,
-			playerId : in_playerId
-		});
-		return in_playerId;
-	}
-	#turnStart(in_player) {
-		this.#turns++;
-		in_player.turnHook(in_player.playerId);
-	}
-	turnEnd() {
-		if (!this.#active) {
-			return;
-		}
-		this.#turnStart(this.#players.incrementedValue());
-	}
-	gameStart() {
-		this.#active = true;
-		this.#turnStart(this.#players.currValue());
-	}
-	gameEnd() {
-		this.#active = false;
-	}
-}
-
-/*
 	the cColony class related functions provide the ability to create cylinder-shaped threejs objects.
 */
 
@@ -2217,8 +2183,6 @@ const SKYBLUE = 0x5588FF, S = SKYBLUE;
 const LIME = 0x55CC55, L = LIME;
 const DMZCOLOR = GRAY2, D = DMZCOLOR;
 const EMPTYCOLOR = GRAY3, E = EMPTYCOLOR;
-
-const edgeMaterial = new THREE.MeshLambertMaterial({color : BGCOLOR});
 
 const COLONY_SIZE = 400;
 
@@ -4037,10 +4001,10 @@ async function chooseHere(in_ev) {
 		'mouseout' : stop,
 		'mouseup' : stop
 	};
-	for (let [eventName, closure] of Object.entries(handlers)) {
+	for (let [eventName, handler] of Object.entries(handlers)) {
 		gWorld.canvas.addEventListener(eventName, in_ev => {
-			if (gController && gController.enableHandler) {
-				(closure.bind(this))(in_ev);
+			if (gController?.enableHandler) {
+				(handler)(in_ev);
 			}
 		});
 	}

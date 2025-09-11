@@ -943,10 +943,8 @@ function chooseHere(in_ev) {
 		'mouseout' : stop,
 		'mouseup' : stop
 	};
-	for (let [name, func] of Object.entries(handlers)) {
-		gWorld.canvas.addEventListener(name, in_ev => {
-			(func.bind(this))(in_ev);
-		});
+	for (let [eventName, handler] of Object.entries(handlers)) {
+		gWorld.canvas.addEventListener(eventName, handler);
 	}
 })();
 
