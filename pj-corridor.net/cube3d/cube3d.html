@@ -1307,8 +1307,8 @@ const gHandlers = (() => {
 	};
 })();
 
-for (let [name, func] of Object.entries(gHandlers)) {
-	gWorld.canvas.addEventListener(name, func.bind(this));
+for (let [eventName, handler] of Object.entries(gHandlers)) {
+	gWorld.canvas.addEventListener(eventName, handler);
 }
 
 </script>
