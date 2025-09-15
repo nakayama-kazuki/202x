@@ -2195,6 +2195,30 @@ const gColoredArgo = new Map([
 	[LIME, 'classic']
 ]);
 
+/*
+
+	    +-------+-----------+
+	   /|      /|          /|
+	  / |     / |         / |
+	 /  |    /  |        /  |
+	+-------+-----------+---------------> row-0
+	|   |   |   |       |   |
+	|   +---|---+-------|---+
+	|  /    |  /        |  /
+	+-------+-----------+---------------> row-i
+	|/      |/          |/
+	+-------+-----------+
+	|       |
+	|       |
+	v       v
+	col-0   col-j
+
+	* cylinder oriented around the x-axis
+	- row : a position along the circumference of the cylinder
+	- col : a position along the height of the cylinder
+
+*/
+
 const BOARD_DB = [
 	{
 		type : 'traditional',
@@ -2814,11 +2838,6 @@ const gCyclicLevels = ((in_diameter) => {
 			geometry = squareGeometryFactory.create(unitSize, ratio, unitThick);
 		}
 		const pieces = [];
-		/*
-			create a cylinder oriented around the x-axis
-				row : a position along the circumference of the cylinder
-				col : a position along the height of the cylinder
-		*/
 		for (let row = 0; row < rows; row++) {
 			for (let col = 0; col < cols; col++) {
 				let x = unitSize * col - unitSize * (cols - 1) / 2;
@@ -2971,8 +2990,9 @@ class cColonyBoard extends cColony {
 		const max = 1.2;
 		const scalar = (createPeriodicCos(this.settingVal.unitAngle, 1, max, true))(in_rad);
 		in_group.children.forEach(in_child => {
-			// you don't need to worry about roAxisXYZ because it will be zero ( see setupGroup )
-			in_child.position.copy(in_child.userData.tmpCache.position.clone().multiplyScalar(scalar));
+			const basePos = in_child.userData.tmpCache.position;
+			in_child.position.copy(basePos.clone().multiplyScalar(scalar));
+			in_child.position.x = basePos.x;
 		});
 	}
 	makeRotateProgress(in_col, in_delta, in_ending_callback) {
