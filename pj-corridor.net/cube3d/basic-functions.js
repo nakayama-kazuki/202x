@@ -404,16 +404,16 @@ export function thresholding(in_callback, in_delta = _MOUSEMOVE_IGNORE) {
 }
 
 export const debouncing = (() => {
-	const timerIds = {};
+	const timerIds = new Map();
 	return (in_callback, in_interval, in_group = Symbol()) => {
-		return in_ev => {
-			if (timerIds.hasOwnProperty(in_group)) {
-				clearTimeout(timerIds[in_group]);
+		return (...in_args) => {
+			if (timerIds.has(in_group)) {
+				clearTimeout(timerIds.get(in_group));
 			}
-			timerIds[in_group] = setTimeout(() => {
-				(in_callback)(in_ev);
-				delete timerIds[in_group];
-			}, in_interval);
+			timerIds.set(in_group, setTimeout(() => {
+				(in_callback)(...in_args);
+				timerIds.delete(in_group);
+			}, in_interval));
 		}
 	};
 })();
@@ -482,57 +482,58 @@ export function startDialog(in_elem, in_callback = null) {
 	background.addEventListener('touchstart', closeDialog);
 }
 
-export function factoryBuilder(in_constructor) {
-	const group = pseudoMessageDigest2(in_constructor.toString().substring(0, 200));
+export function factoryBuilder(in_factory) {
 	class cCache {
-		static #cache = {};
+		static #storage = new Map();
 		constructor(...in_args) {
-			this.entity = (in_constructor)(...in_args);
+			this.entity = (in_factory)(...in_args);
 		}
-		static #genKey(...in_args) {
-			const args = [];
-			// assume in_args is primitive
-			in_args.forEach(in_arg => {
-				if (Number.isFinite(in_arg)) {
-					args.push(Math.ceil(in_arg));
-				} else {
-					args.push(in_arg);
-				}
-			});
-			return '_' + args.join('-');
+		static #generateKey(...in_args) {
+			const args = in_args.map(in_arg => [String(typeof in_arg).slice(0, 3), in_arg]);
+			return JSON.stringify({args});
 		}
-		static getRef(...in_args) {
-			const key = cCache.#genKey(...in_args);
-			if (key in cCache.#cache) {
-				// console.log('cache hit ( cCache key : ' + key + ' )');
+		static #dp(in_delay = 1000) {
+			if (!DEBUG) {
+				return;
+			}
+			(debouncing(() => {
+				console.log('debounced', cCache.#storage.size, cCache.#storage);
+			}, in_delay, in_factory))();
+		}
+		static refer(...in_args) {
+			cCache.#dp();
+			const key = cCache.#generateKey(...in_args);
+			let entity;
+			if (cCache.#storage.has(key)) {
+				return cCache.#storage.get(key);
 			} else {
-				cCache.#cache[key] = new cCache(...in_args);
+				const cache = new cCache(...in_args);
+				cCache.#storage.set(key, cache.entity);
+				return cache.entity;
 			}
-			if (DEBUG) {
-				(debouncing(() => {
-					console.log(Object.keys(cCache.#cache).length, cCache.#cache);
-				}, 500, group))(new Event('dummy'));
-			}
-			return cCache.#cache[key].entity;
 		}
-		static allClear(in_callback = null) {
-			if (in_callback) {
-				Object.keys(cCache.#cache).forEach(in_key => {
-					(in_callback)(cCache.#cache[in_key].entity);
-				});
+		static purge(in_entity) {
+			for (const [key, {entity}] of cCache.#storage) {
+				if (entity === in_entity) {
+					cCache.#storage.delete(key);
+					return true;
+				}
 			}
-			cCache.#cache = {};
+			return false;
+		}
+		static initialize(in_callback = null) {
+			if (in_callback) {
+				for (const {entity} of cCache.#storage.values()) {
+					(in_callback)(entity);
+				}
+			}
+			cCache.#storage.clear();
 		}
 	}
-	/*
-		*** NOTE ***
-		when there are a lot of the same objects,
-		and they can be shared using reference,
-		cCache.getRef() returns reference.
-	*/
 	return {
-		create : cCache.getRef,
-		allClear : cCache.allClear
+		create : cCache.refer,
+		delete : cCache.purge,
+		initialize : cCache.initialize
 	};
 }
 
