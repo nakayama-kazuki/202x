@@ -2830,18 +2830,22 @@ const gCyclicLevels = ((in_diameter) => {
 		const unitSize = circumf / rows;
 		const unitThick = unitSize * 0.3;
 		const unitAngle = Math.PI * 2 / rows;
+		const zoom = 1.2;
+		let margin = 2 * Math.sin(unitAngle / 2) * (radius - unitThick) * (zoom - 1);
 		let geometry;
 		const ratio = ((radius - unitThick) / radius);
 		if (in_shell.format === 'hexFlatTopped') {
+			margin *= 0.1;
 			geometry = hexmapGeometryFactory.create(unitSize, ratio, unitThick);
 		} else {
+			margin *= 0.5;
 			geometry = squareGeometryFactory.create(unitSize, ratio, unitThick);
 		}
 		const pieces = [];
 		for (let row = 0; row < rows; row++) {
 			for (let col = 0; col < cols; col++) {
-				let x = unitSize * col - unitSize * (cols - 1) / 2;
-				let y = (in_diameter / 2 - unitThick) * 1.2;
+				let x = (unitSize + margin) * col - (unitSize + margin) * (cols - 1) / 2;
+				let y = (in_diameter / 2 - unitThick) * zoom;
 				const color = in_shell.table[row][col];
 				const materials = [];
 				if (color === D) {
