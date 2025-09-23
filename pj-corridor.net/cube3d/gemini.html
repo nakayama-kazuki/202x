@@ -26,6 +26,10 @@ import {
 	postResource,
 	getParam,
 	DEBUG,
+	SETALPHA,
+	GRAYHEX,
+	RGBSTR,
+	RGBASTR,
 	randomString,
 	snapToNotch,
 	snapToPI,
@@ -349,8 +353,7 @@ class cWarpLine {
 		return this.from.clone().add(this.direction.clone().multiplyScalar(in_scalar));
 	}
 	#drawGrayLine(in_from, in_to, in_grayScale) {
-		const gray = (in_grayScale << 16) | (in_grayScale << 8) | in_grayScale;
-		this.ctx.strokeStyle = '#' + gray.toString(16).padStart(6, '0');
+		this.ctx.strokeStyle = RGBSTR(GRAYHEX(in_grayScale));
 		this.ctx.beginPath();
 		this.ctx.moveTo(in_from.x, in_from.y);
 		this.ctx.lineTo(in_to.x, in_to.y);
@@ -632,14 +635,6 @@ function nextLevel(in_sound = true) {
 	}
 ]);
 
-function hex2rgb(in_hex) {
-	const mask = 0xFF;
-	const r = (in_hex >> 16) & mask;
-	const g = (in_hex >> 8) & mask;
-	const b = in_hex & mask;
-	return [r, g, b];
-}
-
 function drawCosmicView(in_canvas, in_stars, in_nebulae_patterns, in_color = 0x000064) {
 	const ctx = in_canvas.getContext('2d');
 	const w = in_canvas.width;
@@ -649,22 +644,21 @@ function drawCosmicView(in_canvas, in_stars, in_nebulae_patterns, in_color = 0x0
 	for (let i = 0; i < in_nebulae_patterns; i++) {
 		const x = Math.random() * w;
 		const y = Math.random() * h;
-		const radius = Math.random() * 100 + 50;
-		const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
-		const rgb = hex2rgb(in_color);
-		gradient.addColorStop(0, 'rgba('+ rgb[0] +', '+ rgb[1] +', '+ rgb[2] +', 0.5)');
-		gradient.addColorStop(1, 'rgba('+ rgb[0] +', '+ rgb[1] +', '+ rgb[2] +', 0)');
+		const r = Math.random() * 100 + 50;
+		const gradient = ctx.createRadialGradient(x, y, 0, x, y, r);
+		gradient.addColorStop(0, RGBASTR(in_color, 127));
+		gradient.addColorStop(1, RGBASTR(in_color, 0));
 		ctx.beginPath();
-		ctx.arc(x, y, radius, 0, Math.PI * 2, false);
+		ctx.arc(x, y, r, 0, Math.PI * 2, false);
 		ctx.fillStyle = gradient;
 		ctx.fill();
 	}
 	for (let i = 0; i < in_stars; i++) {
 		const x = Math.random() * w;
 		const y = Math.random() * h;
-		const radius = Math.random() * 1;
+		const r = Math.random() * 1;
 		ctx.beginPath();
-		ctx.arc(x, y, radius, 0, Math.PI * 2, false);
+		ctx.arc(x, y, r, 0, Math.PI * 2, false);
 		ctx.fillStyle = 'white';
 		ctx.fill();
 	}
