@@ -69,6 +69,14 @@ export function getParam(in_name) {
 
 export const DEBUG = getParam('debug') !== false;
 
+const OCT = in_value => in_value & 0xFF;
+const RATE = in_value => (in_value <= 1 ? Math.round(in_value * 0xFF) : in_value);
+export const SETALPHA = (in_hex, in_alpha) => ((in_hex & 0xFFFFFF) << 8) | OCT(RATE(in_alpha));
+export const GRAYHEX = in_scale => (OCT(in_scale) << 16) | (OCT(in_scale) << 8) | OCT(in_scale)
+const COLORSTR = (in_hex, in_digit) => '#' + (in_hex >>> 0).toString(16).padStart(in_digit, '0');
+export const RGBSTR = in_hex => COLORSTR(in_hex & 0xFFFFFF, 6);
+export const RGBASTR = (in_hex, in_alpha = 255) => COLORSTR(SETALPHA(in_hex, in_alpha), 8);
+
 export function randomString(in_length = 5) {
 	return Math.floor(Math.random() * (10 ** in_length)).toString(16).padStart(in_length, '0');
 }
@@ -174,12 +182,27 @@ export function pseudoMessageDigest2(in_string) {
 	return pseudoMessageDigest1([in_string]);
 }
 
-export function beep(in_amplitude = 2000) {
-	const frequency = 5000;
-	const duration = 0.01
+/*
+	* Pi (= default)
+	- in_amplitude = 2000
+	- in_frequency = 5000
+	- in_duration = 0.01
+
+	* Bu
+	- in_amplitude = 2000
+	- in_frequency = 100
+	- in_duration = 0.3
+
+	* Doon
+	- in_amplitude = 2500
+	- in_frequency = 100
+	- in_duration = 0.6
+*/
+
+export function beep(in_amplitude = 2000, in_frequency = 5000, in_duration = 0.01) {
 	const sampleRate = 44100;
 	const numChannels = 1;
-	const numSamples = sampleRate * duration;
+	const numSamples = sampleRate * in_duration;
 	const bytesPerSample = 2;
 	const blockAlign = numChannels * bytesPerSample;
 	const byteRate = sampleRate * blockAlign;
@@ -214,7 +237,7 @@ export function beep(in_amplitude = 2000) {
 	view.setUint32(40, dataSize, true);
 	// generate base64
 	for (let i = 0; i < numSamples; i++) {
-		const sample = in_amplitude * Math.sin(2 * Math.PI * frequency * (i / sampleRate));
+		const sample = in_amplitude * Math.sin(2 * Math.PI * in_frequency * (i / sampleRate));
 		view.setInt16(44 + i * bytesPerSample, sample, true);
 	}
 	const uint8Array = new Uint8Array(buffer);
@@ -420,13 +443,16 @@ export const debouncing = (() => {
 
 export function nonReentrantAsync(in_async) {
 	let executable = true;
-	return async () => {
+	return async (...args) => {
 		if (!executable) {
 			return;
 		}
 		executable = false;
-		await (in_async)();
-		executable = true;
+		try {
+			return await in_async(...args);
+		} finally {
+			executable = true;
+		}
 	};
 }
 
@@ -503,7 +529,6 @@ export function factoryBuilder(in_factory) {
 		static refer(...in_args) {
 			cCache.#dp();
 			const key = cCache.#generateKey(...in_args);
-			let entity;
 			if (cCache.#storage.has(key)) {
 				return cCache.#storage.get(key);
 			} else {
@@ -513,7 +538,7 @@ export function factoryBuilder(in_factory) {
 			}
 		}
 		static purge(in_entity) {
-			for (const [key, {entity}] of cCache.#storage) {
+			for (const [key, entity] of cCache.#storage) {
 				if (entity === in_entity) {
 					cCache.#storage.delete(key);
 					return true;
@@ -521,18 +546,22 @@ export function factoryBuilder(in_factory) {
 			}
 			return false;
 		}
+		static forEach(in_callback) {
+			for (const [key, entity] of cCache.#storage) {
+				(in_callback)(entity, key, cCache.#storage);
+			}
+		}
 		static initialize(in_callback = null) {
 			if (in_callback) {
-				for (const {entity} of cCache.#storage.values()) {
-					(in_callback)(entity);
-				}
+				cCache.forEach(in_callback);
 			}
 			cCache.#storage.clear();
 		}
 	}
 	return {
 		create : cCache.refer,
-		delete : cCache.purge,
+		remove : cCache.purge,
+		forEach : cCache.forEach,
 		initialize : cCache.initialize
 	};
 }
@@ -1477,7 +1506,10 @@ export class cSphericalWorld {
 	#zoomMin = Number.NEGATIVE_INFINITY;
 	#zoomMax = Number.POSITIVE_INFINITY;
 	#userObjects = new Set();
-	#animationHooks = new Set();
+	#hooks = {
+		loopSet : new Set,
+		updateMap : new Map
+	};
 	constructor(in_radius) {
 		// scene
 		this.#scene = new THREE.Scene();
@@ -1671,11 +1703,32 @@ export class cSphericalWorld {
 	easeLinear(in_initValue, in_stopValue, in_duration, in_progressCallback) {
 		return this.#easing(in_initValue, in_stopValue, in_duration, in_progressCallback, 30);
 	}
+	addUpdatedHook(in_hook, in_err = 1e-2) {
+		this.removeUpdatedHook(in_hook);
+		const prev = (new THREE.Quaternion()).copy(this.#centerBall.quaternion);
+		const wrapper = () => {
+			const curr = this.#centerBall.quaternion;
+			if (curr.equals(prev)) {
+				return;
+			}
+			const angle = prev.angleTo(curr);
+			if (angle > in_err) {
+				(in_hook)(angle);
+				prev.copy(curr);
+			}
+		};
+		this.addAnimationHook(wrapper);
+		this.#hooks.updateMap.set(in_hook, wrapper);
+	}
+	removeUpdatedHook(in_hook) {
+		this.removeAnimationHook(this.#hooks.updateMap.get(in_hook));
+		this.#hooks.updateMap.delete(in_hook);
+	}
 	addAnimationHook(in_hook) {
-		this.#animationHooks.add(in_hook);
+		this.#hooks.loopSet.add(in_hook);
 	}
 	removeAnimationHook(in_hook) {
-		this.#animationHooks.delete(in_hook);
+		this.#hooks.loopSet.delete(in_hook);
 	}
 	motionZoom1(in_initDistance, in_stopDistance, in_duration) {
 		return this.easeOut(in_initDistance, in_stopDistance, in_duration, in_currDistance => {
@@ -1685,9 +1738,9 @@ export class cSphericalWorld {
 	motionZoom2(in_stopDistance, in_duration) {
 		return this.motionZoom1(this.#camera.position.length(), in_stopDistance, in_duration);
 	}
-	motionKnock(in_duration = 100) {
+	motionKnock(in_duration = 100, in_amplitude = 1.1) {
 		const currentDistance = this.#camera.position.length();
-		return this.motionZoom1(currentDistance * 1.1, currentDistance, in_duration);
+		return this.motionZoom1(currentDistance * in_amplitude, currentDistance, in_duration);
 	}
 	motionViewFrom(in_vec3, in_duration = 2000) {
 		const up = new THREE.Vector3(0, 1, 0);
@@ -1800,7 +1853,7 @@ export class cSphericalWorld {
 		this.add(this.#centerBall, true);
 		this.#renderer.setAnimationLoop(() => {
 			this.render();
-			this.#animationHooks.forEach(in_hook => {
+			this.#hooks.loopSet.forEach(in_hook => {
 				(in_hook)();
 			});
 		});
