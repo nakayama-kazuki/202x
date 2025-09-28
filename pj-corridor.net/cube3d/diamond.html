@@ -26,10 +26,7 @@ import {
 	postResource,
 	getParam,
 	DEBUG,
-	SETALPHA,
-	GRAYHEX,
-	RGBSTR,
-	RGBASTR,
+	COLOR,
 	randomString,
 	snapToNotch,
 	snapToPI,
@@ -408,7 +405,7 @@ class cWarpLine {
 		return this.from.clone().add(this.direction.clone().multiplyScalar(in_scalar));
 	}
 	#drawGrayLine(in_from, in_to, in_grayScale) {
-		this.ctx.strokeStyle = RGBSTR(GRAYHEX(in_grayScale));
+		this.ctx.strokeStyle = COLOR.sGray(in_grayScale);
 		this.ctx.beginPath();
 		this.ctx.moveTo(in_from.x, in_from.y);
 		this.ctx.lineTo(in_to.x, in_to.y);
@@ -701,8 +698,8 @@ function drawCosmicView(in_canvas, in_stars, in_nebulae_patterns, in_color = 0x0
 		const y = Math.random() * h;
 		const r = Math.random() * 100 + 50;
 		const gradient = ctx.createRadialGradient(x, y, 0, x, y, r);
-		gradient.addColorStop(0, RGBASTR(in_color, 127));
-		gradient.addColorStop(1, RGBASTR(in_color, 0));
+		gradient.addColorStop(0, COLOR.sRGBA(in_color, 127));
+		gradient.addColorStop(1, COLOR.sRGBA(in_color, 0));
 		ctx.beginPath();
 		ctx.arc(x, y, r, 0, Math.PI * 2, false);
 		ctx.fillStyle = gradient;
