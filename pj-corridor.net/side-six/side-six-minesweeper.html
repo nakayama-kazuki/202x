@@ -355,9 +355,6 @@ class cMinesweeperModel {
 		this.#updateRiskCnt();
 		return true;
 	}
-	rotate(in_fixedCol, in_deltaRow)  {
-		this.#rotateSameColItems(in_fixedCol, in_deltaRow);
-	}
 	#delayedResetBombs(in_safe_ix) {
 		let cnt = this.#conf.bomb.count;
 		const len = this.#itemArr.length;
@@ -421,6 +418,16 @@ class cMinesweeperModel {
 			return cMinesweeperModel.RC.COMPLETED;
 		} else {
 			return rc;
+		}
+	}
+	rotate(in_fixedCol, in_deltaRow)  {
+		if (this.#gemeIsOver) {
+			return cMinesweeperModel.RC.CANNOT;
+		}
+		if (this.#rotateSameColItems(in_fixedCol, in_deltaRow)) {
+			return cMinesweeperModel.RC.SUCCESS;
+		} else {
+			return cMinesweeperModel.RC.CANNOT;
 		}
 	}
 	rotatableFixedCol() {
@@ -1861,9 +1868,11 @@ function resetFocus() {
 async function rotateDone(in_changed) {
 	resetFocus();
 	const {col} = gColony.pieceToIndex(in_changed.piece);
-	gMinesweeper.rotate(col, in_changed.delta);
-	await dynamicUpdate(gMinesweeper.getRiskTable(), true);
-	gScore.addScore('rotation', 1);
+	const rc = gMinesweeper.rotate(col, in_changed.delta);
+	if (rc === cMinesweeperModel.RC.SUCCESS) {
+		await dynamicUpdate(gMinesweeper.getRiskTable(), true);
+		gScore.addScore('rotation', 1);
+	}
 }
 
 function rotateTexture() {
