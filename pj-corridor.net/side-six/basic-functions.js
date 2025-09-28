@@ -69,13 +69,33 @@ export function getParam(in_name) {
 
 export const DEBUG = getParam('debug') !== false;
 
-const OCT = in_value => in_value & 0xFF;
-const RATE = in_value => (in_value <= 1 ? Math.round(in_value * 0xFF) : in_value);
-export const SETALPHA = (in_hex, in_alpha) => ((in_hex & 0xFFFFFF) << 8) | OCT(RATE(in_alpha));
-export const GRAYHEX = in_scale => (OCT(in_scale) << 16) | (OCT(in_scale) << 8) | OCT(in_scale)
-const COLORSTR = (in_hex, in_digit) => '#' + (in_hex >>> 0).toString(16).padStart(in_digit, '0');
-export const RGBSTR = in_hex => COLORSTR(in_hex & 0xFFFFFF, 6);
-export const RGBASTR = (in_hex, in_alpha = 255) => COLORSTR(SETALPHA(in_hex, in_alpha), 8);
+export class COLOR {
+	static #rate(in_value) {
+		return in_value <= 1 ? Math.round(in_value * 0xFF) : in_value & 0xFF;
+	}
+	static #A(in_hex, in_alpha) {
+		return ((in_hex & 0xFFFFFF) << 8) | COLOR.#rate(in_alpha);
+	}
+	static #STR(in_hex, in_digit) {
+		return '#' + (in_hex >>> 0).toString(16).padStart(in_digit, '0');
+	}
+	static hGray(in_scale) {
+		const scale = COLOR.#rate(in_scale);
+		return (scale << 16) | (scale << 8) | scale;
+	}
+	static sRGB(in_hex) {
+		return COLOR.#STR(in_hex & 0xFFFFFF, 6);
+	}
+	static sRGBA(in_hex, in_alpha = 255) {
+		return COLOR.#STR(COLOR.#A(in_hex, in_alpha), 8);
+	}
+	static sGray(in_scale) {
+		return COLOR.sRGB(COLOR.hGray(in_scale));
+	}
+	static sGrayA(in_scale, in_alpha = 255) {
+		return COLOR.sRGBA(COLOR.hGray(in_scale), in_alpha);
+	}
+}
 
 export function randomString(in_length = 5) {
 	return Math.floor(Math.random() * (10 ** in_length)).toString(16).padStart(in_length, '0');
@@ -1544,6 +1564,10 @@ export class cSphericalWorld {
 		// other
 		this.resize(this.canvas.width, this.canvas.height);
 		this.#setupEventHandler();
+		// for this.getScreenDirXP(), this.getScreenDirXN(), ...
+		Object.keys(DIRECTION).forEach(in_key => {
+			this['getScreenDir' + in_key] = () => this.#getScreenDir(DIRECTION[in_key]);
+		});
 		_emulateTouchEvent(this.canvas);
 		_watchResize(this.canvas);
 	}
@@ -1615,6 +1639,16 @@ export class cSphericalWorld {
 	}
 	getCameraUp() {
 		return this.#camera[getWorldUp]();
+	}
+	#getScreenDir(in_direction) {
+		this.#camera.updateMatrixWorld(true);
+		const vec3 = in_direction.clone().transformDirection(this.#camera.matrixWorldInverse);
+		const vec2 = new THREE.Vector2(vec3.x, vec3.y);
+		if (vec2.lengthSq() < 1e-3) {
+			return new THREE.Vector2(0, 0);
+		} else {
+			return vec2.normalize();
+		}
 	}
 	static #encode = false;
 	getViewCode() {

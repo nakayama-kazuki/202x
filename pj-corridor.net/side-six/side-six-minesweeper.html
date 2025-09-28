@@ -1,0 +1,2059 @@
+<html>
+<head>
+<!-- MIT License Copyright (c) 2024 pj-corridor.net -->
+<meta name='viewport' content='width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1' />
+<meta charset='utf-8' />
+<script async src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7863584801355594' crossorigin='anonymous'></script>
+<script type='importmap'>
+{
+	"imports" : {
+		"three" : "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.min.js",
+		"utils" : "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/utils/BufferGeometryUtils.js",
+		"basic" : "./basic-functions.js",
+		"side6" : "./side-six.js",
+		"sound" : "./sound-effect.js"
+	}
+}
+</script>
+</head>
+<body>
+<script type='module'>
+
+import * as THREE from 'three';
+import * as UTILS from 'utils';
+import {
+	getResource,
+	postResource,
+	getParam,
+	DEBUG,
+	COLOR,
+	randomString,
+	snapToNotch,
+	snapToPI,
+	snapTo05PI,
+	createPeriodicSin,
+	createPeriodicCos,
+	pseudoMessageDigest1,
+	pseudoMessageDigest2,
+	beep,
+	isEmulated,
+	throttling,
+	thresholding,
+	debouncing,
+	nonReentrantAsync,
+	autoTransition,
+	startDialog,
+	factoryBuilder,
+	arrRand,
+	arrTrim,
+	cEase,
+	cApproximateMap,
+	cApproximateSet,
+	cCyclicMap,
+	cCyclicValues,
+	forEachCombination,
+	cChart,
+	clipArea,
+	clipClearArea,
+	fillRoundRect,
+	XYZ,
+	VEC3,
+	DIRECTION,
+	ndcFromEvent,
+	ndcToAbs,
+	getWorldVec3,
+	getWorldUp,
+	instanceInAncestor,
+	lookAtWithoutRotation,
+	safeMergeGeometry,
+	makeTrapezoidGeometryParts,
+	trapezoidGeometryUtil,
+	roundBoxGeometry,
+	roundRegularBoxGeometry,
+	roundTrapezoidGeometry,
+	capsuleConfigure,
+	customCapsuleGeometry,
+	cSphericalWorld
+} from 'basic';
+import {
+	cColony
+} from 'side6';
+import * as SOUND from 'sound';
+
+class cMinesweeperModel {
+	static #rotateArray(in_array, in_shiftCnt, in_shiftRight = true) {
+		const len = in_array.length;
+		let shiftCnt = ((in_shiftCnt % len) + len) % len;
+		if (in_shiftRight) {
+			// reverse
+			shiftCnt = (len - shiftCnt) % len;
+		}
+		return in_array.slice(shiftCnt).concat(in_array.slice(0, shiftCnt));
+	}
+	static #dirStyle = {
+		square : {
+			onehand : {
+				regular : [
+					[-1, -1],
+					[-1,  0],
+					[-1, +1],
+					[ 0, -1],
+					[ 0, +1],
+					[+1, -1],
+					[+1,  0],
+					[+1, +1]
+				],
+				offset : [
+					[-1, -1],
+					[-1,  0],
+					[-1, +1],
+					[ 0, -1],
+					[ 0, +1],
+					[+1, -1],
+					[+1,  0],
+					[+1, +1]
+				]
+			},
+			pair : new Map([
+				[  0, [1, 6]],
+				[ 45, [2, 5]],
+				[ 90, [3, 4]],
+				[135, [0, 7]]
+			])
+		},
+		hexPointyTopped : {
+			onehand : {
+				/*
+					@@
+					@+@
+					@@
+				*/
+				regular : [
+					[-1, -1],
+					[-1,  0],
+					[ 0, +1],
+					[+1,  0],
+					[+1, -1],
+					[ 0, -1]
+				],
+				/*
+					 @@
+					@+@
+					 @@
+				*/
+				offset : [
+					[-1,  0],
+					[-1, +1],
+					[ 0, +1],
+					[+1, +1],
+					[+1,  0],
+					[ 0, -1]
+				]
+			},
+			pair : new Map([
+				[ 30, [1, 4]],
+				[ 90, [2, 5]],
+				[150, [0, 3]]
+			])
+		},
+		hexFlatTopped : {
+			onehand : {
+				/*
+					@@@
+					@+@
+					 @
+				*/
+				regular : [
+					[-1, -1],
+					[-1,  0],
+					[-1, +1],
+					[ 0, +1],
+					[+1,  0],
+					[ 0, -1]
+				],
+				/*
+					 @
+					@+@
+					@@@
+				*/
+				offset : [
+					[ 0, -1],
+					[-1,  0],
+					[ 0, +1],
+					[+1, +1],
+					[+1,  0],
+					[+1, -1]
+				]
+			},
+			pair : new Map([
+				[  0, [1, 4]],
+				[ 60, [2, 5]],
+				[120, [0, 3]]
+			])
+		}
+	};
+	#itemArr = [];
+	#conf = null;
+	get #gemeIsOver() {
+		return this.#itemArr.filter(in_item => in_item.opened && in_item.isBomb).length > 0;
+	}
+	constructor(in_sizeRow, in_sizeCol, in_bomb, in_options = {}) {
+		const options = {
+			edgeRow : true,
+			edgeCol : true,
+			format : 'square',
+			offset : 1
+		};
+		Object.keys(options).forEach(in_prop => {
+			if (in_options.hasOwnProperty(in_prop)) {
+				options[in_prop] = in_options[in_prop];
+			}
+		});
+		if (cMinesweeperModel.#dirStyle.hasOwnProperty(options.format)) {
+			if (!options.edgeRow && (in_sizeRow % 2 === 1) && (options.format === 'hexPointyTopped')) {
+				throw new Error('invalid rows (' + in_sizeRow + ') for row-loop of ' + options.format);
+			}
+			if (!options.edgeCol && (in_sizeCol % 2 === 1) && (options.format === 'hexFlatTopped')) {
+				throw new Error('invalid cols (' + in_sizeCol + ') for col-loop of ' + options.format);
+			}
+		} else {
+			throw new Error('invalid input');
+		}
+		const dirStyle = cMinesweeperModel.#dirStyle[options.format];
+		this.#conf = {
+			row : {
+				size : in_sizeRow,
+				edge : options.edgeRow
+			},
+			col : {
+				size : in_sizeCol,
+				edge : options.edgeCol
+			},
+			bomb : {
+				count : in_bomb,
+				mapped : false
+			},
+			dirStyle : dirStyle,
+			// square can accommodate any offset
+			offset : (options.offset % 2),
+			rotatable : {
+				fixedCol : !options.edgeRow && dirStyle.pair.has(0),
+				fixedRow : !options.edgeCol && dirStyle.pair.has(90)
+			}
+		};
+		this.#initItemArr();
+	}
+	#initItemArr() {
+		const len = this.#conf.row.size * this.#conf.col.size;
+		for (let ix = 0; ix < len; ix++) {
+			this.#itemArr[ix] = {
+				opened : false,
+				isBomb : false,
+				riskCnt : 0
+			};
+		}
+	}
+	#updateRiskCnt() {
+		for (let ix = 0; ix < this.#itemArr.length; ix++) {
+			const ixArr = this.#aroundIndexes(ix);
+			this.#itemArr[ix].riskCnt = ixArr.filter(in_ix => this.#itemArr[in_ix].isBomb).length;
+		}
+	}
+	#indexToPos(in_ix) {
+		return {
+			row : Math.floor(in_ix / this.#conf.col.size),
+			col : in_ix % this.#conf.col.size
+		};
+	}
+	#posToIndex(in_row, in_col) {
+		return in_row * this.#conf.col.size + in_col;
+	}
+	#setItemByIndex(in_ix, in_item) {
+		this.#itemArr[in_ix] = in_item;
+	}
+	#setItemByPos(in_row, in_col, in_item) {
+		this.#setItemByIndex(this.#posToIndex(in_row, in_col), in_item);
+	}
+	#getItemByIndex(in_ix) {
+		return this.#itemArr[in_ix];
+	}
+	#getItemByPos(in_row, in_col) {
+		return this.#getItemByIndex(this.#posToIndex(in_row, in_col));
+	}
+	#getDirections(in_row, in_col) {
+		const dirStyle = this.#conf.dirStyle;
+		let useOffset = false;
+		if (dirStyle.pair.get(0)) {
+			// square or hexFlatTopped
+			useOffset = (in_col % 2 === this.#conf.offset);
+		} else {
+			// hexPointyTopped
+			useOffset = (in_row % 2 === this.#conf.offset);
+		}
+		if (useOffset) {
+			return dirStyle.onehand.offset;
+		} else {
+			return dirStyle.onehand.regular;
+		}
+	}
+	#aroundIndexes(in_ix) {
+		const pos = this.#indexToPos(in_ix);
+		return this.aroundPositions(pos.row, pos.col).map(([in_r, in_c]) => this.#posToIndex(in_r, in_c));
+	}
+	aroundPositions(in_row, in_col) {
+		const directions = this.#getDirections(in_row, in_col);
+		const aroundPos = [];
+		const sizeRow = this.#conf.row.size;
+		const sizeCol = this.#conf.col.size;
+		directions.forEach(([in_dr, in_dc]) => {
+			let row = in_row + in_dr;
+			let col = in_col + in_dc;
+			if ((row < 0) || (sizeRow -1 < row)) {
+				if (this.#conf.row.edge) {
+					return;
+				} else {
+					row = (sizeRow + row) % sizeRow;
+				}
+			}
+			if ((col < 0) || (sizeCol -1 < col)) {
+				if (this.#conf.col.edge) {
+					return;
+				} else {
+					col = (sizeCol + col) % sizeCol;
+				}
+			}
+			aroundPos.push([row, col]);
+		});
+		return aroundPos;
+	}
+	#rotateItems(in_indexes, in_rightShiftCnt) {
+		const initialItems = in_indexes.map(in_ix => this.#getItemByIndex(in_ix));
+		const rotatedItems = cMinesweeperModel.#rotateArray(initialItems, in_rightShiftCnt);
+		rotatedItems.forEach((in_item, in_order) => this.#setItemByIndex(in_indexes[in_order], in_item));
+	}
+	#rotateSameRowItems(in_fixedRow, in_deltaCol) {
+		if (!this.#conf.rotatable.fixedRow) {
+			return false;
+		}
+		const indexes = [];
+		for (let col = 0; col < this.#conf.col.size; col++) {
+			indexes.push(this.#posToIndex(in_fixedRow, col));
+		}
+		this.#rotateItems(indexes, in_deltaCol);
+		this.#updateRiskCnt();
+		return true;
+	}
+	#rotateSameColItems(in_fixedCol, in_deltaRow) {
+		if (!this.#conf.rotatable.fixedCol) {
+			return false;
+		}
+		const indexes = [];
+		for (let row = 0; row < this.#conf.row.size; row++) {
+			indexes.push(this.#posToIndex(row, in_fixedCol));
+		}
+		this.#rotateItems(indexes, in_deltaRow);
+		this.#updateRiskCnt();
+		return true;
+	}
+	rotate(in_fixedCol, in_deltaRow)  {
+		this.#rotateSameColItems(in_fixedCol, in_deltaRow);
+	}
+	#delayedResetBombs(in_safe_ix) {
+		let cnt = this.#conf.bomb.count;
+		const len = this.#itemArr.length;
+		for (let ix = 0; ix < len; ix++) {
+			this.#itemArr[ix].isBomb = (cnt-- > 0) ? true : false;
+		}
+		this.#itemArr.sort(() => Math.random() - 0.5);
+		if (this.#itemArr[in_safe_ix].isBomb) {
+			for (let ix = 0; ix < len; ix++) {
+				if (this.#itemArr[ix].isBomb) {
+					continue;
+				}
+				// replace
+				this.#itemArr[ix].isBomb = true;
+				this.#itemArr[in_safe_ix].isBomb = false;
+				break;
+			}
+		}
+		this.#updateRiskCnt();
+		return true;
+	}
+	static RC = {
+		CANNOT : Symbol(),
+		SUCCESS : Symbol(),
+		EXPLODED : Symbol(),
+		COMPLETED : Symbol()
+	};
+	#openIndex(in_ix) {
+		const item = this.#getItemByIndex(in_ix);
+		if (item.opened) {
+			return cMinesweeperModel.RC.CANNOT;
+		}
+		item.opened = true;
+		if (item.isBomb) {
+			return cMinesweeperModel.RC.EXPLODED;
+		}
+		if (item.riskCnt === 0) {
+			const ixArr = this.#aroundIndexes(in_ix);
+			ixArr.forEach(in_around_ix => {
+				const around_item = this.#getItemByIndex(in_around_ix);
+				if (around_item.opened) {
+					return;
+				}
+				this.#openIndex(in_around_ix);
+			});
+		}
+		return cMinesweeperModel.RC.SUCCESS;
+	}
+	openPos(in_row, in_col) {
+		if (this.#gemeIsOver) {
+			return cMinesweeperModel.RC.CANNOT;
+		}
+		const ix = this.#posToIndex(in_row, in_col);
+		if (!this.#conf.bomb.mapped) {
+			this.#delayedResetBombs(ix);
+			this.#conf.bomb.mapped = true;
+		}
+		const rc = this.#openIndex(ix);
+		const openedCount = this.#itemArr.reduce((in_acc, in_cur) => in_acc + (in_cur.opened ? 1 : 0), 0);
+		if (this.#itemArr.length === (openedCount + this.#conf.bomb.count)) {
+			return cMinesweeperModel.RC.COMPLETED;
+		} else {
+			return rc;
+		}
+	}
+	rotatableFixedCol() {
+		return this.#conf.rotatable.fixedCol;
+	}
+	rotatableFixedRow() {
+		return this.#conf.rotatable.fixedRow;
+	}
+	static BOMBED = Symbol();
+	static CLOSED = Symbol();
+	getOverTable() {
+		if (!this.#gemeIsOver) {
+			return;
+		}
+		const table = [];
+		for (let ix = 0; ix < this.#itemArr.length; ix++) {
+			const pos = this.#indexToPos(ix);
+			if (!table[pos.row]) {
+				table[pos.row] = [];
+			}
+			const item = this.#getItemByIndex(ix);
+			if (item.isBomb) {
+				table[pos.row][pos.col] = cMinesweeperModel.BOMBED;
+			} else {
+				table[pos.row][pos.col] = item.riskCnt;
+			}
+		}
+		return table;
+	}
+	getRiskTable() {
+		const table = [];
+		for (let ix = 0; ix < this.#itemArr.length; ix++) {
+			const pos = this.#indexToPos(ix);
+			if (!table[pos.row]) {
+				table[pos.row] = [];
+			}
+			const item = this.#getItemByIndex(ix);
+			if (item.opened) {
+				table[pos.row][pos.col] = item.riskCnt;
+			} else {
+				table[pos.row][pos.col] = cMinesweeperModel.CLOSED;
+			}
+		}
+		return table;
+	}
+	_snapshot(in_infoTable = null) {
+		const rightMargin = 10;
+		const cellSize = 20;
+		const cellMargin = 5;
+		for (let row = 0; row < this.#conf.row.size; row++) {
+			for (let col = 0; col < this.#conf.col.size; col++) {
+				const item = this.#getItemByPos(row, col);
+				let bgcolor, text;
+				if (item.opened) {
+					text = item.riskCnt;
+					bgcolor = COLOR.sGray(255 - item.riskCnt * 10);
+				} else {
+					text = '+';
+					bgcolor = COLOR.sGray(20);
+				}
+				const id = '_' + row + 'x' + col;
+				let cell = document.getElementById(id);
+				if (cell) {
+					cell.textContent = text;
+					cell.style.backgroundColor = bgcolor;
+					if (in_infoTable && !item.opened) {
+						cell.onmouseenter = () => console.log(in_infoTable[row][col]);
+					} else {
+						cell.onmouseenter = () => {};
+					}
+					continue;
+				} else {
+					cell = document.createElement('DIV');
+					cell.textContent = text;
+					cell.id = id;
+					cell.addEventListener('click', in_ev => {
+						const rc = this.openPos(row, col);
+						switch (rc) {
+						case cMinesweeperModel.RC.EXPLODED :
+							console.log('died');
+							break;
+						case cMinesweeperModel.RC.COMPLETED :
+							console.log('you win');
+							break;
+						default :
+							this._snapshot();
+							break;
+						}
+					});
+				}
+				let l = rightMargin + (cellSize + cellMargin) * col;
+				let t = rightMargin + (cellSize + cellMargin) * row;
+				const pair = this.#conf.dirStyle.pair;
+				if (pair.has(90) && !pair.has(0)) {
+					l += (row % 2 === this.#conf.offset ? (cellSize + cellMargin) / 2 : 0);
+				}
+				if (!pair.has(90) && pair.has(0)) {
+					t += (col % 2 === this.#conf.offset ? (cellSize + cellMargin) / 2 : 0);
+				}
+				Object.assign(cell.style, {
+					width : cellSize + 'px',
+					height : cellSize + 'px',
+					backgroundColor : bgcolor,
+					border : '1px solid black',
+					position : 'absolute',
+					left : l + 'px',
+					top : t + 'px'
+				});
+				document.body.appendChild(cell);
+			}
+		}
+	}
+}
+
+// this class shoud not know private information of cMinesweeperModel
+class cMinesweeper extends cMinesweeperModel {
+	#setting;
+	constructor(in_sizeRow, in_sizeCol, in_bomb, in_options = {}) {
+		super(in_sizeRow, in_sizeCol, in_bomb, in_options);
+		this.#setting = {
+			rows : in_sizeRow,
+			cols : in_sizeCol,
+			bomb : in_bomb
+		};
+	}
+	#filledTable(in_value) {
+		return Array.from({length : this.#setting.rows}, () => Array(this.#setting.cols).fill(in_value));
+	}
+	static UNPROVEN = Symbol();
+	#getProvenTable(in_tblRisk) {
+		const tblSafe = this.#filledTable(false);
+		const tblBomb = this.#filledTable(false);
+		let canStillProve = true;
+		while (canStillProve) {
+			canStillProve = false;
+			for (let row = 0; row < this.#setting.rows; row++) {
+				for (let col = 0; col < this.#setting.cols; col++) {
+					if (in_tblRisk[row][col] === cMinesweeper.CLOSED) {
+						continue;
+					}
+					const neighbors = this.aroundPositions(row, col);
+					let neighborBombCnt = 0;
+					const unprovenNeighbors = [];
+					for (const [nrow, ncol] of neighbors) {
+						if (tblBomb[nrow][ncol]) {
+							neighborBombCnt++;
+							continue;
+						}
+						if ((in_tblRisk[nrow][ncol] === cMinesweeper.CLOSED) && !tblSafe[nrow][ncol]) {
+							unprovenNeighbors.push([nrow, ncol]);
+						}
+					}
+					const restRiskCnt = in_tblRisk[row][col] - neighborBombCnt;
+					if (restRiskCnt === 0) {
+						for (const [nrow, ncol] of unprovenNeighbors) {
+							if (!tblSafe[nrow][ncol]) {
+								tblSafe[nrow][ncol] = true;
+								canStillProve = true;
+							}
+						}
+						continue;
+					}
+					if (restRiskCnt === unprovenNeighbors.length) {
+						for (const [nrow, ncol] of unprovenNeighbors) {
+							if (!tblBomb[nrow][ncol]) {
+								tblBomb[nrow][ncol] = true;
+								canStillProve = true;
+							}
+						}
+						continue;
+					}
+				}
+			}
+		}
+		const table = this.#filledTable(cMinesweeper.UNPROVEN);
+		for (let row = 0; row < this.#setting.rows; row++) {
+			for (let col = 0; col < this.#setting.cols; col++) {
+				if (in_tblRisk[row][col] !== cMinesweeper.CLOSED) {
+					table[row][col] = 0;
+					continue;
+				}
+				if (tblSafe[row][col]) {
+					table[row][col] = 0;
+					continue;
+				}
+				if (tblBomb[row][col]) {
+					table[row][col] = 1;
+					continue;
+				}
+			}
+		}
+		return table;
+	}
+	#getRatioTable(in_tblRisk, in_tblProven) {
+		const table = this.#filledTable(0);
+		const total = {
+			bomb : 0,
+			rest : this.#setting.rows * this.#setting.cols
+		};
+		/*
+			(1) make unprovenArr
+
+			|
+			+- opened
+			|	|
+			|	+- proven (= 0) + count of neighbor bombs
+			|
+			+- closed
+				|
+				+- proven (= 0, 1)
+				|
+				+- unproven <--- this !!
+		*/
+		const unprovenArr = [];
+		for (let row = 0; row < this.#setting.rows; row++) {
+			for (let col = 0; col < this.#setting.cols; col++) {
+				if (in_tblProven[row][col] === cMinesweeper.UNPROVEN) {
+					unprovenArr.push([row, col]);
+				} else {
+					// proven
+					table[row][col] = in_tblProven[row][col];
+					total.bomb += in_tblProven[row][col];
+					total.rest--;
+					continue;
+				}
+			}
+		}
+		/*
+			(2) analyze unproven risk using in_tblRisk
+
+			unproven
+			|
+			+- neighbor1 = closed
+			|
+			+- neighbor2 = opened
+			|	|
+			|	+- nextNeighbor1 = UNPROVEN <--- unprovenCnt++
+			|	|
+			|	+- nextNeighbor2 = PROVEN = 1 <--- provenBombCnt++
+			|	|
+			|	+- nextNeighbor3 = PROVEN = 0
+			|	|
+			|	+- ...
+			|
+			+- ...
+		*/
+		const baseRatio = (this.#setting.bomb - total.bomb) / total.rest;
+		for (const [upRow, upCol] of unprovenArr) {
+			// find position which shows the biggest risk for unproven (upRow, upCol)
+			const neighbors = this.aroundPositions(upRow, upCol);
+			let rRow, rCol, maxRatio = 0;
+			const countTblProven = (in_arr, in_v) => in_arr.filter(([in_r, in_c]) => in_tblProven[in_r][in_c] === in_v).length;
+			neighbors.forEach(([in_row, in_col]) => {
+				if (in_tblRisk[in_row][in_col] === cMinesweeper.CLOSED) {
+					return;
+				}
+				const nextNeighbors = this.aroundPositions(in_row, in_col);
+				const provenBombCnt = countTblProven(nextNeighbors, 1);
+				const unprovenCnt = countTblProven(nextNeighbors, cMinesweeper.UNPROVEN);
+				const ratio = (in_tblRisk[in_row][in_col] - provenBombCnt) / unprovenCnt;
+				if (ratio > maxRatio) {
+					rRow = in_row;
+					rCol = in_col;
+					maxRatio = ratio;
+				}
+			});
+			if (maxRatio === 0) {
+				table[upRow][upCol] = baseRatio;
+			} else {
+				table[upRow][upCol] = maxRatio;
+			}
+		}
+		return table;
+	}
+	open(in_row, in_col) {
+		const tblRisk = this.getRiskTable(); 
+		const tblProven = this.#getProvenTable(tblRisk);
+		const tblRatio = this.#getRatioTable(tblRisk, tblProven);
+		let hasSafe = false;
+		FIND_SAFE :
+		for (let row = 0; row < this.#setting.rows; row++) {
+			for (let col = 0; col < this.#setting.cols; col++) {
+				if (tblRisk[row][col] !== cMinesweeper.CLOSED) {
+					continue;
+				}
+				if (tblRatio[row][col] === 0) {
+					hasSafe = true;
+					break FIND_SAFE;
+				}
+			}
+		}
+		const rc = this.openPos(in_row, in_col);
+		return {
+			rc : rc,
+			ratio : tblRatio[in_row][in_col],
+			hasSafe : hasSafe
+		};
+	}
+	_snapshot() {
+		const tblRisk = this.getRiskTable(); 
+		const tblProven = this.#getProvenTable(tblRisk);
+		const tblRatio = this.#getRatioTable(tblRisk, tblProven);
+		super._snapshot(tblRatio);
+	}
+}
+
+/*
+	the cColony class related functions provide the ability to create cylinder-shaped threejs objects.
+*/
+
+const GRAY1 = COLOR.hGray(50);
+const GRAY2 = COLOR.hGray(100);
+
+const RED = 0xFF0000;
+
+const DARKYELLOW = 0x999937;
+
+const BLUE1 = 0x3333CC;
+const BLUE2 = 0x4444CC;
+const BLUE3 = 0x5555CC;
+const BLUE4 = 0x6666CC;
+const BLUE5 = 0x7777CC;
+const BLUE6 = 0x8888CC;
+const BLUE7 = 0x9999CC;
+const BLUE8 = 0xAAAACC;
+
+const BGCOLOR = GRAY1;
+const CLOSED = GRAY2;
+const HIGHLIGHT = DARKYELLOW;
+const BOMBED = RED;
+const OPENED0 = BLUE8;
+const OPENED1 = BLUE7;
+const OPENED2 = BLUE6;
+const OPENED3 = BLUE5;
+const OPENED4 = BLUE4;
+const OPENED5 = BLUE3;
+const OPENED6 = BLUE2;
+const OPENED7 = BLUE1;
+
+class cBiMap extends Map {
+	getValue(in_key) {
+		return this.get(in_key);
+	}
+	getKeys(in_value) {
+		const arr = [];
+		for (const [key, value] of this) {
+			if (value === in_value) {
+				arr.push(key);
+			}
+		}
+		return arr;
+	}
+	getKey(in_value) {
+		const arr = this.getKeys(in_value);
+		if (arr.length > 0) {
+			return arr[0];
+		} else {
+			return undefined;
+		}
+	}
+}
+
+const gColorTable = new cBiMap([
+	[BOMBED, cMinesweeper.BOMBED],
+	[CLOSED, cMinesweeper.CLOSED],
+	[OPENED0, 0],
+	[OPENED1, 1],
+	[OPENED2, 2],
+	[OPENED3, 3],
+	[OPENED4, 4],
+	[OPENED5, 5],
+	[OPENED6, 6],
+	[OPENED7, 7]
+]);
+
+function codeToColorValue(in_code) {
+	return gColorTable.getKey(in_code);
+}
+
+function codeToColorTable(in_table) {
+	return in_table.map(in_r => in_r.map(in_c => codeToColorValue(in_c)));
+}
+
+function colorToCodeValue(in_color) {
+	return gColorTable.getValue(in_color);
+}
+
+function colorToCodeTable(in_table) {
+	return in_table.map(in_r => in_r.map(in_c => colorToCodeValue(in_c)));
+}
+
+const bombed100x100TextureFactory = factoryBuilder(() => {
+	const canvas = document.createElement('CANVAS');
+	const w = 100;
+	const h = 100;
+	canvas.width = w;
+	canvas.height = h;
+	const ctx = canvas.getContext('2d');
+	ctx.fillStyle = '#ffffff';
+	ctx.fillRect(0, 0, w, h);
+	const count = 250;
+	for (let i = 0; i < count; i++) {
+		const x = Math.random() * w;
+		const y = Math.random() * h;
+		const r = Math.random() * 20;
+		const gradient = ctx.createRadialGradient(x, y, 0, x, y, r);
+		const hex = (Math.random() > 0.5) ? 0xFFFFFF : 0x000000;
+		gradient.addColorStop(0, COLOR.sRGBA(hex, 127));
+		gradient.addColorStop(1, COLOR.sRGBA(hex, 0));
+		ctx.beginPath();
+		ctx.arc(x, y, r, 0, Math.PI * 2, false);
+		ctx.fillStyle = gradient;
+		ctx.fill();
+	}
+	ctx.globalAlpha = 1;
+	const texture = new THREE.CanvasTexture(canvas);
+	texture.flipY = false;
+	texture.needsUpdate = true;
+	return texture;
+
+});
+
+const digit100x100TextureFactory = factoryBuilder(in_digit => {
+	const canvas = document.createElement('CANVAS');
+	const w = 100;
+	const h = 100;
+	canvas.width = w;
+	canvas.height = h;
+	const ctx = canvas.getContext('2d');
+	ctx.fillStyle = '#ffffff';
+	ctx.fillRect(0, 0, w, h);
+	ctx.fillStyle = '#333333';
+	ctx.textAlign = 'center';
+	ctx.textBaseline = 'middle';
+	ctx.font = 'bold ' + Math.floor(Math.min(w, h) * 0.8) + 'px cursive';
+	const offsetY = h * 0.1;
+	ctx.fillText(in_digit, w / 2, h / 2 + offsetY);
+	const texture = new THREE.CanvasTexture(canvas);
+	texture.flipY = false;
+	texture.needsUpdate = true;
+	return texture;
+
+});
+
+const materialFactory = factoryBuilder((in_color, in_unitSize) => {
+	const material = new THREE.MeshLambertMaterial();
+	material.userData.rotatableTexture = false;
+	const setTexture = (() => {
+		return (in_texture, in_textureSize) => {
+			material.map = in_texture;
+			material.map.wrapS = THREE.ClampToEdgeWrapping;
+			material.map.wrapT = THREE.ClampToEdgeWrapping;
+			const zoom = in_unitSize * in_textureSize;
+			material.map.offset.set(0.5 - 1 / zoom / 2, 0.5 - 1 / zoom / 2);
+			material.map.repeat.set(1 / zoom, 1 / zoom);
+		};
+	})();
+	material.color = new THREE.Color(in_color);
+	let texture;
+	switch (in_color) {
+	case BOMBED :
+		texture = bombed100x100TextureFactory.create();
+		setTexture(texture, 1.5);
+		break;
+	case CLOSED :
+		break;
+	default :
+		const digit = colorToCodeValue(in_color);
+		if (digit !== undefined) {
+			texture = digit100x100TextureFactory.create(digit);
+			setTexture(texture, 0.8);
+			material.userData.rotatableTexture = true;
+		}
+		break;
+	}
+	return material;
+});
+
+const SHELL_SURFACE_IX = 0;
+
+function getShellColor(in_object) {
+	return in_object.material[SHELL_SURFACE_IX].color.getHex();
+}
+
+function setShellColor(in_object, in_color) {
+	const size = in_object.geometry.parameters.size;
+	return in_object.material[SHELL_SURFACE_IX] = materialFactory.create(in_color, size);
+}
+
+function chamferedShape(in_n, in_edgeLength, in_taper = 0.05) {
+	const r = in_edgeLength / (2 * Math.sin(Math.PI / in_n)); 
+	const unitAngle = 2 * Math.PI / in_n;
+	const v = [];
+	for (let i = 0; i < in_n; i++) {
+		const angle = unitAngle * i;
+		v.push(new THREE.Vector2(r * Math.cos(angle), r * Math.sin(angle)));
+	}
+	const prev = [];
+	const next = [];
+	for (let i = 0; i < in_n; i++) {
+		prev[i] = v[i].clone().lerp(v[(i + in_n - 1) % in_n], in_taper);
+		next[i] = v[i].clone().lerp(v[(i + 1) % in_n], in_taper);
+	}
+	const shape = new THREE.Shape();
+	shape.moveTo(next[0].x, next[0].y);
+	for (let i = 1; i < in_n; i++) {
+		shape.lineTo(prev[i].x, prev[i].y);
+		shape.lineTo(next[i].x, next[i].y);
+	}
+	shape.lineTo(prev[0].x, prev[0].y);
+	shape.closePath();
+	return shape;
+}
+
+function chamferedGeometry(in_n, in_edgeLength, in_innerRatio, in_thickness) {
+	const err = 1e-6;
+	const taper = 0.05;
+
+	// 1. merged ExtrudeGeometry
+	const extrudeSettings = {
+		depth : in_thickness,
+		bevelEnabled : true,
+		bevelThickness : in_edgeLength * taper,
+		bevelSize : in_edgeLength * taper,
+		bevelOffset : in_edgeLength * taper * -1,
+		bevelSegments : 1,
+		steps: 1
+	};
+	const shape = chamferedShape(in_n, in_edgeLength, taper);
+	const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+
+	// 2. transform & make two groups (surface + the other)
+	const pos = geometry.attributes.position;
+	const combinedArr = new Uint16Array(pos.count);
+	let headIndex = 0;
+	let tailIndex = combinedArr.length;
+	for (let t = 0; t < pos.count / 3; t++) {
+		const triMap = new Map([
+			[3 * t + 0, pos.getZ(3 * t + 0)],
+			[3 * t + 1, pos.getZ(3 * t + 1)],
+			[3 * t + 2, pos.getZ(3 * t + 2)]
+		]);
+		let triInSurface = true;
+		for (const [ix, z] of triMap) {
+			if (z > in_thickness / 2) {
+				pos.setX(ix, pos.getX(ix) * in_innerRatio);
+				pos.setY(ix, pos.getY(ix) * in_innerRatio);
+			}
+			if (z > err * -1) {
+				triInSurface = false;
+			}
+		}
+		let index;
+		if (triInSurface) {
+			index = headIndex;
+			headIndex += 3;
+		} else {
+			tailIndex -= 3;
+			index = tailIndex;
+		}
+		Array.from(triMap.keys()).forEach((ix, delta) => combinedArr[index + delta] = ix);
+	}
+	geometry.setIndex(new THREE.BufferAttribute(combinedArr, 1));
+	geometry.clearGroups();
+	geometry.addGroup(0, headIndex, SHELL_SURFACE_IX);
+	geometry.addGroup(headIndex, combinedArr.length - headIndex, 1);
+
+	// 3. reset
+	pos.needsUpdate = true;
+	geometry.computeVertexNormals();
+	geometry.rotateX(Math.PI / 2);
+	return geometry;
+}
+
+const hexmapGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickness) => {
+	const edgeLength = in_size / (3 ** 0.5);
+	const geometry = chamferedGeometry(6, edgeLength, in_innerRatio, in_thickness);
+	geometry.parameters = {size : in_size};
+	return geometry;
+});
+
+const squareGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickness) => {
+	const edgeLength = in_size;
+	const geometry = chamferedGeometry(4, edgeLength, in_innerRatio, in_thickness);
+	geometry.rotateY(Math.PI / 4);
+	geometry.parameters = {size : in_size};
+	return geometry;
+});
+
+const COLONY_SIZE = 400;
+
+/*
+
+	    +-------+-----------+
+	   /|      /|          /|
+	  / |     / |         / |
+	 /  |    /  |        /  |
+	+-------+-----------+---------------> row-0
+	|   |   |   |       |   |
+	|   +---|---+-------|---+
+	|  /    |  /        |  /
+	+-------+-----------+---------------> row-i
+	|/      |/          |/
+	+-------+-----------+
+	|       |
+	|       |
+	v       v
+	col-0   col-j
+
+	* cylinder oriented around the x-axis
+	- row : a position along the circumference of the cylinder
+	- col : a position along the height of the cylinder
+
+*/
+
+const gCyclicLevels = ((in_diameter) => {
+	const edgeRow = false;
+	const edgeCol = true;
+	const levels = [
+		{
+			format : 'hexFlatTopped',
+			offset : 1,
+			rows : 20,
+			cols : 10,
+			bomb : 22
+		},
+		{
+			format : 'square',
+			offset : -1,
+			rows : 20,
+			cols : 10,
+			bomb : 22
+		},
+		{
+			format : 'hexFlatTopped',
+			offset : 1,
+			rows : 20,
+			cols : 10,
+			bomb : 30
+		},
+		{
+			format : 'square',
+			offset : -1,
+			rows : 20,
+			cols : 10,
+			bomb : 30
+		},
+		{
+			format : 'hexFlatTopped',
+			offset : 1,
+			rows : 30,
+			cols : 15,
+			bomb : 75
+		},
+		{
+			format : 'square',
+			offset : -1,
+			rows : 30,
+			cols : 15,
+			bomb : 75
+		}
+	];
+	const values = new cCyclicValues();
+	levels.forEach(in_level => {
+		const radius = in_diameter / 2;
+		const circumf = in_diameter * Math.PI;
+		const rows = in_level.rows;
+		const cols = in_level.cols;
+		const unitSize = circumf / rows;
+		const unitThick = unitSize * 0.3;
+		const unitAngle = Math.PI * 2 / rows;
+		const zoom = 1.2;
+		let margin = 2 * Math.sin(unitAngle / 2) * (radius - unitThick) * (zoom - 1);
+		let geometry;
+		const ratio = ((radius - unitThick) / radius);
+		if (in_level.format === 'hexFlatTopped') {
+			margin *= 0.1;
+			geometry = hexmapGeometryFactory.create(unitSize, ratio, unitThick);
+		} else {
+			margin *= 0.5;
+			geometry = squareGeometryFactory.create(unitSize, ratio, unitThick);
+		}
+		const pieces = [];
+		for (let row = 0; row < rows; row++) {
+			for (let col = 0; col < cols; col++) {
+				let x = (unitSize + margin) * col - (unitSize + margin) * (cols - 1) / 2;
+				let y = (in_diameter / 2 - unitThick) * zoom;
+				const materials = [
+					materialFactory.create(CLOSED, unitSize),
+					materialFactory.create(BGCOLOR, unitSize)
+				];
+				const piece = new THREE.Mesh(geometry, materials);
+				const pivot = new THREE.Object3D();
+				pivot.add(piece);
+				piece.position.copy(VEC3(x, y, 0));
+				if ((in_level.format === 'hexFlatTopped') && (col % 2 === in_level.offset)) {
+					pivot.rotateX(unitAngle * (row + 0.5));
+				} else {
+					pivot.rotateX(unitAngle * row);
+				}
+				/*
+					*** NOTE ***
+					you can use matrix,
+					to apply rotated position before adding to scene
+				*/
+				pivot.updateMatrixWorld();
+				piece.applyMatrix4(pivot.matrix);
+				pivot.remove(piece);
+				pieces.push(piece);
+			}
+		}
+		const name = in_level.format + '(' + in_level.bomb + '/' + (in_level.rows * in_level.cols) + ')';
+		values.push({
+			name : name,
+			size : unitSize,
+			rows : in_level.rows,
+			cols : in_level.cols,
+			bomb : in_level.bomb,
+			options : {
+				edgeRow : edgeRow,
+				edgeCol : edgeCol,
+				format : in_level.format,
+				offset : in_level.offset
+			},
+			pieces : pieces
+		});
+	});
+	return values;
+})(COLONY_SIZE);
+
+/*
+	the cBoard is designed to represent a reversi board.
+*/
+
+class cColonyBoard extends cColony {
+	#makeRotationX(in_rad) {
+		return this.settingVal.origin.clone().applyMatrix4((new THREE.Matrix4()).makeRotationX(in_rad));
+	}
+	setupAllPieces(in_pieces, in_offsetCol = -1) {
+		super.setupAllPieces(in_pieces);
+		this.settingVal.offset = in_offsetCol;
+		if (this.settingVal.offset >= 0) {
+			this.settingVal.offset %= 2;
+		}
+	}
+	indexToPiece(in_row, in_col) {
+		let row = in_row;
+		if ((this.settingVal.offset >= 0) && (in_col % 2 === this.settingVal.offset)) {
+			row += 0.5;
+		}
+		const vec3 = this.#makeRotationX(this.settingVal.unitAngle * row);
+		vec3.x += this.settingVal.unitDelta * in_col;
+		const piece = this.children.find(in_child => XYZ.every(in_xyz => Math.abs(in_child.position[in_xyz] - vec3[in_xyz]) < cColony.error));
+		if (!piece) {
+			console.log('indexToPiece failed : ', in_row, in_col);
+			throw new Error('');
+		}
+		return piece;
+	}
+	pieceToIndex(in_piece) {
+		const pos = in_piece.position;
+		const col = Math.round((pos.x - this.settingVal.origin.x) / this.settingVal.unitDelta);
+		let offset = 0;
+		if ((this.settingVal.offset >= 0) && (col % 2 === this.settingVal.offset)) {
+			offset = 0.5;
+		}
+		for (let row = 0; row < this.settingVal.rowsForCircle; row++) {
+			const vec3 = this.#makeRotationX(this.settingVal.unitAngle * (row + offset));
+			if ((Math.abs(pos.y - vec3.y) < cColony.error) && (Math.abs(pos.z - vec3.z) < cColony.error)) {
+				return {row : row, col : col};
+			}
+		}
+		throw new Error('pieceToIndex failed');
+	}
+	getColorTable() {
+		const table = [];
+		for (let row = 0; row < this.settingVal.rowsForCircle; row++) {
+			table[row] = [];
+			for (let col = 0; col < this.settingVal.colsForLength; col++) {
+				const piece = this.indexToPiece(row, col);
+				table[row].push(getShellColor(piece));
+			}
+		}
+		return table;
+	}
+	changedPieces(in_table) {
+		const changedArr = [];
+		for (let row = 0; row < in_table.length; row++) {
+			for (let col = 0; col < in_table[row].length; col++) {
+				const piece = this.indexToPiece(row, col);
+				const currColor = getShellColor(piece);
+				const nextColor = in_table[row][col];
+				if (currColor !== nextColor) {
+					changedArr.push({
+						piece : piece,
+						curr : currColor,
+						next : nextColor
+					});
+				}
+			}
+		}
+		return changedArr;
+	}
+	slidableDistance(in_piece, in_sign) {
+		// can not slide in cColonyBoard
+		return 0;
+	}
+	bobRotation = false;
+	rotate(in_group, in_axis, in_rad) {
+		super.rotate(in_group, in_axis, in_rad);
+		if (!this.bobRotation) {
+			return;
+		}
+		const max = 1.2;
+		const scalar = (createPeriodicCos(this.settingVal.unitAngle, 1, max, true))(in_rad);
+		in_group.children.forEach(in_child => {
+			const basePos = in_child.userData.tmpCache.position;
+			in_child.position.copy(basePos.clone().multiplyScalar(scalar));
+			in_child.position.x = basePos.x;
+		});
+	}
+	makeRotateProgress(in_col, in_delta, in_ending_callback) {
+		this.uiDisable();
+		const last = this.settingVal.unitAngle * in_delta;
+		const x = this.settingVal.origin.x + this.settingVal.unitDelta * in_col;
+		const pieces = this.children.filter(in_child => Math.abs(in_child.position.x - x) < cColony.error);
+		const group = this.setupGroup(pieces);
+		return this.makeAnimationProgress(group, cColony.axes.x, 0, last, in_ratio => {
+			if (in_ratio < 1) {
+				return;
+			}
+			this.uiEnable();
+			(in_ending_callback)();
+		});
+	}
+}
+
+/*
+	gWorld (cSphericalWorld)
+		|
+		+-- gColony (cColonyBoard)
+			|
+			+-- gColony.children <--- gCyclicLevels[n].pieces
+*/
+
+const gColony = new cColonyBoard();
+
+const WORLD_RADIUS = COLONY_SIZE * 10;
+const WORLD_INIT_ZOOM = WORLD_RADIUS / 2;
+
+const gWorld = new cSphericalWorld(WORLD_RADIUS);
+gWorld.add(gColony);
+gWorld.moveView(0.5, 0.5);
+gWorld.motionZoom2(WORLD_INIT_ZOOM, 1000);
+
+class cScoreManager {
+	static #scoreMap = new Map();
+	static getCategory(in_category) {
+		return cScoreManager.#scoreMap.get(in_category);
+	}
+	static setCategory(in_category, in_score) {
+		cScoreManager.#scoreMap.set(in_category, in_score);
+	}
+	static deltaCategory(in_category, in_delta) {
+		const score = cScoreManager.getCategory(in_category) + in_delta;
+		cScoreManager.setCategory(in_category, score);
+	}
+	static #timer = {id : null, hookSet : new Set()};
+	static registerHook(in_hook) {
+		cScoreManager.#timer.hookSet.add(in_hook);
+	}
+	static removeHook(in_hook) {
+		cScoreManager.#timer.hookSet.delete(in_hook);
+	}
+	static clearHook() {
+		cScoreManager.#timer.hookSet.clear();
+	}
+	static stopTimer() {
+		if (cScoreManager.#timer.id) {
+			clearInterval(cScoreManager.#timer.id);
+		}
+		cScoreManager.#timer.id = null;
+	}
+	static startTimer(in_interval = 1000) {
+		cScoreManager.stopTimer();
+		cScoreManager.#timer.id = setInterval(() => {
+			for (const hook of cScoreManager.#timer.hookSet) {
+				(hook)(cScoreManager.#scoreMap);
+			}
+		}, in_interval);
+	}
+}
+
+class gScore extends cScoreManager {
+	static #categories = {
+		reckless : {
+			left : '3%',
+			elem : null
+		},
+		rotation : {
+			left : '23%',
+			elem : null
+		},
+		waste : {
+			left : '43%',
+			elem : null
+		}
+	};
+	static #viewerContainer = null
+	static setupViewer() {
+		if (gScore.#viewerContainer) {
+			return;
+		}
+		gScore.#viewerContainer = document.createElement('div');
+		Object.assign(gScore.#viewerContainer.style, {
+			opacity : '0',
+			position : 'absolute',
+			fontFamily : 'cursive',
+			color : '#cccccc',
+			left : '5%',
+			bottom : '5%',
+			width : '90%'
+
+		});
+		document.body.appendChild(gScore.#viewerContainer);
+		Object.keys(gScore.#categories).forEach(in_key => {
+			const category = gScore.#categories[in_key];
+			category.elem = document.createElement('div');
+			Object.assign(category.elem.style, {
+				position : 'absolute',
+				left : category.left,
+				width : '20%'
+			});
+			gScore.#viewerContainer.appendChild(category.elem);
+		});
+	}
+	static start() {
+		gScore.stop();
+		Object.keys(gScore.#categories).forEach(in_key => {
+			gScore.setCategory(in_key, 0);
+			gScore.addScore(in_key, 0);
+		});
+		gScore.registerHook(in_scoreMap => {
+			gScore.addScore('waste', 1);
+		});
+		gScore.startTimer();
+		autoTransition(gScore.#viewerContainer, 'opacity 1s ease-out', '0', '1');
+	}
+	static stop() {
+		gScore.clearHook();
+		gScore.stopTimer();
+		autoTransition(gScore.#viewerContainer, 'opacity 1s ease-out', '1', '0');
+	}
+	static addScore(in_category, in_added) {
+		const next = gScore.getCategory(in_category) + in_added;
+		gScore.setCategory(in_category, next);
+		const elem = gScore.#categories[in_category].elem;
+		elem.textContent = in_category + ' : ' + next;
+	}
+}
+
+gScore.setupViewer();
+
+let gMinesweeper = null;
+
+class cWarpLine {
+	static #speed = 10;
+	static #gradation = 10;
+	constructor(in_canvas) {
+		const w = in_canvas.width;
+		const h = in_canvas.height;
+		this.ctx = in_canvas.getContext('2d');
+		this.box = new THREE.Box2(
+			new THREE.Vector2(0, 0),
+			new THREE.Vector2(w, h)
+		);
+		this.from = new THREE.Vector2(w / 2, h / 2);
+		this.#reset();
+	}
+	#reset() {
+		const angle = Math.random() * Math.PI * 2;
+		this.direction = new THREE.Vector2(Math.cos(angle), Math.sin(angle));
+		this.speed = Math.random() * cWarpLine.#speed + 5;
+		this.length = 0;
+	}
+	#curVec(in_scalar) {
+		return this.from.clone().add(this.direction.clone().multiplyScalar(in_scalar));
+	}
+	#drawGrayLine(in_from, in_to, in_grayScale) {
+		this.ctx.strokeStyle = COLOR.sGray(in_grayScale);
+		this.ctx.beginPath();
+		this.ctx.moveTo(in_from.x, in_from.y);
+		this.ctx.lineTo(in_to.x, in_to.y);
+		this.ctx.stroke();
+	}
+	update() {
+		this.length += this.speed;
+		const to = this.#curVec(this.length);
+		if (this.box.containsPoint(to)) {
+			const notch = this.length / cWarpLine.#gradation;
+			for (let i = 0; i < cWarpLine.#gradation; i++) {
+				this.#drawGrayLine(
+					this.#curVec(notch * i),
+					this.#curVec(notch * (i + 1)),
+					255 / cWarpLine.#gradation * (i + 1)
+				);
+			}
+		} else {
+			/*
+				*** NOTE ***
+				even if overwritung using black,
+				this.#drawGrayLine(this.from, to, 0x00);
+				smudge of white line will remain.
+			*/
+			this.#reset();
+		}
+	}
+}
+
+function warpViewProgress(in_canvas, in_lineCount) {
+	const warpLines = [];
+	for (let i = 0; i < in_lineCount; i++) {
+		warpLines.push(new cWarpLine(in_canvas));
+	}
+	return () => {
+		warpLines.forEach(in_line => {
+			in_line.update();
+		});
+	}
+}
+
+function complete() {
+	const progress = warpViewProgress(gBackgroundCanvas, 50);
+	gWorld.addAnimationHook(progress);
+	const duration = 2000;
+	gWorld.motionZoom2(WORLD_RADIUS * 1.5, duration * 0.9);
+	setTimeout(() => {
+		gWorld.removeAnimationHook(progress);
+		const dialog = document.createElement('div');
+		Object.assign(dialog.style, {
+			width : 'auto',
+			height : 'auto',
+			color : 'white',
+			background : 'black',
+			borderRadius : '1em',
+			padding : '1.5em'
+		});
+		let waste = gScore.getCategory('waste');
+		if (waste < 10) {
+			waste += ' ( fidiculously fast )';
+		}
+		if (waste > 50) {
+			waste += ' ( moving like a tortoise )';
+		}
+		let reckless = gScore.getCategory('reckless');
+		if (reckless === 0) {
+			reckless += ' ( cool )';
+		}
+		if (reckless > 100) {
+			reckless += ' ( ironically amazing )';
+		}
+		let rotation = gScore.getCategory('rotation');
+		if (rotation === 0) {
+			rotation += ' ( endured well )';
+		}
+		([
+			'<div>Congratulation !!</div>',
+			'<div>your score is as follows.</div>',
+			'<ul>',
+			'<li>waste : ' + waste + '</li>',
+			'<li>reckless : ' + reckless + '</li>',
+			'<li>rotation : ' + rotation + '</li>',
+			'</ul>',
+			'<br />',
+			'<div>Thanks to your wisdom, peace in the universe has been preserved.</div>',
+			'<div>Click to go next stage.</div>'
+		]).forEach(in_fragment => {
+			dialog.innerHTML += in_fragment;
+		});
+		startDialog(dialog, async () => {
+			drawCosmicView(gBackgroundCanvas, 400, 50);
+			await nextLevel(false);
+			gWorld.motionZoom2(WORLD_INIT_ZOOM, 1000);
+		});
+	}, duration);
+}
+
+(in_level => {
+	if (typeof in_level === 'number') {
+		gCyclicLevels.setCurrentIndex(in_level);
+	}
+})(getParam('level'));
+
+const ID_PREV_LEVEL = randomString();
+const ID_NEXT_LEVEL = randomString();
+
+async function updateLevel(in_curr) {
+	const black = 0x000000;
+	await gWorld.motionFog(black, 0, 100);
+	gColony.removePieces();
+	if (in_curr.options.offset >= 0) {
+		gColony.setupAllPieces(in_curr.pieces, in_curr.options.offset);
+	} else {
+		gColony.setupAllPieces(in_curr.pieces);
+	}
+	if (in_curr.options.format === 'hexFlatTopped') {
+		gColony.bobRotation = true;
+	} else {
+		gColony.bobRotation = false;
+	}
+	await gWorld.motionFog(black, 100, 0);
+	const prev = gCyclicLevels.prevValue();
+	const next = gCyclicLevels.nextValue();
+	document.getElementById(ID_PREV_LEVEL).innerText = prev.name;
+	document.getElementById(ID_NEXT_LEVEL).innerText = next.name;
+	resetFocus();
+	gMinesweeper = new cMinesweeper(in_curr.rows, in_curr.cols, in_curr.bomb, in_curr.options);
+	dynamicUpdate(gMinesweeper.getRiskTable(), false);
+	gScore.start();
+}
+
+updateLevel(gCyclicLevels.currValue());
+
+/*
+	*** NOTE ***
+	in Safari, using await to get audio will cause the process to fail.
+	I'm not sure of the reason, but top-level await might be the cause.
+	this time use then() to avoid the issue.
+*/
+
+let SE_BEEP = beep(2000);
+let SE_DUMMY = beep(10);
+let SE_MOVED = SE_BEEP;
+let SE_ERROR = SE_BEEP;
+let SE_BOMBED = beep(2500, 100, 0.6);
+
+SOUND.MOVED.then(in_decompress => {
+	SE_MOVED = new Audio('data:audio/mpeg;base64,' + in_decompress);
+});
+
+SOUND.ERROR.then(in_decompress => {
+	SE_ERROR = new Audio('data:audio/mpeg;base64,' + in_decompress);
+});
+
+SOUND.RELEASE.then(in_decompress => {
+	SE_BOMBED = new Audio('data:audio/mpeg;base64,' + in_decompress);
+});
+
+function uiHelp() {
+	const url = {
+		ver : './version.txt',
+		img : './side-six-reversi-help.gif',
+		src : 'https://github.com/nakayama-kazuki/202x/commit/'
+	};
+	const dialog = document.createElement('div');
+	Object.assign(dialog.style, {
+		width : 'auto',
+		height : 'auto',
+		background : 'white',
+		borderRadius : '1em',
+		padding : '1em'
+	});
+	dialog.innerHTML += '<div><img src="' + url.img + '" /></div>';
+	const verLabel = document.createElement('div');
+	Object.assign(verLabel.style, {
+		textAlign : 'right'
+	});
+	dialog.appendChild(verLabel);
+	getResource(url.ver).then(in_hash => {
+		verLabel.innerHTML = 'version : <a href="' + url.src + in_hash + '">' + in_hash.substring(0, 7) + '</a>';
+		verLabel.addEventListener('mousedown', in_e => in_e.stopPropagation());
+		verLabel.addEventListener('touchstart', in_e => in_e.stopPropagation());
+	}).catch(in_err => {
+	    console.error(in_err);
+		verLabel.innerHTML = 'version : unknown';
+	});
+	startDialog(dialog);
+}
+
+function uiRights() {
+	const dialog = document.createElement('dl');
+	Object.assign(dialog.style, {
+		width : '30%',
+		height : 'auto',
+		color : 'white',
+		background : 'black',
+		borderRadius : '1em',
+		padding : '1.5em'
+	});
+	([
+		'<dt>Rights</dt>',
+		'<dd>This software is based on MIT License.</dd>',
+		'<dd>The code can be freely modified and reused.</dd>',
+		'<dd>For full license details, please refer to :</dd>',
+		'<dd>https://opensource.org/licenses/MIT</dd>',
+		'<dt>Donations</dt>',
+		'<dd>While the use of images generated by this software is completely free, donations are welcome and greatly appreciated.</dd>',
+		'<dd>If you would like to support the development of this software, please consider making a donation using the QR code below (TBD).</dd>'
+	]).forEach(in_fragment => {
+		dialog.innerHTML += in_fragment;
+	});
+	startDialog(dialog);
+}
+
+async function prevLevel(in_sound = true) {
+	if (in_sound) {
+		SE_BEEP.play();
+	}
+	await updateLevel(gCyclicLevels.decrementedValue());
+}
+
+async function nextLevel(in_sound = true) {
+	if (in_sound) {
+		SE_BEEP.play();
+	}
+	await updateLevel(gCyclicLevels.incrementedValue());
+}
+
+(in_settings => {
+	let container = document.createElement('div');
+	Object.assign(container.style, {
+		position : 'absolute',
+		left : '5%',
+		top : '5%'
+	});
+	document.body.appendChild(container);
+	in_settings.forEach(in_setting => {
+		let button = document.createElement('button');
+		if (in_setting.id) {
+			button.id = in_setting.id;
+		}
+		if (in_setting.text) {
+			button.innerText = in_setting.text;
+		}
+		button.addEventListener('click', in_setting.func);
+		Object.assign(button.style, {
+			margin : '1.5px 1.5px 1.5px 1.5px',
+			borderRadius : '3px',
+			border : '1px solid gray'
+		});
+		container.appendChild(button);
+	});
+})([
+	{
+		id : ID_PREV_LEVEL,
+		text : '(Prev)',
+		func : prevLevel
+	},
+	{
+		id : ID_NEXT_LEVEL,
+		text : '(Next)',
+		func : nextLevel
+	},
+	{
+		text : 'help',
+		func : uiHelp
+	},
+	{
+		text : 'rights',
+		func : uiRights
+	}
+]);
+
+function drawCosmicView(in_canvas, in_stars, in_nebulae_patterns, in_color = 0x000064) {
+	const ctx = in_canvas.getContext('2d');
+	const w = in_canvas.width;
+	const h = in_canvas.height;
+	ctx.fillStyle = 'black';
+	ctx.fillRect(0, 0, w, h);
+	for (let i = 0; i < in_nebulae_patterns; i++) {
+		const x = Math.random() * w;
+		const y = Math.random() * h;
+		const r = Math.random() * 100 + 50;
+		const gradient = ctx.createRadialGradient(x, y, 0, x, y, r);
+		gradient.addColorStop(0, COLOR.sRGBA(in_color, 127));
+		gradient.addColorStop(1, COLOR.sRGBA(in_color, 0));
+		ctx.beginPath();
+		ctx.arc(x, y, r, 0, Math.PI * 2, false);
+		ctx.fillStyle = gradient;
+		ctx.fill();
+	}
+	for (let i = 0; i < in_stars; i++) {
+		const x = Math.random() * w;
+		const y = Math.random() * h;
+		const r = Math.random() * 1;
+		ctx.beginPath();
+		ctx.arc(x, y, r, 0, Math.PI * 2, false);
+		ctx.fillStyle = 'white';
+		ctx.fill();
+	}
+}
+
+/*
+	event handlers
+*/
+
+function drawBackground(in_canvas) {
+	Object.assign(in_canvas.style, {
+		position : 'absolute',
+		left : 0,
+		top : 0,
+		zIndex : -1
+	});
+	drawCosmicView(in_canvas, 400, 50);
+}
+
+const gBackgroundCanvas = document.createElement('CANVAS');
+
+function setupBody(in_document) {
+	if (!in_document.body) {
+		in_document.documentElement.appendChild(in_document.createElement('BODY'));
+	}
+	Object.assign(in_document.body.style, {
+		margin : '0',
+		overflow : 'hidden'
+	});
+}
+
+function createChildWindow(in_document) {
+	return new Promise(in_callback => {
+		setupBody(in_document);
+		const iframe = in_document.createElement('iframe');
+		in_document.body.appendChild(iframe);
+		Object.assign(iframe.style, {
+			width: '100%',
+			height: '100%',
+			border: 'none'
+		});
+		/*
+			*** NOTE ***
+			although Chrome can use iframe.contentDocument right after createElement,
+			Firefox can not use it ant needs to use asynchronous process.
+			by the way, if you use not timer but load event,
+			your code will not work for Chrome.
+		*/
+		setTimeout(() => {
+			setupBody(iframe.contentDocument);
+			(in_callback)(iframe.contentWindow);
+		}, 0);
+	});
+}
+
+document.addEventListener('DOMContentLoaded', (async () => {
+	/*
+		*** NOTE ***
+		without iframe (outer window),
+		geometry in event will be wrong because of google ads
+	*/
+	const outer = await createChildWindow(document);
+	let resizeWorld = in_ev => {
+		gWorld.resize(outer.innerWidth, outer.innerHeight);
+		gBackgroundCanvas.width = outer.innerWidth;
+		gBackgroundCanvas.height = outer.innerHeight;
+		drawBackground(gBackgroundCanvas);
+	};
+	outer.addEventListener('resize', debouncing(resizeWorld, 300));
+	outer.dispatchEvent(new Event('resize'));
+	outer.document.body.appendChild(gWorld.canvas);
+	outer.document.body.appendChild(gBackgroundCanvas);
+	gWorld.start();
+}));
+
+const knock = nonReentrantAsync(async (in_options = {}) => {
+	const options = {
+		duration : 100,
+		amplitude : 1.1,
+		repeat : 1
+	};
+	Object.keys(options).forEach(in_prop => {
+		if (in_options.hasOwnProperty(in_prop)) {
+			options[in_prop] = in_options[in_prop];
+		}
+	});
+	while (options['repeat']-- > 0) {
+		await gWorld.motionKnock(options['duration'], options['amplitude']);
+	}
+});
+
+function effectError() {
+	SE_ERROR.play();
+	knock();
+}
+
+function effectBombed() {
+	SE_BOMBED.play();
+	knock({duration : 50, repeat : 8});
+}
+
+const notifyDelta = (() => {
+	const RC = cColony.uiSetDeltaPositionRC;
+	return in_ndc => {
+		const intersects = gWorld.intersectPositive(in_ndc);
+		if (intersects.length === 0) {
+			return;
+		}
+		const result = gColony.uiNotifyDeltaPosition(intersects[0].object, intersects[0].point, ndcToAbs(in_ndc));
+		if (result === RC.UNMOVABLE) {
+			effectError();
+		}
+	}
+})();
+
+const focusHere = (() => {
+	let focused = null;
+	return in_ndc => {
+		let current, color;
+		let intersects = gWorld.intersectPositive(in_ndc);
+		if (intersects.length > 0) {
+			current = intersects[0].object;
+			color = getShellColor(current);
+		} else {
+			current = null;
+			color = -1;
+		}
+		if ((color === CLOSED) || (color === HIGHLIGHT)) {
+			if (current === focused) {
+				return;
+			}
+			setShellColor(current, HIGHLIGHT);
+			if (focused) {
+				setShellColor(focused, CLOSED);
+			}
+			focused = current;
+		} else {
+			if (focused) {
+				setShellColor(focused, CLOSED);
+			}
+			focused = null;
+		}
+	}
+})();
+
+function resetFocus() {
+	const outOfRange = new THREE.Vector2(Infinity, Infinity);
+	focusHere(outOfRange);
+}
+
+async function rotateDone(in_changed) {
+	resetFocus();
+	const {col} = gColony.pieceToIndex(in_changed.piece);
+	gMinesweeper.rotate(col, in_changed.delta);
+	await dynamicUpdate(gMinesweeper.getRiskTable(), true);
+	gScore.addScore('rotation', 1);
+}
+
+function rotateTexture() {
+	const {y, z} = gWorld.getCameraPos();
+	const plane = VEC3(0, y, z).normalize();
+	const initUp = VEC3(0, z, -y);
+	const currUp = gWorld.getCameraUp().projectOnPlane(plane);
+	let angle = initUp.angleTo(currUp);
+	const vec2 = gWorld.getScreenDirXP();
+	let screenAngle = Math.atan2(vec2.y * gWorld.canvas.height, vec2.x * gWorld.canvas.width);
+	if ((screenAngle < Math.PI / 4 * -1) || (Math.PI * 3 / 4 < screenAngle)) {
+		angle = Math.min(angle, Math.PI - angle) + Math.PI;
+	}
+	if (gCyclicLevels.currValue().options.format === 'square') {
+		angle += Math.PI / 4;
+	}
+	materialFactory.forEach(in_material => {
+		if (in_material.userData.rotatableTexture) {
+			const map = in_material.map;
+			map.rotation = angle;
+			map.needsUpdate = true;
+		}
+	});
+}
+
+gWorld.addUpdatedHook(rotateTexture);
+
+function dynamicUpdate(in_table, in_sound_effect) {
+	const changedArr = gColony.changedPieces(codeToColorTable(in_table));
+	changedArr.forEach(in_changed => {
+		in_changed.initRotationX = in_changed.piece.rotation.x;
+	});
+	let updated = false;
+	return new Promise(in_resolved => {
+		let ease;
+		const hook = () => {
+			const angle = ease.currentEasingOut();
+			if (angle === Math.PI * 2) {
+				gWorld.removeAnimationHook(hook);
+				changedArr.forEach(in_changed => {
+					in_changed.piece.rotation.x = in_changed.initRotationX;
+				});
+				(in_resolved)();
+			} else {
+				if ((angle > Math.PI) && (!updated)) {
+					if (in_sound_effect) {
+						SE_MOVED.play();
+					}
+					changedArr.forEach(in_changed => {
+						setShellColor(in_changed.piece, in_changed.next);
+					});
+					(rotateTexture)();
+					updated = true;
+				}
+				changedArr.forEach(in_changed => {
+					in_changed.piece.rotation.x = in_changed.initRotationX + angle;
+				});
+			}
+		};
+		if (changedArr.length > 0) {
+			ease = new cEase(0, Math.PI * 2, 500);
+			gWorld.addAnimationHook(hook);
+		} else {
+			(in_resolved)();
+		}
+	});
+}
+
+async function chooseHere(in_ev) {
+	const ndc = ndcFromEvent(in_ev);
+	let intersects = gWorld.intersectPositive(ndc);
+	if (intersects.length === 0) {
+		return;
+	}
+	resetFocus();
+	const curr = intersects[0].object;
+	const pos = gColony.pieceToIndex(curr);
+	const {rc, ratio, hasSafe} = gMinesweeper.open(pos.row, pos.col);
+	if (rc === cMinesweeper.RC.CANNOT) {
+		effectError();
+		return;
+	}
+	if (rc === cMinesweeper.RC.EXPLODED) {
+		effectBombed();
+		await dynamicUpdate(gMinesweeper.getOverTable(), false);
+		gScore.stop();
+		return;
+	}
+	if (rc === cMinesweeper.RC.COMPLETED) {
+		gScore.stop();
+		await dynamicUpdate(gMinesweeper.getRiskTable(), true);
+		complete();
+		return;
+	}
+	await dynamicUpdate(gMinesweeper.getRiskTable(), true);
+	if ((ratio > 0) && hasSafe) {
+		gScore.addScore('reckless', Math.round(ratio * 100));
+	}
+}
+
+(() => {
+	const closure = {
+		x : -1,
+		y : -1,
+		once : false,
+		focusable : true
+	};
+	const start = in_ev => {
+		if (!closure.once) {
+			/*
+				*** NOTE ***
+				Safari may restrict sound without user interaction.
+				because of this, the sound does not work without this code.
+			*/
+			SE_DUMMY.play();
+			closure.once = true;
+		}
+		const ndc = ndcFromEvent(in_ev);
+		const intersects = gWorld.intersectPositive(ndc);
+		if (intersects.length === 0) {
+			return;
+		}
+		resetFocus();
+		closure.x = in_ev.clientX;
+		closure.y = in_ev.clientY;
+		const drag = intersects[0].object;
+		if (gMinesweeper.rotatableFixedCol()) {
+			gColony.uiSetInitPosition(intersects[0].point, ndcToAbs(ndc));
+		}
+	};
+	const move = thresholding(in_ev => {
+		closure.x = -1;
+		closure.y = -1;
+		const ndc = ndcFromEvent(in_ev);
+		if (gColony.uiIsMoving()) {
+			if (gColony.uiUpdatePosition(ndcToAbs(ndc))) {
+				SE_MOVED.play();
+			}
+		} else {
+			if (gColony.uiIsDragging()) {
+				notifyDelta(ndc);
+			} else {
+				if (!in_ev[isEmulated] && closure.focusable) {
+					focusHere(ndc);
+				}
+			}
+		}
+	});
+	const stop = in_ev => {
+		const releaseProgress = gColony.uiRelease(in_changed => {
+			gWorld.removeAnimationHook(releaseProgress);
+			if (in_changed) {
+				(async () => {
+					await rotateDone(in_changed);
+					closure.focusable = true;
+				})();
+			} else {
+				closure.focusable = true;
+			}
+		});
+		if (releaseProgress) {
+			closure.focusable = false;
+			gWorld.addAnimationHook(releaseProgress);
+		} else {
+			const delta = 3;
+			if (Math.abs(closure.x - in_ev.clientX) > delta) {
+				return;
+			}
+			if (Math.abs(closure.y - in_ev.clientY) > delta) {
+				return;
+			}
+			closure.focusable = false;
+			(async () => {
+				await chooseHere(in_ev);
+				closure.focusable = true;
+			})();
+		}
+	};
+	let handlers = {
+		'mousedown' : start,
+		'mousemove' : move,
+		'mouseleave' : stop,
+		'mouseout' : stop,
+		'mouseup' : stop
+	};
+	for (let [eventName, handler] of Object.entries(handlers)) {
+		gWorld.canvas.addEventListener(eventName, handler);
+	}
+})();
+
+</script>
+</body>
+</html>

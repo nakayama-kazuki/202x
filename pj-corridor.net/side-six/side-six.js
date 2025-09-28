@@ -5,10 +5,7 @@ import {
 	postResource,
 	getParam,
 	DEBUG,
-	SETALPHA,
-	GRAYHEX,
-	RGBSTR,
-	RGBASTR,
+	COLOR,
 	randomString,
 	snapToNotch,
 	snapToPI,
@@ -467,20 +464,32 @@ export class cColony extends cColonyCore {
 		}
 		this.#transition('release');
 		const ctx = this.#uiSession.ctx;
-		let notch;
+		let type, notch, last, delta;
 		if (ctx.rotationAxis) {
+			type = 'rotate';
 			notch = this.settingVal.unitAngle;
+			last = snapToNotch(ctx.currAmount, notch);
+			delta = Math.round(last / this.settingVal.unitAngle);
 		} else {
+			type = 'slide';
 			notch = Math.abs(ctx.movableRange.min + ctx.movableRange.max);
+			last = snapToNotch(ctx.currAmount, notch);
+			delta = Math.round(last / this.settingVal.unitDelta);
 		}
-		const last = snapToNotch(ctx.currAmount, notch);
-		return this.makeAnimationProgress(ctx.group, ctx.rotationAxis, ctx.currAmount, last, in_ratio => {
+		const piece = ctx.group.children[0];
+		return this.makeAnimationProgress(ctx.group, ctx.rotationAxis, ctx.currAmount, last, (in_ratio) => {
 			if (in_ratio < 1) {
 				return;
 			}
+			let changed;
+			if (last === 0) {
+				changed = null;
+			} else {
+				changed = {type, delta, piece};
+			}
 			this.#uiInitSession();
 			this.#transition('stop');
-			(in_ending_callback)(!!last);
+			(in_ending_callback)(changed);
 		});
 	}
 }
