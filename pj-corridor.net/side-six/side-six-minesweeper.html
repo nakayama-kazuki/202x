@@ -1324,15 +1324,15 @@ class cScoreManager {
 class gScore extends cScoreManager {
 	static #categories = {
 		reckless : {
-			left : '3%',
+			left : '1em',
 			elem : null
 		},
 		rotation : {
-			left : '28%',
+			left : '13em',
 			elem : null
 		},
 		waste : {
-			left : '53%',
+			left : '25em',
 			elem : null
 		}
 	};
@@ -1348,7 +1348,7 @@ class gScore extends cScoreManager {
 			fontFamily : 'cursive',
 			color : '#cccccc',
 			left : '5%',
-			bottom : '5%',
+			bottom : '10%',
 			width : '90%'
 
 		});
@@ -1479,8 +1479,8 @@ function complete() {
 		if (waste < 10) {
 			waste += ' ( fidiculously fast )';
 		}
-		if (waste > 50) {
-			waste += ' ( moving like a tortoise )';
+		if (waste > 180) {
+			waste += ' ( like a tortoise )';
 		}
 		let reckless = gScore.getCategory('reckless');
 		if (reckless === 0) {
