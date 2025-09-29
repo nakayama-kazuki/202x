@@ -105,7 +105,8 @@ class cAbstractPart extends THREE.SkinnedMesh {
 		DRAGGING_POS : Symbol(),
 		RCV_DRAGGING : Symbol(),
 		RCV_RELEASED : Symbol(),
-		INTERLOCKING : Symbol()
+		INTERLOCKING : Symbol(),
+		MATERIALBKUP : Symbol()
 	};
 	static operatingLayer = 1;
 	static #activateReceiver(in_receiver, in_activate) {
@@ -328,10 +329,43 @@ class cAbstractPart extends THREE.SkinnedMesh {
 		}
 		return merged;
 	}
-	resetMaterial(in_material) {
+	#resetInterlockingMaterials(in_material) {
 		this.#interlockings.forEach(in_obj => {
-			in_obj.material = in_material;
+			if ((in_obj instanceof cAbstractPart) && (in_obj !== this)) {
+				in_obj.resetMaterial(in_material);
+			} else {
+				in_obj.material = in_material;
+			}
 		});
+	}
+	resetMaterial(in_material) {
+		this.highlight(false);
+		this.#resetInterlockingMaterials(in_material);
+	}
+	highlight(in_highlight, in_strengthen = 0.2) {
+		let cache = this.#getCache('MATERIALBKUP');
+		if (in_highlight) {
+			if (cache) {
+				// already highlighted
+				return false;
+			} else {
+				cache = {original : this.material, cloned : this.material.clone()};
+				cache.cloned.color = cache.cloned.color.lerp(new THREE.Color(0xffffff), in_strengthen);
+				this.#resetInterlockingMaterials(cache.cloned);
+				this.#setCache('MATERIALBKUP', cache);
+				return true;
+			}
+		} else {
+			if (cache) {
+				this.#resetInterlockingMaterials(cache.original);
+				this.#setCache('MATERIALBKUP', null);
+				cache.cloned.dispose();
+				return true;
+			} else {
+				// already normal
+				return false;
+			}
+		}
 	}
 	get #boneCnt() {
 		return this.skeleton.bones.length;
@@ -694,14 +728,22 @@ class cJointedSolidPart extends cSolidPart {
 	}
 	static #jointedFrom(in_startObj, in_direction) {
 		const ancestor = in_startObj[instanceInAncestor](cJointedSolidPart);
-		if (!ancestor) {
+		if (ancestor) {
+			const chain = [ancestor, ...ancestor.userData.jointed];
+			if (chain.includes(in_startObj)) {
+				if (in_direction) {
+					chain.reverse();
+				}
+				// if in_startObj belongs to a cJointedSolidPart chain, method returns array.
+				return chain.slice(chain.indexOf(in_startObj));
+			} else {
+				// in_startObj does not belong to a cJointedSolidPart (simply child)
+				return [];
+			}
+		} else {
+			// can not find cJointedSolidPart ancestor
 			return [];
 		}
-		const buff = [ancestor, ...ancestor.userData.jointed];
-		if (in_direction) {
-			buff.reverse();
-		}
-		return buff.slice(buff.indexOf(in_startObj));
 	}
 	static ancestors(in_obj) {
 		// in_startObj + ancestors
@@ -711,9 +753,22 @@ class cJointedSolidPart extends cSolidPart {
 		// in_startObj + descendants
 		return cJointedSolidPart.#jointedFrom(in_obj, false);
 	}
+	static highlightAt(in_obj, in_highlight) {
+		const jointedChain = cJointedSolidPart.ancestors(in_obj);
+		jointedChain.forEach(in_ancestor => in_ancestor.highlight(in_highlight));
+	}
+	static stretchable(in_obj) {
+		const jointedChain = cJointedSolidPart.ancestors(in_obj);
+		if (jointedChain.length > 1) {
+			return true;
+		} else {
+			// root or not cJointedSolidPart
+			return false;
+		}
+	}
 	static stretchAt(in_obj, in_dstV3) {
-		const ancestors = cJointedSolidPart.ancestors(in_obj);
-		if (ancestors.length === 0) {
+		const jointedChain = cJointedSolidPart.ancestors(in_obj);
+		if (jointedChain.length === 0) {
 			// not cJointedSolidPart
 			return false;
 		}
@@ -733,10 +788,10 @@ class cJointedSolidPart extends cSolidPart {
 		const angleToStretch = in_targetObj => {
 			return vectorToStretch(in_targetObj).angleTo(in_targetObj.getWorldDirection(VEC3()));
 		};
-		if (angleToStretch(ancestors[0]) < threshold) {
+		if (angleToStretch(jointedChain[0]) < threshold) {
 			let target = 0;
-			for (let i = 1; i < ancestors.length; i++) {
-				if (angleToStretch(ancestors[i]) < threshold) {
+			for (let i = 1; i < jointedChain.length; i++) {
+				if (angleToStretch(jointedChain[i]) < threshold) {
 					continue;
 				} else {
 					target = i;
@@ -745,7 +800,7 @@ class cJointedSolidPart extends cSolidPart {
 			}
 			if (target > 0) {
 				// affect [n]
-				const parent = ancestors[target];
+				const parent = jointedChain[target];
 				const srcDir = parent.getWorldDirection(VEC3());
 				const dstDir = vectorToStretch(parent);
 				const adhocScale = 1000; // how can I decide this ?
@@ -756,7 +811,7 @@ class cJointedSolidPart extends cSolidPart {
 				srcDir.applyQuaternion(quat).multiplyScalar(WORLD_RADIUS);
 				parent[lookAtWithoutRotation](parent.position.clone().add(srcDir));
 				// bendAt [n - 1]
-				const child = ancestors[target - 1];
+				const child = jointedChain[target - 1];
 				child[lookAtWithoutRotation](in_dstV3);
 			}
 			// streched
@@ -1889,23 +1944,25 @@ document.addEventListener('DOMContentLoaded', (async () => {
 */
 
 const gHandlers = (() => {
-	const c = {
+	const closure = {
 		obj : null,
 		far : false,
 		animating : false,
-		once : false
+		once : false,
+		longpushMode : false,
+		longpushTimer : null
 	};
 	const start = in_ev => {
-		if (!c.once) {
+		if (!closure.once) {
 			/*
 				*** NOTE ***
 				Safari may restrict sound without user interaction.
 				because of this, the sound does not work without this code.
 			*/
 			SE_DUMMY.play();
-			c.once = true;
+			closure.once = true;
 		}
-		if (c.obj) {
+		if (closure.obj) {
 			return;
 		}
 		const ndc = ndcFromEvent(in_ev);
@@ -1923,50 +1980,64 @@ const gHandlers = (() => {
 		const cameraPos = gWorld.getCameraPos();
 		const objectPos = target.getWorldPosition(VEC3());
 		const fineAdjustment = 0.9;
-		c.far = (rayHit.distance * fineAdjustment > cameraPos.distanceTo(objectPos));
-		c.obj = target;
+		closure.far = (rayHit.distance * fineAdjustment > cameraPos.distanceTo(objectPos));
+		closure.obj = target;
 		// not lookAt(cameraPos), but lookAt(raycaster.ray.direction.negate())
-		c.obj.activateDraggingRcv(objectPos.add(cameraPos));
+		closure.obj.activateDraggingRcv(objectPos.add(cameraPos));
+		closure.longpushMode = false;
+		if (cJointedSolidPart.stretchable(closure.obj)) {
+			closure.longpushTimer = setTimeout(() => {
+				closure.longpushMode = true;
+				closure.longpushTimer = null;
+				cJointedSolidPart.highlightAt(closure.obj, true);
+				SE_BEEP.play();
+			}, 500);
+		}
+		closure.obj.highlight(true);
+		SE_BEEP.play();
 	};
 	const move = in_ev => {
-		if (!c.obj) {
+		if (!closure.obj) {
 			return;
+		} else {
+			clearTimeout(closure.longpushTimer);
+			closure.longpushTimer = null;
 		}
 		const ndc = ndcFromEvent(in_ev);
 		let intersects;
-		if (c.far) {
+		if (closure.far) {
 			intersects = gWorld.intersectNegative(ndc, cAbstractPart.operatingLayer);
 		} else {
 			intersects = gWorld.intersectPositive(ndc, cAbstractPart.operatingLayer);
 		}
 		if (intersects.length > 0) {
 			// receiver (CircleGeometry or SphereGeometry)
-			if (intersects.length === 1) {
+			if ((intersects.length === 1) && (closure.longpushMode)) {
 				// receiver (only CircleGeometry)
-				if (cJointedSolidPart.stretchAt(c.obj, intersects[0].point)) {
+				if (cJointedSolidPart.stretchAt(closure.obj, intersects[0].point)) {
 					// (1) bendAt() may be applied to ancestor
 					return;
 				}
 			}
-			// (2) bendAt() is applied to c.obj
-			c.obj.bendAt(intersects[0].point);
-			if (c.obj instanceof cSmartPhone) {
+			// (2) bendAt() is applied to closure.obj
+			closure.obj.bendAt(intersects[0].point);
+			if (closure.obj instanceof cSmartPhone) {
 				gCyclicFigures.currValue().resetItemUpToHead();
 			}
 		} else {
-			// (3) c.obj is released
-			if (c.animating) {
+			// (3) closure.obj is released
+			if (closure.animating) {
 				return;
 			} else {
 				SE_RELEASE.play();
-				c.animating = true;
+				closure.animating = true;
 			}
 			const hook = (in_obj => {
 				return () => {
 					/*
 						when stop will be called during animation,
-						c.obj will be set to null.
-						so bind c.obj to callback.
+						closure.obj will be set to null.
+						so bind closure.obj to callback.
 					*/
 					if (in_obj.moreShrink()) {
 						return;
@@ -1974,18 +2045,26 @@ const gHandlers = (() => {
 					gWorld.removeAnimationHook(hook);
 					stop(new Event('mouseout'));
 				}
-			})(c.obj);
+			})(closure.obj);
 			gWorld.addAnimationHook(hook);
 		}
 	};
 	const stop = in_ev => {
-		if (!c.obj) {
+		if (!closure.obj) {
 			return;
+		} else {
+			clearTimeout(closure.longpushTimer);
+			closure.longpushTimer = null;
 		}
-		c.obj.activateReleasedRcv();
-		c.obj = null;
-		c.far = false;
-		c.animating = false;
+		if (closure.longpushMode) {
+			cJointedSolidPart.highlightAt(closure.obj, false);
+		} else {
+			closure.obj.highlight(false);
+		}
+		closure.obj.activateReleasedRcv();
+		closure.obj = null;
+		closure.far = false;
+		closure.animating = false;
 	};
 	return {
 		'mousedown' : start,
