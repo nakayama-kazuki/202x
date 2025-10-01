@@ -1943,26 +1943,90 @@ document.addEventListener('DOMContentLoaded', (async () => {
 	(4) event handlers
 */
 
-const gHandlers = (() => {
-	const closure = {
-		obj : null,
-		far : false,
-		animating : false,
-		once : false,
-		longpushMode : false,
-		longpushTimer : null
-	};
-	const start = in_ev => {
-		if (!closure.once) {
-			/*
-				*** NOTE ***
-				Safari may restrict sound without user interaction.
-				because of this, the sound does not work without this code.
-			*/
-			SE_DUMMY.play();
-			closure.once = true;
+(() => {
+	class state {
+		static #transitions = {
+			waiting : Symbol(),
+			operating : Symbol(),
+			animating : Symbol()
+		};
+		static #current;
+		static {
+			state.set('waiting');
 		}
-		if (closure.obj) {
+		static is(in_transition) {
+			return state.#current === state.#transitions[in_transition];
+		}
+		static set(in_transition) {
+			state.#current = state.#transitions[in_transition];
+		}
+		static #_obj = null;
+		static set obj(in_obj) {
+			if (in_obj) {
+				state.set('operating');
+			} else {
+				state.set('waiting');
+			}
+			state.#_obj = in_obj;
+		}
+		static get obj() {
+			return state.#_obj;
+		}
+		static far = false;
+		static #_wideMode = false;
+		static get isWideMode() {
+			return state.#_wideMode;
+		}
+		static #_timer1 = null;
+		static #_timer1_ms = 500;
+		static observeLongPush(in_callback) {
+			state.#_wideMode = false;
+			state.unobserveLongPush();
+			state.#_timer1 = setTimeout(() => {
+				if (state.is('operating')) {
+					state.#_wideMode = true;
+					(in_callback)();
+				}
+				state.unobserveLongPush();
+				state.unobserveRepeatPush();
+			}, state.#_timer1_ms);
+		}
+		static unobserveLongPush() {
+			if (state.#_timer1) {
+				clearTimeout(state.#_timer1);
+				state.#_timer1 = null;
+			}
+		}
+		static #_timer2 = null;
+		static #_timer2_ms = 300;
+		static observeRepeatPush(in_callback) {
+			if (state.#_timer2) {
+				if (state.is('operating')) {
+					state.#_wideMode = true;
+					(in_callback)();
+				}
+				state.unobserveLongPush();
+				state.unobserveRepeatPush();
+			} else {
+				state.#_timer2 = setTimeout(() => {
+					state.#_timer2 = null;
+				}, state.#_timer2_ms);
+			}
+		}
+		static unobserveRepeatPush() {
+			if (state.#_timer2) {
+				clearTimeout(state.#_timer2);
+				state.#_timer2 = null;
+			}
+		}
+		static initialize() {
+			state.obj = null;
+			state.far = false;
+			state.#_wideMode = false;
+		}
+	}
+	const start = in_ev => {
+		if (!state.is('waiting')) {
 			return;
 		}
 		const ndc = ndcFromEvent(in_ev);
@@ -1980,64 +2044,57 @@ const gHandlers = (() => {
 		const cameraPos = gWorld.getCameraPos();
 		const objectPos = target.getWorldPosition(VEC3());
 		const fineAdjustment = 0.9;
-		closure.far = (rayHit.distance * fineAdjustment > cameraPos.distanceTo(objectPos));
-		closure.obj = target;
+		state.far = (rayHit.distance * fineAdjustment > cameraPos.distanceTo(objectPos));
+		state.obj = target;
 		// not lookAt(cameraPos), but lookAt(raycaster.ray.direction.negate())
-		closure.obj.activateDraggingRcv(objectPos.add(cameraPos));
-		closure.longpushMode = false;
-		if (cJointedSolidPart.stretchable(closure.obj)) {
-			closure.longpushTimer = setTimeout(() => {
-				closure.longpushMode = true;
-				closure.longpushTimer = null;
-				cJointedSolidPart.highlightAt(closure.obj, true);
+		state.obj.activateDraggingRcv(objectPos.add(cameraPos));
+		if (cJointedSolidPart.stretchable(state.obj)) {
+			const callback = () => {
+				cJointedSolidPart.highlightAt(state.obj, true);
 				SE_BEEP.play();
-			}, 500);
+			};
+			state.observeLongPush(callback);
+			state.observeRepeatPush(callback);
 		}
-		closure.obj.highlight(true);
-		SE_BEEP.play();
+		if (!state.isWideMode) {
+			state.obj.highlight(true);
+			SE_BEEP.play();
+		}
 	};
 	const move = in_ev => {
-		if (!closure.obj) {
+		if (!state.is('operating')) {
 			return;
-		} else {
-			clearTimeout(closure.longpushTimer);
-			closure.longpushTimer = null;
 		}
+		state.unobserveLongPush();
 		const ndc = ndcFromEvent(in_ev);
 		let intersects;
-		if (closure.far) {
+		if (state.far) {
 			intersects = gWorld.intersectNegative(ndc, cAbstractPart.operatingLayer);
 		} else {
 			intersects = gWorld.intersectPositive(ndc, cAbstractPart.operatingLayer);
 		}
 		if (intersects.length > 0) {
 			// receiver (CircleGeometry or SphereGeometry)
-			if ((intersects.length === 1) && (closure.longpushMode)) {
+			if ((intersects.length === 1) && (state.isWideMode)) {
 				// receiver (only CircleGeometry)
-				if (cJointedSolidPart.stretchAt(closure.obj, intersects[0].point)) {
+				if (cJointedSolidPart.stretchAt(state.obj, intersects[0].point)) {
 					// (1) bendAt() may be applied to ancestor
 					return;
 				}
 			}
-			// (2) bendAt() is applied to closure.obj
-			closure.obj.bendAt(intersects[0].point);
-			if (closure.obj instanceof cSmartPhone) {
+			// (2) bendAt() is applied to state.obj
+			state.obj.bendAt(intersects[0].point);
+			if (state.obj instanceof cSmartPhone) {
 				gCyclicFigures.currValue().resetItemUpToHead();
 			}
 		} else {
-			// (3) closure.obj is released
-			if (closure.animating) {
-				return;
-			} else {
-				SE_RELEASE.play();
-				closure.animating = true;
-			}
+			// (3) state.obj is released
 			const hook = (in_obj => {
 				return () => {
 					/*
 						when stop will be called during animation,
-						closure.obj will be set to null.
-						so bind closure.obj to callback.
+						state.obj will be set to null.
+						so bind state.obj to callback.
 					*/
 					if (in_obj.moreShrink()) {
 						return;
@@ -2045,39 +2102,48 @@ const gHandlers = (() => {
 					gWorld.removeAnimationHook(hook);
 					stop(new Event('mouseout'));
 				}
-			})(closure.obj);
+			})(state.obj);
+			SE_RELEASE.play();
+			state.set('animating')
 			gWorld.addAnimationHook(hook);
 		}
 	};
 	const stop = in_ev => {
-		if (!closure.obj) {
+		if (state.is('waiting')) {
 			return;
-		} else {
-			clearTimeout(closure.longpushTimer);
-			closure.longpushTimer = null;
 		}
-		if (closure.longpushMode) {
-			cJointedSolidPart.highlightAt(closure.obj, false);
+		state.unobserveLongPush();
+		if (state.isWideMode) {
+			cJointedSolidPart.highlightAt(state.obj, false);
 		} else {
-			closure.obj.highlight(false);
+			state.obj.highlight(false);
 		}
-		closure.obj.activateReleasedRcv();
-		closure.obj = null;
-		closure.far = false;
-		closure.animating = false;
+		state.obj.activateReleasedRcv();
+		state.initialize();
 	};
-	return {
+	let handlers = {
 		'mousedown' : start,
 		'mousemove' : move,
 		'mouseleave' : stop,
 		'mouseout' : stop,
 		'mouseup' : stop
 	};
+	let once = false;
+	for (let [eventName, handler] of Object.entries(handlers)) {
+		gWorld.canvas.addEventListener(eventName, in_ev => {
+			if (!once) {
+				/*
+					*** NOTE ***
+					Safari may restrict sound without user interaction.
+					because of this, the sound does not work without this code.
+				*/
+				SE_DUMMY.play();
+				once = true;
+			}
+			(handler)(in_ev);
+		});
+	}
 })();
-
-for (let [eventName, handler] of Object.entries(gHandlers)) {
-	gWorld.canvas.addEventListener(eventName, handler);
-}
 
 </script>
 </body>
