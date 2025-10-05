@@ -199,6 +199,7 @@ class cMinesweeperModel {
 	}
 	constructor(in_sizeRow, in_sizeCol, in_bomb, in_options = {}) {
 		const options = {
+			dmz : 0,
 			edgeRow : true,
 			edgeCol : true,
 			format : 'square',
@@ -242,6 +243,14 @@ class cMinesweeperModel {
 			}
 		};
 		this.#initItemArr();
+		if (options.dmz > 0) {
+			// DMZ means an already opened area which hides the hint (number of bombs) around it
+			for (let ix = 0; ix < options.dmz; ix++) {
+				this.#itemArr[ix].opened = true;
+				this.#itemArr[ix].hidden = true;
+			}
+			this.#itemArr.sort(() => Math.random() - 0.5);
+		}
 	}
 	#initItemArr() {
 		const len = this.#conf.row.size * this.#conf.col.size;
@@ -249,7 +258,8 @@ class cMinesweeperModel {
 			this.#itemArr[ix] = {
 				opened : false,
 				isBomb : false,
-				riskCnt : 0
+				hidden : false,
+				riskCnt : -1
 			};
 		}
 	}
@@ -355,26 +365,19 @@ class cMinesweeperModel {
 		this.#updateRiskCnt();
 		return true;
 	}
-	#delayedResetBombs(in_safe_ix) {
-		let cnt = this.#conf.bomb.count;
-		const len = this.#itemArr.length;
-		for (let ix = 0; ix < len; ix++) {
-			this.#itemArr[ix].isBomb = (cnt-- > 0) ? true : false;
+	#delayedResetBombs() {
+		const closedArr = this.#itemArr.filter(in_item => !in_item.opened);
+		for (let ix = 0; ix < this.#conf.bomb.count; ix++) {
+			closedArr[ix].isBomb = true;
 		}
-		this.#itemArr.sort(() => Math.random() - 0.5);
-		if (this.#itemArr[in_safe_ix].isBomb) {
-			for (let ix = 0; ix < len; ix++) {
-				if (this.#itemArr[ix].isBomb) {
-					continue;
-				}
-				// replace
-				this.#itemArr[ix].isBomb = true;
-				this.#itemArr[in_safe_ix].isBomb = false;
-				break;
+		closedArr.sort(() => Math.random() - 0.5);
+		for (let ix = 0; ix < this.#itemArr.length; ix++) {
+			if (this.#itemArr[ix].opened) {
+				continue;
 			}
+			this.#itemArr[ix] = closedArr.pop();
 		}
 		this.#updateRiskCnt();
-		return true;
 	}
 	static RC = {
 		CANNOT : Symbol(),
@@ -391,28 +394,39 @@ class cMinesweeperModel {
 		if (item.isBomb) {
 			return cMinesweeperModel.RC.EXPLODED;
 		}
-		if (item.riskCnt === 0) {
-			const ixArr = this.#aroundIndexes(in_ix);
-			ixArr.forEach(in_around_ix => {
-				const around_item = this.#getItemByIndex(in_around_ix);
-				if (around_item.opened) {
-					return;
-				}
-				this.#openIndex(in_around_ix);
-			});
-		}
 		return cMinesweeperModel.RC.SUCCESS;
+	}
+	#cascadeOpenIndex(in_ix) {
+		let cnt = 0;
+		const item = this.#getItemByIndex(in_ix);
+		if (item.riskCnt > 0) {
+			return cnt;
+		}
+		const ixArr = this.#aroundIndexes(in_ix);
+		ixArr.forEach(in_around_ix => {
+			const around_item = this.#getItemByIndex(in_around_ix);
+			if (around_item.opened) {
+				return;
+			}
+			this.#openIndex(in_around_ix);
+			cnt = 1 + this.#cascadeOpenIndex(in_around_ix);
+		});
+		return cnt;
 	}
 	openPos(in_row, in_col) {
 		if (this.#gemeIsOver) {
 			return cMinesweeperModel.RC.CANNOT;
 		}
 		const ix = this.#posToIndex(in_row, in_col);
+		const rc = this.#openIndex(ix);
+		if (rc !== cMinesweeperModel.RC.SUCCESS) {
+			return rc;
+		}
 		if (!this.#conf.bomb.mapped) {
-			this.#delayedResetBombs(ix);
+			this.#delayedResetBombs();
 			this.#conf.bomb.mapped = true;
 		}
-		const rc = this.#openIndex(ix);
+		this.#cascadeOpenIndex(ix);
 		const openedCount = this.#itemArr.reduce((in_acc, in_cur) => in_acc + (in_cur.opened ? 1 : 0), 0);
 		if (this.#itemArr.length === (openedCount + this.#conf.bomb.count)) {
 			return cMinesweeperModel.RC.COMPLETED;
@@ -438,6 +452,7 @@ class cMinesweeperModel {
 	}
 	static BOMBED = Symbol();
 	static CLOSED = Symbol();
+	static DMZ = Symbol();
 	getOverTable() {
 		if (!this.#gemeIsOver) {
 			return;
@@ -452,7 +467,11 @@ class cMinesweeperModel {
 			if (item.isBomb) {
 				table[pos.row][pos.col] = cMinesweeperModel.BOMBED;
 			} else {
-				table[pos.row][pos.col] = item.riskCnt;
+				if (item.hidden) {
+					table[pos.row][pos.col] = cMinesweeperModel.DMZ;
+				} else {
+					table[pos.row][pos.col] = item.riskCnt;
+				}
 			}
 		}
 		return table;
@@ -466,7 +485,11 @@ class cMinesweeperModel {
 			}
 			const item = this.#getItemByIndex(ix);
 			if (item.opened) {
-				table[pos.row][pos.col] = item.riskCnt;
+				if (item.hidden) {
+					table[pos.row][pos.col] = cMinesweeperModel.DMZ;
+				} else {
+					table[pos.row][pos.col] = item.riskCnt;
+				}
 			} else {
 				table[pos.row][pos.col] = cMinesweeperModel.CLOSED;
 			}
@@ -565,7 +588,7 @@ class cMinesweeper extends cMinesweeperModel {
 			canStillProve = false;
 			for (let row = 0; row < this.#setting.rows; row++) {
 				for (let col = 0; col < this.#setting.cols; col++) {
-					if (in_tblRisk[row][col] === cMinesweeper.CLOSED) {
+					if ((in_tblRisk[row][col] === cMinesweeper.CLOSED) || (in_tblRisk[row][col] === cMinesweeper.DMZ)) {
 						continue;
 					}
 					const neighbors = this.aroundPositions(row, col);
@@ -633,13 +656,20 @@ class cMinesweeper extends cMinesweeperModel {
 			|
 			+- opened
 			|	|
-			|	+- proven (= 0) + count of neighbor bombs
+			|	+- normal
+			|	|	|
+			|	|	+- proven (= 0) @in_tblProven
+			|	|		& count of neighbor bombs @in_tblRisk 
+			|	|
+			|	+- dmz
+			|		|
+			|		+- proven (= 0) @in_tblProven
 			|
 			+- closed
 				|
-				+- proven (= 0, 1)
+				+- proven (= 0, 1) @in_tblProven
 				|
-				+- unproven <--- this !!
+				+- unproven @in_tblProven <--- this !!
 		*/
 		const unprovenArr = [];
 		for (let row = 0; row < this.#setting.rows; row++) {
@@ -662,7 +692,9 @@ class cMinesweeper extends cMinesweeperModel {
 			|
 			+- neighbor1 = closed
 			|
-			+- neighbor2 = opened
+			+- neighbor2 = opened (dmz)
+			|
+			+- neighbor3 = opened (with risk score)
 			|	|
 			|	+- nextNeighbor1 = UNPROVEN <--- unprovenCnt++
 			|	|
@@ -681,7 +713,7 @@ class cMinesweeper extends cMinesweeperModel {
 			let rRow, rCol, maxRatio = 0;
 			const countTblProven = (in_arr, in_v) => in_arr.filter(([in_r, in_c]) => in_tblProven[in_r][in_c] === in_v).length;
 			neighbors.forEach(([in_row, in_col]) => {
-				if (in_tblRisk[in_row][in_col] === cMinesweeper.CLOSED) {
+				if ((in_tblRisk[in_row][in_col] === cMinesweeper.CLOSED) || (in_tblRisk[in_row][in_col] === cMinesweeper.DMZ)) {
 					return;
 				}
 				const nextNeighbors = this.aroundPositions(in_row, in_col);
@@ -739,7 +771,8 @@ class cMinesweeper extends cMinesweeperModel {
 */
 
 const GRAY1 = COLOR.hGray(50);
-const GRAY2 = COLOR.hGray(100);
+const GRAY2 = COLOR.hGray(80);
+const GRAY3 = COLOR.hGray(110);
 
 const RED = 0xFF0000;
 
@@ -755,7 +788,8 @@ const BLUE7 = 0x9999CC;
 const BLUE8 = 0xAAAACC;
 
 const BGCOLOR = GRAY1;
-const CLOSED = GRAY2;
+const CLOSED = GRAY3;
+const DMZ = GRAY2;
 const HIGHLIGHT = DARKYELLOW;
 const BOMBED = RED;
 const OPENED0 = BLUE8;
@@ -793,6 +827,7 @@ class cBiMap extends Map {
 const gColorTable = new cBiMap([
 	[BOMBED, cMinesweeper.BOMBED],
 	[CLOSED, cMinesweeper.CLOSED],
+	[DMZ, cMinesweeper.DMZ],
 	[OPENED0, 0],
 	[OPENED1, 1],
 	[OPENED2, 2],
@@ -819,15 +854,36 @@ function colorToCodeTable(in_table) {
 	return in_table.map(in_r => in_r.map(in_c => colorToCodeValue(in_c)));
 }
 
+class gTextureCanvas {
+	static #map = new Map();
+	static #latestId = null;
+	static create(in_w, in_h) {
+		gTextureCanvas.#latestId = Symbol();
+		const canvas = document.createElement('canvas');
+		gTextureCanvas.#map.set(gTextureCanvas.#latestId, canvas);
+		canvas.width = in_w;
+		canvas.height = in_h;
+		const ctx = canvas.getContext('2d');
+		ctx.globalAlpha = 1;
+		ctx.globalCompositeOperation = 'source-over';
+		ctx.fillStyle = '#ffffff';
+		ctx.fillRect(0, 0, in_w, in_h);
+		return {id : gTextureCanvas.#latestId, w : in_w, h : in_h, ctx : ctx};
+	}
+	static getTexture(in_id) {
+		// CanvasTexture only references the canvas. It does not copy its pixels
+		const texture = new THREE.CanvasTexture(gTextureCanvas.#map.get(in_id));
+		texture.flipY = false;
+		texture.needsUpdate = true;
+		return texture;
+	}
+	static get texture() {
+		return gTextureCanvas.getTexture(gTextureCanvas.#latestId);
+	}
+}
+
 const bombed100x100TextureFactory = factoryBuilder(() => {
-	const canvas = document.createElement('CANVAS');
-	const w = 100;
-	const h = 100;
-	canvas.width = w;
-	canvas.height = h;
-	const ctx = canvas.getContext('2d');
-	ctx.fillStyle = '#ffffff';
-	ctx.fillRect(0, 0, w, h);
+	const {w, h, ctx} = gTextureCanvas.create(100, 100);
 	const count = 250;
 	for (let i = 0; i < count; i++) {
 		const x = Math.random() * w;
@@ -842,34 +898,55 @@ const bombed100x100TextureFactory = factoryBuilder(() => {
 		ctx.fillStyle = gradient;
 		ctx.fill();
 	}
-	ctx.globalAlpha = 1;
-	const texture = new THREE.CanvasTexture(canvas);
-	texture.flipY = false;
-	texture.needsUpdate = true;
-	return texture;
+	return gTextureCanvas.texture;
+});
 
+const dmz100x100TextureFactory = factoryBuilder(in_digit => {
+	const {w, h, ctx} = gTextureCanvas.create(100, 100);
+	ctx.globalCompositeOperation = 'multiply';
+	const cross = {
+		width : 10,
+		length : (w ** 2 + h ** 2) ** 0.5 * 0.5
+	};
+	const steps = Math.floor(cross.width / 2);
+	for (let i = 0; i < steps; i++) {
+		const curr = {
+			color : COLOR.sGray(1 - i / (steps - 1)),
+			width : cross.width - i * 2,
+			length : cross.length - i * 2
+		};
+		const drawLine = () => {
+			ctx.beginPath();
+			ctx.moveTo(curr.length / 2 * -1, 0);
+			ctx.lineTo(curr.length / 2 * +1, 0);
+			ctx.stroke();
+		};
+		ctx.lineCap = 'round';
+		ctx.lineWidth = curr.width;
+		ctx.strokeStyle = curr.color;
+		// 1st line
+		ctx.save();
+		ctx.translate(w / 2, h / 2);
+		drawLine();
+		// 2nd line
+		ctx.save();
+		ctx.rotate(Math.PI / 2);
+		drawLine();
+		ctx.restore();
+		ctx.restore();
+	}
+	return gTextureCanvas.texture;
 });
 
 const digit100x100TextureFactory = factoryBuilder(in_digit => {
-	const canvas = document.createElement('CANVAS');
-	const w = 100;
-	const h = 100;
-	canvas.width = w;
-	canvas.height = h;
-	const ctx = canvas.getContext('2d');
-	ctx.fillStyle = '#ffffff';
-	ctx.fillRect(0, 0, w, h);
+	const {w, h, ctx} = gTextureCanvas.create(100, 100);
 	ctx.fillStyle = '#333333';
 	ctx.textAlign = 'center';
 	ctx.textBaseline = 'middle';
 	ctx.font = 'bold ' + Math.floor(Math.min(w, h) * 0.8) + 'px cursive';
 	const offsetY = h * 0.1;
 	ctx.fillText(in_digit, w / 2, h / 2 + offsetY);
-	const texture = new THREE.CanvasTexture(canvas);
-	texture.flipY = false;
-	texture.needsUpdate = true;
-	return texture;
-
+	return gTextureCanvas.texture;
 });
 
 const materialFactory = factoryBuilder((in_color, in_unitSize) => {
@@ -893,6 +970,10 @@ const materialFactory = factoryBuilder((in_color, in_unitSize) => {
 		setTexture(texture, 1.5);
 		break;
 	case CLOSED :
+		break;
+	case DMZ :
+		texture = dmz100x100TextureFactory.create();
+		setTexture(texture, 1.0);
 		break;
 	default :
 		const digit = colorToCodeValue(in_color);
@@ -1050,13 +1131,7 @@ const gCyclicLevels = ((in_diameter) => {
 		{
 			format : 'hexFlatTopped',
 			offset : 1,
-			rows : 20,
-			cols : 10,
-			bomb : 22
-		},
-		{
-			format : 'square',
-			offset : -1,
+			dmz : false,
 			rows : 20,
 			cols : 10,
 			bomb : 22
@@ -1064,13 +1139,31 @@ const gCyclicLevels = ((in_diameter) => {
 		{
 			format : 'hexFlatTopped',
 			offset : 1,
+			dmz : true,
 			rows : 20,
 			cols : 10,
-			bomb : 30
+			bomb : 22
 		},
 		{
 			format : 'square',
 			offset : -1,
+			dmz : false,
+			rows : 20,
+			cols : 10,
+			bomb : 22
+		},
+		{
+			format : 'square',
+			offset : -1,
+			dmz : true,
+			rows : 20,
+			cols : 10,
+			bomb : 22
+		},
+		{
+			format : 'hexFlatTopped',
+			offset : 1,
+			dmz : false,
 			rows : 20,
 			cols : 10,
 			bomb : 30
@@ -1078,6 +1171,39 @@ const gCyclicLevels = ((in_diameter) => {
 		{
 			format : 'hexFlatTopped',
 			offset : 1,
+			dmz : true,
+			rows : 20,
+			cols : 10,
+			bomb : 30
+		},
+		{
+			format : 'square',
+			offset : -1,
+			dmz : false,
+			rows : 20,
+			cols : 10,
+			bomb : 30
+		},
+		{
+			format : 'square',
+			offset : -1,
+			dmz : true,
+			rows : 20,
+			cols : 10,
+			bomb : 30
+		},
+		{
+			format : 'hexFlatTopped',
+			offset : 1,
+			dmz : false,
+			rows : 30,
+			cols : 15,
+			bomb : 75
+		},
+		{
+			format : 'hexFlatTopped',
+			offset : 1,
+			dmz : true,
 			rows : 30,
 			cols : 15,
 			bomb : 75
@@ -1085,6 +1211,15 @@ const gCyclicLevels = ((in_diameter) => {
 		{
 			format : 'square',
 			offset : -1,
+			dmz : false,
+			rows : 30,
+			cols : 15,
+			bomb : 75
+		},
+		{
+			format : 'square',
+			offset : -1,
+			dmz : true,
 			rows : 30,
 			cols : 15,
 			bomb : 75
@@ -1139,7 +1274,13 @@ const gCyclicLevels = ((in_diameter) => {
 				pieces.push(piece);
 			}
 		}
-		const name = in_level.format + '(' + in_level.bomb + '/' + (in_level.rows * in_level.cols) + ')';
+		let name = in_level.format;
+
+		if (in_level.dmz) {
+			name += '(' + in_level.bomb + '/' + (in_level.rows * in_level.cols - in_level.bomb ) + ')';
+		} else {
+			name += '(' + in_level.bomb + '/' + (in_level.rows * in_level.cols) + ')';
+		}
 		values.push({
 			name : name,
 			size : unitSize,
@@ -1147,6 +1288,7 @@ const gCyclicLevels = ((in_diameter) => {
 			cols : in_level.cols,
 			bomb : in_level.bomb,
 			options : {
+				dmz : in_level.dmz ? in_level.bomb : 0,
 				edgeRow : edgeRow,
 				edgeCol : edgeCol,
 				format : in_level.format,
