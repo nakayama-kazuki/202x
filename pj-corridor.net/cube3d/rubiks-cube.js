@@ -106,14 +106,14 @@ export class cRubiksCube extends THREE.Object3D {
 		this.#settingKey = pseudoMessageDigest1(uuids);
 		if (!this.#settingVal.initialized) {
 			this.#settingVal.completeCallback = null;
-			this.#settingVal.shuffleCount = 0;
+			this.#settingVal.operationCount = 0;
 			this.#settingVal.shuffled = false;
 			this.#settingVal.initialized = true;
 		}
 	}
 	getScore() {
 		const max = 100;
-		return Math.max(Math.ceil((max - this.#settingVal.shuffleCount) / 10) * 10, 0);
+		return Math.max(Math.ceil((max - this.#settingVal.operationCount) / 10) * 10, 0);
 	}
 	#isSurface(in_piece, in_surface, in_scale = 1000) {
 		const far = VEC3();
@@ -571,9 +571,9 @@ export class cRubiksCube extends THREE.Object3D {
 				// when without shuffled, do nothing
 				return;
 			}
-			this.#settingVal.shuffleCount++;
+			this.#settingVal.operationCount++;
 			if (this.#settingVal.completeCallback && this.#isComplete()) {
-				(this.#settingVal.completeCallback)(this.#settingVal.shuffleCount);
+				(this.#settingVal.completeCallback)(this.#settingVal.operationCount);
 			}
 		});
 	}
