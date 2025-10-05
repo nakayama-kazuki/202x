@@ -277,7 +277,7 @@ class cColonyPuzzle extends cColony {
 		super.setupAllPieces(in_pieces);
 		if (!this.settingVal.initialized) {
 			this.settingVal.completeCallback = null;
-			this.settingVal.shuffleCount = 0;
+			this.settingVal.operationCount = 0;
 			this.settingVal.shuffled = false;
 			this.settingVal.initialized = true;
 		}
@@ -290,7 +290,7 @@ class cColonyPuzzle extends cColony {
 	}
 	getScore() {
 		const max = 100;
-		return Math.max(Math.ceil((max - this.settingVal.shuffleCount) / 10) * 10, 0);
+		return Math.max(Math.ceil((max - this.settingVal.operationCount) / 10) * 10, 0);
 	}
 	#isComplete() {
 		const evaluators = [
@@ -372,9 +372,9 @@ class cColonyPuzzle extends cColony {
 		const callback = () => {
 			(in_ending_callback)();
 			if (this.settingVal.shuffled) {
-				this.settingVal.shuffleCount++;
+				this.settingVal.operationCount++;
 				if (this.settingVal.completeCallback && this.#isComplete()) {
-					(this.settingVal.completeCallback)(this.settingVal.shuffleCount);
+					(this.settingVal.completeCallback)(this.settingVal.operationCount);
 				}
 			}
 		};
