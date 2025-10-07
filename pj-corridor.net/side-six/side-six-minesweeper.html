@@ -1125,12 +1125,26 @@ const COLONY_SIZE = 400;
 */
 
 const gCyclicLevels = ((in_diameter) => {
-	const edgeRow = false;
-	const edgeCol = true;
-	const levels = [
+	const topologyMap = new Map([
+		['hexFlatTopped', {
+			factory : hexmapGeometryFactory,
+			marginCol : (in_size, in_margin) => 2 * in_margin / 3 ** 0.5 - (3 ** 0.5 - 1) / 4 * in_size,
+			offset : 1
+		}],
+		['square', {
+			factory : squareGeometryFactory,
+			marginCol : (in_size, in_margin) => in_margin,
+			offset : -1,
+		}]
+	]);
+	const conf = {
+		rZoom : 1.2,
+		mWeight : 0.1,
+		tWeight : 0.5
+	};
+	const levelArr = [
 		{
 			format : 'hexFlatTopped',
-			offset : 1,
 			dmz : false,
 			rows : 20,
 			cols : 10,
@@ -1138,7 +1152,6 @@ const gCyclicLevels = ((in_diameter) => {
 		},
 		{
 			format : 'hexFlatTopped',
-			offset : 1,
 			dmz : true,
 			rows : 20,
 			cols : 10,
@@ -1146,7 +1159,6 @@ const gCyclicLevels = ((in_diameter) => {
 		},
 		{
 			format : 'square',
-			offset : -1,
 			dmz : false,
 			rows : 20,
 			cols : 10,
@@ -1154,7 +1166,6 @@ const gCyclicLevels = ((in_diameter) => {
 		},
 		{
 			format : 'square',
-			offset : -1,
 			dmz : true,
 			rows : 20,
 			cols : 10,
@@ -1162,7 +1173,6 @@ const gCyclicLevels = ((in_diameter) => {
 		},
 		{
 			format : 'hexFlatTopped',
-			offset : 1,
 			dmz : false,
 			rows : 20,
 			cols : 10,
@@ -1170,7 +1180,6 @@ const gCyclicLevels = ((in_diameter) => {
 		},
 		{
 			format : 'hexFlatTopped',
-			offset : 1,
 			dmz : true,
 			rows : 20,
 			cols : 10,
@@ -1178,7 +1187,6 @@ const gCyclicLevels = ((in_diameter) => {
 		},
 		{
 			format : 'square',
-			offset : -1,
 			dmz : false,
 			rows : 20,
 			cols : 10,
@@ -1186,7 +1194,6 @@ const gCyclicLevels = ((in_diameter) => {
 		},
 		{
 			format : 'square',
-			offset : -1,
 			dmz : true,
 			rows : 20,
 			cols : 10,
@@ -1194,7 +1201,6 @@ const gCyclicLevels = ((in_diameter) => {
 		},
 		{
 			format : 'hexFlatTopped',
-			offset : 1,
 			dmz : false,
 			rows : 30,
 			cols : 15,
@@ -1202,7 +1208,6 @@ const gCyclicLevels = ((in_diameter) => {
 		},
 		{
 			format : 'hexFlatTopped',
-			offset : 1,
 			dmz : true,
 			rows : 30,
 			cols : 15,
@@ -1210,7 +1215,6 @@ const gCyclicLevels = ((in_diameter) => {
 		},
 		{
 			format : 'square',
-			offset : -1,
 			dmz : false,
 			rows : 30,
 			cols : 15,
@@ -1218,38 +1222,33 @@ const gCyclicLevels = ((in_diameter) => {
 		},
 		{
 			format : 'square',
-			offset : -1,
 			dmz : true,
 			rows : 30,
 			cols : 15,
 			bomb : 75
 		}
 	];
+	const edgeRow = false;
+	const edgeCol = true;
 	const values = new cCyclicValues();
-	levels.forEach(in_level => {
-		const radius = in_diameter / 2;
-		const circumf = in_diameter * Math.PI;
+	levelArr.forEach(in_level => {
+		const topology = topologyMap.get(in_level.format);
+		const radius = in_diameter / 2 * conf.rZoom;
+		const circumf = in_diameter * Math.PI * conf.rZoom;
 		const rows = in_level.rows;
 		const cols = in_level.cols;
-		const unitSize = circumf / rows;
-		const unitThick = unitSize * 0.3;
 		const unitAngle = Math.PI * 2 / rows;
-		const zoom = 1.2;
-		let margin = 2 * Math.sin(unitAngle / 2) * (radius - unitThick) * (zoom - 1);
-		let geometry;
+		const marginRow = circumf / rows * conf.mWeight;
+		const unitSize = circumf / rows - marginRow;
+		const marginCol = topology.marginCol(unitSize, marginRow);
+		const unitThick = unitSize * conf.tWeight;
 		const ratio = ((radius - unitThick) / radius);
-		if (in_level.format === 'hexFlatTopped') {
-			margin *= 0.1;
-			geometry = hexmapGeometryFactory.create(unitSize, ratio, unitThick);
-		} else {
-			margin *= 0.5;
-			geometry = squareGeometryFactory.create(unitSize, ratio, unitThick);
-		}
+		const geometry = topology.factory.create(unitSize, ratio, unitThick);
 		const pieces = [];
 		for (let row = 0; row < rows; row++) {
 			for (let col = 0; col < cols; col++) {
-				let x = (unitSize + margin) * col - (unitSize + margin) * (cols - 1) / 2;
-				let y = (in_diameter / 2 - unitThick) * zoom;
+				let x = (unitSize + marginCol) * col - (unitSize + marginCol) * (cols - 1) / 2;
+				let y = radius;
 				const materials = [
 					materialFactory.create(CLOSED, unitSize),
 					materialFactory.create(BGCOLOR, unitSize)
@@ -1258,7 +1257,7 @@ const gCyclicLevels = ((in_diameter) => {
 				const pivot = new THREE.Object3D();
 				pivot.add(piece);
 				piece.position.copy(VEC3(x, y, 0));
-				if ((in_level.format === 'hexFlatTopped') && (col % 2 === in_level.offset)) {
+				if ((in_level.format === 'hexFlatTopped') && (col % 2 === topology.offset)) {
 					pivot.rotateX(unitAngle * (row + 0.5));
 				} else {
 					pivot.rotateX(unitAngle * row);
@@ -1275,7 +1274,6 @@ const gCyclicLevels = ((in_diameter) => {
 			}
 		}
 		let name = in_level.format;
-
 		if (in_level.dmz) {
 			name += '(' + in_level.bomb + '/' + (in_level.rows * in_level.cols - in_level.bomb ) + ')';
 		} else {
@@ -1292,7 +1290,7 @@ const gCyclicLevels = ((in_diameter) => {
 				edgeRow : edgeRow,
 				edgeCol : edgeCol,
 				format : in_level.format,
-				offset : in_level.offset
+				offset : topology.offset
 			},
 			pieces : pieces
 		});
