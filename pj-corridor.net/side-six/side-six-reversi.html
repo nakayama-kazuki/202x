@@ -3002,6 +3002,108 @@ class cColonyBoard extends cColony {
 			(in_ending_callback)();
 		});
 	}
+	static #views  = {
+		COLONYVIEW : Symbol(),
+		TRNSFORMING : Symbol(),
+		OVERVIEW : Symbol()
+	};
+	static #viewTransitions = {
+		[cColonyBoard.#views.COLONYVIEW] : {
+			toOverview : cColonyBoard.#views.TRNSFORMING
+		},
+		[cColonyBoard.#views.TRNSFORMING] : {
+			toColonyView : cColonyBoard.#views.COLONYVIEW,
+			toOverview : cColonyBoard.#views.OVERVIEW
+		},
+		[cColonyBoard.#views.OVERVIEW] : {
+			toColonyView : cColonyBoard.#views.TRNSFORMING
+		}
+	};
+	#state = cColonyBoard.#views.COLONYVIEW;
+	#transition(in_action) {
+		const state = cColonyBoard.#viewTransitions[this.#state][in_action];
+		if (state) {
+			this.#state = state;
+		} else {
+			throw new Error('invalid transition : ' + in_action);
+		}
+	}
+	get isColonyView() {
+		return (this.#state === cColonyBoard.#views.COLONYVIEW);
+	}
+	get isOverview() {
+		return (this.#state === cColonyBoard.#views.OVERVIEW);
+	}
+	makeSwitchViewProgress(in_c_to_o, in_duration, in_ending_callback) {
+		const init = {
+			amount : 0,
+			position : new Map(),
+			quaternion : new Map()
+		};
+		const last = {
+			amount : 1,
+			position : new Map(),
+			quaternion : new Map()
+		};
+		this.children.forEach(in_child => {
+			init.position.set(in_child, in_child.position.clone());
+			init.quaternion.set(in_child, in_child.quaternion.clone());
+		});
+		let endingProcess;
+		if (in_c_to_o) {
+			if (this.isColonyView) {
+				this.uiDisable();
+				this.#transition('toOverview');
+				this.children.forEach(in_child => {
+					const world = VEC3().setFromMatrixPosition(in_child.matrixWorld);
+					const s = Math.hypot(world.y, world.z) * Math.atan2(world.z, world.y);
+					last.position.set(in_child, VEC3(world.x, 0, s));
+					last.quaternion.set(in_child, new THREE.Quaternion());
+				});
+				endingProcess = () => {
+					this.cache = init;
+					this.#transition('toOverview');
+				}
+			} else {
+				// do nothing
+				return;
+			}
+		} else {
+			if (this.isOverview) {
+				this.#transition('toColonyView');
+				this.children.forEach(in_child => {
+					last.position.set(in_child, this.cache.position.get(in_child));
+					last.quaternion.set(in_child, this.cache.quaternion.get(in_child));
+				});
+				endingProcess = () => {
+					delete this.cache;
+					this.uiEnable();
+					this.#transition('toColonyView');
+				};
+			} else {
+				// do nothing
+				return;
+			}
+		}
+		const ease = new cEase(init.amount, last.amount, in_duration);
+		const progress = () => {
+			const amount = ease.currentEasingOut();
+			this.children.forEach(in_child => {
+				const p0 = init.position.get(in_child);
+				const q0 = init.quaternion.get(in_child);
+				const p1 = last.position.get(in_child);
+				const q1 = last.quaternion.get(in_child);
+				in_child.position.copy(p0).lerp(p1, amount);
+				in_child.quaternion.copy(q0).slerp(q1, amount);
+				in_child.updateMatrixWorld(true);
+			});
+			if (amount === last.amount) {
+				(endingProcess)();
+				(in_ending_callback)();
+			}
+		}
+		return progress;
+	}
 }
 
 /*
@@ -3591,6 +3693,29 @@ async function uiUndo() {
 	}
 }
 
+function uiOverview() {
+	if (!gColony.isColonyView) {
+		return;
+	}
+	const duration = {
+		c2o : 500,
+		camera : 1000,
+		wait : 3000,
+		o2c : 500
+	};
+	const hook = gColony.makeSwitchViewProgress(true, duration.c2o, () => {
+		gWorld.removeAnimationHook(hook);
+		gWorld.motionViewFrom(VEC3(0, 1, 0), duration.camera);
+	});
+	gWorld.addAnimationHook(hook);
+	setTimeout(() => {
+		const hook = gColony.makeSwitchViewProgress(false, duration.o2c, () => {
+			gWorld.removeAnimationHook(hook);
+		});
+		gWorld.addAnimationHook(hook);
+	}, duration.wait);
+}
+
 function uiHelp() {
 	const url = {
 		ver : './version.txt',
@@ -3739,6 +3864,10 @@ const gChart = new cOcupiedChart();
 		id : ID_NEXT_LEVEL,
 		text : '(Next)',
 		func : nextLevel
+	},
+	{
+		text : 'overview',
+		func : uiOverview
 	},
 	{
 		text : 'help',
@@ -4006,7 +4135,7 @@ async function chooseHere(in_ev) {
 	};
 	for (let [eventName, handler] of Object.entries(handlers)) {
 		gWorld.canvas.addEventListener(eventName, in_ev => {
-			if (gController?.enableHandler) {
+			if (gController?.enableHandler && gColony.isColonyView) {
 				(handler)(in_ev);
 			}
 		});
