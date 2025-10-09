@@ -518,6 +518,9 @@ export function startDialog(in_elem, in_callback = null) {
 	document.body.appendChild(background);
 	const closeDialog = () => {
 		autoTransition(background, 'opacity 0.5s ease-out', '1', '0', () => {
+			if (!document.body.contains(background)) {
+				return;
+			}
 			document.body.removeChild(background);
 			if (in_callback) {
 				(in_callback)();
