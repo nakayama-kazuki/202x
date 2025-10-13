@@ -90,7 +90,7 @@ export class cRubiksCube extends THREE.Object3D {
 		this.userData.currentSettingKey = in_value;
 	}
 	removePieces() {
-		const pieces = this.children.slice();
+		const pieces = [...this.children];
 		pieces.forEach(in_piece => {
 			this.remove(in_piece);
 		});
@@ -105,6 +105,8 @@ export class cRubiksCube extends THREE.Object3D {
 		});
 		this.#settingKey = pseudoMessageDigest1(uuids);
 		if (!this.#settingVal.initialized) {
+			const size = (new THREE.Box3()).setFromObject(this).getSize(VEC3());
+			this.#settingVal.raycastDistance = Math.max(size.x, size.y, size.z) + 1;
 			this.#settingVal.completeCallback = null;
 			this.#settingVal.operationCount = 0;
 			this.#settingVal.shuffled = false;
@@ -115,20 +117,20 @@ export class cRubiksCube extends THREE.Object3D {
 		const max = 100;
 		return Math.max(Math.ceil((max - this.#settingVal.operationCount) / 10) * 10, 0);
 	}
-	#isSurface(in_piece, in_surface, in_scale = 1000) {
+	#isSurface(in_piece, in_surface) {
 		const far = VEC3();
 		XYZ.forEach(in_xyz => {
 			if (in_surface[in_xyz] === 0) {
 				far[in_xyz] = in_piece.position[in_xyz];
 			} else {
-				far[in_xyz] = in_surface[in_xyz] * in_scale;
+				far[in_xyz] = in_surface[in_xyz] * this.#settingVal.raycastDistance;
 			}
 		});
 		const raycaster = new THREE.Raycaster(far, in_surface.clone().negate());
 		const intersects = raycaster.intersectObjects(this.children, false);
 		return (intersects[0].object === in_piece);
 	}
-	static #getColor(in_piece, in_targetV3) {
+	static getColor(in_piece, in_targetV3) {
 		const matrix = (new THREE.Matrix4()).makeRotationFromQuaternion(in_piece.quaternion);
 		const invertV3 = in_targetV3.clone().applyMatrix4(matrix.invert());
 		const error = 0.001;
@@ -147,7 +149,7 @@ export class cRubiksCube extends THREE.Object3D {
 				if (!this.#isSurface(in_piece, in_direction)) {
 					return true;
 				}
-				const color = cRubiksCube.#getColor(in_piece, in_direction);
+				const color = cRubiksCube.getColor(in_piece, in_direction);
 				if (sameColor < 0) {
 					sameColor = color;
 					return true;
