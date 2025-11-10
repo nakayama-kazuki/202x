@@ -7,8 +7,8 @@
 <script type='importmap'>
 {
 	"imports" : {
-		"three" : "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.min.js",
-		"utils" : "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/utils/BufferGeometryUtils.js",
+		"three" : "https://cdn.jsdelivr.net/npm/three@0.181.0/build/three.module.min.js",
+		"utils" : "https://cdn.jsdelivr.net/npm/three@0.181.0/examples/jsm/utils/BufferGeometryUtils.js",
 		"basic" : "./basic-functions.js",
 		"rubik" : "./rubiks-cube.js",
 		"sound" : "./sound-effect.js"
@@ -815,15 +815,8 @@ SOUND.ERROR.then(in_decompress => {
 
 function shuffle(in_count) {
 	const randomRotation = (in_remaining_count) => {
-		let overTheTop = false;
-		const callback = (in_ratio) => {
-			if ((in_ratio > 0.4) && !overTheTop) {
-				SE_MOVED.play();
-				overTheTop = true;
-			}
-			if (in_ratio < 1) {
-				return;
-			}
+		const callback = () => {
+			SE_MOVED.play();
 			gWorld.removeAnimationHook(progress);
 			if (in_remaining_count > 1) {
 				(randomRotation)(in_remaining_count - 1);

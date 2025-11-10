@@ -1668,6 +1668,9 @@ export class cSphericalWorld {
 		// event-y -- : world-y ++ : camera-rotate-x -- : object-rotate-x ++ : object-view-y --
 		this.#centerBall.rotateX(in_world_dy * -1);
 	}
+	rotateOnWorldAxis(in_axis, in_rad) {
+		this.#centerBall.rotateOnWorldAxis(in_axis, in_rad * -1);
+	}
 	#setZoom(in_distance) {
 		this.#camera.position.normalize().multiplyScalar(in_distance);
 	}

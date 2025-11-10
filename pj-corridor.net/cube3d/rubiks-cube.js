@@ -304,14 +304,12 @@ export class cRubiksCube extends THREE.Object3D {
 		const progress = () => {
 			const currRad = ease.currentEasingIn();
 			this.rotate(in_group, in_axis, currRad);
-			let ratio = Math.abs(currRad - in_start_rad) / distance;
 			if (currRad === in_final_rad) {
-				this.#releaseGroup(in_group);
-				this.#settingVal.shuffled = true;
 				// this progress function should be stopped in callback
-				ratio = 1.0;
+				(in_callback)(1.0);
+			} else {
+				(in_callback)(Math.abs(currRad - in_start_rad) / distance);
 			}
-			(in_callback)(ratio);
 		};
 		return progress;
 	}
@@ -332,7 +330,15 @@ export class cRubiksCube extends THREE.Object3D {
 		}
 		const group = this.#setupGroup(pieces);
 		const angle = cRubiksCube.#rotatableAngle(group, axis);
-		return this.#makeRotationProgress(group, axis, 0, angle, in_callback);
+		return this.#makeRotationProgress(group, axis, 0, angle, in_ratio => {
+			const wouldFinalize = in_ratio === 1.0;
+			if (!wouldFinalize) {
+				return;
+			}
+			this.#releaseGroup(group);
+			this.#settingVal.shuffled = true;
+			(in_callback)();
+		});
 	}
 	registerCompleteCallback(in_callback) {
 		this.#settingVal.completeCallback = in_callback;
@@ -549,7 +555,7 @@ export class cRubiksCube extends THREE.Object3D {
 		// if true, caller may show some effects.
 		return overTheTop;
 	}
-	uiRelease(in_ending_callback) {
+	uiRelease(in_callback) {
 		if (this.#uiSession.state === cRubiksCube.#uiStates.DRAGGING) {
 			this.#uiInitSession();
 			this.#transition('release');
@@ -563,12 +569,20 @@ export class cRubiksCube extends THREE.Object3D {
 		const startRad = ctx.currAmount;
 		const finalRad = (ctx.amountSnap)(ctx.currAmount);
 		return this.#makeRotationProgress(ctx.group, ctx.rotationAxis, startRad, finalRad, in_ratio => {
-			if (in_ratio < 1) {
+			const wouldFinalize = in_ratio === 1.0;
+			if (!wouldFinalize) {
 				return;
+			}
+			// information to keep the position of stickers (URFDLB)
+			const groupCenter = (new THREE.Box3()).setFromObject(ctx.group).getCenter(VEC3());
+			let rotateURFDLB = null;
+			if (groupCenter.distanceTo(VEC3()) < 1e-3) {
+				// rotation including center piece
+				rotateURFDLB = {axis : ctx.rotationAxis.clone(), rad : finalRad};
 			}
 			this.#uiInitSession();
 			this.#transition('stop');
-			(in_ending_callback)();
+			(in_callback)(rotateURFDLB);
 			if (!this.#settingVal.shuffled) {
 				// when without shuffled, do nothing
 				return;

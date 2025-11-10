@@ -11,6 +11,7 @@
 		"utils" : "https://cdn.jsdelivr.net/npm/three@0.181.0/examples/jsm/utils/BufferGeometryUtils.js",
 		"basic" : "./basic-functions.js",
 		"rubik" : "./rubiks-cube.js",
+		"min2p" : "https://esm.sh/@biohuns/min2phase@0.4.4?bundle",
 		"sound" : "./sound-effect.js"
 	}
 }
@@ -78,6 +79,9 @@ import {
 import {
 	cRubiksCube
 } from 'rubik';
+import {
+	OffThreadMin2Phase
+} from 'min2p';
 import * as SOUND from 'sound';
 
 /*
@@ -177,125 +181,475 @@ const BLUE = 0x3333FF;
 const GREEN = 0x33CC33;
 
 const EDGECOLOR = DARKGRAY;
-let INSIDECOLOR;
+const INSIDECOLOR = DARKGRAY;
 
-const SURFACEPROP = [];
-
-if (getParam('color') === 'easy') {
-	SURFACEPROP.push({V3 : DIRECTION.XP, COLOR : WHITE});
-	SURFACEPROP.push({V3 : DIRECTION.XN, COLOR : WHITE});
-	SURFACEPROP.push({V3 : DIRECTION.YP, COLOR : BLUE});
-	SURFACEPROP.push({V3 : DIRECTION.YN, COLOR : BLUE});
-	SURFACEPROP.push({V3 : DIRECTION.ZP, COLOR : BLUE});
-	SURFACEPROP.push({V3 : DIRECTION.ZN, COLOR : BLUE});
-	INSIDECOLOR = BLUE;
-} else {
-	// standard color scheme
-	SURFACEPROP.push({V3 : DIRECTION.XP, COLOR : ORANGE});
-	SURFACEPROP.push({V3 : DIRECTION.XN, COLOR : RED});
-	SURFACEPROP.push({V3 : DIRECTION.YP, COLOR : WHITE});
-	SURFACEPROP.push({V3 : DIRECTION.YN, COLOR : YELLOW});
-	SURFACEPROP.push({V3 : DIRECTION.ZP, COLOR : BLUE});
-	SURFACEPROP.push({V3 : DIRECTION.ZN, COLOR : GREEN});
-	INSIDECOLOR = DARKGRAY;
-}
+const SURFACEx6 = [
+	{NORM : DIRECTION.XP, INITCOLOR : RED},
+	{NORM : DIRECTION.XN, INITCOLOR : ORANGE},
+	{NORM : DIRECTION.YP, INITCOLOR : WHITE},
+	{NORM : DIRECTION.YN, INITCOLOR : YELLOW},
+	{NORM : DIRECTION.ZP, INITCOLOR : GREEN},
+	{NORM : DIRECTION.ZN, INITCOLOR : BLUE}
+];
 
 const edgeMaterial = new THREE.MeshLambertMaterial({color : EDGECOLOR});
+
+function pieceColorList(in_dimV3, in_ixV3) {
+	/*
+		piece ( hexahedron ) has surface x6
+		|
+		+- edge surface x0-3
+		|	|
+		|	+- orange, red, white, ...
+		|
+		+- inner surface x3-6
+			|
+			+- dark gray
+	*/
+	const colorList = [];
+	// when in_ixV3 is on an edge, the color of SURFACEx6 is used
+	SURFACEx6.forEach(({NORM, INITCOLOR}) => {
+		XYZ.forEach(in_xyz => {
+			switch (NORM[in_xyz]) {
+			// the surface is facing the positive direction
+			case +1 :
+				// the position is at the positive edge
+				if (in_ixV3[in_xyz] === in_dimV3[in_xyz] - 1) {
+					colorList.push(INITCOLOR);
+				} else {
+					colorList.push(INSIDECOLOR);
+				}
+				break;
+			// the surface is facing the negative direction
+			case -1 :
+				// the position is at the negative edge
+				if (in_ixV3[in_xyz] === 0) {
+					colorList.push(INITCOLOR);
+				} else {
+					colorList.push(INSIDECOLOR);
+				}
+				break;
+			case 0 :
+				break;
+			}
+		});
+	});
+	return colorList;
+}
 
 /*
 	(2) shape, parts composition, and behavior of a Rubik's Cube
 */
 
-const CUBE_SIZE = 400;
-
-const gMeshLevelMap = ((in_cubeSize) => {
-	const map = new cCyclicMap();
-	const settings = [
-		{
-			dimension : 2,
-			intersect : VEC3(2, 1, 1)
-		},
-		{
-			dimension : 2,
-			intersect : VEC3(1, 1, 1)
-		},
-		{
-			dimension : 3,
-			intersect : VEC3(3, 2, 2)
-		},
-		{
-			dimension : 3,
-			intersect : VEC3(3, 2, 1)
-		},
-		{
-			dimension : 3,
-			intersect : VEC3(3, 1, 1)
-		},
-		{
-			dimension : 3,
-			intersect : VEC3(2, 2, 2)
-		},
-		{
-			dimension : 3,
-			intersect : VEC3(2, 2, 1)
-		},
-		{
-			dimension : 3,
-			intersect : VEC3(2, 1, 1)
-		},
-		{
-			dimension : 3,
-			intersect : VEC3(1, 1, 1)
-		},
-	];
-	settings.forEach(in_setting => {
-		const unitSize = in_cubeSize / in_setting.dimension;
-		const delta = in_setting.intersect.clone().multiplyScalar(unitSize * 0.5);
-		const pieces = [];
-		for (let z = 0; z < in_setting.dimension; z++) {
-			for (let y = 0; y < in_setting.dimension; y++) {
-				for (let x = 0; x < in_setting.dimension; x++) {
-					const colors = SURFACEPROP.map(in_obj => in_obj.COLOR);
-					const geometry = boxGeometryFactory.create(unitSize, unitSize, unitSize);
-					// geometry has 7 groups (sub meshes)
-					const materials = boxMaterials(unitSize, unitSize, unitSize, colors);
-					materials.push(edgeMaterial);
-					const positiveSide = VEC3(
-						unitSize * (x + 0.5),
-						unitSize * (y + 0.5),
-						unitSize * (z + 0.5)
-					).add(delta.clone().negate());
-					const negativeSide = VEC3(
-						unitSize * (x + 0.5) - in_cubeSize,
-						unitSize * (y + 0.5) - in_cubeSize,
-						unitSize * (z + 0.5) - in_cubeSize
-					).add(delta);
-					const isIntersected = [x, y, z].every((in_v, in_ix) => in_v < in_setting.intersect.toArray()[in_ix]);
-					if (isIntersected) {
-						// create x1
-						const piece = new THREE.Mesh(geometry, materials);
-						piece.position.copy(negativeSide);
-						pieces.push(piece);
-					} else {
-						// create x2 (+ translated)
-						const gemini1 = new THREE.Mesh(geometry, materials);
-						gemini1.position.copy(negativeSide);
-						pieces.push(gemini1);
-						const gemini2 = new THREE.Mesh(geometry, materials);
-						gemini2.position.copy(positiveSide);
-						pieces.push(gemini2);
-					}
+class cCubeDimV3 extends THREE.Vector3 {
+	get maxDim() {
+		return Math.max(...this.toArray());
+	}
+	#sizeList(in_unitSize = 1) {
+		const list = {};
+		/*
+			in case of 3x2x2, ...
+			list.x = [in_unitSize, in_unitSize, in_unitSize]
+			list.y = [in_unitSize, in_unitSize * 2]
+			list.z = [in_unitSize, in_unitSize * 2]
+		*/
+		XYZ.forEach(in_xyz => {
+			if (this[in_xyz] < this.maxDim) {
+				// separate not 4=3+1 but 4=2+2
+				if (this.maxDim % this[in_xyz] === 0) {
+					const quotient = this.maxDim / this[in_xyz];
+					list[in_xyz] = Array(this[in_xyz]).fill(in_unitSize * quotient);
+				} else {
+					list[in_xyz] = Array(this[in_xyz] - 1).fill(in_unitSize);
+					list[in_xyz].push((this.maxDim - this[in_xyz] + 1) * in_unitSize);
+				}
+			} else {
+				list[in_xyz] = Array(this[in_xyz]).fill(in_unitSize);
+			}
+		});
+		return list;
+	}
+	#indexLoop(in_callback) {
+		// first surface is at "new THREE.Vector3(0, 0, -1)"
+		for (let z = 0; z < this.z; z++) {
+			for (let y = 0; y < this.y; y++) {
+				for (let x = 0; x < this.x; x++) {
+					(in_callback)(VEC3(x, y, z));
 				}
 			}
 		}
-		const volume_default = 15;
-		const volume_intersect = in_setting.intersect.toArray().reduce((acc, cur) => acc * cur, 1);
-		const volume_current = (in_setting.dimension ** 3) * 2 - volume_intersect;
-		const level = (volume_current / volume_default).toFixed(1);
-		map.set('lv ' + level, pieces);
-	});
-	return map;
-})(CUBE_SIZE);
+	}
+	positionLoop(in_callback, in_unitSize, in_moveToV3 = VEC3()) {
+		const sizeList = this.#sizeList(in_unitSize);
+		/*
+			each piece should be translated using translateV3
+
+			before translated :
+
+			   |
+			   +---+
+			   |   |
+			   |   |
+			   |   |
+			---+---+-
+			   |
+			   |
+			   |
+
+			after translated :
+
+			   |
+			   |
+			   |
+			 +-+-+
+			 | | |
+			-+-+-+---
+			 | | |
+			 +-+-+
+			   |
+		*/
+		const cubeCneter = this.maxDim * in_unitSize / 2;
+		const translateV3 = in_moveToV3.clone().sub(VEC3(cubeCneter, cubeCneter, cubeCneter));
+		this.#indexLoop(in_ixV3 => {
+			const pieceSizeV3 = VEC3();
+			const piecePosV3 = VEC3();
+			XYZ.forEach(in_xyz => {
+				const curr = in_ixV3[in_xyz];
+				let start = 0;
+				for (let i = 0; i < curr; i++) {
+					start += sizeList[in_xyz][i];
+				}
+				pieceSizeV3[in_xyz] = sizeList[in_xyz][curr];
+				piecePosV3[in_xyz] = start + pieceSizeV3[in_xyz] / 2;
+			});
+			piecePosV3.add(translateV3);
+			(in_callback)(in_ixV3, piecePosV3, pieceSizeV3);
+		});
+	}
+	isInsideCube(in_ixV3) {
+		return XYZ.every(in_xyz => {
+			return (0 < in_ixV3[in_xyz]) && (in_ixV3[in_xyz] < this[in_xyz] - 1);
+		});
+	}
+}
+
+/*
+
+★★
+
+https://qiita.com/7y2n/items/a840e44dba77b1859352
+からすると facelet が動いてしまうと問題みたいなので、center の位置も入れるようにした
+
+
+×1. center の有無で結果が変わるかどうかを確認 → 変化があるならば、現状の方針を維持する → 変化ない
+×2. index をロジックから検証する
+＠3. facelet 変換と center 固定の方針を検討
+
+いったん実装はできたので次はテスト
+
+
+a. センターピースは動かさず両脇と視点を動かすことで見た目上のセンター動作
+b. 毎回センターピースを元の座標に戻す（視点も移動）
+c. 計算時にセンターピースを元の座標に戻して、計算後に復活
+d. orderFeature を適切に修正する … #dict が U = YP 前提なので結構ムズイ
+
+*/
+
+
+class kociemba {
+	static sortedMap = new Map([
+		[WHITE, 'U'],
+		[RED, 'R'],
+		[GREEN, 'F'],
+		[YELLOW, 'D'],
+		[ORANGE, 'L'],
+		[BLUE, 'B']
+	]);
+	static stickerOrder(in_sticker) {
+		return Array.from(kociemba.sortedMap).findIndex(in_e => in_e[1] === in_sticker);
+	}
+	/*
+		                   ZN ZN ZN
+		                XN 00 01 02 XP
+		                XN 03 UU 05 XP
+		                XN 06 07 08 XP
+		                   ZP ZP ZP
+
+		   YP YP YP        YP YP YP        YP YP YP        YP YP YP
+		ZN 36 37 38 ZP  XN 18 19 20 XP  ZP 09 10 11 ZN  XP 45 46 47 XN
+		ZN 39 LL 41 ZP  XN 21 FF 23 XP  ZP 12 RR 14 ZN  XP 48 BB 50 XN
+		ZN 42 43 44 ZP  XN 24 25 26 XP  ZP 15 16 17 ZN  XP 51 52 53 XN
+		   YN YN YN        YN YN YN        YN YN YN        YN YN YN
+
+		                   ZP ZP ZP
+		                XN 27 28 29 XP
+		                XN 30 DD 32 XP
+		                XN 33 34 35 XP
+		                   ZN ZN ZN
+	*/
+	static #orderFeature = [
+		{NORM : DIRECTION.YP, STICKER : 'U', O1 : DIRECTION.ZP, O2 : DIRECTION.XP},
+		{NORM : DIRECTION.XP, STICKER : 'R', O1 : DIRECTION.YN, O2 : DIRECTION.ZN},
+		{NORM : DIRECTION.ZP, STICKER : 'F', O1 : DIRECTION.YN, O2 : DIRECTION.XP},
+		{NORM : DIRECTION.YN, STICKER : 'D', O1 : DIRECTION.ZN, O2 : DIRECTION.XP},
+		{NORM : DIRECTION.XN, STICKER : 'L', O1 : DIRECTION.YN, O2 : DIRECTION.ZP},
+		{NORM : DIRECTION.ZN, STICKER : 'B', O1 : DIRECTION.YN, O2 : DIRECTION.XN}
+	];
+	static #getOrderFeature(in_norm) {
+		for (let i = 0; i < kociemba.#orderFeature.length; i++) {
+			const obj = kociemba.#orderFeature[i];
+			if (obj.NORM.equals(in_norm)) {
+				return {O0 : kociemba.stickerOrder(obj.STICKER), ...obj};
+			}
+		}
+		throw new Error('invalid param : ' + in_norm);
+	}
+	static updateOrderFeature(in_srcArr) {
+		// in_srcArr : as the same as sortedIndexes
+		in_srcArr.forEach(in_src => {
+			const size = in_src.pos.projectOnPlane(in_src.norm.normalize()).length();
+			if (size > 1e-3) {
+				return;
+			}
+			// center is on the axis : in_src.norm ---> in_src.sticker
+			for (let i = 0; i < kociemba.#orderFeature.length; i++) {
+				const e = kociemba.#orderFeature[i];
+				if (e.NORM.equals(in_src.norm)) {
+					e.STICKER = in_src.sticker;
+					return;
+				}
+			}
+		});
+		const stickerSet = new Set(kociemba.#orderFeature.map(in_e => in_e.STICKER));
+		if (stickerSet.size !== kociemba.sortedMap.size) {
+			throw new Error('something wrong happend');
+		}
+	}
+	static debugFacelet(in_facelet) {
+		const format = [
+			['*', 'U', '*', '*'],
+			['L', 'F', 'R', 'B'],
+			['*', 'D', '*', '*']
+		];
+		const rows = format.length;
+		const cols = format[0].length;
+		const findStickerIx = in_sticker => {
+			for (let row = 0; row < rows; row++) {
+				for (let col = 0; col < cols; col++) {
+					if (in_sticker === format[row][col]) {
+						return {row, col}
+					}
+				}
+			}
+			throw new Error('invalid sticker');
+		};
+		const table = Array.from({length : rows * 3}, () => Array(cols * 3).fill(null));
+		Array.from(kociemba.sortedMap).forEach((in_e, in_ix) => {
+			const ix = findStickerIx(in_e[1]);
+			for (let row = 0; row < 3; row++) {
+				for (let col = 0; col < 3; col++) {
+					table[ix.row * 3 + row][ix.col * 3 + col] = in_facelet[in_ix * 9 + row * 3 + col];
+				}
+			}
+		});
+		console.table(table);
+	}
+	static #dict = {
+		corner : {
+			indexes : [
+				[ 8,  9, 20],
+				[ 6, 18, 38],
+				[ 0, 36, 47],
+				[ 2, 45, 11],
+				[29, 26, 15],
+				[27, 44, 24],
+				[33, 53, 42],
+				[35, 17, 51]
+			],
+			stickers : []
+		},
+		edge : {
+			indexes : [
+				[ 5, 10],
+				[ 7, 19],
+				[ 3, 37],
+				[ 1, 46],
+				[32, 16],
+				[28, 25],
+				[30, 43],
+				[34, 52],
+				[23, 12],
+				[21, 41],
+				[50, 39],
+				[48, 14]
+			],
+			stickers : []
+		}
+	};
+	static {
+		let comp = [];
+		Array.from(kociemba.sortedMap).forEach(in_e => {
+			comp = comp.concat(Array(9).fill(in_e[1]));
+		});
+		Object.values(kociemba.#dict).forEach(({indexes, stickers}) => {
+			indexes.forEach(in_arr => stickers.push(in_arr.map(in_e => comp[in_e])));
+		});
+	}
+	static #isEqual = (in_a1, in_a2) => [...in_a1].sort().join('') === [...in_a2].sort().join('');
+	static #getIxOf(in_location, in_arr) {
+		const stickers = kociemba.#dict[in_location].stickers;
+		return stickers.findIndex(in_compArr => kociemba.#isEqual(in_arr, in_compArr));
+	}
+	static getCornerIx(in_arr) {
+		return kociemba.#getIxOf('corner', in_arr);
+	}
+	static getEdgeIx(in_arr) {
+		return kociemba.#getIxOf('edge', in_arr);
+	}
+	static sortedIndexes(in_srcArr) {
+		/*
+			in_srcArr = [
+				{sticker : sticker-00, norm : norm-00, pos : world-pos-00, ...},
+				{sticker : sticker-01, norm : norm-01, pos : world-pos-01, ...},
+				...
+				{sticker : sticker-53, norm : norm-53, pos : world-pos-53, ...}
+			];
+		*/
+		const arr = in_srcArr.map(({norm, pos}, in_ix) => {
+			const {O0, O1, O2} = kociemba.#getOrderFeature(norm);
+			const quantize = in_vec => {
+				let val = pos.dot(in_vec);
+				return Math.abs(val) < 1e-3 ? 0 : Math.sign(val);
+			};
+			return {ix : in_ix, o0 : O0, o1 : quantize(O1), o2 : quantize(O2)};
+		});
+		arr.sort((a, b) => (a.o0 === b.o0) ? ((a.o1 === b.o1) ? a.o2 - b.o2 : a.o1 - b.o1) : a.o0 - b.o0);
+		return arr.map(in_e => in_e.ix);
+	}
+	static faceletToCubie(in_facelet) {
+		const ret = {cp : [], co : [], ep : [], eo : []};
+		const c = this.#dict.corner;
+		for (let slot = 0; slot < c.indexes.length; slot++) {
+			const arr = c.indexes[slot];
+			// observed
+			const o0 = in_facelet[arr[0]];
+			const o1 = in_facelet[arr[1]];
+			const o2 = in_facelet[arr[2]];
+			const ix = kociemba.getCornerIx([o0, o1, o2]);
+			// expected
+			const [e0, e1, e2] = c.stickers[ix];
+			let orient;
+			if (o0 === e0 && o1 === e1 && o2 === e2) {
+				orient = 0;
+			} else if (o0 === e2 && o1 === e0 && o2 === e1) {
+				orient = 1;
+			} else if (o0 === e1 && o1 === e2 && o2 === e0) {
+				orient = 2;
+			} else {
+				throw new Error('invalid corner');
+			}
+			ret.cp[slot] = ix;
+			ret.co[slot] = orient;
+		}
+		const e = this.#dict.edge;
+		for (let slot = 0; slot < e.indexes.length; slot++) {
+			const arr = e.indexes[slot];
+			// observed
+			const o0 = in_facelet[arr[0]];
+			const o1 = in_facelet[arr[1]];
+			const ix = kociemba.getEdgeIx([o0, o1]);
+			// expected
+			const [e0, e1] = e.stickers[ix];
+			let orient;
+			if (o0 === e0 && o1 === e1) {
+				orient = 0;
+			} else if (o0 === e1 && o1 === e0) {
+				orient = 1;
+			} else {
+				throw new Error('invalid edge');
+			}
+			ret.ep[slot] = ix;
+			ret.eo[slot] = orient;
+		}
+		return ret;
+	}
+}
+
+class cCntRubiksCube extends cRubiksCube {
+	static #min2phase = null;
+	static {
+		(async () => {
+			const solver = new OffThreadMin2Phase();
+			await solver.initialize();
+			cCntRubiksCube.#min2phase = solver;
+		})();
+	}
+	#faceletFrom3D() {
+		// this.updateMatrixWorld(true);
+		const srcArr = [];
+		const facelet = [];
+		for (const piece of this.children) {
+			Object.values(DIRECTION).forEach(in_direction => {
+				const color = cCntRubiksCube.getColor(piece, in_direction);
+				if (color === INSIDECOLOR) {
+					return;
+				}
+				srcArr.push({
+					sticker : kociemba.sortedMap.get(color),
+					norm : in_direction,
+					pos : piece.getWorldPosition(VEC3()),
+				});
+			});
+		}
+		kociemba.updateOrderFeature(srcArr);
+		const sorted = kociemba.sortedIndexes(srcArr);
+		for (let i = 0; i < sorted.length; i++) {
+			facelet[i] = srcArr[sorted[i]].sticker;
+		}
+		return facelet;
+	}
+	#stateFromFacelet(in_faceletArr) {
+		// kociemba.debugFacelet(in_faceletArr);
+		const cubie = kociemba.faceletToCubie(in_faceletArr);
+		// console.log(state);
+		const state = {
+			CORNER : {
+				permutation : cubie.cp,
+				orientation : cubie.co
+			},
+			EDGE : {
+				permutation : cubie.ep,
+				orientation : cubie.eo,
+			},
+			CENTER : {
+				permutation : [0, 1, 2, 3, 4, 5],
+				orientation : [0, 0, 0, 0, 0, 0]
+			}
+		};
+		return state;
+	}
+	countUntilSolve(in_callback) {
+		if (cCntRubiksCube.#min2phase) {
+			const faceletArr = this.#faceletFrom3D();
+			const state = this.#stateFromFacelet(faceletArr);
+			(async () => {
+				const solution = await cCntRubiksCube.#min2phase.solve(state);
+				//console.log(solution);
+				const cnt = solution.nestedUnits.length;
+				(in_callback)(cnt);
+			})();
+		} else {
+			(in_callback)(-1);
+		}
+	}
+	rotateOnWorldAxis(in_axis, in_rad) {
+		const reparentChildren = (a, b) => [...a.children].forEach(in_e => b.attach(in_e));
+		const temp = new THREE.Object3D();
+		reparentChildren(this, temp);
+		temp.rotateOnWorldAxis(in_axis, in_rad);
+		reparentChildren(temp, this);
+	}
+}
 
 /*
 	(3) ui & dom setting
@@ -307,24 +661,47 @@ const gMeshLevelMap = ((in_cubeSize) => {
 		+-- meshes <--- gMeshLevelMap
 */
 
+const CUBE_SIZE = 400;
+
 const WORLD_RADIUS = CUBE_SIZE * 10;
-const WORLD_INIT_ZOOM = WORLD_RADIUS / 2;
+const WORLD_INIT_ZOOM = WORLD_RADIUS / 3;
 
 const gWorld = new cSphericalWorld(WORLD_RADIUS);
 
-const gCube = new cRubiksCube();
+const gCube = new cCntRubiksCube();
 
 gWorld.add(gCube);
 
 gWorld.moveView(2.5, 0.5);
 gWorld.motionZoom2(WORLD_INIT_ZOOM, 1000);
 
-/*
-	*** NOTE ***
-	when you use AxesHelper,
-	// gWorld.add(new THREE.AxesHelper(WORLD_RADIUS));
-	gWorld.setZoom() can not work well.
-*/
+(async in_cubeSize => {
+	const cubeDim = new cCubeDimV3(3, 3, 3);
+	const unitSize = in_cubeSize / cubeDim.maxDim;
+	const pieces = [];
+	// see cCubeDimV3 implementation
+	cubeDim.positionLoop((in_ixV3, in_posV3, in_sizeV3) => {
+		if (cubeDim.isInsideCube(in_ixV3)) {
+			// console.log('inside', in_ixV3);
+			return;
+		}
+		const geometry = boxGeometryFactory.create(...in_sizeV3.toArray());
+		// geometry has 7 groups (sub meshes)
+		const colors = pieceColorList(cubeDim, in_ixV3);
+		const materials = boxMaterials(...in_sizeV3.toArray(), colors);
+		materials.push(edgeMaterial);
+		/*
+			*** NOTE ***
+			when you use materials (= array) for "new THREE.Mesh",
+			the geometry should be devided into groups (= sub meshes).
+		*/
+		const piece = new THREE.Mesh(geometry, materials);
+		piece.position.copy(in_posV3);
+		pieces.push(piece);
+	}, unitSize);
+	await gWorld.motionFog(0x000000, 0, 100);
+	gCube.setupAllPieces(pieces);
+})(CUBE_SIZE);
 
 class cWarpLine {
 	static #speed = 10;
@@ -533,45 +910,6 @@ function uiRights() {
 const ID_PREV_LEVEL = randomString();
 const ID_NEXT_LEVEL = randomString();
 
-(in_level => {
-	if (in_level === false) {
-		gMeshLevelMap.setOrder(1);
-	} else {
-		gMeshLevelMap.setOrder(in_level);
-	}
-})(getParam('level'));
-
-async function updateLevel() {
-	const color = 0x000000;
-	await gWorld.motionFog(color, 0, 100);
-	gCube.removePieces();
-	const current = gMeshLevelMap.currItemByOrder();
-	gCube.setupAllPieces(current.v);
-	await gWorld.motionFog(color, 100, 0);
-	const prev = gMeshLevelMap.prevItemByOrder();
-	const next = gMeshLevelMap.nextItemByOrder();
-	document.getElementById(ID_PREV_LEVEL).innerText = prev.k;
-	document.getElementById(ID_NEXT_LEVEL).innerText = next.k;
-}
-
-updateLevel();
-
-function prevLevel(in_sound = true) {
-	if (in_sound) {
-		SE_BEEP.play();
-	}
-	gMeshLevelMap.shiftOrder(-1);
-	updateLevel();
-}
-
-function nextLevel(in_sound = true) {
-	if (in_sound) {
-		SE_BEEP.play();
-	}
-	gMeshLevelMap.shiftOrder(+1);
-	updateLevel();
-}
-
 (in_settings => {
 	let container = document.createElement('div');
 	Object.assign(container.style, {
@@ -597,16 +935,6 @@ function nextLevel(in_sound = true) {
 		container.appendChild(button);
 	});
 })([
-	{
-		id : ID_PREV_LEVEL,
-		text : '(Prev)',
-		func : prevLevel
-	},
-	{
-		id : ID_NEXT_LEVEL,
-		text : '(Next)',
-		func : nextLevel
-	},
 	{
 		text : 'shuffle x3',
 		func : shuffle3
@@ -906,8 +1234,13 @@ const gHandlers = (() => {
 		}
 	});
 	const stop = in_ev => {
-		const releaseProgress = gCube.uiRelease(() => {
+		const releaseProgress = gCube.uiRelease(in_rotateURFDLB => {
 			gWorld.removeAnimationHook(releaseProgress);
+			if (in_rotateURFDLB) {
+				gCube.rotateOnWorldAxis(in_rotateURFDLB.axis, in_rotateURFDLB.rad * -1);
+				gWorld.rotateOnWorldAxis(in_rotateURFDLB.axis, in_rotateURFDLB.rad)
+			}
+			//gCube.countUntilSolve(in_cnt => console.log('last : ', in_cnt));
 		});
 		if (releaseProgress) {
 			gWorld.addAnimationHook(releaseProgress);
