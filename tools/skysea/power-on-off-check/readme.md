@@ -6,7 +6,7 @@
 
 ### ファイル名
 
- *.csv
+    *.csv
 
 ### ファイル形式
 
@@ -25,11 +25,6 @@
 
 ### 出力形式
 
- login=hoge.jiro, until=5, rate-total=0.761904761904762(16/21), rate-recent=0.666666666666667(6/9)
- login=hoge.taro, until=21, rate-total=0.25(1/4), rate-recent=0(0/2)
- login=dummy, until=(the date before 04/01/2025 00:00:00), rate-total=0(0/1), rate-recent=0(0/1)
- terminal=1111, until=(the date before 04/01/2025 00:00:00), rate-total=0(0/1), rate-recent=0(0/1)
-
 | 項目 | 内容 |
 | ---- | ---- |
 | login | ログイン名 |
@@ -38,3 +33,9 @@
 | rate-tota | 電源 OFF にしている割合 |
 | rate-recent | 電源 OFF にしている割合（直近 $agoDays 以内で） |
 
+### 出力サンプル
+
+    login=hoge.jiro, until=5, rate-total=0.761904761904762(16/21), rate-recent=0.666666666666667(6/9)
+    login=hoge.taro, until=21, rate-total=0.25(1/4), rate-recent=0(0/2)
+    login=dummy, until=(the date before 04/01/2025 00:00:00), rate-total=0(0/1), rate-recent=0(0/1)
+    terminal=1111, until=(the date before 04/01/2025 00:00:00), rate-total=0(0/1), rate-recent=0(0/1)
