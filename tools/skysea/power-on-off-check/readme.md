@@ -17,6 +17,10 @@
 | 6 | 7 | イベント発生日 |
 | 11 | 12 | イベント内容 |
 
+### 入力サンプル
+
+- https://github.com/nakayama-kazuki/202x/blob/main/tools/skysea/power-on-off-check/test/testdata.csv
+
 ## 出力データ
 
 ### ファイル名
