@@ -1,0 +1,86 @@
+@python -c "exec(''.join(open(r'%~f0', encoding='utf-8').readlines()[1:]))" %* & goto:eof
+
+import os
+import csv
+from collections import defaultdict
+from datetime import datetime, timedelta
+import sys
+
+input_files = [f for f in os.listdir(".") if f.endswith(".csv")]
+output_file = "result.txt"
+if os.path.exists(output_file):
+    os.remove(output_file)
+
+kv_col_indices = {
+    "Terminal": 0,
+    "Login": 4,
+    "Date": 6,
+    "Operation": 11
+}
+
+arr_terminals = []
+kv_days_onoff = defaultdict(set)
+kv_days_total = defaultdict(set)
+kv_mapper = {}
+
+ago_days = 20
+operation_target_text = "OFF"
+oldest_date = datetime.now()
+newest_date = datetime.min
+
+for file in input_files:
+    with open(file, encoding="cp932", errors="ignore") as f:
+        reader = csv.reader(f)
+        next(reader, None)  # skip header
+        for row in reader:
+            if len(row) <= kv_col_indices["Operation"]:
+                continue
+
+            kv = {k: row[idx].strip() for k, idx in kv_col_indices.items()}
+
+            # 1. arr_terminals + kv_mapper
+            if kv["Terminal"] not in arr_terminals:
+                arr_terminals.append(kv["Terminal"])
+            if kv["Login"]:
+                kv_mapper.setdefault(kv["Terminal"], kv["Login"])
+
+            # 2. logDate + oldestDate/newestDate
+            try:
+                log_date = datetime.strptime(kv["Date"], "%Y/%m/%d %H:%M:%S")
+            except ValueError:
+                continue
+
+            if log_date < oldest_date:
+                oldest_date = log_date
+            if log_date > newest_date:
+                newest_date = log_date
+
+            # 3. kv_days_onoff
+            if operation_target_text in kv["Operation"]:
+                kv_days_onoff[kv["Terminal"]].add(log_date.date())
+
+            # 4. kv_days_total
+            kv_days_total[kv["Terminal"]].add(log_date.date())
+
+ago = newest_date - timedelta(days=ago_days)
+
+with open(output_file, "w", encoding="cp932") as f:
+    for terminal in arr_terminals:
+        identifier = f"login={kv_mapper[terminal]}" if terminal in kv_mapper else f"terminal={terminal}"
+        offs = kv_days_onoff.get(terminal, set())
+        totals = kv_days_total.get(terminal, set())
+
+        if not offs:
+            keep_on = f"(the date before {oldest_date.strftime('%m/%d/%Y 00:00:00')})"
+        else:
+            keep_on = (max(totals) - max(offs)).days
+
+        offs_total = len(offs)
+        days_total = len(totals)
+        rate_total = offs_total / days_total if days_total else 0
+
+        offs_recent = sum(1 for d in offs if d >= ago.date())
+        days_recent = sum(1 for d in totals if d >= ago.date())
+        rate_recent = offs_recent / days_recent if days_recent else 0
+
+        f.write(f"{identifier}, until={keep_on}, rate-total={rate_total}({offs_total}/{days_total}), rate-recent={rate_recent}({offs_recent}/{days_recent})\n")

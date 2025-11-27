@@ -1,0 +1,126 @@
+@powershell "$THISFILE='%~f0'; $PSCODE=[scriptblock]::create((Get-Content $THISFILE | Where-Object {$_.readcount -gt 1}) -join [Environment]::NewLine); & $PSCODE %*" & goto:eof
+
+# $outputFile
+# ---
+# login=hoge.jiro, until=5, rate-total=0.761904761904762(16/21), rate-recent=0.666666666666667(6/9)
+# login=hoge.taro, until=21, rate-total=0.25(1/4), rate-recent=0(0/2)
+# login=dummy, until=(the date before 04/01/2025 00:00:00), rate-total=0(0/1), rate-recent=0(0/1)
+# terminal=1111, until=(the date before 04/01/2025 00:00:00), rate-total=0(0/1), rate-recent=0(0/1)
+# ---
+# login : login name 
+# termina : termina (when login name is not available)
+# until=N : this user have not shut down from N days before
+#           when there is not shut down data, "(the date before MM/DD/YYYY 00:00:00)" will be logged
+# rate-total=N.NN : the rate of shutting down
+# rate-recent=N.NN : the rate of shutting down (within $agoDays)
+
+$inputFiles = Get-ChildItem -Path . -Filter *.csv
+$outputFile = 'result.txt'
+if (Test-Path $outputFile) {
+	Remove-Item $outputFile
+}
+
+$kvColIndices = @{
+	'Terminal' = 0
+	'Login' = 4
+	'Date' = 6
+	'Operation' = 11
+}
+
+$arrTerminals = @()
+$kvDaysOnOff = @{}
+$kvDaysTotal = @{}
+$kvMapper = @{}
+
+$agoDays = 20
+$operationTargetText = '*OFF'
+$oldestDate = [datetime]::Now
+$newestDate = [datetime]::MinValue
+
+foreach ($csvFile in $inputFiles) {
+	$reader = [System.IO.StreamReader]::new($csvFile.FullName, [System.Text.Encoding]::GetEncoding('Shift_JIS'))
+	# skip header
+	$reader.ReadLine()
+	while ($reader.Peek() -ge 0) {
+		###
+		### 0. parse csv
+		###
+		$line = $reader.ReadLine()
+		$columns = $line -split ','
+		if ($columns.Length -le $kvColIndices['Operation']) {
+			continue
+		}
+		$kvColValues = @{}
+		foreach ($name in $kvColIndices.Keys) {
+			$kvColValues[$name] = $columns[$kvColIndices[$name]].Trim()
+		}
+
+		###
+		### 1. $arrTerminals + $kvMapper
+		###
+		if (-not ($arrTerminals -contains $kvColValues['Terminal'])) {
+			$arrTerminals += $kvColValues['Terminal']
+		}
+		if ($kvColValues['Login'] -ne '') {
+			if (-not $kvMapper.ContainsKey($kvColValues['Terminal'])) {
+				$kvMapper[$kvColValues['Terminal']] = $kvColValues['Login']
+			}
+		}
+
+		###
+		### 2. $logDate + $oldestDate
+		###
+		$logDate = [datetime]::ParseExact($kvColValues['Date'], 'yyyy/MM/dd HH:mm:ss', $null)
+		if ($logDate -lt $oldestDate) {
+			$oldestDate = $logDate
+		}
+		if ($logDate -gt $newestDate) {
+			$newestDate = $logDate
+		}
+
+		###
+		### 3. $kvDaysOnOff for each user
+		###
+		if (-not $kvDaysOnOff.ContainsKey($kvColValues['Terminal'])) {
+			$kvDaysOnOff[$kvColValues['Terminal']] = @()
+		}
+		if ($kvColValues['Operation'] -like $operationTargetText) {
+			if (-not ($kvDaysOnOff[$kvColValues['Terminal']] -contains $logDate.Date)) {
+				$kvDaysOnOff[$kvColValues['Terminal']] += $logDate.Date
+			}
+		}
+
+		###
+		### 4. $kvDaysTotal for each user
+		###
+		if (-not $kvDaysTotal.ContainsKey($kvColValues['Terminal'])) {
+			$kvDaysTotal[$kvColValues['Terminal']] = @()
+		}
+		if (-not ($kvDaysTotal[$kvColValues['Terminal']] -contains $logDate.Date)) {
+			$kvDaysTotal[$kvColValues['Terminal']] += $logDate.Date
+		}
+	}
+}
+
+$ago = $newestDate.AddDays($agoDays * -1)
+
+foreach ($terminal in $arrTerminals) {
+	if ($kvMapper.ContainsKey($terminal)) {
+		$identifier = 'login=' + $kvMapper[$terminal]
+	} else {
+		$identifier = 'terminal=' + $terminal
+	}
+	if ($kvDaysOnOff[$terminal].Count -eq 0) {
+		$keepOnDays = '(the date before ' + $oldestDate.Date + ')'
+	} else {
+		$keepOnDays = ($kvDaysTotal[$terminal] | Sort-Object)[-1] - ($kvDaysOnOff[$terminal] | Sort-Object)[-1]
+		$keepOnDays = [int]$keepOnDays.TotalDays
+	}
+	$offsTotal = $kvDaysOnOff[$terminal].Count
+	$daysTotal = $kvDaysTotal[$terminal].Count
+	$rateTotal = $offsTotal / $daysTotal
+	$offsRecent = ($kvDaysOnOff[$terminal] | Where-Object { $_ -ge $ago }).Count
+	$daysRecent = ($kvDaysTotal[$terminal] | Where-Object { $_ -ge $ago }).Count
+	$rateRecent = $offsRecent / $daysRecent
+	Add-Content -Path $outputFile -Value "$identifier, until=$keepOnDays, rate-total=$rateTotal($offsTotal/$daysTotal), rate-recent=$rateRecent($offsRecent/$daysRecent)" -Encoding Default
+}
