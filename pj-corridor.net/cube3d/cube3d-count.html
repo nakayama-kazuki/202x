@@ -11,13 +11,601 @@
 		"utils" : "https://cdn.jsdelivr.net/npm/three@0.181.0/examples/jsm/utils/BufferGeometryUtils.js",
 		"basic" : "./basic-functions.js",
 		"rubik" : "./rubiks-cube.js",
-		"min2p" : "https://esm.sh/@biohuns/min2phase@0.4.4?bundle",
 		"sound" : "./sound-effect.js"
 	}
 }
 </script>
 </head>
 <body>
+<script id='worker-blob' type='text/plain'>
+
+class facelet {
+	static #dim = 3;
+	static pieces = facelet.#dim ** 2;
+	static sortedArr = [...'URFDLB'];
+	static surfaces = facelet.sortedArr.length;
+	static faceletCnt = facelet.surfaces * facelet.pieces;
+	static #makeComplete(in_isIx = true) {
+		const comp = [];
+		facelet.sortedArr.forEach((in_sticker, in_ix) => {
+			const data = in_isIx ? in_ix : in_sticker;
+			comp.push(...Array(facelet.pieces).fill(data));
+		});
+		return comp;
+	}
+	static #makeInitIndexes() {
+		return Array.from({length : facelet.faceletCnt}, (_, i) => i);
+	}
+	/*
+		                   ZN ZN ZN
+		                XN 00 01 02 XP
+		                XN 03 UU 05 XP
+		                XN 06 07 08 XP
+		                   ZP ZP ZP
+
+		   YP YP YP        YP YP YP        YP YP YP        YP YP YP
+		ZN 36 37 38 ZP  XN 18 19 20 XP  ZP 09 10 11 ZN  XP 45 46 47 XN
+		ZN 39 LL 41 ZP  XN 21 FF 23 XP  ZP 12 RR 14 ZN  XP 48 BB 50 XN
+		ZN 42 43 44 ZP  XN 24 25 26 XP  ZP 15 16 17 ZN  XP 51 52 53 XN
+		   YN YN YN        YN YN YN        YN YN YN        YN YN YN
+
+		                   ZP ZP ZP
+		                XN 27 28 29 XP
+		                XN 30 DD 32 XP
+		                XN 33 34 35 XP
+		                   ZN ZN ZN
+	*/
+	static #edgeRingMap = new Map([
+		['U', [47, 46, 45, 11, 10,  9, 20, 19, 18, 38, 37, 36]],
+		['R', [ 8,  5,  2, 45, 48, 51, 35, 32, 29, 26, 23, 20]],
+		['F', [ 6,  7,  8,  9, 12, 15, 29, 28, 27, 44, 41, 38]],
+		['D', [24, 25, 26, 15, 16, 17, 51, 52, 53, 42, 43, 44]],
+		['L', [ 0,  3,  6, 18, 21, 24, 27, 30, 33, 53, 50, 47]],
+		['B', [ 2,  1,  0, 36, 39, 42, 33, 34, 35, 17, 14, 11]]
+	]);
+	static #centerRingMap = new Map([
+		['M', [ 1,  4,  7, 19, 22, 25, 28, 31, 34, 52, 49, 46]],
+		['E', [48, 49, 50, 39, 40, 41, 21, 22, 23, 12, 13, 14]],
+		['S', [ 3,  4,  5, 10, 13, 16, 32, 31, 30, 43, 40, 37]]
+	]);
+	static #axis = [
+		['L', 'M', 'R'],
+		['D', 'E', 'U'],
+		['B', 'S', 'F']
+	];
+	static #surfaceR90 = [6, 3, 0, 7, 4, 1, 8, 5, 2];
+	static #rotateEdge(in_ixArr, in_sticker, in_cnt = 1) {
+		const cnt = (in_cnt + 4) % 4;
+		if (cnt === 0) {
+			return in_ixArr;
+		}
+		const ixArr = [...in_ixArr];
+		// 1. surface of in_sticker
+		const start = facelet.sortedArr.indexOf(in_sticker) * facelet.pieces;
+		facelet.#surfaceR90.forEach((in_srcIx, in_dstIx) => ixArr[start + in_dstIx] = in_ixArr[start + in_srcIx]);
+		// 2. ring around in_sticker
+		const ring = facelet.#edgeRingMap.get(in_sticker);
+		for (let i = 0; i < ring.length; i++) {
+			const srcIx = ring[i];
+			const dstIx = ring[(i + 3) % ring.length];
+			ixArr[dstIx] = in_ixArr[srcIx];
+		}
+		if (cnt > 1) {
+			return facelet.#rotateEdge(ixArr, in_sticker, (cnt - 1));
+		} else {
+			return ixArr;
+		}
+	}
+	static #rotateCenter(in_ixArr, in_slice, in_cnt = 1) {
+		const cnt = (in_cnt + 4) % 4;
+		if (cnt === 0) {
+			return in_ixArr;
+		}
+		const ixArr = [...in_ixArr];
+		const ring = facelet.#centerRingMap.get(in_slice);
+		for (let i = 0; i < ring.length; i++) {
+			const srcIx = ring[i];
+			const dstIx = ring[(i + 3) % ring.length];
+			ixArr[dstIx] = in_ixArr[srcIx];
+		}
+		if (cnt > 1) {
+			return facelet.#rotateCenter(ixArr, in_slice, (cnt - 1));
+		} else {
+			return ixArr;
+		}
+	}
+	static moveArr = [];
+	static {
+		const initArr = facelet.#makeInitIndexes();
+		let sameId = 0;
+		facelet.sortedArr.forEach(in_sticker => {
+			const axisId = facelet.#axis.findIndex(in_arr => in_arr.includes(in_sticker));
+			const axisOrder = facelet.#axis[axisId].indexOf(in_sticker);
+			const registerMove = in_angle => {
+				facelet.moveArr.push({
+					move : facelet.#rotateEdge(initArr, in_sticker, in_angle / 90),
+					hint : {same : sameId, axis : axisId, order : axisOrder, angle : in_angle}
+				});
+			};
+			registerMove(90);
+			registerMove(180);
+			registerMove(270);
+			sameId++;
+		});
+		const sliceArr = ['M', 'E', 'S'];
+		sliceArr.forEach(in_slice => {
+			const axisId = facelet.#axis.findIndex(in_arr => in_arr.includes(in_slice));
+			const axisOrder = facelet.#axis[axisId].indexOf(in_slice);
+			const registerMove = in_angle => {
+				facelet.moveArr.push({
+					move : facelet.#rotateCenter(initArr, in_slice, in_angle / 90),
+					hint : {same : sameId, axis : axisId, order : axisOrder, angle : in_angle}
+				});
+			};
+			registerMove(90);
+			registerMove(180);
+			registerMove(270);
+			sameId++;
+		});
+	}
+	static canonical = [];
+	static {
+		const rotateGroup = {
+			FtoR : [
+				{sticker : 'U', cnt : 3},
+				{sticker : 'E', cnt : 1},
+				{sticker : 'D', cnt : 1}
+			],
+			RtoU : [
+				{sticker : 'F', cnt : 3},
+				{sticker : 'S', cnt : 3},
+				{sticker : 'B', cnt : 1}
+			],
+			UtoF : [
+				{sticker : 'L', cnt : 1},
+				{sticker : 'M', cnt : 1},
+				{sticker : 'R', cnt : 3}
+			]
+		}
+		const initArr = facelet.#makeInitIndexes();
+		const canonMoveArr = [
+			// U === U
+			[],
+			['FtoR'],
+			['FtoR', 'FtoR'],
+			['FtoR', 'FtoR', 'FtoR'],
+			// U === R
+			['RtoU'],
+			['RtoU', 'FtoR'],
+			['RtoU', 'FtoR', 'FtoR'],
+			['RtoU', 'FtoR', 'FtoR', 'FtoR'],
+			// U === B
+			['UtoF'],
+			['UtoF', 'FtoR'],
+			['UtoF', 'FtoR', 'FtoR'],
+			['UtoF', 'FtoR', 'FtoR', 'FtoR'],
+			// U === D
+			['RtoU', 'RtoU'],
+			['RtoU', 'RtoU', 'FtoR'],
+			['RtoU', 'RtoU', 'FtoR', 'FtoR'],
+			['RtoU', 'RtoU', 'FtoR', 'FtoR', 'FtoR'],
+			// U === L
+			['RtoU', 'RtoU', 'RtoU'],
+			['RtoU', 'RtoU', 'RtoU', 'FtoR'],
+			['RtoU', 'RtoU', 'RtoU', 'FtoR', 'FtoR'],
+			['RtoU', 'RtoU', 'RtoU', 'FtoR', 'FtoR', 'FtoR'],
+			// U === F
+			['UtoF', 'UtoF', 'UtoF'],
+			['UtoF', 'UtoF', 'UtoF', 'FtoR'],
+			['UtoF', 'UtoF', 'UtoF', 'FtoR', 'FtoR'],
+			['UtoF', 'UtoF', 'UtoF', 'FtoR', 'FtoR', 'FtoR']
+		];
+		canonMoveArr.forEach(in_rotateArr => {
+			let tempArr = initArr;
+			in_rotateArr.forEach(in_which => {
+				rotateGroup[in_which].forEach(({sticker, cnt}) => {
+					if (facelet.#edgeRingMap.has(sticker)) {
+						tempArr = facelet.#rotateEdge(tempArr, sticker, cnt);
+					} else {
+						// facelet.#centerRingMap.has(sticker)
+						tempArr = facelet.#rotateCenter(tempArr, sticker, cnt);
+					}
+				});
+			});
+			facelet.canonical.push(tempArr);
+		});
+		// debug for facelet.canonical
+		if (false) {
+			const comp = facelet.#makeComplete(false);
+			facelet.debugCanonical(comp);
+		}
+	}
+	static debugCanonical(in_arr) {
+		facelet.canonical.forEach((in_move, in_no) => {
+			const moved = [];
+			for (let i = 0; i < in_move.length; i++) {
+				moved[i] = in_arr[in_move[i]];
+			}
+			console.log('canonical #' + in_no);
+			facelet.debug(moved);
+		});
+	}
+	static #surfaceTupleMap = (() => {
+		const map = new Map();
+		// for facelet.#c
+		for (let tupleCnt = 1; tupleCnt <= 3; tupleCnt++) {
+			const total = facelet.pieces * tupleCnt;
+			const nTupleArr = [];
+			function nextDigit(in_arr, in_depth) {
+				const tail = in_arr[in_arr.length - 1];
+				const sum = in_arr.reduce((a, b) => a + b, 0);
+				for (let i = tail; i >= 0; i--) {
+					if (sum + i > total) {
+						continue;
+					}
+					const arr = [...in_arr, i];
+					if (in_depth === 1) {
+						if (sum + i === total) {
+							nTupleArr.push(arr);
+						}
+					} else {
+						nextDigit(arr, in_depth - 1);
+					}
+				}
+			}
+			for (let i = facelet.pieces; i > 0; i--) {
+				nextDigit([i], 5);
+			}
+			for (let i = 0; i < nTupleArr.length; i++) {
+				let sum = 0;
+				for (let j = 0; j < nTupleArr[i].length; j++) {
+					sum += nTupleArr[i][j] * (10 ** (nTupleArr[i].length - j - 1));
+				}
+				nTupleArr[i] = sum;
+			}
+			map.set(tupleCnt, nTupleArr);
+		}
+		// console.log(map);
+		return map;
+	})();
+	static #pruningMap = new Map([
+		/*
+			1-1 : 24/26
+			1-2 : 19/26
+			1-3 :  5/26
+			1-4 :  0/26
+			1-5 :  0/26
+
+			2-1 : 137/139
+			2-2 : 135/139
+			2-3 : 116/139
+			2-4 :  40/139
+			2-5 :   7/139
+
+			3-1 : 225/227
+			3-2 : 218/227
+			3-3 : 164/227
+			3-4 :  17/227
+			3-5 :   1/227
+		*/
+		[1, new Map([
+			[1, new Set()]
+		])],
+		[2, new Map([
+			[2, new Set()],
+			[3, new Set()],
+			[1, new Set()]
+		])],
+		[3, new Map([
+			[2, new Set()],
+			[3, new Set()],
+			[1, new Set()]
+		])],
+		[4, new Map([
+			[2, new Set([
+				981000,
+				972000,
+				963000,
+				954000,
+				873000,
+				864000,
+				855000,
+				774000,
+				971100,
+				962100,
+				953100,
+				952200,
+				944100,
+				843300,
+				644400,
+				555300,
+				961110,
+				952110,
+				943110,
+				942210,
+				933210,
+				932220,
+				871110,
+				833310,
+				833220,
+				763110,
+				743310,
+				733320,
+				555210,
+				951111,
+				942111,
+				933111,
+				922221,
+				832221,
+				822222,
+				733311,
+				733221,
+				663111,
+				555111,
+				533322
+			])],
+			[3, new Set([
+				966600,
+				887400,
+				886500,
+				877500,
+				777600,
+				993330,
+				866610,
+				777330,
+				755550,
+				995211,
+				994311,
+				994221,
+				993222,
+				983331,
+				966222,
+				944442,
+				888111
+			])]
+		])],
+		[5, new Map([
+			[2, new Set([
+				933111,
+				922221,
+				961110,
+				954000,
+				944100,
+				933210,
+				855000
+			])]
+		])],
+	]);
+	static get actualDepth() {
+		const additionalDepth = 3;
+		return facelet.#pruningMap.size + additionalDepth;
+	}
+	static pack = (() => {
+		const digit1 = facelet.surfaces ** 1;
+		const digit2 = facelet.surfaces ** 2;
+		const representativeArr = new Uint8Array(facelet.faceletCnt);
+		const digit = 3;
+		return in_uArr => {
+			representativeArr.fill(0xFF);
+			facelet.canonical.forEach(in_move => {
+				for (let i = 0; i < facelet.faceletCnt; i++) {
+					if (in_uArr[in_move[i]] === representativeArr[i]) {
+						// next elem
+						continue;
+					}
+					if (in_uArr[in_move[i]] < representativeArr[i]) {
+						// update representative by current in_move
+						for (let j = i; j < facelet.faceletCnt; j++) {
+							representativeArr[j] = in_uArr[in_move[j]];
+						}
+					}
+					// next in_move
+					break;
+				}
+			});
+			let uniqStr = '';
+			for (let i = 0; i < representativeArr.length / digit; i++) {
+				const g = i * digit;
+				const ch =
+					representativeArr[g + 0] * digit2 +
+					representativeArr[g + 1] * digit1 +
+					representativeArr[g + 2];
+				uniqStr += String.fromCharCode(ch);
+			}
+			return uniqStr;
+		};
+	})();
+	static #makeTupleKey = (() => {
+		const offsetArr = [];
+		offsetArr[0] = null;
+		for (let i = 1; i < facelet.#surfaceTupleMap.size + 1; i++) {
+			const orderCnt = facelet.surfaces / i;
+			offsetArr[i] = [];
+			for (let order = 0; order < orderCnt; order++) {
+				const arr = new Uint8Array(i);
+				for (let j = 0; j < i; j++) {
+					arr[j] = (orderCnt * j + order) * facelet.pieces;
+				}
+				offsetArr[i][order] = arr;
+			}
+		}
+		const varietyArr = new Uint8Array(facelet.surfaces);
+		return (in_arr, in_tuple, in_order) => {
+			varietyArr.fill(0);
+			const ref = offsetArr[in_tuple][in_order];
+			for (let i = 0; i < facelet.pieces; i++) {
+				ref.forEach(in_offset => varietyArr[in_arr[in_offset + i]]++);
+			}
+			return varietyArr.sort((a, b) => b - a).reduce((a, b) => a * 10 + b, 0);
+		};
+	})();
+	static {
+		const ignoreSet = new Set();
+		const forEachMove = (in_srcArr, in_depth, in_callback) => {
+			for (let i = 0; i < facelet.moveArr.length; i++) {
+				let dstArr = new Uint8Array(facelet.faceletCnt);
+				const move = facelet.moveArr[i].move;
+				for (let j = 0; j < move.length; j++) {
+					dstArr[j] = in_srcArr[move[j]];
+				}
+				if (in_depth > 1) {
+					forEachMove(dstArr, (in_depth - 1), in_callback);
+				} else {
+					const packed = facelet.pack(dstArr);
+					if (ignoreSet.has(packed)) {
+						continue;
+					} else {
+						ignoreSet.add(packed);
+						(in_callback)(dstArr);
+					}
+				}
+			}
+		};
+		for (let depth = 1; depth <= facelet.#pruningMap.size; depth++) {
+			const depthMap = facelet.#pruningMap.get(depth);
+			for (const [tupleCnt, unreachSet] of depthMap) {
+				if (unreachSet.size > 0) {
+					// preset
+					continue;
+				}
+				facelet.#surfaceTupleMap.get(tupleCnt).forEach(in_e => unreachSet.add(in_e));
+				const initArr = facelet.#makeComplete();
+				ignoreSet.clear();
+				forEachMove(initArr, depth, in_movedArr => {
+					for (let order = 0; order < facelet.surfaces / tupleCnt; order++) {
+						const reached = facelet.#makeTupleKey(in_movedArr, tupleCnt, order);
+						unreachSet.delete(reached);
+					}
+				});
+			}
+		}
+		// console.log(facelet.#pruningMap);
+	}
+	static maySolveBy(in_arr, in_moveCnt) {
+		if (in_moveCnt > facelet.#pruningMap.size) {
+			return true;
+		}
+		const depthMap = facelet.#pruningMap.get(in_moveCnt);
+		for (const [tupleCnt, unreachSet] of depthMap) {
+			for (let order = 0; order < facelet.surfaces / tupleCnt; order++) {
+				const reached = facelet.#makeTupleKey(in_arr, tupleCnt, order);
+				if (unreachSet.has(reached)) {
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+	static debug(in_arr) {
+		const format = [
+			['*', 'U', '*', '*'],
+			['L', 'F', 'R', 'B'],
+			['*', 'D', '*', '*']
+		];
+		const rows = format.length;
+		const cols = format[0].length;
+		const findStickerIx = in_sticker => {
+			for (let row = 0; row < rows; row++) {
+				for (let col = 0; col < cols; col++) {
+					if (in_sticker === format[row][col]) {
+						return {row, col}
+					}
+				}
+			}
+			throw new Error('invalid sticker');
+		};
+		const table = Array.from({length : rows * facelet.#dim}, () => Array(cols * facelet.#dim).fill(null));
+		facelet.sortedArr.forEach((in_sticker, in_ix) => {
+			const ix = findStickerIx(in_sticker);
+			for (let row = 0; row < facelet.#dim; row++) {
+				for (let col = 0; col < facelet.#dim; col++) {
+					const r = ix.row * facelet.#dim + row;
+					const c = ix.col * facelet.#dim + col;
+					const f = in_ix * (facelet.pieces) + row * facelet.#dim + col;
+					table[r][c] = in_arr[f];
+				}
+			}
+		});
+		console.table(table);
+	}
+}
+
+function countUntilSolve(in_currArr) {
+	const isComplete = in_uArr => {
+		// facelet.surfaces - 1 is enough for checking
+		for (let f = 0; f < facelet.surfaces - 1; f++) {
+			const offset = f * facelet.pieces;
+			for (let i = 1; i < facelet.pieces; i++) {
+				if (in_uArr[offset] !== in_uArr[offset + i]) {
+					return false;
+				}
+			}
+		}
+		return true;
+	};
+	const apply = (in_srcArr, in_dstArr, in_move) => {
+		for (let i = 0; i < in_move.length; i++) {
+			in_dstArr[i] = in_srcArr[in_move[i]];
+		}
+	};
+	const dfs = (in_currArr, in_budget, in_prevHint, in_visited) => {
+		if (in_budget === 0) {
+			return isComplete(in_currArr);
+		}
+		if (!facelet.maySolveBy(in_currArr, in_budget)) {
+			return false;
+		}
+		const packed = facelet.pack(in_currArr);
+		if ((in_visited.get(packed) ?? -1) < in_budget) {
+			in_visited.set(packed, in_budget);
+		} else {
+			// already visited with more budget
+		    return false;
+		}
+		let nextArr = new Uint8Array(facelet.faceletCnt);
+		for (let i = 0; i < facelet.moveArr.length; i++) {
+			const nextHint = facelet.moveArr[i].hint;
+			if (in_prevHint) {
+				// pruning usind hint
+				if (nextHint.same === in_prevHint.same) {
+					// the same rotation of the same group
+					continue;
+				} else {
+					if (nextHint.axis === in_prevHint.axis) {
+						if (nextHint.angle === in_prevHint.angle) {
+							// the same as the opposite rotation of the other group
+							continue;
+						}
+						if (nextHint.order !== in_prevHint.order + 1) {
+							// should follow normalize sequence
+							continue;
+						}
+					}
+				}
+			}
+			apply(in_currArr, nextArr, facelet.moveArr[i].move);
+			if (dfs(nextArr, in_budget - 1, nextHint, in_visited)) {
+				return true;
+			}
+		}
+		return false;
+	};
+	const visited = new Map();
+	const start = performance.now();
+	let cnt = -1;
+	for (let budget = 0; budget <= facelet.actualDepth; budget++) {
+		if (dfs(in_currArr, budget, null, visited)) {
+			cnt = budget;
+			break;
+		}
+	}
+	console.log(performance.now() - start + 'ms');
+	return cnt;
+}
+
+self.onmessage = in_ev => self.postMessage({cnt : countUntilSolve(in_ev.data.currArr)});
+
+</script>
 <script type='module'>
 
 import * as THREE from 'three';
@@ -79,9 +667,6 @@ import {
 import {
 	cRubiksCube
 } from 'rubik';
-import {
-	OffThreadMin2Phase
-} from 'min2p';
 import * as SOUND from 'sound';
 
 /*
@@ -333,178 +918,32 @@ class cCubeDimV3 extends THREE.Vector3 {
 	}
 }
 
-/*
-
-★★
-
-https://qiita.com/7y2n/items/a840e44dba77b1859352
-からすると facelet が動いてしまうと問題みたいなので、center の位置も入れるようにした
-
-
-×1. center の有無で結果が変わるかどうかを確認 → 変化があるならば、現状の方針を維持する → 変化ない
-×2. index をロジックから検証する
-＠3. facelet 変換と center 固定の方針を検討
-
-いったん実装はできたので次はテスト
-
-
-a. センターピースは動かさず両脇と視点を動かすことで見た目上のセンター動作
-b. 毎回センターピースを元の座標に戻す（視点も移動）
-c. 計算時にセンターピースを元の座標に戻して、計算後に復活
-d. orderFeature を適切に修正する … #dict が U = YP 前提なので結構ムズイ
-
-*/
-
-
-class kociemba {
-	static sortedMap = new Map([
-		[WHITE, 'U'],
-		[RED, 'R'],
-		[GREEN, 'F'],
-		[YELLOW, 'D'],
-		[ORANGE, 'L'],
-		[BLUE, 'B']
-	]);
-	static stickerOrder(in_sticker) {
-		return Array.from(kociemba.sortedMap).findIndex(in_e => in_e[1] === in_sticker);
-	}
-	/*
-		                   ZN ZN ZN
-		                XN 00 01 02 XP
-		                XN 03 UU 05 XP
-		                XN 06 07 08 XP
-		                   ZP ZP ZP
-
-		   YP YP YP        YP YP YP        YP YP YP        YP YP YP
-		ZN 36 37 38 ZP  XN 18 19 20 XP  ZP 09 10 11 ZN  XP 45 46 47 XN
-		ZN 39 LL 41 ZP  XN 21 FF 23 XP  ZP 12 RR 14 ZN  XP 48 BB 50 XN
-		ZN 42 43 44 ZP  XN 24 25 26 XP  ZP 15 16 17 ZN  XP 51 52 53 XN
-		   YN YN YN        YN YN YN        YN YN YN        YN YN YN
-
-		                   ZP ZP ZP
-		                XN 27 28 29 XP
-		                XN 30 DD 32 XP
-		                XN 33 34 35 XP
-		                   ZN ZN ZN
-	*/
-	static #orderFeature = [
-		{NORM : DIRECTION.YP, STICKER : 'U', O1 : DIRECTION.ZP, O2 : DIRECTION.XP},
-		{NORM : DIRECTION.XP, STICKER : 'R', O1 : DIRECTION.YN, O2 : DIRECTION.ZN},
-		{NORM : DIRECTION.ZP, STICKER : 'F', O1 : DIRECTION.YN, O2 : DIRECTION.XP},
-		{NORM : DIRECTION.YN, STICKER : 'D', O1 : DIRECTION.ZN, O2 : DIRECTION.XP},
-		{NORM : DIRECTION.XN, STICKER : 'L', O1 : DIRECTION.YN, O2 : DIRECTION.ZP},
-		{NORM : DIRECTION.ZN, STICKER : 'B', O1 : DIRECTION.YN, O2 : DIRECTION.XN}
+class converter {
+	// assume sorted as facelet.sortedArr order
+	static #featuresArr = [
+		{NORM : DIRECTION.YP, STICKER : 'U', O1 : DIRECTION.ZP, O2 : DIRECTION.XP, COLOR : WHITE},
+		{NORM : DIRECTION.XP, STICKER : 'R', O1 : DIRECTION.YN, O2 : DIRECTION.ZN, COLOR : RED},
+		{NORM : DIRECTION.ZP, STICKER : 'F', O1 : DIRECTION.YN, O2 : DIRECTION.XP, COLOR : GREEN},
+		{NORM : DIRECTION.YN, STICKER : 'D', O1 : DIRECTION.ZN, O2 : DIRECTION.XP, COLOR : YELLOW},
+		{NORM : DIRECTION.XN, STICKER : 'L', O1 : DIRECTION.YN, O2 : DIRECTION.ZP, COLOR : ORANGE},
+		{NORM : DIRECTION.ZN, STICKER : 'B', O1 : DIRECTION.YN, O2 : DIRECTION.XN, COLOR : BLUE}
 	];
+	static stickerMap = (() => {
+		const map = new Map();
+		converter.#featuresArr.forEach(in_features => map.set(in_features.COLOR, in_features.STICKER));
+		return map;
+	})();
+	static stickerOrder(in_sticker) {
+		return Array.from(converter.stickerMap).findIndex(in_e => in_e[1] === in_sticker);
+	}
 	static #getOrderFeature(in_norm) {
-		for (let i = 0; i < kociemba.#orderFeature.length; i++) {
-			const obj = kociemba.#orderFeature[i];
+		for (let i = 0; i < converter.#featuresArr.length; i++) {
+			const obj = converter.#featuresArr[i];
 			if (obj.NORM.equals(in_norm)) {
-				return {O0 : kociemba.stickerOrder(obj.STICKER), ...obj};
+				return {O0 : converter.stickerOrder(obj.STICKER), ...obj};
 			}
 		}
 		throw new Error('invalid param : ' + in_norm);
-	}
-	static updateOrderFeature(in_srcArr) {
-		// in_srcArr : as the same as sortedIndexes
-		in_srcArr.forEach(in_src => {
-			const size = in_src.pos.projectOnPlane(in_src.norm.normalize()).length();
-			if (size > 1e-3) {
-				return;
-			}
-			// center is on the axis : in_src.norm ---> in_src.sticker
-			for (let i = 0; i < kociemba.#orderFeature.length; i++) {
-				const e = kociemba.#orderFeature[i];
-				if (e.NORM.equals(in_src.norm)) {
-					e.STICKER = in_src.sticker;
-					return;
-				}
-			}
-		});
-		const stickerSet = new Set(kociemba.#orderFeature.map(in_e => in_e.STICKER));
-		if (stickerSet.size !== kociemba.sortedMap.size) {
-			throw new Error('something wrong happend');
-		}
-	}
-	static debugFacelet(in_facelet) {
-		const format = [
-			['*', 'U', '*', '*'],
-			['L', 'F', 'R', 'B'],
-			['*', 'D', '*', '*']
-		];
-		const rows = format.length;
-		const cols = format[0].length;
-		const findStickerIx = in_sticker => {
-			for (let row = 0; row < rows; row++) {
-				for (let col = 0; col < cols; col++) {
-					if (in_sticker === format[row][col]) {
-						return {row, col}
-					}
-				}
-			}
-			throw new Error('invalid sticker');
-		};
-		const table = Array.from({length : rows * 3}, () => Array(cols * 3).fill(null));
-		Array.from(kociemba.sortedMap).forEach((in_e, in_ix) => {
-			const ix = findStickerIx(in_e[1]);
-			for (let row = 0; row < 3; row++) {
-				for (let col = 0; col < 3; col++) {
-					table[ix.row * 3 + row][ix.col * 3 + col] = in_facelet[in_ix * 9 + row * 3 + col];
-				}
-			}
-		});
-		console.table(table);
-	}
-	static #dict = {
-		corner : {
-			indexes : [
-				[ 8,  9, 20],
-				[ 6, 18, 38],
-				[ 0, 36, 47],
-				[ 2, 45, 11],
-				[29, 26, 15],
-				[27, 44, 24],
-				[33, 53, 42],
-				[35, 17, 51]
-			],
-			stickers : []
-		},
-		edge : {
-			indexes : [
-				[ 5, 10],
-				[ 7, 19],
-				[ 3, 37],
-				[ 1, 46],
-				[32, 16],
-				[28, 25],
-				[30, 43],
-				[34, 52],
-				[23, 12],
-				[21, 41],
-				[50, 39],
-				[48, 14]
-			],
-			stickers : []
-		}
-	};
-	static {
-		let comp = [];
-		Array.from(kociemba.sortedMap).forEach(in_e => {
-			comp = comp.concat(Array(9).fill(in_e[1]));
-		});
-		Object.values(kociemba.#dict).forEach(({indexes, stickers}) => {
-			indexes.forEach(in_arr => stickers.push(in_arr.map(in_e => comp[in_e])));
-		});
-	}
-	static #isEqual = (in_a1, in_a2) => [...in_a1].sort().join('') === [...in_a2].sort().join('');
-	static #getIxOf(in_location, in_arr) {
-		const stickers = kociemba.#dict[in_location].stickers;
-		return stickers.findIndex(in_compArr => kociemba.#isEqual(in_arr, in_compArr));
-	}
-	static getCornerIx(in_arr) {
-		return kociemba.#getIxOf('corner', in_arr);
-	}
-	static getEdgeIx(in_arr) {
-		return kociemba.#getIxOf('edge', in_arr);
 	}
 	static sortedIndexes(in_srcArr) {
 		/*
@@ -516,7 +955,7 @@ class kociemba {
 			];
 		*/
 		const arr = in_srcArr.map(({norm, pos}, in_ix) => {
-			const {O0, O1, O2} = kociemba.#getOrderFeature(norm);
+			const {O0, O1, O2} = converter.#getOrderFeature(norm);
 			const quantize = in_vec => {
 				let val = pos.dot(in_vec);
 				return Math.abs(val) < 1e-3 ? 0 : Math.sign(val);
@@ -526,68 +965,45 @@ class kociemba {
 		arr.sort((a, b) => (a.o0 === b.o0) ? ((a.o1 === b.o1) ? a.o2 - b.o2 : a.o1 - b.o1) : a.o0 - b.o0);
 		return arr.map(in_e => in_e.ix);
 	}
-	static faceletToCubie(in_facelet) {
-		const ret = {cp : [], co : [], ep : [], eo : []};
-		const c = this.#dict.corner;
-		for (let slot = 0; slot < c.indexes.length; slot++) {
-			const arr = c.indexes[slot];
-			// observed
-			const o0 = in_facelet[arr[0]];
-			const o1 = in_facelet[arr[1]];
-			const o2 = in_facelet[arr[2]];
-			const ix = kociemba.getCornerIx([o0, o1, o2]);
-			// expected
-			const [e0, e1, e2] = c.stickers[ix];
-			let orient;
-			if (o0 === e0 && o1 === e1 && o2 === e2) {
-				orient = 0;
-			} else if (o0 === e2 && o1 === e0 && o2 === e1) {
-				orient = 1;
-			} else if (o0 === e1 && o1 === e2 && o2 === e0) {
-				orient = 2;
-			} else {
-				throw new Error('invalid corner');
-			}
-			ret.cp[slot] = ix;
-			ret.co[slot] = orient;
-		}
-		const e = this.#dict.edge;
-		for (let slot = 0; slot < e.indexes.length; slot++) {
-			const arr = e.indexes[slot];
-			// observed
-			const o0 = in_facelet[arr[0]];
-			const o1 = in_facelet[arr[1]];
-			const ix = kociemba.getEdgeIx([o0, o1]);
-			// expected
-			const [e0, e1] = e.stickers[ix];
-			let orient;
-			if (o0 === e0 && o1 === e1) {
-				orient = 0;
-			} else if (o0 === e1 && o1 === e0) {
-				orient = 1;
-			} else {
-				throw new Error('invalid edge');
-			}
-			ret.ep[slot] = ix;
-			ret.eo[slot] = orient;
-		}
-		return ret;
-	}
 }
 
 class cCntRubiksCube extends cRubiksCube {
-	static #min2phase = null;
-	static {
-		(async () => {
-			const solver = new OffThreadMin2Phase();
-			await solver.initialize();
-			cCntRubiksCube.#min2phase = solver;
-		})();
+	static #context = {worker : null, callback : null};
+	static #abort() {
+		const ctx = cCntRubiksCube.#context;
+		ctx.worker.terminate();
+		ctx.worker = null;
+		ctx.callback = null;
 	}
-	#faceletFrom3D() {
-		// this.updateMatrixWorld(true);
+	static #execWorker = (in_code => {
+		const url = URL.createObjectURL(new Blob([in_code], {type : 'application/javascript'}));
+		return (in_currArr, in_callback) => {
+			const ctx = cCntRubiksCube.#context;
+			if (ctx.callback) {
+				cCntRubiksCube.#abort();
+			}
+			if (!ctx.worker) {
+				ctx.worker = new Worker(url);
+			}
+			ctx.callback = in_callback;
+			ctx.worker.onmessage = in_e => {
+				const {cnt} = in_e.data;
+				(ctx.callback)(cnt);
+				ctx.callback = null;
+			};
+			ctx.worker.postMessage({currArr : in_currArr}); 
+		};
+	})(document.getElementById('worker-blob').textContent);
+	rotateOnWorldAxis(in_axis, in_rad) {
+		const reparentChildren = (a, b) => [...a.children].forEach(in_e => b.attach(in_e));
+		const temp = new THREE.Object3D();
+		reparentChildren(this, temp);
+		temp.rotateOnWorldAxis(in_axis, in_rad);
+		reparentChildren(temp, this);
+	}
+	countUntilSolve(in_callback) {
 		const srcArr = [];
-		const facelet = [];
+		const stickerArr = [];
 		for (const piece of this.children) {
 			Object.values(DIRECTION).forEach(in_direction => {
 				const color = cCntRubiksCube.getColor(piece, in_direction);
@@ -595,59 +1011,19 @@ class cCntRubiksCube extends cRubiksCube {
 					return;
 				}
 				srcArr.push({
-					sticker : kociemba.sortedMap.get(color),
+					sticker : converter.stickerMap.get(color),
 					norm : in_direction,
 					pos : piece.getWorldPosition(VEC3()),
 				});
 			});
 		}
-		kociemba.updateOrderFeature(srcArr);
-		const sorted = kociemba.sortedIndexes(srcArr);
+		const sorted = converter.sortedIndexes(srcArr);
 		for (let i = 0; i < sorted.length; i++) {
-			facelet[i] = srcArr[sorted[i]].sticker;
+			stickerArr[i] = srcArr[sorted[i]].sticker;
 		}
-		return facelet;
-	}
-	#stateFromFacelet(in_faceletArr) {
-		// kociemba.debugFacelet(in_faceletArr);
-		const cubie = kociemba.faceletToCubie(in_faceletArr);
-		// console.log(state);
-		const state = {
-			CORNER : {
-				permutation : cubie.cp,
-				orientation : cubie.co
-			},
-			EDGE : {
-				permutation : cubie.ep,
-				orientation : cubie.eo,
-			},
-			CENTER : {
-				permutation : [0, 1, 2, 3, 4, 5],
-				orientation : [0, 0, 0, 0, 0, 0]
-			}
-		};
-		return state;
-	}
-	countUntilSolve(in_callback) {
-		if (cCntRubiksCube.#min2phase) {
-			const faceletArr = this.#faceletFrom3D();
-			const state = this.#stateFromFacelet(faceletArr);
-			(async () => {
-				const solution = await cCntRubiksCube.#min2phase.solve(state);
-				//console.log(solution);
-				const cnt = solution.nestedUnits.length;
-				(in_callback)(cnt);
-			})();
-		} else {
-			(in_callback)(-1);
-		}
-	}
-	rotateOnWorldAxis(in_axis, in_rad) {
-		const reparentChildren = (a, b) => [...a.children].forEach(in_e => b.attach(in_e));
-		const temp = new THREE.Object3D();
-		reparentChildren(this, temp);
-		temp.rotateOnWorldAxis(in_axis, in_rad);
-		reparentChildren(temp, this);
+		// converter.debug(stickerArr);
+		const currArr = Uint8Array.from(stickerArr.map(converter.stickerOrder));
+		cCntRubiksCube.#execWorker(currArr, in_callback);
 	}
 }
 
@@ -672,7 +1048,7 @@ const gCube = new cCntRubiksCube();
 
 gWorld.add(gCube);
 
-gWorld.moveView(2.5, 0.5);
+//gWorld.moveView(2.5, 0.5);
 gWorld.motionZoom2(WORLD_INIT_ZOOM, 1000);
 
 (async in_cubeSize => {
@@ -830,11 +1206,13 @@ function shuffle(in_count) {
 			if (in_remaining_count > 1) {
 				(randomRotation)(in_remaining_count - 1);
 			} else {
-				gWorld.stopRotation();
-				gCube.uiEnable();
+				setTimeout(() => {
+					gWorld.stopRotation();
+					gCube.uiEnable();
+				}, 500);
 			}
 		};
-		const progress = gCube.makeRandomRotationProgress(callback);
+		const progress = gCube.makeRandomRotationProgress(callback, true);
 		gWorld.addAnimationHook(progress);
 	};
 	gCube.registerCompleteCallback(complete);
@@ -843,12 +1221,10 @@ function shuffle(in_count) {
 	(randomRotation)(in_count);
 }
 
-function shuffle3() {
-	shuffle(3);
-}
-
-function shuffle10() {
-	shuffle(10);
+function makeShuffle(in_cnt) {
+	return () => {
+		shuffle(in_cnt);
+	};
 }
 
 function uiHelp() {
@@ -937,11 +1313,15 @@ const ID_NEXT_LEVEL = randomString();
 })([
 	{
 		text : 'shuffle x3',
-		func : shuffle3
+		func : makeShuffle(3)
+	},
+	{
+		text : 'shuffle x5',
+		func : makeShuffle(5)
 	},
 	{
 		text : 'shuffle x10',
-		func : shuffle10
+		func : makeShuffle(10)
 	},
 	{
 		text : 'help',
@@ -1237,10 +1617,11 @@ const gHandlers = (() => {
 		const releaseProgress = gCube.uiRelease(in_rotateURFDLB => {
 			gWorld.removeAnimationHook(releaseProgress);
 			if (in_rotateURFDLB) {
+				// rotation for the expected result in "cCntRubiksCube.#faceletFrom3D"
 				gCube.rotateOnWorldAxis(in_rotateURFDLB.axis, in_rotateURFDLB.rad * -1);
 				gWorld.rotateOnWorldAxis(in_rotateURFDLB.axis, in_rotateURFDLB.rad)
 			}
-			//gCube.countUntilSolve(in_cnt => console.log('last : ', in_cnt));
+			gCube.countUntilSolve(in_cnt => console.log('last : ', in_cnt));
 		});
 		if (releaseProgress) {
 			gWorld.addAnimationHook(releaseProgress);

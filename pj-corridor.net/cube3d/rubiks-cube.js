@@ -313,7 +313,27 @@ export class cRubiksCube extends THREE.Object3D {
 		};
 		return progress;
 	}
-	makeRandomRotationProgress(in_callback) {
+	makeRandomRotationProgress(in_callback, in_onlyCorner = false) {
+		const isCorner = (() => {
+			const min = VEC3(+Infinity, +Infinity, +Infinity);
+			const max = VEC3(-Infinity, -Infinity, -Infinity);
+			this.children.forEach(in_child => {
+				const pos = in_child.getWorldPosition(VEC3());
+				XYZ.forEach(in_xyz => {
+					if (pos[in_xyz] < min[in_xyz]) {
+						min[in_xyz] = pos[in_xyz];
+					}
+					if (pos[in_xyz] > max[in_xyz]) {
+						max[in_xyz] = pos[in_xyz];
+					}
+				});
+			});
+			const eps = 1e-3;
+			return in_piece => {
+				const pos = in_piece.getWorldPosition(VEC3());
+				return XYZ.every(in_xyz => (Math.abs(pos[in_xyz] - min[in_xyz]) < eps) || (Math.abs(pos[in_xyz] - max[in_xyz]) < eps));
+			};
+		})();
 		let axis;
 		let pieces;
 		let maxLoopCount = 100;
@@ -322,6 +342,9 @@ export class cRubiksCube extends THREE.Object3D {
 				throw new Error('maxLoopCount'); 
 			}
 			const _piece = (this.children)[arrRand]();
+			if (in_onlyCorner && !isCorner(_piece)) {
+				continue;
+			}
 			axis = (Object.values(cRubiksCube.#axes))[arrRand]();
 			pieces = this.affectedPieces(_piece, axis);
 			if (pieces.length < this.children.length) {
@@ -329,7 +352,7 @@ export class cRubiksCube extends THREE.Object3D {
 			}
 		}
 		const group = this.#setupGroup(pieces);
-		const angle = cRubiksCube.#rotatableAngle(group, axis);
+		const angle = cRubiksCube.#rotatableAngle(group, axis) * [1, 2][arrRand]();
 		return this.#makeRotationProgress(group, axis, 0, angle, in_ratio => {
 			const wouldFinalize = in_ratio === 1.0;
 			if (!wouldFinalize) {
