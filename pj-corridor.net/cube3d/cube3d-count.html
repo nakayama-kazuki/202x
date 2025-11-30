@@ -25,7 +25,7 @@ class facelet {
 	static sortedArr = [...'URFDLB'];
 	static surfaces = facelet.sortedArr.length;
 	static faceletCnt = facelet.surfaces * facelet.pieces;
-	static #makeComplete(in_isIx = true) {
+	static makeComplete(in_isIx = true) {
 		const comp = [];
 		facelet.sortedArr.forEach((in_sticker, in_ix) => {
 			const data = in_isIx ? in_ix : in_sticker;
@@ -216,7 +216,7 @@ class facelet {
 		});
 		// debug for facelet.canonical
 		if (false) {
-			const comp = facelet.#makeComplete(false);
+			const comp = facelet.makeComplete(false);
 			facelet.debugCanonical(comp);
 		}
 	}
@@ -268,118 +268,6 @@ class facelet {
 		// console.log(map);
 		return map;
 	})();
-	static #pruningMap = new Map([
-		/*
-			1-1 : 24/26
-			1-2 : 19/26
-			1-3 :  5/26
-			1-4 :  0/26
-			1-5 :  0/26
-
-			2-1 : 137/139
-			2-2 : 135/139
-			2-3 : 116/139
-			2-4 :  40/139
-			2-5 :   7/139
-
-			3-1 : 225/227
-			3-2 : 218/227
-			3-3 : 164/227
-			3-4 :  17/227
-			3-5 :   1/227
-		*/
-		[1, new Map([
-			[1, new Set()]
-		])],
-		[2, new Map([
-			[2, new Set()],
-			[3, new Set()],
-			[1, new Set()]
-		])],
-		[3, new Map([
-			[2, new Set()],
-			[3, new Set()],
-			[1, new Set()]
-		])],
-		[4, new Map([
-			[2, new Set([
-				981000,
-				972000,
-				963000,
-				954000,
-				873000,
-				864000,
-				855000,
-				774000,
-				971100,
-				962100,
-				953100,
-				952200,
-				944100,
-				843300,
-				644400,
-				555300,
-				961110,
-				952110,
-				943110,
-				942210,
-				933210,
-				932220,
-				871110,
-				833310,
-				833220,
-				763110,
-				743310,
-				733320,
-				555210,
-				951111,
-				942111,
-				933111,
-				922221,
-				832221,
-				822222,
-				733311,
-				733221,
-				663111,
-				555111,
-				533322
-			])],
-			[3, new Set([
-				966600,
-				887400,
-				886500,
-				877500,
-				777600,
-				993330,
-				866610,
-				777330,
-				755550,
-				995211,
-				994311,
-				994221,
-				993222,
-				983331,
-				966222,
-				944442,
-				888111
-			])]
-		])],
-		[5, new Map([
-			[2, new Set([
-				933111,
-				922221,
-				961110,
-				954000,
-				944100,
-				933210,
-				855000
-			])]
-		])],
-	]);
-	static get actualDepth() {
-		const additionalDepth = 3;
-		return facelet.#pruningMap.size + additionalDepth;
-	}
 	static pack = (() => {
 		const digit1 = facelet.surfaces ** 1;
 		const digit2 = facelet.surfaces ** 2;
@@ -415,87 +303,6 @@ class facelet {
 			return uniqStr;
 		};
 	})();
-	static #makeTupleKey = (() => {
-		const offsetArr = [];
-		offsetArr[0] = null;
-		for (let i = 1; i < facelet.#surfaceTupleMap.size + 1; i++) {
-			const orderCnt = facelet.surfaces / i;
-			offsetArr[i] = [];
-			for (let order = 0; order < orderCnt; order++) {
-				const arr = new Uint8Array(i);
-				for (let j = 0; j < i; j++) {
-					arr[j] = (orderCnt * j + order) * facelet.pieces;
-				}
-				offsetArr[i][order] = arr;
-			}
-		}
-		const varietyArr = new Uint8Array(facelet.surfaces);
-		return (in_arr, in_tuple, in_order) => {
-			varietyArr.fill(0);
-			const ref = offsetArr[in_tuple][in_order];
-			for (let i = 0; i < facelet.pieces; i++) {
-				ref.forEach(in_offset => varietyArr[in_arr[in_offset + i]]++);
-			}
-			return varietyArr.sort((a, b) => b - a).reduce((a, b) => a * 10 + b, 0);
-		};
-	})();
-	static {
-		const ignoreSet = new Set();
-		const forEachMove = (in_srcArr, in_depth, in_callback) => {
-			for (let i = 0; i < facelet.moveArr.length; i++) {
-				let dstArr = new Uint8Array(facelet.faceletCnt);
-				const move = facelet.moveArr[i].move;
-				for (let j = 0; j < move.length; j++) {
-					dstArr[j] = in_srcArr[move[j]];
-				}
-				if (in_depth > 1) {
-					forEachMove(dstArr, (in_depth - 1), in_callback);
-				} else {
-					const packed = facelet.pack(dstArr);
-					if (ignoreSet.has(packed)) {
-						continue;
-					} else {
-						ignoreSet.add(packed);
-						(in_callback)(dstArr);
-					}
-				}
-			}
-		};
-		for (let depth = 1; depth <= facelet.#pruningMap.size; depth++) {
-			const depthMap = facelet.#pruningMap.get(depth);
-			for (const [tupleCnt, unreachSet] of depthMap) {
-				if (unreachSet.size > 0) {
-					// preset
-					continue;
-				}
-				facelet.#surfaceTupleMap.get(tupleCnt).forEach(in_e => unreachSet.add(in_e));
-				const initArr = facelet.#makeComplete();
-				ignoreSet.clear();
-				forEachMove(initArr, depth, in_movedArr => {
-					for (let order = 0; order < facelet.surfaces / tupleCnt; order++) {
-						const reached = facelet.#makeTupleKey(in_movedArr, tupleCnt, order);
-						unreachSet.delete(reached);
-					}
-				});
-			}
-		}
-		// console.log(facelet.#pruningMap);
-	}
-	static maySolveBy(in_arr, in_moveCnt) {
-		if (in_moveCnt > facelet.#pruningMap.size) {
-			return true;
-		}
-		const depthMap = facelet.#pruningMap.get(in_moveCnt);
-		for (const [tupleCnt, unreachSet] of depthMap) {
-			for (let order = 0; order < facelet.surfaces / tupleCnt; order++) {
-				const reached = facelet.#makeTupleKey(in_arr, tupleCnt, order);
-				if (unreachSet.has(reached)) {
-					return false;
-				}
-			}
-		}
-		return true;
-	}
 	static debug(in_arr) {
 		const format = [
 			['*', 'U', '*', '*'],
@@ -530,80 +337,127 @@ class facelet {
 	}
 }
 
-function countUntilSolve(in_currArr) {
-	const isComplete = in_uArr => {
-		// facelet.surfaces - 1 is enough for checking
-		for (let f = 0; f < facelet.surfaces - 1; f++) {
-			const offset = f * facelet.pieces;
-			for (let i = 1; i < facelet.pieces; i++) {
-				if (in_uArr[offset] !== in_uArr[offset + i]) {
-					return false;
-				}
+function applyMove(in_srcArr, in_dstArr, in_move) {
+	for (let i = 0; i < in_move.length; i++) {
+		in_dstArr[i] = in_srcArr[in_move[i]];
+	}
+}
+
+const presetDistMax = 4;
+
+const presetDistMap = (in_n => {
+	const map = new Map();
+	const initArr = Uint8Array.from(facelet.makeComplete());
+	map.set(facelet.pack(initArr), 0);
+	const queue = [initArr];
+	while (queue.length > 0) {
+		const currArr = queue.shift();
+		const depth = map.get(facelet.pack(currArr));
+		if (depth >= in_n) {
+			continue;
+		}
+		for (let i = 0; i < facelet.moveArr.length; i++) {
+			const nextArr = new Uint8Array(facelet.faceletCnt);
+			applyMove(currArr, nextArr, facelet.moveArr[i].move);
+			const packed = facelet.pack(nextArr);
+			if (map.has(packed)) {
+				continue;
 			}
+			map.set(packed, depth + 1);
+			queue.push(nextArr);
 		}
-		return true;
-	};
-	const apply = (in_srcArr, in_dstArr, in_move) => {
-		for (let i = 0; i < in_move.length; i++) {
-			in_dstArr[i] = in_srcArr[in_move[i]];
-		}
-	};
-	const dfs = (in_currArr, in_budget, in_prevHint, in_visited) => {
-		if (in_budget === 0) {
-			return isComplete(in_currArr);
-		}
-		if (!facelet.maySolveBy(in_currArr, in_budget)) {
-			return false;
+	}
+	console.log('setup done : ', map.size, facelet.moveArr.length ** in_n);
+	self.postMessage({mtype : 'setup', value : true});
+	return map;
+})(presetDistMax);
+
+function countUntilSolve(in_initArr) {
+	const answer = {found : false, distance : -1};
+	const dfs = (in_currArr, in_rootBudget, in_currBudget, in_prevHint, in_visited) => {
+		if (answer.found) {
+			return;
 		}
 		const packed = facelet.pack(in_currArr);
-		if ((in_visited.get(packed) ?? -1) < in_budget) {
-			in_visited.set(packed, in_budget);
+		const currDist = presetDistMap.get(packed);
+		if (currDist === undefined) {
+			if (in_currBudget > presetDistMax) {
+				if ((in_visited.get(packed) ?? -1) < in_currBudget) {
+					in_visited.set(packed, in_currBudget);
+				} else {
+					// give up : already visited with more budget
+					return;
+				}
+			} else {
+				// give up : can't find in in_currBudget
+				return;
+			}
 		} else {
-			// already visited with more budget
-		    return false;
+			answer.found = true;
+			answer.distance = (in_rootBudget - in_currBudget) + currDist;
+			return;
 		}
-		let nextArr = new Uint8Array(facelet.faceletCnt);
+		const nextArr = new Uint8Array(facelet.faceletCnt);
 		for (let i = 0; i < facelet.moveArr.length; i++) {
+			if (answer.found) {
+				return;
+			}
 			const nextHint = facelet.moveArr[i].hint;
 			if (in_prevHint) {
 				// pruning usind hint
 				if (nextHint.same === in_prevHint.same) {
-					// the same rotation of the same group
+					// skip : the same rotation of the same group
 					continue;
 				} else {
 					if (nextHint.axis === in_prevHint.axis) {
 						if (nextHint.angle === in_prevHint.angle) {
-							// the same as the opposite rotation of the other group
+							// skip : the same as the opposite rotation of the other group
 							continue;
 						}
 						if (nextHint.order !== in_prevHint.order + 1) {
-							// should follow normalize sequence
+							// skip : should follow normalize sequence
 							continue;
 						}
 					}
 				}
 			}
-			apply(in_currArr, nextArr, facelet.moveArr[i].move);
-			if (dfs(nextArr, in_budget - 1, nextHint, in_visited)) {
-				return true;
-			}
+			applyMove(in_currArr, nextArr, facelet.moveArr[i].move);
+			dfs(nextArr, in_rootBudget, in_currBudget - 1, nextHint, in_visited);
 		}
-		return false;
 	};
-	const visited = new Map();
 	const start = performance.now();
-	let cnt = -1;
-	for (let budget = 0; budget <= facelet.actualDepth; budget++) {
-		if (dfs(in_currArr, budget, null, visited)) {
-			cnt = budget;
+	const budgetLimit = presetDistMax + 5;
+	for (let rootBudget = 0; rootBudget <= budgetLimit; rootBudget++) {
+		const visited = new Map();
+		dfs(in_initArr, rootBudget, rootBudget, null, visited);
+		if (answer.found) {
 			break;
 		}
 	}
 	console.log(performance.now() - start + 'ms');
-	return cnt;
+	if (answer.distance < 0) {
+		return (budgetLimit + 1) + '+';
+	} else {
+		return answer.distance;
+	}
 }
 
-self.onmessage = in_ev => self.postMessage({cnt : countUntilSolve(in_ev.data.currArr)});
+self.onmessage = (() => {
+	const closure = {latest : null, wating : false};
+	const handler = in_ev => {
+		closure.latest = in_ev.data.currArr;
+		if (closure.wating) {
+			return;
+		}
+		closure.wating = true;
+		setTimeout(() => {
+			closure.wating = false;
+			// it may be long time in this process
+			self.postMessage({mtype : 'solve', value : countUntilSolve(closure.latest)});
+		}, 0);
+	};
+	return handler;
+})();
 
 </script>
 <script type='module'>
@@ -968,32 +822,35 @@ class converter {
 }
 
 class cCntRubiksCube extends cRubiksCube {
-	static #context = {worker : null, callback : null};
-	static #abort() {
-		const ctx = cCntRubiksCube.#context;
-		ctx.worker.terminate();
-		ctx.worker = null;
-		ctx.callback = null;
-	}
-	static #execWorker = (in_code => {
-		const url = URL.createObjectURL(new Blob([in_code], {type : 'application/javascript'}));
-		return (in_currArr, in_callback) => {
-			const ctx = cCntRubiksCube.#context;
-			if (ctx.callback) {
-				cCntRubiksCube.#abort();
-			}
-			if (!ctx.worker) {
-				ctx.worker = new Worker(url);
-			}
-			ctx.callback = in_callback;
-			ctx.worker.onmessage = in_e => {
-				const {cnt} = in_e.data;
-				(ctx.callback)(cnt);
-				ctx.callback = null;
-			};
-			ctx.worker.postMessage({currArr : in_currArr}); 
-		};
+	static #url = (in_code => {
+		return URL.createObjectURL(new Blob([in_code]));
 	})(document.getElementById('worker-blob').textContent);
+	static #context;
+	static {
+		const worker = new Worker(cCntRubiksCube.#url);
+		cCntRubiksCube.#context = {worker : worker, ready : false};
+		const handler = in_ev => {
+			const {mtype, value} = in_ev.data;
+			if ((mtype === 'setup') && value) {
+				cCntRubiksCube.#context.ready = true;
+				worker.removeEventListener('message', handler);
+			}
+		};
+		worker.addEventListener('message', handler);
+	}
+	static #execWorker(in_currArr, in_callback) {
+		const ctx = cCntRubiksCube.#context;
+		if (!ctx.ready) {
+			return;
+		}
+		ctx.worker.onmessage = in_ev => {
+			const {mtype, value} = in_ev.data;
+			if (mtype === 'solve') {
+				(in_callback)(value);
+			}
+		};
+		ctx.worker.postMessage({currArr : in_currArr}); 
+	}
 	rotateOnWorldAxis(in_axis, in_rad) {
 		const reparentChildren = (a, b) => [...a.children].forEach(in_e => b.attach(in_e));
 		const temp = new THREE.Object3D();
@@ -1021,7 +878,7 @@ class cCntRubiksCube extends cRubiksCube {
 		for (let i = 0; i < sorted.length; i++) {
 			stickerArr[i] = srcArr[sorted[i]].sticker;
 		}
-		// converter.debug(stickerArr);
+		// facelet.debug(stickerArr);
 		const currArr = Uint8Array.from(stickerArr.map(converter.stickerOrder));
 		cCntRubiksCube.#execWorker(currArr, in_callback);
 	}
