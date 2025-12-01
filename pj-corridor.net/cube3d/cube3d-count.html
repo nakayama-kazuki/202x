@@ -380,9 +380,9 @@ class cPresetDistMap extends Map {
 	}
 }
 
-const presetDistMap = new cPresetDistMap();
+const gPresetDistMap = new cPresetDistMap();
 
-const budgetAddOn = 4;
+const BUDGET_ADDON = 4;
 
 function countUntilSolve(in_initArr) {
 	const answer = {found : false, distance : -1};
@@ -391,9 +391,9 @@ function countUntilSolve(in_initArr) {
 			return;
 		}
 		const packed = facelet.pack(in_currArr);
-		const currDist = presetDistMap.get(packed);
+		const currDist = gPresetDistMap.get(packed);
 		if (currDist === undefined) {
-			if (in_currBudget > presetDistMap.maxDistance) {
+			if (in_currBudget > gPresetDistMap.maxDistance) {
 				if ((in_visited.get(packed) ?? -1) < in_currBudget) {
 					in_visited.set(packed, in_currBudget);
 				} else {
@@ -438,7 +438,7 @@ function countUntilSolve(in_initArr) {
 		}
 	};
 	const start = performance.now();
-	const budgetLimit = presetDistMap.maxDistance + budgetAddOn;
+	const budgetLimit = gPresetDistMap.maxDistance + BUDGET_ADDON;
 	for (let rootBudget = 0; rootBudget <= budgetLimit; rootBudget++) {
 		const visited = new Map();
 		dfs(in_initArr, rootBudget, rootBudget, null, visited);
@@ -471,7 +471,7 @@ self.addEventListener('message', (() => {
 			}, 0);
 		} else {
 			if (mtype === 'update') {
-				presetDistMap.update(value);
+				gPresetDistMap.update(value);
 				self.postMessage({mtype : 'updated', value : true});
 			} else {
 				console.log('invalid mtype : ' + mtype);
@@ -930,7 +930,7 @@ const gCube = new cCntRubiksCube();
 
 gWorld.add(gCube);
 
-//gWorld.moveView(2.5, 0.5);
+gWorld.moveView(2.5, 0.5);
 gWorld.motionZoom2(WORLD_INIT_ZOOM, 1000);
 
 (async in_cubeSize => {
@@ -1323,8 +1323,8 @@ const speak = (() => {
 	});
 	document.body.appendChild(outer);
 	const w = 200;
-	const b = 50;
-	const r = 50;
+	const b = 20;
+	const r = 20;
 	const image = new Image();
 	image.src = FUKIDASHI;
 	image.onload = () => {
@@ -1356,8 +1356,8 @@ const speak = (() => {
 	return in_text => {
 		outer.style.visibility = 'visible';
 		inner.textContent = in_text;
-		autoTransition(outer, 'opacity 0.5s ease-out', '0', '1', () => {
-			autoTransition(outer, 'opacity 1.0s ease-out', '1', '0');
+		autoTransition(outer, 'opacity 1s ease-out', '0', '1', () => {
+			autoTransition(outer, 'opacity 1s ease-out', '1', '0');
 		});
 	};
 })();
