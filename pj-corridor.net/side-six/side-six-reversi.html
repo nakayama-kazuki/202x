@@ -3476,6 +3476,7 @@ const gFigure = (() => {
 	image.onload = () => {
 		const fukidashi_h = image.naturalHeight * fukidashi_w / image.naturalWidth;
 		Object.assign(closure.fukidashi.style, {
+			pointerEvents : 'none',
 			position : 'absolute',
 			right : figure_r + figure_w + offset + 'px',
 			bottom : fukidashi_b + 'px',
@@ -3824,6 +3825,7 @@ const gChart = new cOcupiedChart();
 (in_settings => {
 	let container = document.createElement('div');
 	Object.assign(container.style, {
+		pointerEvents : 'none',
 		position : 'absolute',
 		left : '5%',
 		top : '5%'
