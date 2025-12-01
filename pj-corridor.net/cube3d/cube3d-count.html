@@ -1329,7 +1329,7 @@ const speak = (() => {
 	const image = new Image();
 	image.src = FUKIDASHI;
 	image.onload = () => {
-		const h = image.naturalHeight * w / image.naturalWidth * 0.8;
+		const h = image.naturalHeight * w / image.naturalWidth;
 		Object.assign(outer.style, {
 			position : 'absolute',
 			width : w + 'px',
