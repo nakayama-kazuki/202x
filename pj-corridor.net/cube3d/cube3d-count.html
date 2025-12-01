@@ -1317,11 +1317,6 @@ document.addEventListener('DOMContentLoaded', (async () => {
 const speak = (() => {
 	const maxInt = 2 ** 31 - 1;
 	const outer = document.createElement('DIV');
-	Object.assign(outer.style, {
-		pointerEvents : 'none',
-		visibility : 'hidden',
-		opacity : '0'
-	});
 	document.body.appendChild(outer);
 	const w = 200;
 	const b = 20;
@@ -1331,6 +1326,9 @@ const speak = (() => {
 	image.onload = () => {
 		const h = image.naturalHeight * w / image.naturalWidth;
 		Object.assign(outer.style, {
+			pointerEvents : 'none',
+			visibility : 'hidden',
+			opacity : '0',
 			position : 'absolute',
 			width : w + 'px',
 			height : h + 'px',
