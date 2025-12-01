@@ -1318,6 +1318,7 @@ const speak = (() => {
 	const maxInt = 2 ** 31 - 1;
 	const outer = document.createElement('DIV');
 	Object.assign(outer.style, {
+		pointerEvents : 'none',
 		visibility : 'hidden',
 		opacity : '0'
 	});
@@ -1328,7 +1329,7 @@ const speak = (() => {
 	const image = new Image();
 	image.src = FUKIDASHI;
 	image.onload = () => {
-		const h = image.naturalHeight * w / image.naturalWidth;
+		const h = image.naturalHeight * w / image.naturalWidth * 0.8;
 		Object.assign(outer.style, {
 			position : 'absolute',
 			width : w + 'px',
