@@ -7,8 +7,8 @@
 <script type='importmap'>
 {
 	"imports" : {
-		"three" : "https://cdn.jsdelivr.net/npm/three@0.181.0/build/three.module.min.js",
-		"utils" : "https://cdn.jsdelivr.net/npm/three@0.181.0/examples/jsm/utils/BufferGeometryUtils.js",
+		"three" : "https://cdn.jsdelivr.net/npm/three@0.181.2/build/three.module.min.js",
+		"utils" : "https://cdn.jsdelivr.net/npm/three@0.181.2/examples/jsm/utils/BufferGeometryUtils.js",
 		"basic" : "./basic-functions.js",
 		"sound" : "./sound-effect.js"
 	}
@@ -41,6 +41,7 @@ import {
 	debouncing,
 	nonReentrantAsync,
 	autoTransition,
+	makeSpeaker,
 	startDialog,
 	factoryBuilder,
 	arrRand,
@@ -2028,7 +2029,9 @@ document.addEventListener('DOMContentLoaded', (async () => {
 			state.far = false;
 			state.#_wideMode = false;
 		}
+		static help = false;
 	}
+	const speak = makeSpeaker({width : 250, fontSize : 'large', fadeOut : '2.0s'});
 	const start = in_ev => {
 		if (!state.is('waiting')) {
 			return;
@@ -2059,6 +2062,10 @@ document.addEventListener('DOMContentLoaded', (async () => {
 			};
 			state.observeLongPush(callback);
 			state.observeRepeatPush(callback);
+			if (!state.help) {
+				speak('long-push or double click for wide-mode');
+				state.help = true;
+			}
 		}
 		if (!state.isWideMode) {
 			state.obj.highlight(true);

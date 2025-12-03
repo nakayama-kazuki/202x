@@ -7,8 +7,8 @@
 <script type='importmap'>
 {
 	"imports" : {
-		"three" : "https://cdn.jsdelivr.net/npm/three@0.181.0/build/three.module.min.js",
-		"utils" : "https://cdn.jsdelivr.net/npm/three@0.181.0/examples/jsm/utils/BufferGeometryUtils.js",
+		"three" : "https://cdn.jsdelivr.net/npm/three@0.181.2/build/three.module.min.js",
+		"utils" : "https://cdn.jsdelivr.net/npm/three@0.181.2/examples/jsm/utils/BufferGeometryUtils.js",
 		"basic" : "./basic-functions.js",
 		"side6" : "./side-six.js",
 		"sound" : "./sound-effect.js"
@@ -42,6 +42,7 @@ import {
 	debouncing,
 	nonReentrantAsync,
 	autoTransition,
+	makeSpeaker,
 	startDialog,
 	factoryBuilder,
 	arrRand,
@@ -1585,6 +1586,7 @@ class gScore extends cScoreManager {
 		}
 		gScore.#viewerContainer = document.createElement('div');
 		Object.assign(gScore.#viewerContainer.style, {
+			pointerEvents : 'none',
 			opacity : '0',
 			position : 'absolute',
 			fontFamily : 'cursive',
@@ -1599,6 +1601,7 @@ class gScore extends cScoreManager {
 			const category = gScore.#categories[in_key];
 			category.elem = document.createElement('div');
 			Object.assign(category.elem.style, {
+				pointerEvents : 'none',
 				position : 'absolute',
 				left : category.left,
 				width : '20%'
@@ -2214,6 +2217,8 @@ function dynamicUpdate(in_table, in_sound_effect) {
 	});
 }
 
+const speak = makeSpeaker({});
+
 async function chooseHere(in_ev) {
 	const ndc = ndcFromEvent(in_ev);
 	let intersects = gWorld.intersectPositive(ndc);
@@ -2243,6 +2248,7 @@ async function chooseHere(in_ev) {
 	await dynamicUpdate(gMinesweeper.getRiskTable(), true);
 	if ((ratio > 0) && hasSafe) {
 		gScore.addScore('reckless', Math.round(ratio * 100));
+		speak('reckless !');
 	}
 }
 
