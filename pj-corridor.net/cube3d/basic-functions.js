@@ -497,6 +497,8 @@ export function autoTransition(in_elem, in_shorthand, in_start, in_end, in_callb
 }
 
 export function makeSpeaker(in_options = {}) {
+return () => {};
+/*
 	const options = {
 		src : null,
 		width : 200,
@@ -596,6 +598,7 @@ export function makeSpeaker(in_options = {}) {
 		});
 	};
 	return _speak;
+*/
 }
 
 export function startDialog(in_elem, in_callback = null) {
