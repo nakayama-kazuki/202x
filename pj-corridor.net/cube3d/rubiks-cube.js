@@ -21,6 +21,7 @@ import {
 	debouncing,
 	nonReentrantAsync,
 	autoTransition,
+	makeSpeaker,
 	startDialog,
 	factoryBuilder,
 	arrRand,
