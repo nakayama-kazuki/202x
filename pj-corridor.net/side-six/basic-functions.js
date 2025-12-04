@@ -505,8 +505,8 @@ export function makeSpeaker(in_options = {}) {
 		vertical : 20,
 		horizontal : 20,
 		fontSize : 'x-large',
-		fadeIn : '0.5s',
-		fadeOut : '0.5s'
+		duration : [250, 500, 250],
+		display : null
 	};
 	Object.keys(options).forEach(in_prop => {
 		if (in_options.hasOwnProperty(in_prop)) {
@@ -582,17 +582,20 @@ export function makeSpeaker(in_options = {}) {
 		closure.outer.style.visibility = 'visible';
 		closure.inner.textContent = in_text;
 		closure.inTransition = true;
-		const fadeIn = 'opacity ' + options.fadeIn + ' ease-out';
-		const fadeOut = 'opacity ' + options.fadeOut + ' ease-out';
-		autoTransition(closure.outer, fadeIn, '0', '1', () => {
-			autoTransition(closure.outer, fadeOut, '1', '0', () => {
-				closure.inTransition = false;
-				if (closure.textQueue.length === 0) {
-					return;
-				}
-				_speak(closure.textQueue.pop());
-				closure.textQueue.length = 0;
-			});
+		const fade_i = 'opacity ' + (options.duration[0] / 1000) + 's ease-out';
+		const fade_o = 'opacity ' + (options.duration[2] / 1000) + 's ease-in';
+		const waiting = options.display ?? options.duration[1];
+		autoTransition(closure.outer, fade_i, '0', '1', () => {
+			setTimeout(() => {
+				autoTransition(closure.outer, fade_o, '1', '0', () => {
+					closure.inTransition = false;
+					if (closure.textQueue.length === 0) {
+						return;
+					}
+					_speak(closure.textQueue.pop());
+					closure.textQueue.length = 0;
+				});
+			}, waiting);
 		});
 	};
 	return _speak;
