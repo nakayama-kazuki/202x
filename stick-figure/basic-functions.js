@@ -505,7 +505,7 @@ export function makeSpeaker(in_options = {}) {
 		vertical : 20,
 		horizontal : 20,
 		fontSize : 'x-large',
-		duration : [150, 700, 150],
+		duration : [250, 500, 250],
 		display : null
 	};
 	Object.keys(options).forEach(in_prop => {
