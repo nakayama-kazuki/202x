@@ -3490,13 +3490,14 @@ const gFigure = (() => {
 		return elem;
 	})());
 	// figure speak
-	const _speak = makeSpeaker({
+	const speak = makeSpeaker({
 		width : figure.width + 50,
 		tail : 'br',
 		from : 'br',
-		vertical : figure.from.b + 50,
+		vertical : figure.from.b + 100,
 		horizontal : figure.from.r + figure.width + 20,
-		fontSize : 'normal'
+		fontSize : 'normal',
+		display : 2000
 	});
 	return {
 		show(in_src, in_text) {
@@ -3508,7 +3509,7 @@ const gFigure = (() => {
 			container.style.visibility = 'hidden';
 		},
 		speak(in_text) {
-			_speak(in_text);
+			speak(in_text);
 		}
 	};
 })();
