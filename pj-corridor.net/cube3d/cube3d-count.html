@@ -797,16 +797,18 @@ class cCubeDimV3 extends THREE.Vector3 {
 class converter {
 	// assume sorted as facelet.sortedArr order
 	static #featuresArr = [
-		{NORM : DIRECTION.YP, STICKER : 'U', O1 : DIRECTION.ZP, O2 : DIRECTION.XP, COLOR : WHITE},
-		{NORM : DIRECTION.XP, STICKER : 'R', O1 : DIRECTION.YN, O2 : DIRECTION.ZN, COLOR : RED},
-		{NORM : DIRECTION.ZP, STICKER : 'F', O1 : DIRECTION.YN, O2 : DIRECTION.XP, COLOR : GREEN},
-		{NORM : DIRECTION.YN, STICKER : 'D', O1 : DIRECTION.ZN, O2 : DIRECTION.XP, COLOR : YELLOW},
-		{NORM : DIRECTION.XN, STICKER : 'L', O1 : DIRECTION.YN, O2 : DIRECTION.ZP, COLOR : ORANGE},
-		{NORM : DIRECTION.ZN, STICKER : 'B', O1 : DIRECTION.YN, O2 : DIRECTION.XN, COLOR : BLUE}
+		{NORM : DIRECTION.YP, STICKER : 'U', O1 : DIRECTION.ZP, O2 : DIRECTION.XP},
+		{NORM : DIRECTION.XP, STICKER : 'R', O1 : DIRECTION.YN, O2 : DIRECTION.ZN},
+		{NORM : DIRECTION.ZP, STICKER : 'F', O1 : DIRECTION.YN, O2 : DIRECTION.XP},
+		{NORM : DIRECTION.YN, STICKER : 'D', O1 : DIRECTION.ZN, O2 : DIRECTION.XP},
+		{NORM : DIRECTION.XN, STICKER : 'L', O1 : DIRECTION.YN, O2 : DIRECTION.ZP},
+		{NORM : DIRECTION.ZN, STICKER : 'B', O1 : DIRECTION.YN, O2 : DIRECTION.XN}
 	];
 	static stickerMap = (() => {
 		const map = new Map();
-		converter.#featuresArr.forEach(in_features => map.set(in_features.COLOR, in_features.STICKER));
+		const colorMap = new Map(SURFACEx6.map(in_e => [in_e.NORM, in_e.INITCOLOR]));
+		converter.#featuresArr.forEach(in_e => map.set(colorMap.get(in_e.NORM), in_e.STICKER));
+		// color to sticker
 		return map;
 	})();
 	static stickerOrder(in_sticker) {
