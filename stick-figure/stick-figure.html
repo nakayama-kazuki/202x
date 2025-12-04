@@ -2031,7 +2031,7 @@ document.addEventListener('DOMContentLoaded', (async () => {
 		}
 		static help = false;
 	}
-	const speak = makeSpeaker({width : 250, fontSize : 'large', fadeOut : '2.0s'});
+	const speak = makeSpeaker({width : 250, fontSize : 'large', display : 2000});
 	const start = in_ev => {
 		if (!state.is('waiting')) {
 			return;
