@@ -110,7 +110,8 @@ class cAbstractPart extends THREE.SkinnedMesh {
 		DRAGGING_POS : Symbol(),
 		RCV_DRAGGING : Symbol(),
 		RCV_RELEASED : Symbol(),
-		INTERLOCKING : Symbol()
+		INTERLOCKING : Symbol(),
+		MATERIALBKUP : Symbol()
 	};
 	static operatingLayer = 1;
 	static #activateReceiver(in_receiver, in_activate) {
@@ -333,10 +334,43 @@ class cAbstractPart extends THREE.SkinnedMesh {
 		}
 		return merged;
 	}
-	resetMaterial(in_material) {
+	#resetInterlockingMaterials(in_material) {
 		this.#interlockings.forEach(in_obj => {
-			in_obj.material = in_material;
+			if ((in_obj instanceof cAbstractPart) && (in_obj !== this)) {
+				in_obj.resetMaterial(in_material);
+			} else {
+				in_obj.material = in_material;
+			}
 		});
+	}
+	resetMaterial(in_material) {
+		this.highlight(false);
+		this.#resetInterlockingMaterials(in_material);
+	}
+	highlight(in_highlight, in_strengthen = 0.2) {
+		let cache = this.#getCache('MATERIALBKUP');
+		if (in_highlight) {
+			if (cache) {
+				// already highlighted
+				return false;
+			} else {
+				cache = {original : this.material, cloned : this.material.clone()};
+				cache.cloned.color = cache.cloned.color.lerp(new THREE.Color(0xffffff), in_strengthen);
+				this.#resetInterlockingMaterials(cache.cloned);
+				this.#setCache('MATERIALBKUP', cache);
+				return true;
+			}
+		} else {
+			if (cache) {
+				this.#resetInterlockingMaterials(cache.original);
+				this.#setCache('MATERIALBKUP', null);
+				cache.cloned.dispose();
+				return true;
+			} else {
+				// already normal
+				return false;
+			}
+		}
 	}
 	get #boneCnt() {
 		return this.skeleton.bones.length;
@@ -507,10 +541,12 @@ class cAbstractPart extends THREE.SkinnedMesh {
 			};
 		});
 	}
-	restorePoseData(in_poseData) {
+	restorePoseData(in_poseData, in_restorePosition = true) {
 		in_poseData.forEach((in_boneData, in_ix) => {
 			const bone = this.skeleton.bones[in_ix];
-			bone.position.fromArray(in_boneData.position);
+			if (in_restorePosition) {
+				bone.position.fromArray(in_boneData.position);
+			}
 			bone.quaternion.fromArray(in_boneData.quaternion);
 		});
 	}
@@ -630,7 +666,7 @@ class cSolidPart extends cAbstractPart {
 		return poseData;
 	}
 	restorePoseData(in_poseData) {
-		super.restorePoseData(in_poseData.bone);
+		super.restorePoseData(in_poseData.bone, false);
 		this.quaternion.fromArray(in_poseData.quaternion);
 		this.plane_1_0_0 = in_poseData.plane_1_0_0;
 	}
@@ -697,14 +733,22 @@ class cJointedSolidPart extends cSolidPart {
 	}
 	static #jointedFrom(in_startObj, in_direction) {
 		const ancestor = in_startObj[instanceInAncestor](cJointedSolidPart);
-		if (!ancestor) {
+		if (ancestor) {
+			const chain = [ancestor, ...ancestor.userData.jointed];
+			if (chain.includes(in_startObj)) {
+				if (in_direction) {
+					chain.reverse();
+				}
+				// if in_startObj belongs to a cJointedSolidPart chain, method returns array.
+				return chain.slice(chain.indexOf(in_startObj));
+			} else {
+				// in_startObj does not belong to a cJointedSolidPart (simply child)
+				return [];
+			}
+		} else {
+			// can not find cJointedSolidPart ancestor
 			return [];
 		}
-		const buff = [ancestor, ...ancestor.userData.jointed];
-		if (in_direction) {
-			buff.reverse();
-		}
-		return buff.slice(buff.indexOf(in_startObj));
 	}
 	static ancestors(in_obj) {
 		// in_startObj + ancestors
@@ -714,9 +758,22 @@ class cJointedSolidPart extends cSolidPart {
 		// in_startObj + descendants
 		return cJointedSolidPart.#jointedFrom(in_obj, false);
 	}
+	static highlightAt(in_obj, in_highlight) {
+		const jointedChain = cJointedSolidPart.ancestors(in_obj);
+		jointedChain.forEach(in_ancestor => in_ancestor.highlight(in_highlight));
+	}
+	static stretchable(in_obj) {
+		const jointedChain = cJointedSolidPart.ancestors(in_obj);
+		if (jointedChain.length > 1) {
+			return true;
+		} else {
+			// root or not cJointedSolidPart
+			return false;
+		}
+	}
 	static stretchAt(in_obj, in_dstV3) {
-		const ancestors = cJointedSolidPart.ancestors(in_obj);
-		if (ancestors.length === 0) {
+		const jointedChain = cJointedSolidPart.ancestors(in_obj);
+		if (jointedChain.length === 0) {
 			// not cJointedSolidPart
 			return false;
 		}
@@ -728,17 +785,18 @@ class cJointedSolidPart extends cSolidPart {
 			    [2] > threshold : affect [2] + bendAt [1] ([0] is the same angle with [1])
 			    [2] < threshold : i++
 		*/
-		const threshold = 0.02;
+		const threshold = 0.01;
+		const smoothing = 0.9;
 		const vectorToStretch = in_targetObj => {
 			return VEC3().subVectors(in_dstV3, in_targetObj.getWorldPosition(VEC3()));
 		};
 		const angleToStretch = in_targetObj => {
 			return vectorToStretch(in_targetObj).angleTo(in_targetObj.getWorldDirection(VEC3()));
 		};
-		if (angleToStretch(ancestors[0]) < threshold) {
+		if (angleToStretch(jointedChain[0]) < threshold) {
 			let target = 0;
-			for (let i = 1; i < ancestors.length; i++) {
-				if (angleToStretch(ancestors[i]) < threshold) {
+			for (let i = 1; i < jointedChain.length; i++) {
+				if (angleToStretch(jointedChain[i]) < threshold) {
 					continue;
 				} else {
 					target = i;
@@ -747,18 +805,18 @@ class cJointedSolidPart extends cSolidPart {
 			}
 			if (target > 0) {
 				// affect [n]
-				const parent = ancestors[target];
+				const parent = jointedChain[target];
 				const srcDir = parent.getWorldDirection(VEC3());
 				const dstDir = vectorToStretch(parent);
 				const adhocScale = 1000; // how can I decide this ?
 				const delta = in_dstV3.distanceTo(parent.getWorldPosition(VEC3())) / adhocScale;
 				const angle = Math.min(srcDir.angleTo(dstDir), delta);
 				const axis = VEC3().crossVectors(srcDir, dstDir).normalize();
-				const quat = new THREE.Quaternion().setFromAxisAngle(axis, angle);
+				const quat = new THREE.Quaternion().setFromAxisAngle(axis, angle * smoothing);
 				srcDir.applyQuaternion(quat).multiplyScalar(WORLD_RADIUS);
 				parent[lookAtWithoutRotation](parent.position.clone().add(srcDir));
 				// bendAt [n - 1]
-				const child = ancestors[target - 1];
+				const child = jointedChain[target - 1];
 				child[lookAtWithoutRotation](in_dstV3);
 			}
 			// streched
@@ -1034,6 +1092,9 @@ class cFigure extends THREE.Object3D {
 			const part = this.#getCache(in_key);
 			if (part && part.copyPoseData) {
 				poseData[in_key] = part.copyPoseData();
+				if (in_key === 'ITEM') {
+					poseData['ITEM_CLASS'] = part.constructor.name;
+				}
 			}
 		});
 		return poseData;
@@ -1074,6 +1135,12 @@ const gCyclicColors = new cCyclicValues(
 	// black
 	0x000000
 );
+
+(in_index => {
+	if (in_index !== false) {
+		gCyclicColors.setCurrentIndex(in_index);
+	}
+})(getParam('color'));
 
 function createToonTexture() {
 	const canvas = document.createElement('canvas');
@@ -1120,6 +1187,12 @@ const gCyclicMaterials = (in_color => {
 	}));
 	return cyclic;
 })(gCyclicColors.currValue());
+
+(in_index => {
+	if (in_index !== false) {
+		gCyclicMaterials.setCurrentIndex(in_index);
+	}
+})(getParam('material'));
 
 function incrementColor() {
 	// gCyclicColors --> gCyclicMaterials
@@ -1290,6 +1363,8 @@ function uiDefaultView() {
 	gWorld.motionViewFrom(VEC3(0, 0, 1));
 }
 
+const CLIPMARGIN = 10;
+
 /*
 	*** NOTE ***
 	in Safari, using await to get audio will cause the process to fail.
@@ -1332,30 +1407,16 @@ function takeShotFlash() {
 	});
 }
 
-const CLIPMARGIN = 10;
-
 function uiGetScreenShot() {
 	takeShotSound();
 	takeShotFlash();
-	/*
-		*** NOTE ***
-		before getting betmap, you need re-render.
-		without it, for example, you can't use canvas.toDataURL('image/png') etc. 
-	*/
-	gWorld.render();
-	const box = gWorld.canvas[clipClearArea](CLIPMARGIN);
-	const tmpElem = document.createElement('canvas');
-	tmpElem.width = box.w;
-	tmpElem.height = box.h;
-	const ctx = tmpElem.getContext('2d');
-	ctx.drawImage(gWorld.canvas, box.l, box.t, box.w, box.h, 0, 0, box.w, box.h);
 	(async () => {
 		/*
 			*** NOTE ***
 			the browser treats the data URL as a resource when using fetch.
 			the fetch function retrieves the data and allows us to convert it into a Blob.
 		*/
-		const response = await fetch(tmpElem.toDataURL('image/png'));
+		const response = await fetch(gWorld.base64png(CLIPMARGIN));
 		const blob = await response.blob();
 		try {
 			await navigator.clipboard.write([
@@ -1549,24 +1610,92 @@ document.addEventListener('DOMContentLoaded', (async () => {
 	(4) event handlers
 */
 
-const gHandlers = (() => {
-	const c = {
-		obj : null,
-		far : false,
-		animating : false,
-		once : false
-	};
-	const start = in_ev => {
-		if (!c.once) {
-			/*
-				*** NOTE ***
-				Safari may restrict sound without user interaction.
-				because of this, the sound does not work without this code.
-			*/
-			SE_DUMMY.play();
-			c.once = true;
+(() => {
+	class state {
+		static #transitions = {
+			waiting : Symbol(),
+			operating : Symbol(),
+			animating : Symbol()
+		};
+		static #current;
+		static {
+			state.set('waiting');
 		}
-		if (c.obj) {
+		static is(in_transition) {
+			return state.#current === state.#transitions[in_transition];
+		}
+		static set(in_transition) {
+			state.#current = state.#transitions[in_transition];
+		}
+		static #_obj = null;
+		static set obj(in_obj) {
+			if (in_obj) {
+				state.set('operating');
+			} else {
+				state.set('waiting');
+			}
+			state.#_obj = in_obj;
+		}
+		static get obj() {
+			return state.#_obj;
+		}
+		static far = false;
+		static #_wideMode = false;
+		static get isWideMode() {
+			return state.#_wideMode;
+		}
+		static #_timer1 = null;
+		static #_timer1_ms = 500;
+		static observeLongPush(in_callback) {
+			state.#_wideMode = false;
+			state.unobserveLongPush();
+			state.#_timer1 = setTimeout(() => {
+				if (state.is('operating')) {
+					state.#_wideMode = true;
+					(in_callback)();
+				}
+				state.unobserveLongPush();
+				state.unobserveRepeatPush();
+			}, state.#_timer1_ms);
+		}
+		static unobserveLongPush() {
+			if (state.#_timer1) {
+				clearTimeout(state.#_timer1);
+				state.#_timer1 = null;
+			}
+		}
+		static #_timer2 = null;
+		static #_timer2_ms = 300;
+		static observeRepeatPush(in_callback) {
+			if (state.#_timer2) {
+				if (state.is('operating')) {
+					state.#_wideMode = true;
+					(in_callback)();
+				}
+				state.unobserveLongPush();
+				state.unobserveRepeatPush();
+			} else {
+				state.#_timer2 = setTimeout(() => {
+					state.#_timer2 = null;
+				}, state.#_timer2_ms);
+			}
+		}
+		static unobserveRepeatPush() {
+			if (state.#_timer2) {
+				clearTimeout(state.#_timer2);
+				state.#_timer2 = null;
+			}
+		}
+		static initialize() {
+			state.obj = null;
+			state.far = false;
+			state.#_wideMode = false;
+		}
+		static help = false;
+	}
+	const speak = makeSpeaker({width : 250, fontSize : 'large', display : 2000});
+	const start = in_ev => {
+		if (!state.is('waiting')) {
 			return;
 		}
 		const ndc = ndcFromEvent(in_ev);
@@ -1588,47 +1717,58 @@ const gHandlers = (() => {
 		const cameraPos = gWorld.getCameraPos();
 		const objectPos = target.getWorldPosition(VEC3());
 		const fineAdjustment = 0.9;
-		c.far = (rayHit.distance * fineAdjustment > cameraPos.distanceTo(objectPos));
-		c.obj = target;
+		state.far = (rayHit.distance * fineAdjustment > cameraPos.distanceTo(objectPos));
+		state.obj = target;
 		// not lookAt(cameraPos), but lookAt(raycaster.ray.direction.negate())
-		c.obj.activateDraggingRcv(objectPos.add(cameraPos));
+		state.obj.activateDraggingRcv(objectPos.add(cameraPos));
+		if (cJointedSolidPart.stretchable(state.obj)) {
+			const callback = () => {
+				cJointedSolidPart.highlightAt(state.obj, true);
+				SE_BEEP.play();
+			};
+			state.observeLongPush(callback);
+			state.observeRepeatPush(callback);
+			if (!state.help) {
+				speak('long-push or double click for wide-mode');
+				state.help = true;
+			}
+		}
+		if (!state.isWideMode) {
+			state.obj.highlight(true);
+			SE_BEEP.play();
+		}
 	};
 	const move = in_ev => {
-		if (!c.obj) {
+		if (!state.is('operating')) {
 			return;
 		}
+		state.unobserveLongPush();
 		const ndc = ndcFromEvent(in_ev);
 		let intersects;
-		if (c.far) {
+		if (state.far) {
 			intersects = gWorld.intersectNegative(ndc, cAbstractPart.operatingLayer);
 		} else {
 			intersects = gWorld.intersectPositive(ndc, cAbstractPart.operatingLayer);
 		}
 		if (intersects.length > 0) {
 			// receiver (CircleGeometry or SphereGeometry)
-			if (intersects.length === 1) {
+			if ((intersects.length === 1) && (state.isWideMode)) {
 				// receiver (only CircleGeometry)
-				if (cJointedSolidPart.stretchAt(c.obj, intersects[0].point)) {
+				if (cJointedSolidPart.stretchAt(state.obj, intersects[0].point)) {
 					// (1) bendAt() may be applied to ancestor
 					return;
 				}
 			}
-			// (2) bendAt() is applied to c.obj
-			c.obj.bendAt(intersects[0].point);
+			// (2) bendAt() is applied to state.obj
+			state.obj.bendAt(intersects[0].point);
 		} else {
-			// (3) c.obj is released
-			if (c.animating) {
-				return;
-			} else {
-				SE_RELEASE.play();
-				c.animating = true;
-			}
+			// (3) state.obj is released
 			const hook = (in_obj => {
 				return () => {
 					/*
 						when stop will be called during animation,
-						c.obj will be set to null.
-						so bind c.obj to callback.
+						state.obj will be set to null.
+						so bind state.obj to callback.
 					*/
 					if (in_obj.moreShrink()) {
 						return;
@@ -1636,46 +1776,63 @@ const gHandlers = (() => {
 					gWorld.removeAnimationHook(hook);
 					stop(new Event('mouseout'));
 				}
-			})(c.obj);
+			})(state.obj);
+			SE_RELEASE.play();
+			state.set('animating')
 			gWorld.addAnimationHook(hook);
 		}
 	};
-	const DEBOUNCING_GROUP = Symbol();
 	const updateToDetailed = () => {
 		if (!gDetail) {
 			return;
 		}
-		(debouncing(() => {
-			if (c.obj) {
+		const delayedExec = debouncing(() => {
+			if (state.obj) {
 				return;
 			} else {
 				gFigure.toDetailed();
 			}
-		}, 500, DEBOUNCING_GROUP))(new Event('dummy'));
+		}, 500);
+		(delayedExec)();
 	}
 	updateToDetailed();
 	const stop = in_ev => {
-		if (!c.obj) {
+		if (state.is('waiting')) {
 			return;
 		}
-		c.obj.activateReleasedRcv();
-		c.obj = null;
-		c.far = false;
-		c.animating = false;
+		state.unobserveLongPush();
+		if (state.isWideMode) {
+			cJointedSolidPart.highlightAt(state.obj, false);
+		} else {
+			state.obj.highlight(false);
+		}
+		state.obj.activateReleasedRcv();
+		state.initialize();
 		updateToDetailed();
 	};
-	return {
+	let handlers = {
 		'mousedown' : start,
 		'mousemove' : move,
 		'mouseleave' : stop,
 		'mouseout' : stop,
 		'mouseup' : stop
 	};
+	let once = false;
+	for (let [eventName, handler] of Object.entries(handlers)) {
+		gWorld.canvas.addEventListener(eventName, in_ev => {
+			if (!once) {
+				/*
+					*** NOTE ***
+					Safari may restrict sound without user interaction.
+					because of this, the sound does not work without this code.
+				*/
+				SE_DUMMY.play();
+				once = true;
+			}
+			(handler)(in_ev);
+		});
+	}
 })();
-
-for (let [eventName, handler] of Object.entries(gHandlers)) {
-	gWorld.canvas.addEventListener(eventName, handler);
-}
 
 </script>
 </body>
