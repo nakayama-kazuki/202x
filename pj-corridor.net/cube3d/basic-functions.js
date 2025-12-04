@@ -496,6 +496,111 @@ export function autoTransition(in_elem, in_shorthand, in_start, in_end, in_callb
 	}
 }
 
+export function makeSpeaker(in_options = {}) {
+	const options = {
+		src : null,
+		width : 200,
+		tail : 'tl',
+		from : 'br',
+		vertical : 20,
+		horizontal : 20,
+		fontSize : 'x-large',
+		duration : [250, 500, 250],
+		display : null
+	};
+	Object.keys(options).forEach(in_prop => {
+		if (in_options.hasOwnProperty(in_prop)) {
+			options[in_prop] = in_options[in_prop];
+		}
+	});
+	const tailCss = {
+		tl : {transform : 'scale(-1, -1)'},
+		tr : {transform : 'scale(+1, -1)'},
+		bl : {transform : 'scale(-1, +1)'},
+		br : {transform : 'scale(+1, +1)'}
+	}[options.tail];
+	const fromCss = {
+		tl : {top : options.vertical + 'px', left : options.horizontal + 'px'},
+		tr : {top : options.vertical + 'px', right : options.horizontal + 'px'},
+		bl : {bottom : options.vertical + 'px', left : options.horizontal + 'px'},
+		br : {bottom : options.vertical + 'px', right : options.horizontal + 'px'}
+	}[options.from];
+	const closure = {
+		outer : document.createElement('DIV'),
+		inner : document.createElement('SPAN'),
+		inTransition : false,
+		textQueue : []
+	};
+	const maxInt = 2 ** 31 - 1;
+	document.body.appendChild(closure.outer);
+	const image = new Image();
+	image.onload = () => {
+		Object.assign(closure.outer.style, tailCss);
+		Object.assign(closure.outer.style, fromCss);
+		Object.assign(closure.outer.style, {
+			pointerEvents : 'none',
+			visibility : 'hidden',
+			opacity : '0',
+			position : 'absolute',
+			width : options.width + 'px',
+			height : (image.naturalHeight * options.width / image.naturalWidth) + 'px',
+			display : 'grid',
+			placeItems : 'center',
+			textAlign : 'center',
+			backgroundPosition : 'center center',
+			backgroundSize : 'contain',
+			backgroundRepeat : 'no-repeat',
+			backgroundImage : 'url(' + image.src + ')',
+			zIndex : maxInt
+		});
+	}
+	if (options.src) {
+		image.src = options.src;
+	} else {
+		(async () => {
+			const {FUKIDASHI} = await import('./basic-functions-res.js');
+			image.src = FUKIDASHI;
+		})();
+	}
+	Object.assign(closure.inner.style, {
+		transform : tailCss.transform,
+		width : '80%',
+		fontFamily : 'cursive',
+		fontSize : options.fontSize,
+		color : 'black'
+	});
+	closure.outer.appendChild(closure.inner);
+	const _speak = in_text => {
+		if (!image.complete || image.naturalWidth === 0) {
+			console.log('can not speak');
+			return;
+		}
+		if (closure.inTransition) {
+			closure.textQueue.push(in_text);
+			return;
+		}
+		closure.outer.style.visibility = 'visible';
+		closure.inner.textContent = in_text;
+		closure.inTransition = true;
+		const fade_i = 'opacity ' + (options.duration[0] / 1000) + 's ease-out';
+		const fade_o = 'opacity ' + (options.duration[2] / 1000) + 's ease-in';
+		const waiting = options.display ?? options.duration[1];
+		autoTransition(closure.outer, fade_i, '0', '1', () => {
+			setTimeout(() => {
+				autoTransition(closure.outer, fade_o, '1', '0', () => {
+					closure.inTransition = false;
+					if (closure.textQueue.length === 0) {
+						return;
+					}
+					_speak(closure.textQueue.pop());
+					closure.textQueue.length = 0;
+				});
+			}, waiting);
+		});
+	};
+	return _speak;
+}
+
 export function startDialog(in_elem, in_callback = null) {
 	const maxInt = 2 ** 31 - 1;
 	const background = document.createElement('div');
