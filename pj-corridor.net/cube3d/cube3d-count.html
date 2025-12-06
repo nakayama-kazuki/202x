@@ -384,11 +384,11 @@ class cPresetDistMap extends Map {
 	}
 }
 
-const F3DEPTH = 3;
-const F2DEPTH = 5;
+let gF2Depth = 5;
+let gF3Depth = 3;
 
-const gPresetDistMap3 = new cPresetDistMap(facelet3, F3DEPTH);
-const gPresetDistMap2 = new cPresetDistMap(facelet2, F2DEPTH);
+const gPresetDistMap2 = new cPresetDistMap(facelet2, gF2Depth);
+const gPresetDistMap3 = new cPresetDistMap(facelet3, gF3Depth);
 
 const extract = (() => {
 	const targets = [0, 2, 6, 8, 9, 11, 15, 17, 18, 20, 24, 26, 27, 29, 33, 35, 36, 38, 42, 44, 45, 47, 51, 53];
@@ -400,8 +400,6 @@ const extract = (() => {
 		return buffer;
 	};
 })();
-
-let BUDGET_LIMIT = Math.max(F3DEPTH, F2DEPTH) + 4;
 
 function countUntilSolve(in_initArr) {
 	const answer = {found : false, distance : -1};
@@ -420,7 +418,7 @@ function countUntilSolve(in_initArr) {
 				return;
 			}
 			const packed2 = facelet2.pack(extract(in_currArr));
-			const minimum = gPresetDistMap2.get(packed2) ?? F2DEPTH + 1;
+			const minimum = gPresetDistMap2.get(packed2) ?? gF2Depth + 1;
 			if (in_currBudget < minimum) {
 				// give up : can't find in in_currBudget
 				return;
@@ -460,7 +458,8 @@ function countUntilSolve(in_initArr) {
 		}
 	};
 	const start = performance.now();
-	for (let rootBudget = 0; rootBudget <= BUDGET_LIMIT; rootBudget++) {
+	const budgetLimit = Math.max(gF3Depth, gF2Depth) + 4;
+	for (let rootBudget = 0; rootBudget <= budgetLimit; rootBudget++) {
 		const visited = new Map();
 		dfs(in_initArr, rootBudget, rootBudget, null, visited);
 		if (answer.found) {
@@ -469,7 +468,7 @@ function countUntilSolve(in_initArr) {
 	}
 	console.log(performance.now() - start + 'ms');
 	if (answer.distance < 0) {
-		return (BUDGET_LIMIT + 1) + '+';
+		return (budgetLimit + 1) + '+';
 	} else {
 		return answer.distance;
 	}
@@ -493,9 +492,10 @@ self.addEventListener('message', (() => {
 		} else {
 			if (mtype === 'update') {
 				const start = performance.now();
-				gPresetDistMap2.update(value.f2);
-				gPresetDistMap3.update(value.f3);
-				BUDGET_LIMIT = Math.max(value.f2, value.f3) + 4;
+				gF2Depth = value.f2;
+				gF3Depth = value.f3;
+				gPresetDistMap2.update(gF2Depth);
+				gPresetDistMap3.update(gF3Depth);
 				self.postMessage({mtype : 'updated', value : performance.now() - start});
 			} else {
 				console.log('invalid mtype : ' + mtype);
@@ -876,21 +876,24 @@ class cCntRubiksCube extends cRubiksCube {
 	static #worker;
 	static {
 		const instant = new Worker(cCntRubiksCube.#url);
-/*
-		const delayed = new Worker(cCntRubiksCube.#url);
-		delayed.postMessage({mtype : 'update', value : {f2 : 6, f3 : 4}});
-		const handler = in_ev => {
-			const {mtype, value} = in_ev.data;
-			if (mtype === 'updated') {
-				instant.terminate();
-				// replace worker to use powerful preset-data
-				cCntRubiksCube.#worker = delayed;
-				console.log('worker is updated : ' + value + 'ms');
-				delayed.removeEventListener('message', handler);
-			}
-		};
-		delayed.addEventListener('message', handler);
-*/
+		// const useDelayedUpdate = true;
+		const useDelayedUpdate = false;
+		if (useDelayedUpdate) {
+			// 2025.12.06 IDA* using this setting is to late
+			const delayed = new Worker(cCntRubiksCube.#url);
+			delayed.postMessage({mtype : 'update', value : {f2 : 6, f3 : 4}});
+			const handler = in_ev => {
+				const {mtype, value} = in_ev.data;
+				if (mtype === 'updated') {
+					instant.terminate();
+					// replace worker to use powerful preset-data
+					cCntRubiksCube.#worker = delayed;
+					console.log('worker is updated : ' + value + 'ms');
+					delayed.removeEventListener('message', handler);
+				}
+			};
+			delayed.addEventListener('message', handler);
+		}
 		cCntRubiksCube.#worker = instant;
 	}
 	static #execWorker(in_currArr, in_callback) {
