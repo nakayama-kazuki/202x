@@ -20,22 +20,33 @@
 <script id='worker-blob' type='text/plain'>
 
 function createFaceletClass(in_conf) {
-	const {dim, edgeRingMap, centerRingMap, sameAxis, surfaceR90, sliceArr} = in_conf;
-	return class dummy {
-		static pieces = dim ** 2;
+	const {dim, edgeRingMap, centerRingMap, sameAxis, surfaceR90, packFunction, debugMapping} = in_conf;
+	return class _facelet {
+		static pieces = surfaceR90.length;
 		static #sortedArr = [...'URFDLB'];
-		static surfaces = dummy.#sortedArr.length;
-		static faceletCnt = dummy.surfaces * dummy.pieces;
+		static surfaces = _facelet.#sortedArr.length;
+		static #centerIxArr = (() => {
+			const arr = [];
+			if ((_facelet.pieces & 1) === 1) {
+				const centerDelta = (_facelet.pieces - 1) / 2;
+				for (let i = 0; i < _facelet.surfaces; i++) {
+					const offset = i * _facelet.pieces;
+					arr.push(offset + centerDelta);
+				}
+			}
+			return arr;
+		})();
+		static faceletCnt = _facelet.surfaces * _facelet.pieces;
 		static makeComplete(in_isIx = true) {
 			const comp = [];
-			dummy.#sortedArr.forEach((in_sticker, in_ix) => {
+			_facelet.#sortedArr.forEach((in_sticker, in_ix) => {
 				const data = in_isIx ? in_ix : in_sticker;
-				comp.push(...Array(dummy.pieces).fill(data));
+				comp.push(...Array(_facelet.pieces).fill(data));
 			});
 			return comp;
 		}
 		static #makeInitIndexes() {
-			return Array.from({length : dummy.faceletCnt}, (_, i) => i);
+			return Array.from({length : _facelet.faceletCnt}, (_, i) => i);
 		}
 		static #rotateEdge(in_ixArr, in_sticker, in_cnt = 1) {
 			const cnt = (in_cnt + 4) % 4;
@@ -44,17 +55,18 @@ function createFaceletClass(in_conf) {
 			}
 			const ixArr = [...in_ixArr];
 			// 1. surface of in_sticker
-			const start = dummy.#sortedArr.indexOf(in_sticker) * dummy.pieces;
+			const start = _facelet.#sortedArr.indexOf(in_sticker) * _facelet.pieces;
 			surfaceR90.forEach((in_srcIx, in_dstIx) => ixArr[start + in_dstIx] = in_ixArr[start + in_srcIx]);
 			// 2. ring around in_sticker
 			const ring = edgeRingMap.get(in_sticker);
+			const delta = ring.length / 4;
 			for (let i = 0; i < ring.length; i++) {
 				const srcIx = ring[i];
-				const dstIx = ring[(i + dim) % ring.length];
+				const dstIx = ring[(i + delta) % ring.length];
 				ixArr[dstIx] = in_ixArr[srcIx];
 			}
 			if (cnt > 1) {
-				return dummy.#rotateEdge(ixArr, in_sticker, (cnt - 1));
+				return _facelet.#rotateEdge(ixArr, in_sticker, (cnt - 1));
 			} else {
 				return ixArr;
 			}
@@ -66,27 +78,29 @@ function createFaceletClass(in_conf) {
 			}
 			const ixArr = [...in_ixArr];
 			const ring = centerRingMap.get(in_slice);
+			const delta = ring.length / 4;
 			for (let i = 0; i < ring.length; i++) {
 				const srcIx = ring[i];
-				const dstIx = ring[(i + dim) % ring.length];
+				const dstIx = ring[(i + delta) % ring.length];
 				ixArr[dstIx] = in_ixArr[srcIx];
 			}
 			if (cnt > 1) {
-				return dummy.#rotateCenter(ixArr, in_slice, (cnt - 1));
+				return _facelet.#rotateCenter(ixArr, in_slice, (cnt - 1));
 			} else {
 				return ixArr;
 			}
 		}
 		static moveArr = [];
 		static {
-			const initArr = dummy.#makeInitIndexes();
+			const initArr = _facelet.#makeInitIndexes();
 			let sameId = 0;
-			dummy.#sortedArr.forEach(in_sticker => {
+			const edgeRingArr = [...edgeRingMap.keys()];
+			edgeRingArr.forEach(in_sticker => {
 				const axisId = sameAxis.findIndex(in_arr => in_arr.includes(in_sticker));
 				const axisOrder = sameAxis[axisId].indexOf(in_sticker);
 				const registerMove = in_angle => {
-					dummy.moveArr.push({
-						move : dummy.#rotateEdge(initArr, in_sticker, in_angle / 90),
+					_facelet.moveArr.push({
+						move : _facelet.#rotateEdge(initArr, in_sticker, in_angle / 90),
 						hint : {same : sameId, axis : axisId, order : axisOrder, angle : in_angle}
 					});
 				};
@@ -95,12 +109,13 @@ function createFaceletClass(in_conf) {
 				registerMove(270);
 				sameId++;
 			});
-			sliceArr.forEach(in_slice => {
+			const centerRingArr = [...centerRingMap.keys()];
+			centerRingArr.forEach(in_slice => {
 				const axisId = sameAxis.findIndex(in_arr => in_arr.includes(in_slice));
 				const axisOrder = sameAxis[axisId].indexOf(in_slice);
 				const registerMove = in_angle => {
-					dummy.moveArr.push({
-						move : dummy.#rotateCenter(initArr, in_slice, in_angle / 90),
+					_facelet.moveArr.push({
+						move : _facelet.#rotateCenter(initArr, in_slice, in_angle / 90),
 						hint : {same : sameId, axis : axisId, order : axisOrder, angle : in_angle}
 					});
 				};
@@ -129,7 +144,7 @@ function createFaceletClass(in_conf) {
 					{sticker : 'R', cnt : 3}
 				]
 			}
-			const initArr = dummy.#makeInitIndexes();
+			const initArr = _facelet.#makeInitIndexes();
 			const canonMoveArr = [
 				// U === U
 				[],
@@ -167,46 +182,45 @@ function createFaceletClass(in_conf) {
 				in_rotateArr.forEach(in_which => {
 					rotateGroup[in_which].forEach(({sticker, cnt}) => {
 						if (edgeRingMap.has(sticker)) {
-							tempArr = dummy.#rotateEdge(tempArr, sticker, cnt);
+							tempArr = _facelet.#rotateEdge(tempArr, sticker, cnt);
 						} else if (centerRingMap.has(sticker)) {
-							tempArr = dummy.#rotateCenter(tempArr, sticker, cnt);
+							tempArr = _facelet.#rotateCenter(tempArr, sticker, cnt);
 						}
 					});
 				});
-				dummy.canonical.push(tempArr);
+				_facelet.canonical.push(tempArr);
 			});
-			// debug for dummy.canonical
+			// debug for _facelet.canonical
 			if (false) {
-				const comp = dummy.makeComplete(false);
-				dummy.debugCanonical(comp);
+				const comp = _facelet.makeComplete(false);
+				_facelet.debugCanonical(comp);
 			}
 		}
 		static debugCanonical(in_arr) {
-			dummy.canonical.forEach((in_move, in_no) => {
+			_facelet.canonical.forEach((in_move, in_no) => {
 				const moved = [];
 				for (let i = 0; i < in_move.length; i++) {
 					moved[i] = in_arr[in_move[i]];
 				}
 				console.log('canonical #' + in_no);
-				dummy.debug(moved);
+				_facelet.debug(moved);
 			});
 		}
-		static pack = (() => {
-			const digit1 = dummy.surfaces ** 1;
-			const digit2 = dummy.surfaces ** 2;
-			const representativeArr = new Uint8Array(dummy.faceletCnt);
-			const digit = 3;
-			return in_uArr => {
+		static #getRepresentativeArr = (() => {
+			const representativeArr = new Uint8Array(_facelet.faceletCnt);
+			return function _getRepresentativeArr(in_uArr) {
+				let ix = 0;
 				representativeArr.fill(0xFF);
-				dummy.canonical.forEach(in_move => {
-					for (let i = 0; i < dummy.faceletCnt; i++) {
+				_facelet.canonical.forEach((in_move, in_ix) => {
+					for (let i = 0; i < _facelet.faceletCnt; i++) {
 						if (in_uArr[in_move[i]] === representativeArr[i]) {
 							// next elem
 							continue;
 						}
 						if (in_uArr[in_move[i]] < representativeArr[i]) {
 							// update representative by current in_move
-							for (let j = i; j < dummy.faceletCnt; j++) {
+							ix = in_ix;
+							for (let j = i; j < _facelet.faceletCnt; j++) {
 								representativeArr[j] = in_uArr[in_move[j]];
 							}
 						}
@@ -214,18 +228,87 @@ function createFaceletClass(in_conf) {
 						break;
 					}
 				});
-				let uniqStr = '';
-				for (let i = 0; i < representativeArr.length / digit; i++) {
-					const g = i * digit;
-					const ch =
-						representativeArr[g + 0] * digit2 +
-						representativeArr[g + 1] * digit1 +
-						representativeArr[g + 2];
-					uniqStr += String.fromCharCode(ch);
-				}
-				return uniqStr;
-			};
+				return {
+					reprArr : representativeArr,
+					canonArr : _facelet.canonical[ix]
+				};
+			}
 		})();
+		static #getDigitArr = (() => {
+			const digitArr = [];
+			return function _blockDigitArr(in_surfaceCnt) {
+				let blockSize = -1;
+				const modArr = [1, 2, 3];
+				const total = _facelet.pieces * in_surfaceCnt;
+				modArr.forEach(in_mod => {
+					if (total % in_mod === 0) {
+						blockSize = in_mod;
+					}
+				});
+				digitArr.length = 0;
+				for (let i = 0; i < blockSize; i++) {
+					digitArr[i] = _facelet.surfaces ** (blockSize - 1 - i);
+				}
+				return digitArr;
+			}
+		})();
+		static packPermAll = (() => {
+			const digitArr = _facelet.#getDigitArr(_facelet.surfaces);
+			const blockSize = digitArr.length;
+			return function _packPermAll(in_uArr) {
+				const {reprArr} = _facelet.#getRepresentativeArr(in_uArr);
+				let packed = '';
+				for (let i = 0; i < reprArr.length / blockSize; i++) {
+					const offset = blockSize * i;
+					let aggregated = 0;
+					for (let j = 0; j < blockSize; j++) {
+						aggregated += reprArr[offset + j] * digitArr[j];
+					}
+					packed += String.fromCharCode(aggregated);
+				}
+				return packed;
+			}
+		})();
+		static #packPermSome(in_targetColorArr) {
+			if (_facelet.#centerIxArr.length === 0) {
+				return () => {
+					throw new Error('no center');
+				};
+			}
+			const deltaFromCenter = (_facelet.pieces - 1) / 2;
+			const normalizedArr = new Uint8Array(_facelet.pieces * in_targetColorArr.length);
+			const digitArr = _facelet.#getDigitArr(1);
+			const blockSize = digitArr.length;
+			return function _packPermSome(in_uArr) {
+				const {reprArr, canonArr} = _facelet.#getRepresentativeArr(in_uArr);
+				in_targetColorArr.forEach((in_targetColor, in_surefaceIx) => {
+					const reprCenter = _facelet.#centerIxArr.find(in_ix => reprArr[in_ix] === in_targetColor);
+					const reprStart = reprCenter - deltaFromCenter;
+					const reprEnd = reprCenter + deltaFromCenter;
+					const canonStart = canonArr[reprCenter] - deltaFromCenter; 
+					const offset = _facelet.pieces * in_surefaceIx
+					for (let i = reprStart; i <= reprEnd; i++) {
+						const normIx = canonArr[i] - canonStart + offset;
+						normalizedArr[normIx] = reprArr[i];
+					}
+				});
+				let packed = '';
+				for (let i = 0; i < normalizedArr.length / blockSize; i++) {
+					const offset = blockSize * i;
+					let aggregated = 0;
+					for (let j = 0; j < blockSize; j++) {
+						aggregated += normalizedArr[offset + j] * digitArr[j];
+					}
+					packed += String.fromCharCode(aggregated);
+				}
+				return packed;
+			}
+		}
+		static packPermOne = _facelet.#packPermSome([0]);
+		static packPermTwo = _facelet.#packPermSome([0, 3]);
+		static pack(in_uArr) {
+			return _facelet[packFunction](in_uArr);
+		}
 		static debug(in_arr) {
 			const format = [
 				['*', 'U', '*', '*'],
@@ -245,14 +328,24 @@ function createFaceletClass(in_conf) {
 				throw new Error('invalid sticker');
 			};
 			const table = Array.from({length : rows * dim}, () => Array(cols * dim).fill(null));
-			dummy.#sortedArr.forEach((in_sticker, in_ix) => {
+			_facelet.#sortedArr.forEach((in_sticker, in_ix) => {
 				const ix = findStickerIx(in_sticker);
 				for (let row = 0; row < dim; row++) {
 					for (let col = 0; col < dim; col++) {
 						const r = ix.row * dim + row;
 						const c = ix.col * dim + col;
-						const f = in_ix * (dummy.pieces) + row * dim + col;
-						table[r][c] = in_arr[f];
+						if (debugMapping) {
+							const targetIx = row * dim + col;
+							if (debugMapping.includes(targetIx)) {
+								const f = in_ix * (_facelet.pieces) + debugMapping.indexOf(targetIx);
+								table[r][c] = in_arr[f];
+							} else {
+								table[r][c] = null;
+							}
+						} else {
+							const f = in_ix * (_facelet.pieces) + row * dim + col;
+							table[r][c] = in_arr[f];
+						}
 					}
 				}
 			});
@@ -278,7 +371,7 @@ function createFaceletClass(in_conf) {
 	                    ZN ZN
 */
 
-const facelet2 = createFaceletClass({
+const CONF222 = {
 	dim : 2,
 	edgeRingMap : new Map([
 		['U', [21, 20,  5,  4,  9,  8, 17, 16]],
@@ -295,8 +388,11 @@ const facelet2 = createFaceletClass({
 		['B', 'F']
 	],
 	surfaceR90 : [2, 0, 3, 1],
-	sliceArr : []
-});
+	debugMapping : null
+};
+
+CONF222.packFunction = 'packPermAll';
+const fP2xURFDLB = createFaceletClass(CONF222);
 
 /*
 	                   ZN ZN ZN
@@ -318,7 +414,7 @@ const facelet2 = createFaceletClass({
 	                   ZN ZN ZN
 */
 
-const facelet3 = createFaceletClass({
+const CONF333 = {
 	dim : 3,
 	edgeRingMap : new Map([
 		['U', [47, 46, 45, 11, 10,  9, 20, 19, 18, 38, 37, 36]],
@@ -339,8 +435,84 @@ const facelet3 = createFaceletClass({
 		['B', 'S', 'F']
 	],
 	surfaceR90 : [6, 3, 0, 7, 4, 1, 8, 5, 2],
-	sliceArr : ['M', 'E', 'S']
-});
+	debugMapping : null
+};
+
+CONF333.packFunction = 'packPermAll';
+const fP3xURFDLB = createFaceletClass(CONF333);
+
+CONF333.packFunction = 'packPermOne';
+const fP3xU = createFaceletClass(CONF333);
+
+/*
+	                   ZN ZN ZN
+	                XN -- 00 -- XP
+	                XN 01 UU 03 XP
+	                XN -- 04 -- XP
+	                   ZP ZP ZP
+
+	   YP YP YP        YP YP YP        YP YP YP        YP YP YP
+	ZN -- 20 -- ZP  XN -- 10 -- XP  ZP -- 05 -- ZN  XP -- 25 -- XN
+	ZN 21 LL 23 ZP  XN 11 FF 13 XP  ZP 06 RR 08 ZN  XP 26 BB 28 XN
+	ZN -- 24 -- ZP  XN -- 14 -- XP  ZP -- 09 -- ZN  XP -- 29 -- XN
+	   YN YN YN        YN YN YN        YN YN YN        YN YN YN
+
+	                   ZP ZP ZP
+	                XN -- 15 -- XP
+	                XN 16 DD 18 XP
+	                XN -- 19 -- XP
+	                   ZN ZN ZN
+*/
+
+const CONF333S = {
+	dim : 3,
+	edgeRingMap : new Map([
+		['U', [25,  5, 10, 20]],
+		['R', [ 3, 26, 18, 13]],
+		['F', [ 4,  6, 15, 23]],
+		['D', [14,  9, 29, 24]],
+		['L', [ 1, 11, 16, 28]],
+		['B', [ 0, 21, 19,  8]]
+	]),
+	centerRingMap : new Map([
+		['M', [ 0,  2,  4, 10, 12, 14, 15, 17, 19, 29, 27, 25]],
+		['E', [26, 27, 28, 21, 22, 23, 11, 12, 13,  6,  7,  8]],
+		['S', [ 1,  2,  3,  5,  7,  9, 18, 17, 16, 24, 22, 20]]
+	]),
+	sameAxis : [
+		['L', 'M', 'R'],
+		['D', 'E', 'U'],
+		['B', 'S', 'F']
+	],
+	surfaceR90 : [1, 4, 2, 0, 3],
+	debugMapping : [1, 3, 4, 5, 7]
+};
+
+CONF333S.packFunction = 'packPermTwo';
+const fP3SxUD = createFaceletClass(CONF333S);
+
+const extract = (() => {
+	const cornerArr = [0, 2, 6, 8, 9, 11, 15, 17, 18, 20, 24, 26, 27, 29, 33, 35, 36, 38, 42, 44, 45, 47, 51, 53];
+	const othersArr = [];
+	for (let i = 0; i < fP3xURFDLB.faceletCnt; i++) {
+		if (!cornerArr.includes(i)) {
+			othersArr.push(i);
+		}
+	}
+	const buffer = {
+		corner : new Uint8Array(cornerArr.length),
+		others : new Uint8Array(othersArr.length)
+	};
+	return in_arr => {
+		for (let i = 0; i < cornerArr.length; i++) {
+			buffer.corner[i] = in_arr[cornerArr[i]];
+		}
+		for (let i = 0; i < othersArr.length; i++) {
+			buffer.others[i] = in_arr[othersArr[i]];
+		}
+		return buffer;
+	};
+})();
 
 function applyMove(in_srcArr, in_dstArr, in_move) {
 	for (let i = 0; i < in_move.length; i++) {
@@ -348,30 +520,33 @@ function applyMove(in_srcArr, in_dstArr, in_move) {
 	}
 }
 
-class cPresetDistMap extends Map {
+class cPresetDistanceMap extends Map {
 	#facelet = null;
 	#setup(in_maxDistance) {
+		const start = performance.now();
 		const initArr = Uint8Array.from(this.#facelet.makeComplete());
 		this.set(this.#facelet.pack(initArr), 0);
-		const queue = [initArr];
-		while (queue.length > 0) {
-			const currArr = queue.shift();
-			const depth = this.get(this.#facelet.pack(currArr));
-			if (depth >= in_maxDistance) {
-				continue;
-			}
-			for (let i = 0; i < this.#facelet.moveArr.length; i++) {
-				const nextArr = new Uint8Array(this.#facelet.faceletCnt);
-				applyMove(currArr, nextArr, this.#facelet.moveArr[i].move);
-				const packed = this.#facelet.pack(nextArr);
-				if (this.has(packed)) {
+		if (in_maxDistance > 0) {
+			const queue = [initArr];
+			while (queue.length > 0) {
+				const currArr = queue.shift();
+				const depth = this.get(this.#facelet.pack(currArr));
+				if (depth >= in_maxDistance) {
 					continue;
 				}
-				this.set(packed, depth + 1);
-				queue.push(nextArr);
+				for (let i = 0; i < this.#facelet.moveArr.length; i++) {
+					const nextArr = new Uint8Array(this.#facelet.faceletCnt);
+					applyMove(currArr, nextArr, this.#facelet.moveArr[i].move);
+					const packed = this.#facelet.pack(nextArr);
+					if (this.has(packed)) {
+						continue;
+					}
+					this.set(packed, depth + 1);
+					queue.push(nextArr);
+				}
 			}
 		}
-		// console.log('setup done : ', this.size, this.#facelet.moveArr.length ** in_maxDistance);
+		console.log('depth, size, time  = ', in_maxDistance, this.size, performance.now() - start);
 	}
 	constructor(in_class, in_maxDistance) {
 		super();
@@ -384,57 +559,77 @@ class cPresetDistMap extends Map {
 	}
 }
 
-let gF2Depth = 5;
-let gF3Depth = 3;
+let gP3xURFDLB = 3;
+let gP2xURFDLB = 5;
+// delayed --> 5
+let gP3xU = 4;
+// delayed --> 5
+let gP3SxUD = 4;
 
-const gPresetDistMap2 = new cPresetDistMap(facelet2, gF2Depth);
-const gPresetDistMap3 = new cPresetDistMap(facelet3, gF3Depth);
-
-const extract = (() => {
-	const targets = [0, 2, 6, 8, 9, 11, 15, 17, 18, 20, 24, 26, 27, 29, 33, 35, 36, 38, 42, 44, 45, 47, 51, 53];
-	const buffer = new Uint8Array(targets.length);
-	return in_arr => {
-		for (let i = 0; i < targets.length; i++) {
-			buffer[i] = in_arr[targets[i]];
-		}
-		return buffer;
-	};
-})();
+const gPDB_P3xURFDLB = new cPresetDistanceMap(fP3xURFDLB, gP3xURFDLB);
+const gPDB_P2xURFDLB = new cPresetDistanceMap(fP2xURFDLB, gP2xURFDLB);
+const gPDB_P3xU = new cPresetDistanceMap(fP3xU, gP3xU);
+const gPDB_P3SxUD = new cPresetDistanceMap(fP3SxUD, gP3SxUD);
 
 function countUntilSolve(in_initArr) {
 	const answer = {found : false, distance : -1};
+	const cnt = {
+		P2xURFDLB : 0,
+		P3xU : 0,
+		P3SxUD : 0
+	};
 	const dfs = (in_currArr, in_rootBudget, in_currBudget, in_prevHint, in_visited) => {
 		if (answer.found) {
 			return;
 		}
-		const packed3 = facelet3.pack(in_currArr);
-		const distance3 = gPresetDistMap3.get(packed3);
-		if (distance3 === undefined) {
-			const budget = in_visited.get(packed3);
+		let packed, minimum;
+		packed = fP3xURFDLB.pack(in_currArr);
+		const distance = gPDB_P3xURFDLB.get(packed);
+		if (distance === undefined) {
+			const budget = in_visited.get(packed);
 			if ((budget === undefined) || (budget < in_currBudget)) {
-				in_visited.set(packed3, in_currBudget);
+				in_visited.set(packed, in_currBudget);
 			} else {
 				// give up : already visited with more budget
 				return;
 			}
-			const packed2 = facelet2.pack(extract(in_currArr));
-			const minimum = gPresetDistMap2.get(packed2) ?? gF2Depth + 1;
+			const extracted = extract(in_currArr);
+			// lower bound #1
+			packed = fP2xURFDLB.pack(extracted.corner);
+			minimum = gPDB_P2xURFDLB.get(packed) ?? gP2xURFDLB + 1;
 			if (in_currBudget < minimum) {
 				// give up : can't find in in_currBudget
+				cnt.P2xURFDLB++;
+				return;
+			}
+			// lower bound #2
+			packed = fP3xU.pack(in_currArr);
+			minimum = gPDB_P3xU.get(packed) ?? gP3xU + 1;
+			if (in_currBudget < minimum) {
+				// give up : can't find in in_currBudget
+				cnt.P3xU++;
+				return;
+			}
+			// lower bound #3
+			packed = fP3SxUD.pack(extracted.others);
+			minimum = gPDB_P3SxUD.get(packed) ?? gP3SxUD + 1;
+			if (in_currBudget < minimum) {
+				// give up : can't find in in_currBudget
+				cnt.P3SxUD++;
 				return;
 			}
 		} else {
 			// solved
 			answer.found = true;
-			answer.distance = (in_rootBudget - in_currBudget) + distance3;
+			answer.distance = (in_rootBudget - in_currBudget) + distance;
 			return;
 		}
-		const nextArr = new Uint8Array(facelet3.faceletCnt);
-		for (let i = 0; i < facelet3.moveArr.length; i++) {
+		const nextArr = new Uint8Array(fP3xURFDLB.faceletCnt);
+		for (let i = 0; i < fP3xURFDLB.moveArr.length; i++) {
 			if (answer.found) {
-				return;
+				break;
 			}
-			const nextHint = facelet3.moveArr[i].hint;
+			const nextHint = fP3xURFDLB.moveArr[i].hint;
 			if (in_prevHint) {
 				// pruning usind hint
 				if (nextHint.same === in_prevHint.same) {
@@ -446,19 +641,20 @@ function countUntilSolve(in_initArr) {
 							// skip : the same as the opposite rotation of the other group
 							continue;
 						}
-						if (nextHint.order !== in_prevHint.order + 1) {
+						if (nextHint.order < in_prevHint.order) {
 							// skip : should follow normalize sequence
 							continue;
 						}
 					}
 				}
 			}
-			applyMove(in_currArr, nextArr, facelet3.moveArr[i].move);
+			applyMove(in_currArr, nextArr, fP3xURFDLB.moveArr[i].move);
 			dfs(nextArr, in_rootBudget, in_currBudget - 1, nextHint, in_visited);
 		}
 	};
 	const start = performance.now();
-	const budgetLimit = Math.max(gF3Depth, gF2Depth) + 4;
+	// const budgetLimit = 9;
+	const budgetLimit = Math.max(gP3xURFDLB, gP2xURFDLB, gP3xU, gP3SxUD) + 4;
 	for (let rootBudget = 0; rootBudget <= budgetLimit; rootBudget++) {
 		const visited = new Map();
 		dfs(in_initArr, rootBudget, rootBudget, null, visited);
@@ -466,7 +662,7 @@ function countUntilSolve(in_initArr) {
 			break;
 		}
 	}
-	console.log(performance.now() - start + 'ms');
+	console.log(performance.now() - start + 'ms', cnt);
 	if (answer.distance < 0) {
 		return (budgetLimit + 1) + '+';
 	} else {
@@ -492,10 +688,22 @@ self.addEventListener('message', (() => {
 		} else {
 			if (mtype === 'update') {
 				const start = performance.now();
-				gF2Depth = value.f2;
-				gF3Depth = value.f3;
-				gPresetDistMap2.update(gF2Depth);
-				gPresetDistMap3.update(gF3Depth);
+				if (gP3xURFDLB < value.p3x6) {
+					gP3xURFDLB = value.p3x6;
+					gPDB_P3xURFDLB.update(gP3xURFDLB);
+				}
+				if (gP2xURFDLB < value.p2x6) {
+					gP2xURFDLB = value.p2x6;
+					gPDB_P2xURFDLB.update(gP2xURFDLB);
+				}
+				if (gP3xU < value.p3x1) {
+					gP3xU = value.p3x1;
+					gPDB_P3xU.update(gP3xU);
+				}
+				if (gP3SxUD < value.p3Sx2) {
+					gP3SxUD = value.p3Sx2;
+					gPDB_P3SxUD.update(gP3SxUD);
+				}
 				self.postMessage({mtype : 'updated', value : performance.now() - start});
 			} else {
 				console.log('invalid mtype : ' + mtype);
@@ -819,7 +1027,7 @@ class cCubeDimV3 extends THREE.Vector3 {
 }
 
 class converter {
-	// assume sorted as facelet3.sortedArr order
+	// assume sorted as fP3xURFDLB.sortedArr order
 	static #featuresArr = [
 		{NORM : DIRECTION.YP, STICKER : 'U', O1 : DIRECTION.ZP, O2 : DIRECTION.XP},
 		{NORM : DIRECTION.XP, STICKER : 'R', O1 : DIRECTION.YN, O2 : DIRECTION.ZN},
@@ -876,12 +1084,12 @@ class cCntRubiksCube extends cRubiksCube {
 	static #worker;
 	static {
 		const instant = new Worker(cCntRubiksCube.#url);
-		// const useDelayedUpdate = true;
-		const useDelayedUpdate = false;
+		const useDelayedUpdate = true;
+		// const useDelayedUpdate = false;
 		if (useDelayedUpdate) {
 			// 2025.12.06 IDA* using this setting is to late
 			const delayed = new Worker(cCntRubiksCube.#url);
-			delayed.postMessage({mtype : 'update', value : {f2 : 6, f3 : 4}});
+			delayed.postMessage({mtype : 'update', value : {p3x6 : 0, p2x6 : 0, p3x1 : 5, p3Sx2 : 5}});
 			const handler = in_ev => {
 				const {mtype, value} = in_ev.data;
 				if (mtype === 'updated') {
@@ -932,7 +1140,7 @@ class cCntRubiksCube extends cRubiksCube {
 		for (let i = 0; i < sorted.length; i++) {
 			stickerArr[i] = srcArr[sorted[i]].sticker;
 		}
-		// facelet3.debug(stickerArr);
+		// fP3xURFDLB.debug(stickerArr);
 		const currArr = Uint8Array.from(stickerArr.map(converter.stickerOrder));
 		cCntRubiksCube.#execWorker(currArr, in_callback);
 	}

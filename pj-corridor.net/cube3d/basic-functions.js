@@ -362,7 +362,7 @@ function _watchResize(in_elem) {
 					return;
 				} else {
 					const diff = currentSize - closure[in_prop];
-					console.log(in_prop + ' is resized ( ' + diff + ' )');
+					// console.log(in_prop + ' is resized ( ' + diff + ' )');
 					closure[in_prop] = currentSize;
 				}
 			});
