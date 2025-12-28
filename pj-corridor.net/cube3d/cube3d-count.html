@@ -17,7 +17,131 @@
 </script>
 </head>
 <body>
-<script id='worker-blob' type='text/plain'>
+<script data-type='worker-code' data-shared='true' type='text/plain'>
+
+globalThis.gMaxDepth = 10;
+
+globalThis.gConfPDB = {
+	pOrigin6 : {
+		enabled : true,
+		instant : 4,
+		delayed : 4
+	},
+	pCorner6 : {
+		enabled : true,
+		instant : 6,
+		delayed : 7
+	},
+	pOrigin1 : {
+		enabled : true,
+		instant : 0,
+		delayed : 5
+	},
+	pOthers2 : {
+		enabled : false,
+		instant : 0,
+		delayed : 5
+	},
+	cOriginUR : {
+		enabled : false,
+		instant : 0,
+		delayed : 5
+	},
+	cOriginUD : {
+		enabled : false,
+		instant : 0,
+		delayed : 5
+	}
+};
+
+</script>
+<script data-type='worker-code' data-shared='false' type='text/plain'>
+
+class cStarsBars {
+	static #S = 0;
+	static #B = 1;
+	static #lex(in_sCnt, in_bCnt, in_callback) {
+		const total = in_sCnt + in_bCnt;
+		const totalArr = new Uint8Array(total);
+		const cntArr = new Uint8Array(in_bCnt + 1);
+		const map = new Map();
+		let rank = 0;
+		const dfs = (in_pos, in_sLeft, in_bLeft) => {
+			if (in_pos === total) {
+				cntArr.fill(0);
+				let index = 0;
+				for (let i = 0; i < totalArr.length; i++) {
+					if (totalArr[i] === cStarsBars.#B) {
+						index++;
+					} else {
+						cntArr[index]++;
+					}
+				}
+				const key = in_callback(cntArr);
+				if (key !== null) {
+					map.set(key, rank)
+					rank++;
+				}
+			} else {
+				if (in_sLeft > 0) {
+					totalArr[in_pos] = cStarsBars.#S;
+					dfs(in_pos + 1, in_sLeft - 1, in_bLeft);
+				}
+				if (in_bLeft > 0) {
+					totalArr[in_pos] = cStarsBars.#B;
+					dfs(in_pos + 1, in_sLeft, in_bLeft - 1);
+				}
+			}
+		}
+		dfs(0, in_sCnt, in_bCnt);
+		return map;
+	}
+	static convert(in_sCnt) {
+		return in_cntArr => {
+			let key = 0;
+			let base = 1;
+			for (let i = 0; i < in_cntArr.length; i++) {
+				key += in_cntArr[i] * base;
+				base *= (in_sCnt + 1);
+			}
+			return key;
+		};
+	}
+	static rankMap(in_sCnt, in_bCnt) {
+		return cStarsBars.#lex(in_sCnt, in_bCnt, cStarsBars.convert(in_sCnt));
+	}
+}
+
+function createCombiClass(in_pieces, in_surfaceArr) {
+	return class _combi extends cStarsBars {
+		static #surfaces = 6;
+		static #context = {enable : false};
+		static mapKey(in_uArr) {
+			const ctx = _combi.#context;
+			if (!ctx.enable) {
+				return -1;
+			}
+			const pieces = in_uArr.length / _combi.#surfaces;
+			ctx.cntArr.fill(0);
+			for (let i = 0; i < in_surfaceArr.length; i++) {
+				const offset = in_surfaceArr[i] * pieces;
+				for (let j = 0; j < pieces; j++) {
+					ctx.cntArr[in_uArr[offset + j]]++;
+				}
+			}
+			return (ctx.callback)(ctx.cntArr);
+		}
+		static rankMap() {
+			const sCnt = in_pieces * in_surfaceArr.length;
+			const bCnt = _combi.#surfaces - 1;
+			const ctx = _combi.#context;
+			ctx.cntArr = new Uint8Array(_combi.#surfaces);
+			ctx.callback = cStarsBars.convert(sCnt);
+			ctx.enable = true;
+			return cStarsBars.rankMap(sCnt, bCnt);
+		}
+	};
+}
 
 function createFaceletClass(in_conf) {
 	const {dim, edgeRingMap, centerRingMap, sameAxis, surfaceR90, packFunction, debugMapping} = in_conf;
@@ -238,10 +362,20 @@ function createFaceletClass(in_conf) {
 			const digitArr = [];
 			return function _blockDigitArr(in_surfaceCnt) {
 				let blockSize = -1;
-				const modArr = [1, 2, 3];
+				const modArr = (() => {
+					const dbcs = 2 ** 16;
+					let i = 0;
+					const arr = [];
+					while (6 ** ++i < dbcs) {
+						// surrogate-safe : aggregated < 0xD800 (46655 < 55296-57343)
+						arr.push(i);
+					}
+					return arr;
+				})();
 				const total = _facelet.pieces * in_surfaceCnt;
 				modArr.forEach(in_mod => {
 					if (total % in_mod === 0) {
+						// find max in_mod
 						blockSize = in_mod;
 					}
 				});
@@ -249,16 +383,18 @@ function createFaceletClass(in_conf) {
 				for (let i = 0; i < blockSize; i++) {
 					digitArr[i] = _facelet.surfaces ** (blockSize - 1 - i);
 				}
+				// console.log(digitArr);
 				return digitArr;
 			}
 		})();
-		static packPermAll = (() => {
-			const digitArr = _facelet.#getDigitArr(_facelet.surfaces);
+		static #toSurfaceBin(in_surfaceCnt) {
+			const digitArr = _facelet.#getDigitArr(in_surfaceCnt);
 			const blockSize = digitArr.length;
-			return function _packPermAll(in_uArr) {
+			return function _packPermSome(in_uArr) {
 				const {reprArr} = _facelet.#getRepresentativeArr(in_uArr);
 				let packed = '';
-				for (let i = 0; i < reprArr.length / blockSize; i++) {
+				const totalCnt = in_surfaceCnt * _facelet.pieces;
+				for (let i = 0; i < totalCnt / blockSize; i++) {
 					const offset = blockSize * i;
 					let aggregated = 0;
 					for (let j = 0; j < blockSize; j++) {
@@ -268,44 +404,39 @@ function createFaceletClass(in_conf) {
 				}
 				return packed;
 			}
-		})();
-		static #packPermSome(in_targetColorArr) {
-			if (_facelet.#centerIxArr.length === 0) {
-				return () => {
-					throw new Error('no center');
-				};
-			}
-			const deltaFromCenter = (_facelet.pieces - 1) / 2;
-			const normalizedArr = new Uint8Array(_facelet.pieces * in_targetColorArr.length);
-			const digitArr = _facelet.#getDigitArr(1);
+		}
+		static #toSurfaceArr(in_surfaceCnt) {
+			const digitArr = _facelet.#getDigitArr(in_surfaceCnt);
 			const blockSize = digitArr.length;
-			return function _packPermSome(in_uArr) {
-				const {reprArr, canonArr} = _facelet.#getRepresentativeArr(in_uArr);
-				in_targetColorArr.forEach((in_targetColor, in_surefaceIx) => {
-					const reprCenter = _facelet.#centerIxArr.find(in_ix => reprArr[in_ix] === in_targetColor);
-					const reprStart = reprCenter - deltaFromCenter;
-					const reprEnd = reprCenter + deltaFromCenter;
-					const canonStart = canonArr[reprCenter] - deltaFromCenter; 
-					const offset = _facelet.pieces * in_surefaceIx
-					for (let i = reprStart; i <= reprEnd; i++) {
-						const normIx = canonArr[i] - canonStart + offset;
-						normalizedArr[normIx] = reprArr[i];
-					}
-				});
-				let packed = '';
-				for (let i = 0; i < normalizedArr.length / blockSize; i++) {
-					const offset = blockSize * i;
-					let aggregated = 0;
+			const reprArr = new Uint8Array(in_surfaceCnt * _facelet.pieces);
+			return function _unpackPermSome(in_packed) {
+				for (let i = 0; i < in_packed.length; i++) {
+					let code = in_packed.charCodeAt(i);
+					const offset = i * blockSize;
 					for (let j = 0; j < blockSize; j++) {
-						aggregated += normalizedArr[offset + j] * digitArr[j];
+						const digit = digitArr[j];
+						const quotient = (code / digit) | 0;
+						reprArr[offset + j] = quotient;
+						code -= quotient * digit;
 					}
-					packed += String.fromCharCode(aggregated);
 				}
-				return packed;
+				return reprArr;
+			};
+		}
+		static #packCombi(in_surfaceArr) {
+			const combi = createCombiClass(_facelet.pieces, in_surfaceArr);
+			const rankMap = combi.rankMap();
+			return function _packCombi2(in_uArr) {
+				const {reprArr} = _facelet.#getRepresentativeArr(in_uArr);
+				return rankMap.get(combi.mapKey(reprArr));
 			}
 		}
-		static packPermOne = _facelet.#packPermSome([0]);
-		static packPermTwo = _facelet.#packPermSome([0, 3]);
+		static packPerm1 = _facelet.#toSurfaceBin(1);
+		static packPerm2 = _facelet.#toSurfaceBin(2);
+		static arrToBin = _facelet.#toSurfaceBin(_facelet.surfaces);
+		static binToArr = _facelet.#toSurfaceArr(_facelet.surfaces);
+		static packCombiUR = _facelet.#packCombi([0, 1]);
+		static packCombiUD = _facelet.#packCombi([0, 3]);
 		static pack(in_uArr) {
 			return _facelet[packFunction](in_uArr);
 		}
@@ -355,46 +486,6 @@ function createFaceletClass(in_conf) {
 }
 
 /*
-	                    ZN ZN
-	                 XN 00 01 XP
-	                 XN 02 03 XP
-	                    ZP ZP
-
-	       YP YP        YP YP        YP YP        YP YP
-	    ZN 16 17 ZP  XN 08 09 XP  ZP 04 05 ZN  XP 20 21 XN
-	    ZN 18 19 ZP  XN 10 11 XP  ZP 06 07 ZN  XP 22 23 XN
-	       YN YN        YN YN        YN YN        YN YN
-
-	                    ZP ZP
-	                 XN 12 13 XP
-	                 XN 14 15 XP
-	                    ZN ZN
-*/
-
-const CONF222 = {
-	dim : 2,
-	edgeRingMap : new Map([
-		['U', [21, 20,  5,  4,  9,  8, 17, 16]],
-		['R', [ 3,  1, 20, 22, 15, 13, 11,  9]],
-		['F', [ 2,  3,  4,  6, 13, 12, 19, 17]],
-		['D', [10, 11,  6,  7, 22, 23, 18, 19]],
-		['L', [ 0,  2,  8, 10, 12, 14, 23, 21]],
-		['B', [ 1,  0, 16, 18, 14, 15,  7,  5]]
-	]),
-	centerRingMap : new Map(),
-	sameAxis : [
-		['L', 'R'],
-		['D', 'U'],
-		['B', 'F']
-	],
-	surfaceR90 : [2, 0, 3, 1],
-	debugMapping : null
-};
-
-CONF222.packFunction = 'packPermAll';
-const fP2xURFDLB = createFaceletClass(CONF222);
-
-/*
 	                   ZN ZN ZN
 	                XN 00 01 02 XP
 	                XN 03 UU 05 XP
@@ -414,35 +505,77 @@ const fP2xURFDLB = createFaceletClass(CONF222);
 	                   ZN ZN ZN
 */
 
-const CONF333 = {
-	dim : 3,
-	edgeRingMap : new Map([
-		['U', [47, 46, 45, 11, 10,  9, 20, 19, 18, 38, 37, 36]],
-		['R', [ 8,  5,  2, 45, 48, 51, 35, 32, 29, 26, 23, 20]],
-		['F', [ 6,  7,  8,  9, 12, 15, 29, 28, 27, 44, 41, 38]],
-		['D', [24, 25, 26, 15, 16, 17, 51, 52, 53, 42, 43, 44]],
-		['L', [ 0,  3,  6, 18, 21, 24, 27, 30, 33, 53, 50, 47]],
-		['B', [ 2,  1,  0, 36, 39, 42, 33, 34, 35, 17, 14, 11]]
-	]),
-	centerRingMap : new Map([
-		['M', [ 1,  4,  7, 19, 22, 25, 28, 31, 34, 52, 49, 46]],
-		['E', [48, 49, 50, 39, 40, 41, 21, 22, 23, 12, 13, 14]],
-		['S', [ 3,  4,  5, 10, 13, 16, 32, 31, 30, 43, 40, 37]]
-	]),
-	sameAxis : [
-		['L', 'M', 'R'],
-		['D', 'E', 'U'],
-		['B', 'S', 'F']
-	],
-	surfaceR90 : [6, 3, 0, 7, 4, 1, 8, 5, 2],
-	debugMapping : null
-};
+function conf3x3Origin() {
+	return {
+		dim : 3,
+		edgeRingMap : new Map([
+			['U', [47, 46, 45, 11, 10,  9, 20, 19, 18, 38, 37, 36]],
+			['R', [ 8,  5,  2, 45, 48, 51, 35, 32, 29, 26, 23, 20]],
+			['F', [ 6,  7,  8,  9, 12, 15, 29, 28, 27, 44, 41, 38]],
+			['D', [24, 25, 26, 15, 16, 17, 51, 52, 53, 42, 43, 44]],
+			['L', [ 0,  3,  6, 18, 21, 24, 27, 30, 33, 53, 50, 47]],
+			['B', [ 2,  1,  0, 36, 39, 42, 33, 34, 35, 17, 14, 11]]
+		]),
+		centerRingMap : new Map([
+			['M', [ 1,  4,  7, 19, 22, 25, 28, 31, 34, 52, 49, 46]],
+			['E', [48, 49, 50, 39, 40, 41, 21, 22, 23, 12, 13, 14]],
+			['S', [ 3,  4,  5, 10, 13, 16, 32, 31, 30, 43, 40, 37]]
+		]),
+		sameAxis : [
+			['L', 'M', 'R'],
+			['D', 'E', 'U'],
+			['B', 'S', 'F']
+		],
+		surfaceR90 : [6, 3, 0, 7, 4, 1, 8, 5, 2],
+		debugMapping : null
+	};
+}
 
-CONF333.packFunction = 'packPermAll';
-const fP3xURFDLB = createFaceletClass(CONF333);
+/*
+	                   ZN ZN ZN
+	                XN 00 -- 01 XP
+	                XN -- UU -- XP
+	                XN 02 -- 03 XP
+	                   ZP ZP ZP
 
-CONF333.packFunction = 'packPermOne';
-const fP3xU = createFaceletClass(CONF333);
+	   YP YP YP        YP YP YP        YP YP YP        YP YP YP
+	ZN 16 -- 17 ZP  XN 08 -- 09 XP  ZP 04 -- 05 ZN  XP 20 -- 21 XN
+	ZN -- LL -- ZP  XN -- FF -- XP  ZP -- RR -- ZN  XP -- BB -- XN
+	ZN 18 -- 19 ZP  XN 10 -- 11 XP  ZP 06 -- 07 ZN  XP 22 -- 23 XN
+	   YN YN YN        YN YN YN        YN YN YN        YN YN YN
+
+	                   ZP ZP ZP
+	                XN 12 -- 13 XP
+	                XN -- DD -- XP
+	                XN 14 -- 15 XP
+	                   ZN ZN ZN
+*/
+
+function conf3x3Corner() {
+	return {
+		dim : 2,
+		edgeRingMap : new Map([
+			['U', [21, 20,  5,  4,  9,  8, 17, 16]],
+			['R', [ 3,  1, 20, 22, 15, 13, 11,  9]],
+			['F', [ 2,  3,  4,  6, 13, 12, 19, 17]],
+			['D', [10, 11,  6,  7, 22, 23, 18, 19]],
+			['L', [ 0,  2,  8, 10, 12, 14, 23, 21]],
+			['B', [ 1,  0, 16, 18, 14, 15,  7,  5]]
+		]),
+		centerRingMap : new Map(),
+		sameAxis : [
+			['L', 'R'],
+			['D', 'U'],
+			['B', 'F']
+		],
+		surfaceR90 : [2, 0, 3, 1],
+		debugMapping : null
+	};
+}
+
+function conf2x2Origin() {
+	return conf3x3Corner();
+}
 
 /*
 	                   ZN ZN ZN
@@ -464,172 +597,281 @@ const fP3xU = createFaceletClass(CONF333);
 	                   ZN ZN ZN
 */
 
-const CONF333S = {
-	dim : 3,
-	edgeRingMap : new Map([
-		['U', [25,  5, 10, 20]],
-		['R', [ 3, 26, 18, 13]],
-		['F', [ 4,  6, 15, 23]],
-		['D', [14,  9, 29, 24]],
-		['L', [ 1, 11, 16, 28]],
-		['B', [ 0, 21, 19,  8]]
-	]),
-	centerRingMap : new Map([
-		['M', [ 0,  2,  4, 10, 12, 14, 15, 17, 19, 29, 27, 25]],
-		['E', [26, 27, 28, 21, 22, 23, 11, 12, 13,  6,  7,  8]],
-		['S', [ 1,  2,  3,  5,  7,  9, 18, 17, 16, 24, 22, 20]]
-	]),
-	sameAxis : [
-		['L', 'M', 'R'],
-		['D', 'E', 'U'],
-		['B', 'S', 'F']
-	],
-	surfaceR90 : [1, 4, 2, 0, 3],
-	debugMapping : [1, 3, 4, 5, 7]
-};
-
-CONF333S.packFunction = 'packPermTwo';
-const fP3SxUD = createFaceletClass(CONF333S);
-
-const extract = (() => {
-	const cornerArr = [0, 2, 6, 8, 9, 11, 15, 17, 18, 20, 24, 26, 27, 29, 33, 35, 36, 38, 42, 44, 45, 47, 51, 53];
-	const othersArr = [];
-	for (let i = 0; i < fP3xURFDLB.faceletCnt; i++) {
-		if (!cornerArr.includes(i)) {
-			othersArr.push(i);
-		}
-	}
-	const buffer = {
-		corner : new Uint8Array(cornerArr.length),
-		others : new Uint8Array(othersArr.length)
+function conf3x3Others() {
+	return {
+		dim : 3,
+		edgeRingMap : new Map([
+			['U', [25,  5, 10, 20]],
+			['R', [ 3, 26, 18, 13]],
+			['F', [ 4,  6, 15, 23]],
+			['D', [14,  9, 29, 24]],
+			['L', [ 1, 11, 16, 28]],
+			['B', [ 0, 21, 19,  8]]
+		]),
+		centerRingMap : new Map([
+			['M', [ 0,  2,  4, 10, 12, 14, 15, 17, 19, 29, 27, 25]],
+			['E', [26, 27, 28, 21, 22, 23, 11, 12, 13,  6,  7,  8]],
+			['S', [ 1,  2,  3,  5,  7,  9, 18, 17, 16, 24, 22, 20]]
+		]),
+		sameAxis : [
+			['L', 'M', 'R'],
+			['D', 'E', 'U'],
+			['B', 'S', 'F']
+		],
+		surfaceR90 : [1, 4, 2, 0, 3],
+		debugMapping : [1, 3, 4, 5, 7]
 	};
-	return in_arr => {
-		for (let i = 0; i < cornerArr.length; i++) {
-			buffer.corner[i] = in_arr[cornerArr[i]];
-		}
-		for (let i = 0; i < othersArr.length; i++) {
-			buffer.others[i] = in_arr[othersArr[i]];
-		}
-		return buffer;
-	};
-})();
-
-function applyMove(in_srcArr, in_dstArr, in_move) {
-	for (let i = 0; i < in_move.length; i++) {
-		in_dstArr[i] = in_srcArr[in_move[i]];
-	}
 }
 
-class cPresetDistanceMap extends Map {
-	#facelet = null;
-	#setup(in_maxDistance) {
-		const start = performance.now();
-		const initArr = Uint8Array.from(this.#facelet.makeComplete());
-		this.set(this.#facelet.pack(initArr), 0);
-		if (in_maxDistance > 0) {
-			const queue = [initArr];
-			while (queue.length > 0) {
-				const currArr = queue.shift();
-				const depth = this.get(this.#facelet.pack(currArr));
-				if (depth >= in_maxDistance) {
+const stdFaceletCls = createFaceletClass(Object.assign(conf3x3Origin(), {packFunction : 'arrToBin'}));
+
+class PDB {
+	static #types = {
+		pOrigin6 : {
+			depth : -1,
+			facelet : stdFaceletCls,
+			datasrc : 'origin',
+			map : new Map()
+		},
+		pCorner6 : {
+			depth : -1,
+			facelet : createFaceletClass(
+				Object.assign(conf3x3Corner(), {packFunction : 'arrToBin'})
+			),
+			datasrc : 'corner',
+			map : new Map()
+		},
+		pOrigin1 : {
+			depth : -1,
+			facelet : createFaceletClass(
+				Object.assign(conf3x3Origin(), {packFunction : 'packPerm1'})
+			),
+			datasrc : 'origin',
+			map : new Map()
+		},
+		pOthers2 : {
+			depth : -1,
+			facelet : createFaceletClass(
+				Object.assign(conf3x3Others(), {packFunction : 'packPerm2'})
+			),
+			datasrc : 'others',
+			map : new Map()
+		},
+		cOriginUR : {
+			depth : -1,
+			facelet : createFaceletClass(
+				Object.assign(conf3x3Origin(), {packFunction : 'packCombiUR'})
+			),
+			datasrc : 'origin',
+			map : new Map()
+		},
+		cOriginUD : {
+			depth : -1,
+			facelet : createFaceletClass(
+				Object.assign(conf3x3Origin(), {packFunction : 'packCombiUD'})
+			),
+			datasrc : 'origin',
+			map : new Map()
+		},
+	};
+	static activeTypeArr = [];
+	static get maxDepth() {
+		let max = 0;
+		PDB.activeTypeArr.forEach(in_entity => {
+			if (max < in_entity.depth) {
+				max = in_entity.depth;
+			}
+		});
+		return max;
+	}
+	static #bfs(in_entity, in_depth) {
+		const facelet = in_entity.facelet;
+		const initArr = Uint8Array.from(facelet.makeComplete());
+		in_entity.map.set(facelet.pack(initArr), 0);
+		if (in_depth === 0) {
+			return;
+		}
+		const visitedSet = new Set();
+		const queue = {node : [], depth : []};
+		(in_bin => {
+			visitedSet.add(in_bin);
+			queue.node.push(in_bin);
+			queue.depth.push(0);
+		})(facelet.arrToBin(initArr));
+		let head = 0;
+		const heuristicUpperDepth = 5;
+		while (head < queue.node.length) {
+			const currArray = facelet.binToArr(queue.node[head]);
+			const currDepth = queue.depth[head];
+			head++;
+			if (currDepth >= in_depth) {
+				continue;
+			}
+			for (let i = 0; i < facelet.moveArr.length; i++) {
+				const move = facelet.moveArr[i].move;
+				const nextArr = new Uint8Array(facelet.faceletCnt);
+				for (let j = 0; j < move.length; j++) {
+					nextArr[j] = currArray[move[j]];
+				}
+				const bin = facelet.arrToBin(nextArr);
+				if (visitedSet.has(bin)) {
 					continue;
-				}
-				for (let i = 0; i < this.#facelet.moveArr.length; i++) {
-					const nextArr = new Uint8Array(this.#facelet.faceletCnt);
-					applyMove(currArr, nextArr, this.#facelet.moveArr[i].move);
-					const packed = this.#facelet.pack(nextArr);
-					if (this.has(packed)) {
-						continue;
+				} else {
+					if (currDepth < heuristicUpperDepth) {
+						visitedSet.add(bin);
 					}
-					this.set(packed, depth + 1);
-					queue.push(nextArr);
 				}
+				const packed = facelet.pack(nextArr);
+				const nextDepth = currDepth + 1;
+				const prevDepth = in_entity.map.get(packed);
+				if (prevDepth === undefined || nextDepth < prevDepth) {
+					in_entity.map.set(packed, nextDepth);
+				}
+				queue.node.push(bin);
+				queue.depth.push(nextDepth);
 			}
 		}
-		console.log('depth, size, time  = ', in_maxDistance, this.size, performance.now() - start);
 	}
-	constructor(in_class, in_maxDistance) {
-		super();
-		this.#facelet = in_class;
-		this.update(in_maxDistance);
+	static rebuild(in_entity, in_depth) {
+		const start = performance.now();
+		in_entity.depth = in_depth;
+		in_entity.map.clear();
+		PDB.#bfs(in_entity, in_depth);
+		const elapsed = (performance.now() - start).toFixed(3) + 'ms';
+		const stats = {
+			type : in_entity.type,
+			depth : in_depth,
+			time : elapsed,
+			size : in_entity.map.size
+		};
+		const logArr = [];
+		Object.entries(stats).forEach(([in_k, in_v]) => logArr.push(in_k + ' = ' + in_v));
+		console.log(logArr.join(', '));
+		// console.log(in_entity.map);
 	}
-	update(in_maxDistance) {
-		this.clear();
-		this.#setup(in_maxDistance);
+	static {
+		for (const [type, conf] of Object.entries(gConfPDB)) {
+			if (!PDB.#types.hasOwnProperty(type)) {
+				throw new Error('inconsistency : ' + type);
+			}
+			if (conf.enabled) {
+				const activeEntity = {...PDB.#types[type], type};
+				PDB.rebuild(activeEntity, conf.instant);
+				PDB.activeTypeArr.push(activeEntity);
+			}
+		}
+		console.log('initialize done');
 	}
 }
 
-let gP3xURFDLB = 3;
-let gP2xURFDLB = 5;
-// delayed --> 5
-let gP3xU = 4;
-// delayed --> 5
-let gP3SxUD = 4;
-
-const gPDB_P3xURFDLB = new cPresetDistanceMap(fP3xURFDLB, gP3xURFDLB);
-const gPDB_P2xURFDLB = new cPresetDistanceMap(fP2xURFDLB, gP2xURFDLB);
-const gPDB_P3xU = new cPresetDistanceMap(fP3xU, gP3xU);
-const gPDB_P3SxUD = new cPresetDistanceMap(fP3SxUD, gP3SxUD);
+class dfsCtx {
+	static #faceletCnt = 3 * 3 * 6;
+	static #cornerArr = [0, 2, 6, 8, 9, 11, 15, 17, 18, 20, 24, 26, 27, 29, 33, 35, 36, 38, 42, 44, 45, 47, 51, 53];
+	static #othersArr = [];
+	static {
+		for (let i = 0; i < dfsCtx.#faceletCnt; i++) {
+			if (!dfsCtx.#cornerArr.includes(i)) {
+				dfsCtx.#othersArr.push(i);
+			}
+		}
+	}
+	#entityArr = [];
+	constructor(in_init, in_maxDepth) {
+		for (let i = 0; i < in_maxDepth + 1; i++) {
+			this.#entityArr.push({
+				origin : new Uint8Array(54),
+				corner : new Uint8Array(24),
+				others : new Uint8Array(30)
+			});
+		}
+		this.setDepth(0);
+		this.origin.set(in_init);
+	}
+	#currDepth;
+	#dirtyCorner;
+	#dirtyOthers;
+	setDepth(in_depth) {
+		this.#currDepth = in_depth;
+		this.#dirtyCorner = true;
+		this.#dirtyOthers = true;
+	}
+	applyMove(in_move) {
+		const src = this.#entityArr[this.#currDepth].origin;
+		const dst = this.#entityArr[this.#currDepth + 1].origin;
+		for (let i = 0; i < in_move.length; i++) {
+			dst[i] = src[in_move[i]];
+		}
+		return dst;
+	}
+	get origin() {
+		return this.#entityArr[this.#currDepth].origin;
+	}
+	get corner() {
+		const entity = this.#entityArr[this.#currDepth];
+		if (this.#dirtyCorner) {
+			for (let i = 0; i < dfsCtx.#cornerArr.length; i++) {
+				entity.corner[i] = entity.origin[dfsCtx.#cornerArr[i]];
+			}
+			this.#dirtyCorner = false;
+		}
+		return entity.corner;
+	}
+	get others() {
+		const entity = this.#entityArr[this.#currDepth];
+		if (this.#dirtyOthers) {
+			for (let i = 0; i < dfsCtx.#othersArr.length; i++) {
+				entity.others[i] = entity.origin[dfsCtx.#othersArr[i]];
+			}
+			this.#dirtyOthers = false;
+		}
+		return entity.others;
+	}
+}
 
 function countUntilSolve(in_initArr) {
-	const answer = {found : false, distance : -1};
-	const cnt = {
-		P2xURFDLB : 0,
-		P3xU : 0,
-		P3SxUD : 0
+	const isComplete = in_uArr => {
+		// stdFaceletCls.surfaces - 1 is enough for checking
+		for (let f = 0; f < stdFaceletCls.surfaces - 1; f++) {
+			const offset = f * stdFaceletCls.pieces;
+			for (let i = 1; i < stdFaceletCls.pieces; i++) {
+				if (in_uArr[offset] !== in_uArr[offset + i]) {
+					return false;
+				}
+			}
+		}
+		return true;
 	};
-	const dfs = (in_currArr, in_rootBudget, in_currBudget, in_prevHint, in_visited) => {
-		if (answer.found) {
-			return;
+	const pruningCnt = {};
+	const dfs = (in_dfsCtx, in_rootBudget, in_currBudget, in_prevHint, in_visited) => {
+		// currDepth : moved how many times
+		const currDepth = in_rootBudget - in_currBudget;
+		in_dfsCtx.setDepth(currDepth);
+		if (in_currBudget === 0) {
+			return isComplete(in_dfsCtx.origin);
 		}
-		let packed, minimum;
-		packed = fP3xURFDLB.pack(in_currArr);
-		const distance = gPDB_P3xURFDLB.get(packed);
-		if (distance === undefined) {
-			const budget = in_visited.get(packed);
-			if ((budget === undefined) || (budget < in_currBudget)) {
-				in_visited.set(packed, in_currBudget);
-			} else {
-				// give up : already visited with more budget
-				return;
+		for (let i = 0; i < PDB.activeTypeArr.length; i++) {
+			const entity = PDB.activeTypeArr[i];
+			const packed = entity.facelet.pack(in_dfsCtx[entity.datasrc]);
+			if (entity.type === 'pOrigin6') {
+				const prevBudget = in_visited.get(packed);
+				if ((prevBudget === undefined) || (prevBudget < in_currBudget)) {
+					// reset in_visited & continue pruning
+					in_visited.set(packed, in_currBudget);
+				} else {
+					// give up : you had already visited with more budget
+					pruningCnt['visited'] = (pruningCnt['visited'] ?? 0) + 1;
+					return false;
+				}
 			}
-			const extracted = extract(in_currArr);
-			// lower bound #1
-			packed = fP2xURFDLB.pack(extracted.corner);
-			minimum = gPDB_P2xURFDLB.get(packed) ?? gP2xURFDLB + 1;
-			if (in_currBudget < minimum) {
-				// give up : can't find in in_currBudget
-				cnt.P2xURFDLB++;
-				return;
+			const requiredBudget = entity.map.get(packed) ?? entity.depth + 1;
+			if (in_currBudget < requiredBudget) {
+				// give up : you can't find in in_currBudget
+				pruningCnt[entity.type] = (pruningCnt[entity.type] ?? 0) + 1;
+				return false;
 			}
-			// lower bound #2
-			packed = fP3xU.pack(in_currArr);
-			minimum = gPDB_P3xU.get(packed) ?? gP3xU + 1;
-			if (in_currBudget < minimum) {
-				// give up : can't find in in_currBudget
-				cnt.P3xU++;
-				return;
-			}
-			// lower bound #3
-			packed = fP3SxUD.pack(extracted.others);
-			minimum = gPDB_P3SxUD.get(packed) ?? gP3SxUD + 1;
-			if (in_currBudget < minimum) {
-				// give up : can't find in in_currBudget
-				cnt.P3SxUD++;
-				return;
-			}
-		} else {
-			// solved
-			answer.found = true;
-			answer.distance = (in_rootBudget - in_currBudget) + distance;
-			return;
 		}
-		const nextArr = new Uint8Array(fP3xURFDLB.faceletCnt);
-		for (let i = 0; i < fP3xURFDLB.moveArr.length; i++) {
-			if (answer.found) {
-				break;
-			}
-			const nextHint = fP3xURFDLB.moveArr[i].hint;
+		for (let i = 0; i < stdFaceletCls.moveArr.length; i++) {
+			const nextHint = stdFaceletCls.moveArr[i].hint;
 			if (in_prevHint) {
 				// pruning usind hint
 				if (nextHint.same === in_prevHint.same) {
@@ -648,62 +890,62 @@ function countUntilSolve(in_initArr) {
 					}
 				}
 			}
-			applyMove(in_currArr, nextArr, fP3xURFDLB.moveArr[i].move);
-			dfs(nextArr, in_rootBudget, in_currBudget - 1, nextHint, in_visited);
+			in_dfsCtx.applyMove(stdFaceletCls.moveArr[i].move);
+			if (dfs(in_dfsCtx, in_rootBudget, in_currBudget - 1, nextHint, in_visited)) {
+				return true;
+			}
+			// rollback to currDepth
+			in_dfsCtx.setDepth(currDepth);
 		}
+		return false;
 	};
+	// const maxDepth = PDB.maxDepth + 4;
+	const maxDepth = gMaxDepth;
+	const ctx = new dfsCtx(in_initArr, maxDepth);
+	let last = -1;
 	const start = performance.now();
-	// const budgetLimit = 9;
-	const budgetLimit = Math.max(gP3xURFDLB, gP2xURFDLB, gP3xU, gP3SxUD) + 4;
-	for (let rootBudget = 0; rootBudget <= budgetLimit; rootBudget++) {
+	for (let budget = 0; budget <= maxDepth; budget++) {
 		const visited = new Map();
-		dfs(in_initArr, rootBudget, rootBudget, null, visited);
-		if (answer.found) {
+		if (dfs(ctx, budget, budget, null, visited)) {
+			last = budget;
 			break;
 		}
 	}
-	console.log(performance.now() - start + 'ms', cnt);
-	if (answer.distance < 0) {
-		return (budgetLimit + 1) + '+';
-	} else {
-		return answer.distance;
-	}
+	const elapsed = (performance.now() - start).toFixed(3) + 'ms';
+	console.log(elapsed, pruningCnt);
+	return last;
 }
 
 self.addEventListener('message', (() => {
-	const closure = {latest : null, wating : false};
+	const closure = {latest : null, waiting : false};
 	return in_ev => {
 		const {mtype, value} = in_ev.data;
 		if (mtype === 'solve') {
 			closure.latest = value;
-			if (closure.wating) {
+			if (closure.waiting) {
 				return;
 			}
-			closure.wating = true;
+			closure.waiting = true;
 			setTimeout(() => {
-				closure.wating = false;
+				closure.waiting = false;
 				// it may be long time in this process
 				self.postMessage({mtype : 'solved', value : countUntilSolve(closure.latest)});
 			}, 0);
 		} else {
 			if (mtype === 'update') {
 				const start = performance.now();
-				if (gP3xURFDLB < value.p3x6) {
-					gP3xURFDLB = value.p3x6;
-					gPDB_P3xURFDLB.update(gP3xURFDLB);
+				const removeSet = new Set();
+				for (const [type, depth] of Object.entries(value)) {
+					const entity = PDB.activeTypeArr.find(in_e => in_e.type === type);
+					if (depth < 0) {
+						entity.depth = -1;
+						entity.map.clear();
+						removeSet.add(entity); 
+					} else {
+						PDB.rebuild(entity, depth);
+					}
 				}
-				if (gP2xURFDLB < value.p2x6) {
-					gP2xURFDLB = value.p2x6;
-					gPDB_P2xURFDLB.update(gP2xURFDLB);
-				}
-				if (gP3xU < value.p3x1) {
-					gP3xU = value.p3x1;
-					gPDB_P3xU.update(gP3xU);
-				}
-				if (gP3SxUD < value.p3Sx2) {
-					gP3SxUD = value.p3Sx2;
-					gPDB_P3SxUD.update(gP3SxUD);
-				}
+				PDB.activeTypeArr = PDB.activeTypeArr.filter(in_entity => !removeSet.has(in_entity));
 				self.postMessage({mtype : 'updated', value : performance.now() - start});
 			} else {
 				console.log('invalid mtype : ' + mtype);
@@ -713,6 +955,9 @@ self.addEventListener('message', (() => {
 })());
 
 </script>
+<script src='./cubejs/cube.js'></script>
+<script src='./cubejs/async.js'></script>
+<script src='./cubejs/solve.js'></script>
 <script type='module'>
 
 import * as THREE from 'three';
@@ -1027,7 +1272,7 @@ class cCubeDimV3 extends THREE.Vector3 {
 }
 
 class converter {
-	// assume sorted as fP3xURFDLB.sortedArr order
+	// assume sorted as stdFaceletCls.sortedArr order
 	static #featuresArr = [
 		{NORM : DIRECTION.YP, STICKER : 'U', O1 : DIRECTION.ZP, O2 : DIRECTION.XP},
 		{NORM : DIRECTION.XP, STICKER : 'R', O1 : DIRECTION.YN, O2 : DIRECTION.ZN},
@@ -1077,19 +1322,38 @@ class converter {
 	}
 }
 
+Cube.initSolver();
+
 class cCntRubiksCube extends cRubiksCube {
-	static #url = (in_code => {
-		return URL.createObjectURL(new Blob([in_code]));
-	})(document.getElementById('worker-blob').textContent);
+	static #url;
+	static #delayedUpdate = {};
+	static {
+		const textArr = [];
+		const nodeList = document.querySelectorAll("script[data-type='worker-code']");
+		for (const node of nodeList) {
+			textArr.push(node.textContent + "\n");
+			if (node.dataset.shared === 'true') {
+				(new Function(node.textContent))();
+			}
+		}
+		cCntRubiksCube.#url = URL.createObjectURL(new Blob(textArr));
+		// gConfPDB should be enabled by data-shared
+		for (const [type, conf] of Object.entries(gConfPDB)) {
+			if (!conf.enabled) {
+				continue;
+			}
+			if (conf.delayed !== conf.instant) {
+				cCntRubiksCube.#delayedUpdate[type] = conf.delayed;
+			}
+		}
+		console.log('update later : ', cCntRubiksCube.#delayedUpdate);
+	}
 	static #worker;
 	static {
 		const instant = new Worker(cCntRubiksCube.#url);
-		const useDelayedUpdate = true;
-		// const useDelayedUpdate = false;
-		if (useDelayedUpdate) {
-			// 2025.12.06 IDA* using this setting is to late
+		if (Object.keys(cCntRubiksCube.#delayedUpdate).length > 0) {
 			const delayed = new Worker(cCntRubiksCube.#url);
-			delayed.postMessage({mtype : 'update', value : {p3x6 : 0, p2x6 : 0, p3x1 : 5, p3Sx2 : 5}});
+			delayed.postMessage({mtype : 'update', value : cCntRubiksCube.#delayedUpdate});
 			const handler = in_ev => {
 				const {mtype, value} = in_ev.data;
 				if (mtype === 'updated') {
@@ -1105,10 +1369,31 @@ class cCntRubiksCube extends cRubiksCube {
 		cCntRubiksCube.#worker = instant;
 	}
 	static #execWorker(in_currArr, in_callback) {
+		const cubejs = in_currArr => {
+			const stickerArr = [...'URFDLB'];
+			const cubeString = [...in_currArr].map(in_e => stickerArr[in_e]).join('');
+			const solved = Cube.fromString(cubeString).solve();
+			const stickerSet = new Set(stickerArr);
+			return [...solved].filter(in_c => stickerSet.has(in_c)).length;
+		};
+		let waiting = true;
+		const waitLimit = 1000;
+		const timerId = setTimeout(() => {
+			if (waiting) {
+				waiting = false;
+				(in_callback)(cubejs(in_currArr));
+			}
+		}, waitLimit);
 		cCntRubiksCube.#worker.onmessage = in_ev => {
 			const {mtype, value} = in_ev.data;
-			if (mtype === 'solved') {
-				(in_callback)(value);
+			if ((mtype === 'solved') && waiting) {
+				waiting = false;
+				clearTimeout(timerId);
+				let count = value;
+				if (count < 0) {
+					count = cubejs(in_currArr);
+				}
+				(in_callback)(count);
 			}
 		};
 		cCntRubiksCube.#worker.postMessage({mtype : 'solve', value : in_currArr}); 
@@ -1140,7 +1425,7 @@ class cCntRubiksCube extends cRubiksCube {
 		for (let i = 0; i < sorted.length; i++) {
 			stickerArr[i] = srcArr[sorted[i]].sticker;
 		}
-		// fP3xURFDLB.debug(stickerArr);
+		// stdFaceletCls.debug(stickerArr);
 		const currArr = Uint8Array.from(stickerArr.map(converter.stickerOrder));
 		cCntRubiksCube.#execWorker(currArr, in_callback);
 	}
@@ -1167,7 +1452,7 @@ const gCube = new cCntRubiksCube();
 
 gWorld.add(gCube);
 
-gWorld.moveView(2.5, 0.5);
+//gWorld.moveView(2.5, 0.5);
 gWorld.motionZoom2(WORLD_INIT_ZOOM, 1000);
 
 (async in_cubeSize => {
@@ -1741,7 +2026,13 @@ const gHandlers = (() => {
 				gCube.rotateOnWorldAxis(in_rotateURFDLB.axis, in_rotateURFDLB.rad * -1);
 				gWorld.rotateOnWorldAxis(in_rotateURFDLB.axis, in_rotateURFDLB.rad)
 			}
-			gCube.countUntilSolve(in_cnt => speak('last ' + in_cnt + ' move'));
+			gCube.countUntilSolve(in_cnt => {
+				let powerd = ' by IDA*';
+				if (in_cnt > gMaxDepth) {
+					powerd = ' by Kociemba';
+				}
+				speak('last ' + in_cnt + powerd);
+			});
 		});
 		if (releaseProgress) {
 			gWorld.addAnimationHook(releaseProgress);
