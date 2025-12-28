@@ -24,7 +24,7 @@ globalThis.gMaxDepth = 10;
 globalThis.gConfPDB = {
 	pOrigin6 : {
 		enabled : true,
-		instant : 4,
+		instant : 3,
 		delayed : 4
 	},
 	pCorner6 : {
@@ -746,7 +746,7 @@ class PDB {
 		};
 		const logArr = [];
 		Object.entries(stats).forEach(([in_k, in_v]) => logArr.push(in_k + ' = ' + in_v));
-		console.log(logArr.join(', '));
+		// console.log(logArr.join(', '));
 		// console.log(in_entity.map);
 	}
 	static {
