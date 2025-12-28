@@ -1322,6 +1322,7 @@ class converter {
 	}
 }
 
+// cubejs
 Cube.initSolver();
 
 class cCntRubiksCube extends cRubiksCube {
@@ -1452,7 +1453,7 @@ const gCube = new cCntRubiksCube();
 
 gWorld.add(gCube);
 
-//gWorld.moveView(2.5, 0.5);
+gWorld.moveView(2.5, 0.5);
 gWorld.motionZoom2(WORLD_INIT_ZOOM, 1000);
 
 (async in_cubeSize => {
