@@ -22,32 +22,75 @@
 globalThis.gMaxDepth = 10;
 
 globalThis.gConfPDB = {
+	/*
+		pOrigin6 x 4 :   174,604 (*)
+		pOrigin6 x 5 : 3,087,051 (time-over, size-over)
+	*/
 	pOrigin6 : {
 		enabled : true,
 		instant : 4,
 		delayed : 4
 	},
+	/*
+		pCorner6 x 5 :    12,224
+		pCorner6 x 6 :    62,360
+		pCorner6 x 7 :   289,896 (*)
+		pCorner6 x 8 : 1,159,968 (time-over, size-over)
+	*/
 	pCorner6 : {
 		enabled : true,
-		instant : 6,
+		instant : 0,
 		delayed : 7
 	},
+	/*
+		pOrigin1 x 5 :   259,315
+		pOrigin1 x 6 :   827,885 (time-over, size-over)
+	*/
 	pOrigin1 : {
 		enabled : false,
 		instant : 0,
 		delayed : 5
 	},
+	/*
+		pOthers2 x 5 :   485,378 (size-over)
+	*/
 	pOthers2 : {
 		enabled : false,
 		instant : 0,
 		delayed : 5
 	},
+	/*
+		cOriginUR x 5 :   16,329
+		cOriginUR x 6 :   19,144 (time-over) (*)
+	*/
 	cOriginUR : {
 		enabled : false,
 		instant : 0,
 		delayed : 5
 	},
+	/*
+		cOriginUD x 5 :    9,116
+		cOriginUD x 6 :   14,125 (time-over) (*)
+	*/
 	cOriginUD : {
+		enabled : false,
+		instant : 0,
+		delayed : 5
+	},
+	/*
+		cOrigin6 x 5 :       179
+		cOrigin6 x 6 :       220 (time-over) (*)
+	*/
+	cOrigin6 : {
+		enabled : false,
+		instant : 0,
+		delayed : 5
+	},
+	/*
+		cOthers6 x 5 :       106
+		cOthers6 x 6 :       129 (time-over) (*)
+	*/
+	cOthers6 : {
 		enabled : false,
 		instant : 0,
 		delayed : 5
@@ -112,16 +155,17 @@ class cStarsBars {
 	}
 }
 
-function createCombiClass(in_pieces, in_surfaceArr) {
-	return class _combi extends cStarsBars {
+// color-count composition on selected surfaces (in_surfaceArr)
+function createCombi1Class(in_pieces, in_surfaceArr) {
+	return class _combi1 extends cStarsBars {
 		static #surfaces = 6;
 		static #context = {enable : false};
 		static mapKey(in_uArr) {
-			const ctx = _combi.#context;
+			const ctx = _combi1.#context;
 			if (!ctx.enable) {
 				return -1;
 			}
-			const pieces = in_uArr.length / _combi.#surfaces;
+			const pieces = in_uArr.length / _combi1.#surfaces;
 			ctx.cntArr.fill(0);
 			for (let i = 0; i < in_surfaceArr.length; i++) {
 				const offset = in_surfaceArr[i] * pieces;
@@ -133,14 +177,54 @@ function createCombiClass(in_pieces, in_surfaceArr) {
 		}
 		static rankMap() {
 			const sCnt = in_pieces * in_surfaceArr.length;
-			const bCnt = _combi.#surfaces - 1;
-			const ctx = _combi.#context;
-			ctx.cntArr = new Uint8Array(_combi.#surfaces);
+			const bCnt = _combi1.#surfaces - 1;
+			const ctx = _combi1.#context;
+			ctx.cntArr = new Uint8Array(_combi1.#surfaces);
 			ctx.callback = cStarsBars.convert(sCnt);
 			ctx.enable = true;
 			return cStarsBars.rankMap(sCnt, bCnt);
 		}
 	};
+}
+
+// composition of surfaces by how many colors they contain
+function createCombi2Class(in_pieces) {
+	return class _comb2 extends cStarsBars {
+		static #surfaces = 6;
+		static #maxColorsInSurface = -1;
+		static #context = {enable : false};
+		static mapKey(in_uArr) {
+			const ctx = _comb2.#context;
+			if (!ctx.enable) {
+				return -1;
+			}
+			const pieces = in_uArr.length / _comb2.#surfaces;
+			ctx.cntArr.fill(0);
+			for (let i = 0; i < _comb2.#surfaces; i++) {
+				ctx.appearedArr.fill(0);
+				let colorCount = 0;
+				const offset = i * pieces;
+				for (let i = 0; i < pieces; i++) {
+					const color = in_uArr[offset + i];
+					if (ctx.appearedArr[color] === 0) {
+						ctx.appearedArr[color] = 1;
+						colorCount++;
+					}
+				}
+				ctx.cntArr[colorCount - 1]++;
+			}
+			return (ctx.callback)(ctx.cntArr);
+		}
+		static rankMap() {
+			_comb2.#maxColorsInSurface = Math.min(in_pieces, _comb2.#surfaces);
+			const ctx = _comb2.#context;
+			ctx.cntArr = new Uint8Array(_comb2.#maxColorsInSurface);
+			ctx.appearedArr = new Uint8Array(_comb2.#surfaces);
+			ctx.callback = cStarsBars.convert(_comb2.#surfaces);
+			ctx.enable = true;
+			return cStarsBars.rankMap(_comb2.#surfaces, _comb2.#maxColorsInSurface - 1);
+		}
+	}
 }
 
 function createFaceletClass(in_conf) {
@@ -424,13 +508,20 @@ function createFaceletClass(in_conf) {
 			};
 		}
 		static #packCombi(in_surfaceArr) {
-			const combi = createCombiClass(_facelet.pieces, in_surfaceArr);
+			const combi = createCombi1Class(_facelet.pieces, in_surfaceArr);
 			const rankMap = combi.rankMap();
 			return function _packCombi2(in_uArr) {
 				const {reprArr} = _facelet.#getRepresentativeArr(in_uArr);
 				return rankMap.get(combi.mapKey(reprArr));
 			}
 		}
+		static packCombi6 = (() => {
+			const combi = createCombi2Class(_facelet.pieces);
+			const rankMap = combi.rankMap();
+			return function _packCombi2(in_uArr) {
+				return rankMap.get(combi.mapKey(in_uArr));
+			}
+		})();
 		static packPerm1 = _facelet.#toSurfaceBin(1);
 		static packPerm2 = _facelet.#toSurfaceBin(2);
 		static arrToBin = _facelet.#toSurfaceBin(_facelet.surfaces);
@@ -673,6 +764,22 @@ class PDB {
 			datasrc : 'origin',
 			map : new Map()
 		},
+		cOrigin6 : {
+			depth : -1,
+			facelet : createFaceletClass(
+				Object.assign(conf3x3Origin(), {packFunction : 'packCombi6'})
+			),
+			datasrc : 'origin',
+			map : new Map()
+		},
+		cOthers6 : {
+			depth : -1,
+			facelet : createFaceletClass(
+				Object.assign(conf3x3Others(), {packFunction : 'packCombi6'})
+			),
+			datasrc : 'others',
+			map : new Map()
+		}
 	};
 	static activeTypeArr = [];
 	static get maxDepth() {
@@ -746,7 +853,7 @@ class PDB {
 		};
 		const logArr = [];
 		Object.entries(stats).forEach(([in_k, in_v]) => logArr.push(in_k + ' = ' + in_v));
-		// console.log(logArr.join(', '));
+		console.log(logArr.join(', '));
 		// console.log(in_entity.map);
 	}
 	static {
@@ -928,8 +1035,14 @@ self.addEventListener('message', (() => {
 			closure.waiting = true;
 			setTimeout(() => {
 				closure.waiting = false;
-				// it may be long time in this process
-				self.postMessage({mtype : 'solved', value : countUntilSolve(closure.latest)});
+				// message events may be queued while this synchronous process blocks the worker
+				const last = countUntilSolve(closure.latest);
+				setTimeout(() => {
+					// do not send the result if another solve request has been scheduled
+					if (!closure.waiting) {
+						self.postMessage({mtype : 'solved', value : last});
+					}
+				}, 0);
 			}, 0);
 		} else {
 			if (mtype === 'update') {
