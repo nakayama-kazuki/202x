@@ -1,0 +1,1825 @@
+<html>
+<head>
+<!-- MIT License Copyright (c) 2024 pj-corridor.net -->
+<meta name='viewport' content='width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1' />
+<meta charset='utf-8' />
+<script async src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7863584801355594' crossorigin='anonymous'></script>
+<script type='importmap'>
+{
+	"imports" : {
+		"three" : "https://cdn.jsdelivr.net/npm/three@0.182.0/build/three.module.min.js",
+		"utils" : "https://cdn.jsdelivr.net/npm/three@0.182.0/examples/jsm/utils/BufferGeometryUtils.js",
+		"basic" : "./basic-functions.js",
+		"rubik" : "./rubiks-cube.js",
+		"sound" : "./sound-effect.js"
+	}
+}
+</script>
+</head>
+<body>
+<script data-type='worker-code' data-shared='true' type='text/plain'>
+
+globalThis.gMaxDepth = 10;
+
+globalThis.gConfPDB = {
+	/*
+		pCorner6 x 5 :    12,224
+		pCorner6 x 6 :    62,360
+		pCorner6 x 7 :   289,896 (*)
+		pCorner6 x 8 : 1,159,968 (time-over, size-over)
+	*/
+	pCorner6 : {
+		enabled : true,
+		instant : 'pCorner6-7.pdb',
+		delayed : 'pCorner6-7.pdb'
+	}
+};
+
+</script>
+<script data-type='worker-code' data-shared='false' type='text/plain'>
+
+function createFaceletClass(in_conf) {
+	const {dim, edgeRingMap, centerRingMap, sameAxis, surfaceR90, packFunction, debugMapping} = in_conf;
+	return class _facelet {
+		static pieces = surfaceR90.length;
+		static #sortedArr = [...'URFDLB'];
+		static surfaces = _facelet.#sortedArr.length;
+		static #centerIxArr = (() => {
+			const arr = [];
+			if ((_facelet.pieces & 1) === 1) {
+				const centerDelta = (_facelet.pieces - 1) / 2;
+				for (let i = 0; i < _facelet.surfaces; i++) {
+					const offset = i * _facelet.pieces;
+					arr.push(offset + centerDelta);
+				}
+			}
+			return arr;
+		})();
+		static faceletCnt = _facelet.surfaces * _facelet.pieces;
+		static makeComplete(in_isIx = true) {
+			const comp = [];
+			_facelet.#sortedArr.forEach((in_sticker, in_ix) => {
+				const data = in_isIx ? in_ix : in_sticker;
+				comp.push(...Array(_facelet.pieces).fill(data));
+			});
+			return comp;
+		}
+		static #makeInitIndexes() {
+			return Array.from({length : _facelet.faceletCnt}, (_, i) => i);
+		}
+		static #rotateEdge(in_ixArr, in_sticker, in_cnt = 1) {
+			const cnt = (in_cnt + 4) % 4;
+			if (cnt === 0) {
+				return in_ixArr;
+			}
+			const ixArr = [...in_ixArr];
+			// 1. surface of in_sticker
+			const start = _facelet.#sortedArr.indexOf(in_sticker) * _facelet.pieces;
+			surfaceR90.forEach((in_srcIx, in_dstIx) => ixArr[start + in_dstIx] = in_ixArr[start + in_srcIx]);
+			// 2. ring around in_sticker
+			const ring = edgeRingMap.get(in_sticker);
+			const delta = ring.length / 4;
+			for (let i = 0; i < ring.length; i++) {
+				const srcIx = ring[i];
+				const dstIx = ring[(i + delta) % ring.length];
+				ixArr[dstIx] = in_ixArr[srcIx];
+			}
+			if (cnt > 1) {
+				return _facelet.#rotateEdge(ixArr, in_sticker, (cnt - 1));
+			} else {
+				return ixArr;
+			}
+		}
+		static #rotateCenter(in_ixArr, in_slice, in_cnt = 1) {
+			const cnt = (in_cnt + 4) % 4;
+			if (cnt === 0) {
+				return in_ixArr;
+			}
+			const ixArr = [...in_ixArr];
+			const ring = centerRingMap.get(in_slice);
+			const delta = ring.length / 4;
+			for (let i = 0; i < ring.length; i++) {
+				const srcIx = ring[i];
+				const dstIx = ring[(i + delta) % ring.length];
+				ixArr[dstIx] = in_ixArr[srcIx];
+			}
+			if (cnt > 1) {
+				return _facelet.#rotateCenter(ixArr, in_slice, (cnt - 1));
+			} else {
+				return ixArr;
+			}
+		}
+		static moveArr = [];
+		static {
+			const initArr = _facelet.#makeInitIndexes();
+			let sameId = 0;
+			const edgeRingArr = [...edgeRingMap.keys()];
+			edgeRingArr.forEach(in_sticker => {
+				const axisId = sameAxis.findIndex(in_arr => in_arr.includes(in_sticker));
+				const axisOrder = sameAxis[axisId].indexOf(in_sticker);
+				const registerMove = in_angle => {
+					_facelet.moveArr.push({
+						move : _facelet.#rotateEdge(initArr, in_sticker, in_angle / 90),
+						hint : {same : sameId, axis : axisId, order : axisOrder, angle : in_angle}
+					});
+				};
+				registerMove(90);
+				registerMove(180);
+				registerMove(270);
+				sameId++;
+			});
+			const centerRingArr = [...centerRingMap.keys()];
+			centerRingArr.forEach(in_slice => {
+				const axisId = sameAxis.findIndex(in_arr => in_arr.includes(in_slice));
+				const axisOrder = sameAxis[axisId].indexOf(in_slice);
+				const registerMove = in_angle => {
+					_facelet.moveArr.push({
+						move : _facelet.#rotateCenter(initArr, in_slice, in_angle / 90),
+						hint : {same : sameId, axis : axisId, order : axisOrder, angle : in_angle}
+					});
+				};
+				registerMove(90);
+				registerMove(180);
+				registerMove(270);
+				sameId++;
+			});
+		}
+		static canonical = [];
+		static {
+			const rotateGroup = {
+				FtoR : [
+					{sticker : 'U', cnt : 3},
+					{sticker : 'E', cnt : 1},
+					{sticker : 'D', cnt : 1}
+				],
+				RtoU : [
+					{sticker : 'F', cnt : 3},
+					{sticker : 'S', cnt : 3},
+					{sticker : 'B', cnt : 1}
+				],
+				UtoF : [
+					{sticker : 'L', cnt : 1},
+					{sticker : 'M', cnt : 1},
+					{sticker : 'R', cnt : 3}
+				]
+			}
+			const initArr = _facelet.#makeInitIndexes();
+			const canonMoveArr = [
+				// U === U
+				[],
+				['FtoR'],
+				['FtoR', 'FtoR'],
+				['FtoR', 'FtoR', 'FtoR'],
+				// U === R
+				['RtoU'],
+				['RtoU', 'FtoR'],
+				['RtoU', 'FtoR', 'FtoR'],
+				['RtoU', 'FtoR', 'FtoR', 'FtoR'],
+				// U === B
+				['UtoF'],
+				['UtoF', 'FtoR'],
+				['UtoF', 'FtoR', 'FtoR'],
+				['UtoF', 'FtoR', 'FtoR', 'FtoR'],
+				// U === D
+				['RtoU', 'RtoU'],
+				['RtoU', 'RtoU', 'FtoR'],
+				['RtoU', 'RtoU', 'FtoR', 'FtoR'],
+				['RtoU', 'RtoU', 'FtoR', 'FtoR', 'FtoR'],
+				// U === L
+				['RtoU', 'RtoU', 'RtoU'],
+				['RtoU', 'RtoU', 'RtoU', 'FtoR'],
+				['RtoU', 'RtoU', 'RtoU', 'FtoR', 'FtoR'],
+				['RtoU', 'RtoU', 'RtoU', 'FtoR', 'FtoR', 'FtoR'],
+				// U === F
+				['UtoF', 'UtoF', 'UtoF'],
+				['UtoF', 'UtoF', 'UtoF', 'FtoR'],
+				['UtoF', 'UtoF', 'UtoF', 'FtoR', 'FtoR'],
+				['UtoF', 'UtoF', 'UtoF', 'FtoR', 'FtoR', 'FtoR']
+			];
+			canonMoveArr.forEach(in_rotateArr => {
+				let tempArr = initArr;
+				in_rotateArr.forEach(in_which => {
+					rotateGroup[in_which].forEach(({sticker, cnt}) => {
+						if (edgeRingMap.has(sticker)) {
+							tempArr = _facelet.#rotateEdge(tempArr, sticker, cnt);
+						} else if (centerRingMap.has(sticker)) {
+							tempArr = _facelet.#rotateCenter(tempArr, sticker, cnt);
+						}
+					});
+				});
+				_facelet.canonical.push(tempArr);
+			});
+			// debug for _facelet.canonical
+			if (false) {
+				const comp = _facelet.makeComplete(false);
+				_facelet.debugCanonical(comp);
+			}
+		}
+		static debugCanonical(in_arr) {
+			_facelet.canonical.forEach((in_move, in_no) => {
+				const moved = [];
+				for (let i = 0; i < in_move.length; i++) {
+					moved[i] = in_arr[in_move[i]];
+				}
+				console.log('canonical #' + in_no);
+				_facelet.debug(moved);
+			});
+		}
+		static #getRepresentativeArr = (() => {
+			const representativeArr = new Uint8Array(_facelet.faceletCnt);
+			return function _getRepresentativeArr(in_uArr) {
+				let ix = 0;
+				representativeArr.fill(0xFF);
+				_facelet.canonical.forEach((in_move, in_ix) => {
+					for (let i = 0; i < _facelet.faceletCnt; i++) {
+						if (in_uArr[in_move[i]] === representativeArr[i]) {
+							// next elem
+							continue;
+						}
+						if (in_uArr[in_move[i]] < representativeArr[i]) {
+							// update representative by current in_move
+							ix = in_ix;
+							for (let j = i; j < _facelet.faceletCnt; j++) {
+								representativeArr[j] = in_uArr[in_move[j]];
+							}
+						}
+						// next in_move
+						break;
+					}
+				});
+				return {
+					reprArr : representativeArr,
+					canonArr : _facelet.canonical[ix]
+				};
+			}
+		})();
+		static #getDigitArr = (() => {
+			const digitArr = [];
+			return function _blockDigitArr(in_surfaceCnt) {
+				let blockSize = -1;
+				const modArr = (() => {
+					const dbcs = 2 ** 16;
+					let i = 0;
+					const arr = [];
+					while (6 ** ++i < dbcs) {
+						// surrogate-safe : aggregated < 0xD800 (46655 < 55296-57343)
+						arr.push(i);
+					}
+					return arr;
+				})();
+				const total = _facelet.pieces * in_surfaceCnt;
+				modArr.forEach(in_mod => {
+					if (total % in_mod === 0) {
+						// find max in_mod
+						blockSize = in_mod;
+					}
+				});
+				digitArr.length = 0;
+				for (let i = 0; i < blockSize; i++) {
+					digitArr[i] = _facelet.surfaces ** (blockSize - 1 - i);
+				}
+				// console.log(digitArr);
+				return digitArr;
+			}
+		})();
+		static #toSurfaceBin(in_surfaceCnt) {
+			const digitArr = _facelet.#getDigitArr(in_surfaceCnt);
+			const blockSize = digitArr.length;
+			return function _packPermSome(in_uArr) {
+				const {reprArr} = _facelet.#getRepresentativeArr(in_uArr);
+				let packed = '';
+				const totalCnt = in_surfaceCnt * _facelet.pieces;
+				for (let i = 0; i < totalCnt / blockSize; i++) {
+					const offset = blockSize * i;
+					let aggregated = 0;
+					for (let j = 0; j < blockSize; j++) {
+						aggregated += reprArr[offset + j] * digitArr[j];
+					}
+					packed += String.fromCharCode(aggregated);
+				}
+				return packed;
+			}
+		}
+		static #toSurfaceArr(in_surfaceCnt) {
+			const digitArr = _facelet.#getDigitArr(in_surfaceCnt);
+			const blockSize = digitArr.length;
+			const reprArr = new Uint8Array(in_surfaceCnt * _facelet.pieces);
+			return function _unpackPermSome(in_packed) {
+				for (let i = 0; i < in_packed.length; i++) {
+					let code = in_packed.charCodeAt(i);
+					const offset = i * blockSize;
+					for (let j = 0; j < blockSize; j++) {
+						const digit = digitArr[j];
+						const quotient = (code / digit) | 0;
+						reprArr[offset + j] = quotient;
+						code -= quotient * digit;
+					}
+				}
+				return reprArr;
+			};
+		}
+		static arrToBin = _facelet.#toSurfaceBin(_facelet.surfaces);
+		static binToArr = _facelet.#toSurfaceArr(_facelet.surfaces);
+		static pack(in_uArr) {
+			return _facelet[packFunction](in_uArr);
+		}
+		static debug(in_arr) {
+			const format = [
+				['*', 'U', '*', '*'],
+				['L', 'F', 'R', 'B'],
+				['*', 'D', '*', '*']
+			];
+			const rows = format.length;
+			const cols = format[0].length;
+			const findStickerIx = in_sticker => {
+				for (let row = 0; row < rows; row++) {
+					for (let col = 0; col < cols; col++) {
+						if (in_sticker === format[row][col]) {
+							return {row, col}
+						}
+					}
+				}
+				throw new Error('invalid sticker');
+			};
+			const table = Array.from({length : rows * dim}, () => Array(cols * dim).fill(null));
+			_facelet.#sortedArr.forEach((in_sticker, in_ix) => {
+				const ix = findStickerIx(in_sticker);
+				for (let row = 0; row < dim; row++) {
+					for (let col = 0; col < dim; col++) {
+						const r = ix.row * dim + row;
+						const c = ix.col * dim + col;
+						if (debugMapping) {
+							const targetIx = row * dim + col;
+							if (debugMapping.includes(targetIx)) {
+								const f = in_ix * (_facelet.pieces) + debugMapping.indexOf(targetIx);
+								table[r][c] = in_arr[f];
+							} else {
+								table[r][c] = null;
+							}
+						} else {
+							const f = in_ix * (_facelet.pieces) + row * dim + col;
+							table[r][c] = in_arr[f];
+						}
+					}
+				}
+			});
+			console.table(table);
+		}
+	}
+}
+
+/*
+	                   ZN ZN ZN
+	                XN 00 -- 01 XP
+	                XN -- UU -- XP
+	                XN 02 -- 03 XP
+	                   ZP ZP ZP
+
+	   YP YP YP        YP YP YP        YP YP YP        YP YP YP
+	ZN 16 -- 17 ZP  XN 08 -- 09 XP  ZP 04 -- 05 ZN  XP 20 -- 21 XN
+	ZN -- LL -- ZP  XN -- FF -- XP  ZP -- RR -- ZN  XP -- BB -- XN
+	ZN 18 -- 19 ZP  XN 10 -- 11 XP  ZP 06 -- 07 ZN  XP 22 -- 23 XN
+	   YN YN YN        YN YN YN        YN YN YN        YN YN YN
+
+	                   ZP ZP ZP
+	                XN 12 -- 13 XP
+	                XN -- DD -- XP
+	                XN 14 -- 15 XP
+	                   ZN ZN ZN
+*/
+
+function conf3x3Corner() {
+	return {
+		dim : 2,
+		edgeRingMap : new Map([
+			['U', [21, 20,  5,  4,  9,  8, 17, 16]],
+			['R', [ 3,  1, 20, 22, 15, 13, 11,  9]],
+			['F', [ 2,  3,  4,  6, 13, 12, 19, 17]],
+			['D', [10, 11,  6,  7, 22, 23, 18, 19]],
+			['L', [ 0,  2,  8, 10, 12, 14, 23, 21]],
+			['B', [ 1,  0, 16, 18, 14, 15,  7,  5]]
+		]),
+		centerRingMap : new Map(),
+		sameAxis : [
+			['L', 'R'],
+			['D', 'U'],
+			['B', 'F']
+		],
+		surfaceR90 : [2, 0, 3, 1],
+		debugMapping : null
+	};
+}
+
+function conf2x2Origin() {
+	return conf3x3Corner();
+}
+
+const stdFaceletCls = createFaceletClass(Object.assign(conf2x2Origin(), {packFunction : 'arrToBin'}));
+
+class PDB {
+	static #types = {
+		pCorner6 : {
+			depth : -1,
+			facelet : createFaceletClass(
+				Object.assign(conf2x2Origin(), {packFunction : 'arrToBin'})
+			),
+			datasrc : 'origin',
+			map : new Map()
+		}
+	};
+	static activeTypeArr = [];
+	static get maxDepth() {
+		let max = 0;
+		PDB.activeTypeArr.forEach(in_entity => {
+			if (max < in_entity.depth) {
+				max = in_entity.depth;
+			}
+		});
+		return max;
+	}
+	static #bfs(in_entity, in_depth) {
+		const facelet = in_entity.facelet;
+		const initArr = Uint8Array.from(facelet.makeComplete());
+		in_entity.map.set(facelet.pack(initArr), 0);
+		if (in_depth === 0) {
+			return;
+		}
+		const visitedSet = new Set();
+		const queue = {node : [], depth : []};
+		(in_bin => {
+			visitedSet.add(in_bin);
+			queue.node.push(in_bin);
+			queue.depth.push(0);
+		})(facelet.arrToBin(initArr));
+		let head = 0;
+		const heuristicUpperDepth = 5;
+		while (head < queue.node.length) {
+			const currArray = facelet.binToArr(queue.node[head]);
+			const currDepth = queue.depth[head];
+			head++;
+			if (currDepth >= in_depth) {
+				continue;
+			}
+			for (let i = 0; i < facelet.moveArr.length; i++) {
+				const move = facelet.moveArr[i].move;
+				const nextArr = new Uint8Array(facelet.faceletCnt);
+				for (let j = 0; j < move.length; j++) {
+					nextArr[j] = currArray[move[j]];
+				}
+				const bin = facelet.arrToBin(nextArr);
+				if (visitedSet.has(bin)) {
+					continue;
+				} else {
+					if (currDepth < heuristicUpperDepth) {
+						visitedSet.add(bin);
+					}
+				}
+				const packed = facelet.pack(nextArr);
+				const nextDepth = currDepth + 1;
+				const prevDepth = in_entity.map.get(packed);
+				if (prevDepth === undefined || nextDepth < prevDepth) {
+					in_entity.map.set(packed, nextDepth);
+				}
+				queue.node.push(bin);
+				queue.depth.push(nextDepth);
+			}
+		}
+	}
+	static async rebuild(in_entity, in_target) {
+		const start = performance.now();
+		in_entity.map.clear();
+		if (typeof in_target === 'string') {
+			const url = PDBPATH + in_target;
+			const response = await fetch(url, {cache : 'no-cache'});
+			if (!response.ok) {
+				throw new Error(url);
+			}
+			const exportedArr = await response.json();
+			let max = -1;
+			exportedArr.forEach(([key, depth]) => {
+				in_entity.map.set(key, depth);
+				if (max < depth) {
+					max = depth;
+				}
+			});
+			in_entity.depth = max;
+		} else {
+			in_entity.depth = in_target;
+			PDB.#bfs(in_entity, in_target);
+		}
+		const elapsed = (performance.now() - start).toFixed(3) + 'ms';
+		const stats = {
+			type : in_entity.type,
+			depth : in_entity.depth,
+			time : elapsed,
+			size : in_entity.map.size
+		};
+		const logArr = [];
+		Object.entries(stats).forEach(([in_k, in_v]) => logArr.push(in_k + ' = ' + in_v));
+		console.log(logArr.join(', '));
+		// console.log(in_entity.map);
+	}
+	static async initialize() {
+		for (const [type, conf] of Object.entries(gConfPDB)) {
+			if (!PDB.#types.hasOwnProperty(type)) {
+				throw new Error('inconsistency : ' + type);
+			}
+			if (conf.enabled) {
+				const activeEntity = {...PDB.#types[type], type};
+				await PDB.rebuild(activeEntity, conf.instant);
+				PDB.activeTypeArr.push(activeEntity);
+			}
+		}
+		console.log('initialize done');
+	}
+}
+
+await PDB.initialize();
+
+class dfsCtx {
+	static #faceletCnt = 2 * 2 * 6;
+	#entityArr = [];
+	constructor(in_init, in_maxDepth) {
+		for (let i = 0; i < in_maxDepth + 1; i++) {
+			this.#entityArr.push({
+				origin : new Uint8Array(dfsCtx.#faceletCnt)
+			});
+		}
+		this.setDepth(0);
+		this.origin.set(in_init);
+	}
+	#currDepth;
+	setDepth(in_depth) {
+		this.#currDepth = in_depth;
+	}
+	applyMove(in_move) {
+		const src = this.#entityArr[this.#currDepth].origin;
+		const dst = this.#entityArr[this.#currDepth + 1].origin;
+		for (let i = 0; i < in_move.length; i++) {
+			dst[i] = src[in_move[i]];
+		}
+		return dst;
+	}
+	get origin() {
+		return this.#entityArr[this.#currDepth].origin;
+	}
+}
+
+function countUntilSolve(in_initArr) {
+	const isComplete = in_uArr => {
+		// stdFaceletCls.surfaces - 1 is enough for checking
+		for (let f = 0; f < stdFaceletCls.surfaces - 1; f++) {
+			const offset = f * stdFaceletCls.pieces;
+			for (let i = 1; i < stdFaceletCls.pieces; i++) {
+				if (in_uArr[offset] !== in_uArr[offset + i]) {
+					return false;
+				}
+			}
+		}
+		return true;
+	};
+	const pruningCnt = {};
+	const dfs = (in_dfsCtx, in_rootBudget, in_currBudget, in_prevHint, in_visited) => {
+		// currDepth : moved how many times
+		const currDepth = in_rootBudget - in_currBudget;
+		in_dfsCtx.setDepth(currDepth);
+		if (in_currBudget === 0) {
+			return isComplete(in_dfsCtx.origin);
+		}
+		for (let i = 0; i < PDB.activeTypeArr.length; i++) {
+			const entity = PDB.activeTypeArr[i];
+			let packed = null;
+			if (entity.type === 'pOrigin6') {
+				packed = entity.facelet.pack(in_dfsCtx[entity.datasrc]);
+				const prevBudget = in_visited.get(packed);
+				if ((prevBudget === undefined) || (prevBudget < in_currBudget)) {
+					// reset in_visited & continue pruning
+					in_visited.set(packed, in_currBudget);
+				} else {
+					// give up : you had already visited with more budget
+					pruningCnt['visited'] = (pruningCnt['visited'] ?? 0) + 1;
+					return false;
+				}
+			}
+			if (in_currBudget <= entity.depth) {
+				if (!packed) {
+					// lazy pack (other than pOrigin6)
+					packed = entity.facelet.pack(in_dfsCtx[entity.datasrc]);
+				}
+				const requiredBudget = entity.map.get(packed) ?? entity.depth + 1;
+				if (in_currBudget < requiredBudget) {
+					// give up : you can't find in in_currBudget
+					pruningCnt[entity.type] = (pruningCnt[entity.type] ?? 0) + 1;
+					return false;
+				}
+			}
+		}
+		for (let i = 0; i < stdFaceletCls.moveArr.length; i++) {
+			const nextHint = stdFaceletCls.moveArr[i].hint;
+			if (in_prevHint) {
+				// pruning usind hint
+				if (nextHint.same === in_prevHint.same) {
+					// skip : the same rotation of the same group
+					continue;
+				} else {
+					if (nextHint.axis === in_prevHint.axis) {
+						if (nextHint.angle === in_prevHint.angle) {
+							// skip : the same as the opposite rotation of the other group
+							continue;
+						}
+						if (nextHint.order < in_prevHint.order) {
+							// skip : should follow normalize sequence
+							continue;
+						}
+					}
+				}
+			}
+			in_dfsCtx.applyMove(stdFaceletCls.moveArr[i].move);
+			if (dfs(in_dfsCtx, in_rootBudget, in_currBudget - 1, nextHint, in_visited)) {
+				return true;
+			}
+			// rollback to currDepth
+			in_dfsCtx.setDepth(currDepth);
+		}
+		return false;
+	};
+	// const maxDepth = PDB.maxDepth + 4;
+	const maxDepth = gMaxDepth;
+	const ctx = new dfsCtx(in_initArr, maxDepth);
+	let last = -1;
+	const start = performance.now();
+	for (let budget = 0; budget <= maxDepth; budget++) {
+		const visited = new Map();
+		if (dfs(ctx, budget, budget, null, visited)) {
+			last = budget;
+			break;
+		}
+	}
+	const elapsed = (performance.now() - start).toFixed(3) + 'ms';
+	console.log(elapsed, pruningCnt);
+	return last;
+}
+
+self.addEventListener('message', (() => {
+	const closure = {latest : null, waiting : false};
+	return in_ev => {
+		const {mtype, value} = in_ev.data;
+		switch (mtype) {
+		case 'update' :
+			const start = performance.now();
+			const removeSet = new Set();
+			(async () => {
+				for (const [type, target] of Object.entries(value)) {
+					const entity = PDB.activeTypeArr.find(in_e => in_e.type === type);
+					if (target === -1) {
+						entity.depth = -1;
+						entity.map.clear();
+						removeSet.add(entity); 
+					} else {
+						await PDB.rebuild(entity, target);
+					}
+				}
+				PDB.activeTypeArr = PDB.activeTypeArr.filter(in_entity => !removeSet.has(in_entity));
+				self.postMessage({mtype : 'updated', value : performance.now() - start});
+			})();
+			break;
+		case 'export' :
+			const exportedArr = [];
+			for (const kvArr of PDB.activeTypeArr[value].map) {
+				exportedArr.push(kvArr);
+			}
+			self.postMessage({mtype : 'exported', value : exportedArr});
+			break;
+		case 'solve' :
+			closure.latest = value;
+			if (closure.waiting) {
+				return;
+			}
+			closure.waiting = true;
+			setTimeout(() => {
+				closure.waiting = false;
+				// message events may be queued while this synchronous process blocks the worker
+				const last = countUntilSolve(closure.latest);
+				setTimeout(() => {
+					// do not send the result if another solve request has been scheduled
+					if (!closure.waiting) {
+						self.postMessage({mtype : 'solved', value : last});
+					}
+				}, 0);
+			}, 0);
+			break;
+		default :
+			console.log('invalid mtype : ' + mtype);
+			break;
+		}
+	};
+})());
+
+</script>
+<script type='module'>
+
+import * as THREE from 'three';
+import * as UTILS from 'utils';
+import {
+	getResource,
+	postResource,
+	getParam,
+	DEBUG,
+	COLOR,
+	randomString,
+	snapToNotch,
+	snapToPI,
+	snapTo05PI,
+	createPeriodicSin,
+	createPeriodicCos,
+	pseudoMessageDigest1,
+	pseudoMessageDigest2,
+	beep,
+	isEmulated,
+	throttling,
+	thresholding,
+	debouncing,
+	nonReentrantAsync,
+	autoTransition,
+	makeSpeaker,
+	startDialog,
+	factoryBuilder,
+	arrRand,
+	arrTrim,
+	cEase,
+	cApproximateMap,
+	cApproximateSet,
+	cCyclicMap,
+	cCyclicValues,
+	forEachCombination,
+	cChart,
+	clipArea,
+	clipClearArea,
+	fillRoundRect,
+	XYZ,
+	VEC3,
+	DIRECTION,
+	ndcFromEvent,
+	ndcToAbs,
+	getWorldVec3,
+	getWorldUp,
+	instanceInAncestor,
+	lookAtWithoutRotation,
+	safeMergeGeometry,
+	makeTrapezoidGeometryParts,
+	trapezoidGeometryUtil,
+	roundBoxGeometry,
+	roundRegularBoxGeometry,
+	roundTrapezoidGeometry,
+	capsuleConfigure,
+	customCapsuleGeometry,
+	cSphericalWorld
+} from 'basic';
+import {
+	cRubiksCube
+} from 'rubik';
+import * as SOUND from 'sound';
+
+/*
+	(1) Texture, MeshLambertMaterial, and BoxGeometry using cCache, which returns the same object in cache without creating.
+*/
+
+const textureFactory = factoryBuilder((in_w, in_h) => {
+	const gradation = 4
+	// gradation (from black to white)
+	let maxDepth = 255;
+	let styles = [];
+	for (let i = 0; i < gradation; i++) {
+		let depth = Math.ceil(maxDepth / (gradation - 1) * i);
+		styles[i] = 'rgb(' + depth + ',' + depth + ',' + depth + ')';
+	}
+	// draw and convert using toDataUR
+	let canvas = document.createElement('CANVAS');
+	canvas.width = in_w;
+	canvas.height = in_h;
+	const ctx = canvas.getContext('2d');
+	let radius = gradation + 2;
+	/*
+		Rect           RoundRect      RoundRect
+
+		##########     ##########     ##########
+		##########     ##******##     ##******##
+		##########     #********#     #**++++**#
+		##########     #********#     #*++++++*#
+		########## --> #********# --> #*++++++*# --> ...
+		##########     #********#     #*++++++*#
+		##########     #********#     #**++++**#
+		##########     ##******##     ##******##
+		##########     ##########     ##########
+	*/
+	for (let i = 0; i < gradation; i++) {
+		ctx.fillStyle = styles[i];
+		if (i > 0) {
+			ctx[fillRoundRect](i, i, in_w - i * 2, in_h - i * 2, radius - i);
+		} else {
+			ctx.fillRect(i, i, in_w - i * 2, in_h - i * 2);
+		}
+	}
+	return (new THREE.TextureLoader()).load(canvas.toDataURL());
+});
+
+const materialFactory = factoryBuilder((in_w, in_h, in_color) => {
+	return new THREE.MeshLambertMaterial({
+		color : in_color,
+		map : textureFactory.create(in_w, in_h)
+	});
+});
+
+function boxMaterials(in_x, in_y, in_z, in_colors) {
+	/*
+		     2    
+		     |   5
+		     |  /
+		    ###/
+		    ###
+		1 --#*#-- 0
+		    /##
+		   /###
+		  /  |
+		 4   |
+		     3
+	*/
+	return [
+		materialFactory.create(in_z, in_y, in_colors[0]),
+		materialFactory.create(in_y, in_z, in_colors[1]),
+		materialFactory.create(in_x, in_z, in_colors[2]),
+		materialFactory.create(in_x, in_z, in_colors[3]),
+		materialFactory.create(in_x, in_y, in_colors[4]),
+		materialFactory.create(in_x, in_y, in_colors[5])
+	];
+}
+
+const boxGeometryFactory = factoryBuilder((in_x, in_y, in_z) => {
+	const radian = 6;
+	const geometry = roundBoxGeometry(in_x - radian * 2, in_y - radian * 2, in_z - radian * 2, radian);
+	geometry.parameters = {
+		x : in_x,
+		y : in_y,
+		z : in_z
+	};
+	return geometry;
+});
+
+const DARKGRAY = 0x222222;
+const LIGHTGRAY = 0x555555;
+const HIGHLIGHT = 0x888888;
+
+const ORANGE = 0xFFAA00;
+const RED = 0xFF0000;
+const WHITE = 0xFFFFFF;
+const YELLOW = 0xFFFF00;
+const BLUE = 0x3333FF;
+const GREEN = 0x33CC33;
+
+const EDGECOLOR = DARKGRAY;
+const INSIDECOLOR = DARKGRAY;
+
+const SURFACEx6 = [
+	{NORM : DIRECTION.XP, INITCOLOR : RED},
+	{NORM : DIRECTION.XN, INITCOLOR : ORANGE},
+	{NORM : DIRECTION.YP, INITCOLOR : WHITE},
+	{NORM : DIRECTION.YN, INITCOLOR : YELLOW},
+	{NORM : DIRECTION.ZP, INITCOLOR : GREEN},
+	{NORM : DIRECTION.ZN, INITCOLOR : BLUE}
+];
+
+const edgeMaterial = new THREE.MeshLambertMaterial({color : EDGECOLOR});
+
+function pieceColorList(in_dimV3, in_ixV3) {
+	/*
+		piece ( hexahedron ) has surface x6
+		|
+		+- edge surface x0-3
+		|	|
+		|	+- orange, red, white, ...
+		|
+		+- inner surface x3-6
+			|
+			+- dark gray
+	*/
+	const colorList = [];
+	// when in_ixV3 is on an edge, the color of SURFACEx6 is used
+	SURFACEx6.forEach(({NORM, INITCOLOR}) => {
+		XYZ.forEach(in_xyz => {
+			switch (NORM[in_xyz]) {
+			// the surface is facing the positive direction
+			case +1 :
+				// the position is at the positive edge
+				if (in_ixV3[in_xyz] === in_dimV3[in_xyz] - 1) {
+					colorList.push(INITCOLOR);
+				} else {
+					colorList.push(INSIDECOLOR);
+				}
+				break;
+			// the surface is facing the negative direction
+			case -1 :
+				// the position is at the negative edge
+				if (in_ixV3[in_xyz] === 0) {
+					colorList.push(INITCOLOR);
+				} else {
+					colorList.push(INSIDECOLOR);
+				}
+				break;
+			case 0 :
+				break;
+			}
+		});
+	});
+	return colorList;
+}
+
+/*
+	(2) shape, parts composition, and behavior of a Rubik's Cube
+*/
+
+class cCubeDimV3 extends THREE.Vector3 {
+	get maxDim() {
+		return Math.max(...this.toArray());
+	}
+	#sizeList(in_unitSize = 1) {
+		const list = {};
+		/*
+			in case of 3x2x2, ...
+			list.x = [in_unitSize, in_unitSize, in_unitSize]
+			list.y = [in_unitSize, in_unitSize * 2]
+			list.z = [in_unitSize, in_unitSize * 2]
+		*/
+		XYZ.forEach(in_xyz => {
+			if (this[in_xyz] < this.maxDim) {
+				// separate not 4=3+1 but 4=2+2
+				if (this.maxDim % this[in_xyz] === 0) {
+					const quotient = this.maxDim / this[in_xyz];
+					list[in_xyz] = Array(this[in_xyz]).fill(in_unitSize * quotient);
+				} else {
+					list[in_xyz] = Array(this[in_xyz] - 1).fill(in_unitSize);
+					list[in_xyz].push((this.maxDim - this[in_xyz] + 1) * in_unitSize);
+				}
+			} else {
+				list[in_xyz] = Array(this[in_xyz]).fill(in_unitSize);
+			}
+		});
+		return list;
+	}
+	#indexLoop(in_callback) {
+		// first surface is at "new THREE.Vector3(0, 0, -1)"
+		for (let z = 0; z < this.z; z++) {
+			for (let y = 0; y < this.y; y++) {
+				for (let x = 0; x < this.x; x++) {
+					(in_callback)(VEC3(x, y, z));
+				}
+			}
+		}
+	}
+	positionLoop(in_callback, in_unitSize, in_moveToV3 = VEC3()) {
+		const sizeList = this.#sizeList(in_unitSize);
+		/*
+			each piece should be translated using translateV3
+
+			before translated :
+
+			   |
+			   +---+
+			   |   |
+			   |   |
+			   |   |
+			---+---+-
+			   |
+			   |
+			   |
+
+			after translated :
+
+			   |
+			   |
+			   |
+			 +-+-+
+			 | | |
+			-+-+-+---
+			 | | |
+			 +-+-+
+			   |
+		*/
+		const cubeCneter = this.maxDim * in_unitSize / 2;
+		const translateV3 = in_moveToV3.clone().sub(VEC3(cubeCneter, cubeCneter, cubeCneter));
+		this.#indexLoop(in_ixV3 => {
+			const pieceSizeV3 = VEC3();
+			const piecePosV3 = VEC3();
+			XYZ.forEach(in_xyz => {
+				const curr = in_ixV3[in_xyz];
+				let start = 0;
+				for (let i = 0; i < curr; i++) {
+					start += sizeList[in_xyz][i];
+				}
+				pieceSizeV3[in_xyz] = sizeList[in_xyz][curr];
+				piecePosV3[in_xyz] = start + pieceSizeV3[in_xyz] / 2;
+			});
+			piecePosV3.add(translateV3);
+			(in_callback)(in_ixV3, piecePosV3, pieceSizeV3);
+		});
+	}
+	isInsideCube(in_ixV3) {
+		return XYZ.every(in_xyz => {
+			return (0 < in_ixV3[in_xyz]) && (in_ixV3[in_xyz] < this[in_xyz] - 1);
+		});
+	}
+}
+
+class converter {
+	// assume sorted as stdFaceletCls.sortedArr order
+	static #featuresArr = [
+		{NORM : DIRECTION.YP, STICKER : 'U', O1 : DIRECTION.ZP, O2 : DIRECTION.XP},
+		{NORM : DIRECTION.XP, STICKER : 'R', O1 : DIRECTION.YN, O2 : DIRECTION.ZN},
+		{NORM : DIRECTION.ZP, STICKER : 'F', O1 : DIRECTION.YN, O2 : DIRECTION.XP},
+		{NORM : DIRECTION.YN, STICKER : 'D', O1 : DIRECTION.ZN, O2 : DIRECTION.XP},
+		{NORM : DIRECTION.XN, STICKER : 'L', O1 : DIRECTION.YN, O2 : DIRECTION.ZP},
+		{NORM : DIRECTION.ZN, STICKER : 'B', O1 : DIRECTION.YN, O2 : DIRECTION.XN}
+	];
+	static stickerMap = (() => {
+		const map = new Map();
+		const colorMap = new Map(SURFACEx6.map(in_e => [in_e.NORM, in_e.INITCOLOR]));
+		converter.#featuresArr.forEach(in_e => map.set(colorMap.get(in_e.NORM), in_e.STICKER));
+		// color to sticker
+		return map;
+	})();
+	static stickerOrder(in_sticker) {
+		return Array.from(converter.stickerMap).findIndex(in_e => in_e[1] === in_sticker);
+	}
+	static #getOrderFeature(in_norm) {
+		for (let i = 0; i < converter.#featuresArr.length; i++) {
+			const obj = converter.#featuresArr[i];
+			if (obj.NORM.equals(in_norm)) {
+				return {O0 : converter.stickerOrder(obj.STICKER), ...obj};
+			}
+		}
+		throw new Error('invalid param : ' + in_norm);
+	}
+	static sortedIndexes(in_srcArr) {
+		/*
+			in_srcArr = [
+				{sticker : sticker-00, norm : norm-00, pos : world-pos-00, ...},
+				{sticker : sticker-01, norm : norm-01, pos : world-pos-01, ...},
+				...
+				{sticker : sticker-53, norm : norm-53, pos : world-pos-53, ...}
+			];
+		*/
+		const arr = in_srcArr.map(({norm, pos}, in_ix) => {
+			const {O0, O1, O2} = converter.#getOrderFeature(norm);
+			const quantize = in_vec => {
+				let val = pos.dot(in_vec);
+				return Math.abs(val) < 1e-3 ? 0 : Math.sign(val);
+			};
+			return {ix : in_ix, o0 : O0, o1 : quantize(O1), o2 : quantize(O2)};
+		});
+		arr.sort((a, b) => (a.o0 === b.o0) ? ((a.o1 === b.o1) ? a.o2 - b.o2 : a.o1 - b.o1) : a.o0 - b.o0);
+		return arr.map(in_e => in_e.ix);
+	}
+}
+
+class cCntRubiksCube extends cRubiksCube {
+	static #url;
+	static #delayedUpdate = {};
+	static {
+		const currentPath = new URL('./', location.href).href;
+		const textArr = ["const PDBPATH = '" + currentPath + "pdb/';\n"];
+		const nodeList = document.querySelectorAll("script[data-type='worker-code']");
+		for (const node of nodeList) {
+			textArr.push(node.textContent + "\n");
+			if (node.dataset.shared === 'true') {
+				(new Function(node.textContent))();
+			}
+		}
+		cCntRubiksCube.#url = URL.createObjectURL(new Blob(textArr, {type : 'text/javascript'}));
+		// gConfPDB should be enabled by data-shared
+		for (const [type, conf] of Object.entries(gConfPDB)) {
+			if (!conf.enabled) {
+				continue;
+			}
+			if (conf.delayed !== conf.instant) {
+				cCntRubiksCube.#delayedUpdate[type] = conf.delayed;
+			}
+		}
+		console.log('update later : ', cCntRubiksCube.#delayedUpdate);
+	}
+	static #worker;
+	static {
+		const instant = new Worker(cCntRubiksCube.#url, {type : 'module'});
+		if (Object.keys(cCntRubiksCube.#delayedUpdate).length > 0) {
+			const delayed = new Worker(cCntRubiksCube.#url, {type : 'module'});
+			delayed.postMessage({mtype : 'update', value : cCntRubiksCube.#delayedUpdate});
+			const handler = in_ev => {
+				const {mtype, value} = in_ev.data;
+				if (mtype === 'updated') {
+					instant.terminate();
+					// replace worker to use powerful preset-data
+					cCntRubiksCube.#worker = delayed;
+					console.log('worker is updated : ' + value + 'ms');
+					delayed.removeEventListener('message', handler);
+				}
+			};
+			delayed.addEventListener('message', handler);
+		}
+		cCntRubiksCube.#worker = instant;
+	}
+	static #execWorker(in_currArr, in_callback) {
+		const cubejs = in_currArr => {
+			const stickerArr = [...'URFDLB'];
+			const cubeString = [...in_currArr].map(in_e => stickerArr[in_e]).join('');
+			const solved = Cube.fromString(cubeString).solve();
+			const stickerSet = new Set(stickerArr);
+			return [...solved].filter(in_c => stickerSet.has(in_c)).length;
+		};
+		cCntRubiksCube.#worker.onmessage = in_ev => {
+			const {mtype, value} = in_ev.data;
+			if (mtype === 'solved') {
+				(in_callback)(value);
+			}
+		};
+		cCntRubiksCube.#worker.postMessage({mtype : 'solve', value : in_currArr}); 
+	}
+	static exportPdb() {
+		cCntRubiksCube.#worker.onmessage = async (in_ev) => {
+			const {mtype, value} = in_ev.data;
+			if (mtype === 'exported') {
+				const handle = await window.showSaveFilePicker({
+					suggestedName: 'exported.pdb',
+					types : [{description : 'JSON', accept : {'application/json' : ['.json']}}],
+				});
+				const writable = await handle.createWritable();
+				await writable.write(JSON.stringify(value));
+				await writable.close();
+			}
+		};
+		cCntRubiksCube.#worker.postMessage({mtype : 'export', value : 0}); 
+	}
+	rotateOnWorldAxis(in_axis, in_rad) {
+		const reparentChildren = (a, b) => [...a.children].forEach(in_e => b.attach(in_e));
+		const temp = new THREE.Object3D();
+		reparentChildren(this, temp);
+		temp.rotateOnWorldAxis(in_axis, in_rad);
+		reparentChildren(temp, this);
+	}
+	countUntilSolve(in_callback) {
+		const srcArr = [];
+		const stickerArr = [];
+		for (const piece of this.children) {
+			Object.values(DIRECTION).forEach(in_direction => {
+				const color = cCntRubiksCube.getColor(piece, in_direction);
+				if (color === INSIDECOLOR) {
+					return;
+				}
+				srcArr.push({
+					sticker : converter.stickerMap.get(color),
+					norm : in_direction,
+					pos : piece.getWorldPosition(VEC3()),
+				});
+			});
+		}
+		const sorted = converter.sortedIndexes(srcArr);
+		for (let i = 0; i < sorted.length; i++) {
+			stickerArr[i] = srcArr[sorted[i]].sticker;
+		}
+		// stdFaceletCls.debug(stickerArr);
+		const currArr = Uint8Array.from(stickerArr.map(converter.stickerOrder));
+		cCntRubiksCube.#execWorker(currArr, in_callback);
+	}
+}
+
+/*
+	(3) ui & dom setting
+
+	gWorld (cSphericalWorld)
+	|
+	+-- gCube (cRubiksCube)
+		|
+		+-- meshes <--- gMeshLevelMap
+*/
+
+const CUBE_SIZE = 400;
+
+const WORLD_RADIUS = CUBE_SIZE * 10;
+const WORLD_INIT_ZOOM = WORLD_RADIUS / 3;
+
+const gWorld = new cSphericalWorld(WORLD_RADIUS);
+
+const gCube = new cCntRubiksCube();
+
+gWorld.add(gCube);
+
+gWorld.moveView(2.5, 0.5);
+gWorld.motionZoom2(WORLD_INIT_ZOOM, 1000);
+
+(async in_cubeSize => {
+	const cubeDim = new cCubeDimV3(2, 2, 2);
+	const unitSize = in_cubeSize / cubeDim.maxDim;
+	const pieces = [];
+	// see cCubeDimV3 implementation
+	cubeDim.positionLoop((in_ixV3, in_posV3, in_sizeV3) => {
+		if (cubeDim.isInsideCube(in_ixV3)) {
+			// console.log('inside', in_ixV3);
+			return;
+		}
+		const geometry = boxGeometryFactory.create(...in_sizeV3.toArray());
+		// geometry has 7 groups (sub meshes)
+		const colors = pieceColorList(cubeDim, in_ixV3);
+		const materials = boxMaterials(...in_sizeV3.toArray(), colors);
+		materials.push(edgeMaterial);
+		/*
+			*** NOTE ***
+			when you use materials (= array) for "new THREE.Mesh",
+			the geometry should be devided into groups (= sub meshes).
+		*/
+		const piece = new THREE.Mesh(geometry, materials);
+		piece.position.copy(in_posV3);
+		pieces.push(piece);
+	}, unitSize);
+	await gWorld.motionFog(0x000000, 0, 100);
+	gCube.setupAllPieces(pieces);
+})(CUBE_SIZE);
+
+class cWarpLine {
+	static #speed = 10;
+	static #gradation = 10;
+	constructor(in_canvas) {
+		const w = in_canvas.width;
+		const h = in_canvas.height;
+		this.ctx = in_canvas.getContext('2d');
+		this.box = new THREE.Box2(
+			new THREE.Vector2(0, 0),
+			new THREE.Vector2(w, h)
+		);
+		this.from = new THREE.Vector2(w / 2, h / 2);
+		this.#reset();
+	}
+	#reset() {
+		const angle = Math.random() * Math.PI * 2;
+		this.direction = new THREE.Vector2(Math.cos(angle), Math.sin(angle));
+		this.speed = Math.random() * cWarpLine.#speed + 5;
+		this.length = 0;
+	}
+	#curVec(in_scalar) {
+		return this.from.clone().add(this.direction.clone().multiplyScalar(in_scalar));
+	}
+	#drawGrayLine(in_from, in_to, in_grayScale) {
+		this.ctx.strokeStyle = COLOR.sGray(in_grayScale);
+		this.ctx.beginPath();
+		this.ctx.moveTo(in_from.x, in_from.y);
+		this.ctx.lineTo(in_to.x, in_to.y);
+		this.ctx.stroke();
+	}
+	update() {
+		this.length += this.speed;
+		const to = this.#curVec(this.length);
+		if (this.box.containsPoint(to)) {
+			const notch = this.length / cWarpLine.#gradation;
+			for (let i = 0; i < cWarpLine.#gradation; i++) {
+				this.#drawGrayLine(
+					this.#curVec(notch * i),
+					this.#curVec(notch * (i + 1)),
+					255 / cWarpLine.#gradation * (i + 1)
+				);
+			}
+		} else {
+			/*
+				*** NOTE ***
+				even if overwritung using black,
+				this.#drawGrayLine(this.from, to, 0x00);
+				smudge of white line will remain.
+			*/
+			this.#reset();
+		}
+	}
+}
+
+function warpViewProgress(in_canvas, in_lineCount) {
+	const warpLines = [];
+	for (let i = 0; i < in_lineCount; i++) {
+		warpLines.push(new cWarpLine(in_canvas));
+	}
+	return () => {
+		warpLines.forEach(in_line => {
+			in_line.update();
+		});
+	}
+}
+
+function complete() {
+	const progress = warpViewProgress(gBackgroundCanvas, 50);
+	gWorld.addAnimationHook(progress);
+	const duration = 2000;
+	gWorld.motionZoom2(WORLD_RADIUS * 1.5, duration * 0.9);
+	setTimeout(() => {
+		gWorld.removeAnimationHook(progress);
+		gCube.removeCompleteCallback();
+		const dialog = document.createElement('div');
+		Object.assign(dialog.style, {
+			width : 'auto',
+			height : 'auto',
+			color : 'white',
+			background : 'black',
+			borderRadius : '1em',
+			padding : '1.5em'
+		});
+		([
+			'<div>Congratulation !!</div>',
+			'<div>( Your score is : ' + gCube.getScore() + ' )</div>',
+			'<div>Thanks to your wisdom, peace in the universe has been preserved.</div>',
+			'<div>Click to go next stage.</div>',
+		]).forEach(in_fragment => {
+			dialog.innerHTML += in_fragment;
+		});
+		startDialog(dialog, () => {
+			drawCosmicView(gBackgroundCanvas, 400, 50);
+			gWorld.motionZoom2(WORLD_INIT_ZOOM, 1000);
+		});
+		nextLevel(false);
+	}, duration);
+}
+
+/*
+	*** NOTE ***
+	in Safari, using await to get audio will cause the process to fail.
+	I'm not sure of the reason, but top-level await might be the cause.
+	this time use then() to avoid the issue.
+*/
+
+let SE_BEEP = beep(2000);
+let SE_DUMMY = beep(10);
+let SE_MOVED = SE_BEEP;
+let SE_ERROR = SE_BEEP;
+
+SOUND.MOVED.then(in_decompress => {
+	SE_MOVED = new Audio('data:audio/mpeg;base64,' + in_decompress);
+});
+
+SOUND.ERROR.then(in_decompress => {
+	SE_ERROR = new Audio('data:audio/mpeg;base64,' + in_decompress);
+});
+
+function shuffle(in_count) {
+	const randomRotation = (in_remaining_count) => {
+		const callback = () => {
+			SE_MOVED.play();
+			gWorld.removeAnimationHook(progress);
+			if (in_remaining_count > 1) {
+				(randomRotation)(in_remaining_count - 1);
+			} else {
+				setTimeout(() => {
+					gWorld.stopRotation();
+					gCube.uiEnable();
+				}, 500);
+			}
+		};
+		const progress = gCube.makeRandomRotationProgress(callback, true);
+		gWorld.addAnimationHook(progress);
+	};
+	gCube.registerCompleteCallback(complete);
+	gCube.uiDisable();
+	gWorld.startRotation(VEC3().random().multiplyScalar(0.05));
+	(randomRotation)(in_count);
+}
+
+function makeShuffle(in_cnt) {
+	return () => {
+		shuffle(in_cnt);
+	};
+}
+
+function uiHelp() {
+	const url = {
+		ver : './version.txt',
+		img : './cube3d-help.gif',
+		src : 'https://github.com/nakayama-kazuki/202x/commit/'
+	};
+	const dialog = document.createElement('div');
+	Object.assign(dialog.style, {
+		width : 'auto',
+		height : 'auto',
+		background : 'white',
+		borderRadius : '1em',
+		padding : '1em'
+	});
+	dialog.innerHTML += '<div><img src="' + url.img + '" /></div>';
+	const verLabel = document.createElement('div');
+	Object.assign(verLabel.style, {
+		textAlign : 'right'
+	});
+	dialog.appendChild(verLabel);
+	getResource(url.ver).then(in_hash => {
+		verLabel.innerHTML = 'version : <a href="' + url.src + in_hash + '">' + in_hash.substring(0, 7) + '</a>';
+		verLabel.addEventListener('mousedown', in_e => in_e.stopPropagation());
+		verLabel.addEventListener('touchstart', in_e => in_e.stopPropagation());
+	}).catch(in_err => {
+	    console.error(in_err);
+		verLabel.innerHTML = 'version : unknown';
+	});
+	startDialog(dialog);
+}
+
+function uiRights() {
+	const dialog = document.createElement('dl');
+	Object.assign(dialog.style, {
+		width : '30%',
+		height : 'auto',
+		color : 'white',
+		background : 'black',
+		borderRadius : '1em',
+		padding : '1.5em'
+	});
+	([
+		'<dt>Rights</dt>',
+		'<dd>This software is based on MIT License.</dd>',
+		'<dd>The code can be freely modified and reused.</dd>',
+		'<dd>For full license details, please refer to :</dd>',
+		'<dd>https://opensource.org/licenses/MIT</dd>',
+		'<dt>Donations</dt>',
+		'<dd>While the use of images generated by this software is completely free, donations are welcome and greatly appreciated.</dd>',
+		'<dd>If you would like to support the development of this software, please consider making a donation using the QR code below (TBD).</dd>'
+	]).forEach(in_fragment => {
+		dialog.innerHTML += in_fragment;
+	});
+	startDialog(dialog);
+}
+
+const ID_PREV_LEVEL = randomString();
+const ID_NEXT_LEVEL = randomString();
+
+(in_settings => {
+	let container = document.createElement('div');
+	Object.assign(container.style, {
+		position : 'absolute',
+		left : '5%',
+		top : '5%'
+	});
+	document.body.appendChild(container);
+	in_settings.forEach(in_setting => {
+		let button = document.createElement('button');
+		if (in_setting.id) {
+			button.id = in_setting.id;
+		}
+		if (in_setting.text) {
+			button.innerText = in_setting.text;
+		}
+		button.addEventListener('click', in_setting.func);
+		Object.assign(button.style, {
+			margin : '1.5px 1.5px 1.5px 1.5px',
+			borderRadius : '3px',
+			border : '1px solid gray'
+		});
+		container.appendChild(button);
+	});
+})([
+	{
+		text : 'shuffle x3',
+		func : makeShuffle(3)
+	},
+	{
+		text : 'shuffle x5',
+		func : makeShuffle(5)
+	},
+	{
+		text : 'shuffle x10',
+		func : makeShuffle(10)
+	},
+/*
+	{
+		text : 'export',
+		func : () => cCntRubiksCube.exportPdb()
+	},
+*/
+	{
+		text : 'help',
+		func : uiHelp
+	},
+	{
+		text : 'rights',
+		func : uiRights
+	},
+	{
+		text : 'corridor',
+		func : () => location.href = 'https://pj-corridor.net/'
+	}
+]);
+
+function drawCosmicView(in_canvas, in_stars, in_nebulae_patterns, in_color = 0x000064) {
+	const ctx = in_canvas.getContext('2d');
+	const w = in_canvas.width;
+	const h = in_canvas.height;
+	ctx.fillStyle = 'black';
+	ctx.fillRect(0, 0, w, h);
+	for (let i = 0; i < in_nebulae_patterns; i++) {
+		const x = Math.random() * w;
+		const y = Math.random() * h;
+		const r = Math.random() * 100 + 50;
+		const gradient = ctx.createRadialGradient(x, y, 0, x, y, r);
+		gradient.addColorStop(0, COLOR.sRGBA(in_color, 127));
+		gradient.addColorStop(1, COLOR.sRGBA(in_color, 0));
+		ctx.beginPath();
+		ctx.arc(x, y, r, 0, Math.PI * 2, false);
+		ctx.fillStyle = gradient;
+		ctx.fill();
+	}
+	for (let i = 0; i < in_stars; i++) {
+		const x = Math.random() * w;
+		const y = Math.random() * h;
+		const r = Math.random() * 1;
+		ctx.beginPath();
+		ctx.arc(x, y, r, 0, Math.PI * 2, false);
+		ctx.fillStyle = 'white';
+		ctx.fill();
+	}
+}
+
+function drawBackground(in_canvas) {
+	Object.assign(in_canvas.style, {
+		position : 'absolute',
+		left : 0,
+		top : 0,
+		zIndex : -1
+	});
+	drawCosmicView(in_canvas, 400, 50);
+}
+
+const gBackgroundCanvas = document.createElement('CANVAS');
+
+function setupBody(in_document) {
+	if (!in_document.body) {
+		in_document.documentElement.appendChild(in_document.createElement('BODY'));
+	}
+	Object.assign(in_document.body.style, {
+		margin : '0',
+		overflow : 'hidden'
+	});
+}
+
+function createChildWindow(in_document) {
+	return new Promise(in_callback => {
+		setupBody(in_document);
+		const iframe = in_document.createElement('iframe');
+		in_document.body.appendChild(iframe);
+		Object.assign(iframe.style, {
+			width: '100%',
+			height: '100%',
+			border: 'none'
+		});
+		/*
+			*** NOTE ***
+			although Chrome can use iframe.contentDocument right after createElement,
+			Firefox can not use it ant needs to use asynchronous process.
+			by the way, if you use not timer but load event,
+			your code will not work for Chrome.
+		*/
+		setTimeout(() => {
+			setupBody(iframe.contentDocument);
+			(in_callback)(iframe.contentWindow);
+		}, 0);
+	});
+}
+
+document.addEventListener('DOMContentLoaded', (async () => {
+	/*
+		*** NOTE ***
+		without iframe (outer window),
+		geometry in event will be wrong because of google ads
+	*/
+	const outer = await createChildWindow(document);
+	let resizeWorld = in_ev => {
+		gWorld.resize(outer.innerWidth, outer.innerHeight);
+		gBackgroundCanvas.width = outer.innerWidth;
+		gBackgroundCanvas.height = outer.innerHeight;
+		drawBackground(gBackgroundCanvas);
+	};
+	outer.addEventListener('resize', debouncing(resizeWorld, 300));
+	outer.dispatchEvent(new Event('resize'));
+	outer.document.body.appendChild(gWorld.canvas);
+	outer.document.body.appendChild(gBackgroundCanvas);
+	gWorld.start();
+}));
+
+/*
+	(4) event handlers
+*/
+
+const knock = nonReentrantAsync(async () => {
+	SE_ERROR.play();
+	await gWorld.motionKnock();
+});
+
+const notifyDelta = (() => {
+	const RC = cRubiksCube.uiSetDeltaPositionRC;
+	return in_ndc => {
+		const intersects = gWorld.intersectPositive(in_ndc);
+		if (intersects.length === 0) {
+			return;
+		}
+		const result = gCube.uiNotifyDeltaPosition(intersects[0].object, intersects[0].point, ndcToAbs(in_ndc));
+		if (result === RC.UNMOVABLE) {
+			knock();
+		}
+	}
+})();
+
+function colorUtil(in_target, in_index, in_callback) {
+	const colors = [];
+	for (let i = 0; i < in_target.material.length; i++) {
+		const hex = in_target.material[i].color.getHex();
+		if ((in_index < 0) || (i === in_index)) {
+			colors.push(in_callback(hex));
+		} else {
+			colors.push(hex);
+		}
+	}
+	const setting = in_target.geometry.parameters;
+	const materials = boxMaterials(setting.x, setting.y, setting.z, colors);
+	materials.push(edgeMaterial);
+	/*
+		*** NOTE ***
+		materials created by boxMaterials are cached using cCache.
+		therefore, you don't need to worry about memory leaks without calling dispose().
+	*/
+	in_target.material = materials;
+}
+
+function highlight(in_target, in_index, in_alpha) {
+	colorUtil(in_target, in_index, in_currHex => {
+		return (new THREE.Color(in_currHex)).lerp(new THREE.Color(0xFFFFFF), in_alpha).getHex();
+	});
+}
+
+function highlightAll(in_target, in_alpha) {
+	highlight(in_target, -1, in_alpha);
+}
+
+function changeColor(in_target, in_index, in_nextHex) {
+	colorUtil(in_target, in_index, in_currHex => {
+		return in_nextHex;
+	});
+}
+
+function changeColorAll(in_target, in_nextHex) {
+	changeColor(in_target, -1, in_nextHex);
+}
+
+const setFocus = (() => {
+	const c = {
+		prev : null,
+		materials : []
+	};
+	return in_ndc => {
+		let intersects = gWorld.intersectPositive(in_ndc);
+		if (intersects.length === 0) {
+			if (c.prev) {
+				c.prev.target.material = c.materials;
+				/*
+					*** NOTE ***
+					as materials made by boxMaterials will be cached using cCache,
+					you don't need to call dispose() when mouseout.
+				*/
+				c.materials = [];
+				c.prev = null;
+			}
+			return;
+		}
+		const currTarget = intersects[0].object;
+		// assume that each face is composed of two faces
+		const currSurface = Math.floor(intersects[0].faceIndex / 2);
+		if (currSurface >= Object.keys(DIRECTION).length) {
+			// faces included in the edge
+			return;
+		}
+		if (c.prev) {
+			if ((c.prev.target === currTarget) && (c.prev.surface === currSurface)) {
+				return;
+			} else {
+				c.prev.target.material = c.materials;
+			}
+		}
+		c.prev = {
+			target : currTarget,
+			surface : currSurface
+		};
+		c.materials = currTarget.material;
+		const alpha = 0.3;
+		highlight(currTarget, currSurface, alpha);
+	}
+})();
+
+function decideSurface(in_intersects) {
+	// as face.normal is local coordination of the object, need to convert
+	const matrix = (new THREE.Matrix3()).getNormalMatrix(in_intersects[0].object.matrixWorld);
+	const surface = in_intersects[0].face.normal.clone().applyMatrix3(matrix).normalize();
+	const snap = (in_err => {
+		return (in_value, ...in_targets) => {
+			let snapped = in_value;
+			in_targets.forEach(in_target => {
+				if (Math.abs(in_value - in_target) < in_err) {
+					snapped = in_target;
+				}
+			});
+			return snapped;
+		};
+	})(0.0001);
+	XYZ.forEach(in_xyz => {
+		surface[in_xyz] = snap(surface[in_xyz], -1, 0, +1);
+	});
+	return surface;
+}
+
+function choose(in_ev) {
+	const ndc = ndcFromEvent(in_ev);
+	let intersects = gWorld.intersectPositive(ndc);
+	if (intersects.length === 0) {
+		return;
+	}
+	knock();
+}
+
+const gHandlers = (() => {
+	const c = {
+		x : -1,
+		y : -1,
+		once : false
+	};
+	const speak = makeSpeaker({});
+	const start = in_ev => {
+		if (!c.once) {
+			/*
+				*** NOTE ***
+				Safari may restrict sound without user interaction.
+				because of this, the sound does not work without this code.
+			*/
+			SE_DUMMY.play();
+			c.once = true;
+		}
+		const ndc = ndcFromEvent(in_ev);
+		const intersects = gWorld.intersectPositive(ndc);
+		if (intersects.length === 0) {
+			return;
+		}
+		c.x = in_ev.clientX;
+		c.y = in_ev.clientY;
+		gCube.uiSetInitPosition(decideSurface(intersects), intersects[0].point, ndcToAbs(ndc));
+	};
+	const move = thresholding(in_ev => {
+		c.x = -1;
+		c.y = -1;
+		const ndc = ndcFromEvent(in_ev);
+		if (gCube.uiIsMoving()) {
+			if (gCube.uiUpdatePosition(ndcToAbs(ndc))) {
+				SE_MOVED.play();
+			}
+		} else {
+			if (gCube.uiIsDragging()) {
+				notifyDelta(ndc);
+			} else {
+				if (!in_ev[isEmulated]) {
+					// setFocus(ndc);
+				}
+			}
+		}
+	});
+	const stop = in_ev => {
+		const releaseProgress = gCube.uiRelease(in_rotateURFDLB => {
+			gWorld.removeAnimationHook(releaseProgress);
+			if (in_rotateURFDLB) {
+				// rotation for the expected result in "cCntRubiksCube.#faceletFrom3D"
+				gCube.rotateOnWorldAxis(in_rotateURFDLB.axis, in_rotateURFDLB.rad * -1);
+				gWorld.rotateOnWorldAxis(in_rotateURFDLB.axis, in_rotateURFDLB.rad)
+			}
+			gCube.countUntilSolve(in_cnt => {
+				let powerd = ' by IDA*';
+				if (in_cnt > gMaxDepth) {
+					powerd = ' by Kociemba';
+				}
+				speak('last ' + in_cnt + powerd);
+			});
+		});
+		if (releaseProgress) {
+			gWorld.addAnimationHook(releaseProgress);
+		} else {
+			if ((c.x !== in_ev.clientX) || (c.y !== in_ev.clientY)) {
+				return;
+			}
+			choose(in_ev);
+		}
+	};
+	return {
+		'mousedown' : start,
+		'mousemove' : move,
+		'mouseleave' : stop,
+		'mouseout' : stop,
+		'mouseup' : stop
+	};
+})();
+
+for (let [eventName, handler] of Object.entries(gHandlers)) {
+	gWorld.canvas.addEventListener(eventName, handler);
+}
+
+</script>
+</body>
+</html>
