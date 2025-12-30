@@ -850,7 +850,7 @@ class PDB {
 			const url = PDBPATH + in_target;
 			const response = await fetch(url, {cache : 'no-cache'});
 			if (!response.ok) {
-				throw new Error();
+				throw new Error(url);
 			}
 			const exportedArr = await response.json();
 			let max = -1;
