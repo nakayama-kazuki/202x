@@ -39,8 +39,8 @@ globalThis.gConfPDB = {
 	*/
 	pCorner6 : {
 		enabled : true,
-		instant : 0,
-		delayed : 7
+		instant : 'pCorner6-7.pdb',
+		delayed : 'pCorner6-7.pdb'
 	},
 	/*
 		pOrigin1 x 5 :   259,315
@@ -64,36 +64,36 @@ globalThis.gConfPDB = {
 		cOriginUR x 6 :   19,144 (time-over) (*)
 	*/
 	cOriginUR : {
-		enabled : false,
-		instant : 0,
-		delayed : 5
+		enabled : true,
+		instant : 'cOriginUR-6.pdb',
+		delayed : 'cOriginUR-6.pdb'
 	},
 	/*
 		cOriginUD x 5 :    9,116
 		cOriginUD x 6 :   14,125 (time-over) (*)
 	*/
 	cOriginUD : {
-		enabled : false,
-		instant : 0,
-		delayed : 5
+		enabled : true,
+		instant : 'cOriginUD-6.pdb',
+		delayed : 'cOriginUD-6.pdb'
 	},
 	/*
 		cOrigin6 x 5 :       179
 		cOrigin6 x 6 :       220 (time-over) (*)
 	*/
 	cOrigin6 : {
-		enabled : false,
-		instant : 0,
-		delayed : 5
+		enabled : true,
+		instant : 'cOrigin6-6.pdb',
+		delayed : 'cOrigin6-6.pdb'
 	},
 	/*
 		cOthers6 x 5 :       106
 		cOthers6 x 6 :       129 (time-over) (*)
 	*/
 	cOthers6 : {
-		enabled : false,
-		instant : 0,
-		delayed : 5
+		enabled : true,
+		instant : 'cOthers6-6.pdb',
+		delayed : 'cOthers6-6.pdb'
 	}
 };
 
@@ -839,15 +839,32 @@ class PDB {
 			}
 		}
 	}
-	static rebuild(in_entity, in_depth) {
+	static async rebuild(in_entity, in_target) {
 		const start = performance.now();
-		in_entity.depth = in_depth;
 		in_entity.map.clear();
-		PDB.#bfs(in_entity, in_depth);
+		if (typeof in_target === 'string') {
+			const url = PDBPATH + in_target;
+			const response = await fetch(url, {cache : 'no-cache'});
+			if (!response.ok) {
+				throw new Error();
+			}
+			const exportedArr = await response.json();
+			let max = -1;
+			exportedArr.forEach(([key, depth]) => {
+				in_entity.map.set(key, depth);
+				if (max < depth) {
+					max = depth;
+				}
+			});
+			in_entity.depth = max;
+		} else {
+			in_entity.depth = in_target;
+			PDB.#bfs(in_entity, in_target);
+		}
 		const elapsed = (performance.now() - start).toFixed(3) + 'ms';
 		const stats = {
 			type : in_entity.type,
-			depth : in_depth,
+			depth : in_entity.depth,
 			time : elapsed,
 			size : in_entity.map.size
 		};
@@ -856,20 +873,22 @@ class PDB {
 		console.log(logArr.join(', '));
 		// console.log(in_entity.map);
 	}
-	static {
+	static async initialize() {
 		for (const [type, conf] of Object.entries(gConfPDB)) {
 			if (!PDB.#types.hasOwnProperty(type)) {
 				throw new Error('inconsistency : ' + type);
 			}
 			if (conf.enabled) {
 				const activeEntity = {...PDB.#types[type], type};
-				PDB.rebuild(activeEntity, conf.instant);
+				await PDB.rebuild(activeEntity, conf.instant);
 				PDB.activeTypeArr.push(activeEntity);
 			}
 		}
 		console.log('initialize done');
 	}
 }
+
+await PDB.initialize();
 
 class dfsCtx {
 	static #faceletCnt = 3 * 3 * 6;
@@ -958,8 +977,9 @@ function countUntilSolve(in_initArr) {
 		}
 		for (let i = 0; i < PDB.activeTypeArr.length; i++) {
 			const entity = PDB.activeTypeArr[i];
-			const packed = entity.facelet.pack(in_dfsCtx[entity.datasrc]);
+			let packed = null;
 			if (entity.type === 'pOrigin6') {
+				packed = entity.facelet.pack(in_dfsCtx[entity.datasrc]);
 				const prevBudget = in_visited.get(packed);
 				if ((prevBudget === undefined) || (prevBudget < in_currBudget)) {
 					// reset in_visited & continue pruning
@@ -970,11 +990,17 @@ function countUntilSolve(in_initArr) {
 					return false;
 				}
 			}
-			const requiredBudget = entity.map.get(packed) ?? entity.depth + 1;
-			if (in_currBudget < requiredBudget) {
-				// give up : you can't find in in_currBudget
-				pruningCnt[entity.type] = (pruningCnt[entity.type] ?? 0) + 1;
-				return false;
+			if (in_currBudget <= entity.depth) {
+				if (!packed) {
+					// lazy pack (other than pOrigin6)
+					packed = entity.facelet.pack(in_dfsCtx[entity.datasrc]);
+				}
+				const requiredBudget = entity.map.get(packed) ?? entity.depth + 1;
+				if (in_currBudget < requiredBudget) {
+					// give up : you can't find in in_currBudget
+					pruningCnt[entity.type] = (pruningCnt[entity.type] ?? 0) + 1;
+					return false;
+				}
 			}
 		}
 		for (let i = 0; i < stdFaceletCls.moveArr.length; i++) {
@@ -1027,7 +1053,33 @@ self.addEventListener('message', (() => {
 	const closure = {latest : null, waiting : false};
 	return in_ev => {
 		const {mtype, value} = in_ev.data;
-		if (mtype === 'solve') {
+		switch (mtype) {
+		case 'update' :
+			const start = performance.now();
+			const removeSet = new Set();
+			(async () => {
+				for (const [type, target] of Object.entries(value)) {
+					const entity = PDB.activeTypeArr.find(in_e => in_e.type === type);
+					if (target === -1) {
+						entity.depth = -1;
+						entity.map.clear();
+						removeSet.add(entity); 
+					} else {
+						await PDB.rebuild(entity, target);
+					}
+				}
+				PDB.activeTypeArr = PDB.activeTypeArr.filter(in_entity => !removeSet.has(in_entity));
+				self.postMessage({mtype : 'updated', value : performance.now() - start});
+			})();
+			break;
+		case 'export' :
+			const exportedArr = [];
+			for (const kvArr of PDB.activeTypeArr[value].map) {
+				exportedArr.push(kvArr);
+			}
+			self.postMessage({mtype : 'exported', value : exportedArr});
+			break;
+		case 'solve' :
 			closure.latest = value;
 			if (closure.waiting) {
 				return;
@@ -1044,25 +1096,10 @@ self.addEventListener('message', (() => {
 					}
 				}, 0);
 			}, 0);
-		} else {
-			if (mtype === 'update') {
-				const start = performance.now();
-				const removeSet = new Set();
-				for (const [type, depth] of Object.entries(value)) {
-					const entity = PDB.activeTypeArr.find(in_e => in_e.type === type);
-					if (depth < 0) {
-						entity.depth = -1;
-						entity.map.clear();
-						removeSet.add(entity); 
-					} else {
-						PDB.rebuild(entity, depth);
-					}
-				}
-				PDB.activeTypeArr = PDB.activeTypeArr.filter(in_entity => !removeSet.has(in_entity));
-				self.postMessage({mtype : 'updated', value : performance.now() - start});
-			} else {
-				console.log('invalid mtype : ' + mtype);
-			}
+			break;
+		default :
+			console.log('invalid mtype : ' + mtype);
+			break;
 		}
 	};
 })());
@@ -1442,7 +1479,8 @@ class cCntRubiksCube extends cRubiksCube {
 	static #url;
 	static #delayedUpdate = {};
 	static {
-		const textArr = [];
+		const currentPath = new URL('./', location.href).href;
+		const textArr = ["const PDBPATH = '" + currentPath + "/pdb/';\n"];
 		const nodeList = document.querySelectorAll("script[data-type='worker-code']");
 		for (const node of nodeList) {
 			textArr.push(node.textContent + "\n");
@@ -1450,7 +1488,7 @@ class cCntRubiksCube extends cRubiksCube {
 				(new Function(node.textContent))();
 			}
 		}
-		cCntRubiksCube.#url = URL.createObjectURL(new Blob(textArr));
+		cCntRubiksCube.#url = URL.createObjectURL(new Blob(textArr, {type : 'text/javascript'}));
 		// gConfPDB should be enabled by data-shared
 		for (const [type, conf] of Object.entries(gConfPDB)) {
 			if (!conf.enabled) {
@@ -1464,9 +1502,9 @@ class cCntRubiksCube extends cRubiksCube {
 	}
 	static #worker;
 	static {
-		const instant = new Worker(cCntRubiksCube.#url);
+		const instant = new Worker(cCntRubiksCube.#url, {type : 'module'});
 		if (Object.keys(cCntRubiksCube.#delayedUpdate).length > 0) {
-			const delayed = new Worker(cCntRubiksCube.#url);
+			const delayed = new Worker(cCntRubiksCube.#url, {type : 'module'});
 			delayed.postMessage({mtype : 'update', value : cCntRubiksCube.#delayedUpdate});
 			const handler = in_ev => {
 				const {mtype, value} = in_ev.data;
@@ -1491,7 +1529,7 @@ class cCntRubiksCube extends cRubiksCube {
 			return [...solved].filter(in_c => stickerSet.has(in_c)).length;
 		};
 		let waiting = true;
-		const waitLimit = 1000;
+		const waitLimit = 1500;
 		const timerId = setTimeout(() => {
 			if (waiting) {
 				waiting = false;
@@ -1511,6 +1549,21 @@ class cCntRubiksCube extends cRubiksCube {
 			}
 		};
 		cCntRubiksCube.#worker.postMessage({mtype : 'solve', value : in_currArr}); 
+	}
+	static exportPdb() {
+		cCntRubiksCube.#worker.onmessage = async (in_ev) => {
+			const {mtype, value} = in_ev.data;
+			if (mtype === 'exported') {
+				const handle = await window.showSaveFilePicker({
+					suggestedName: 'exported.pdb',
+					types : [{description : 'JSON', accept : {'application/json' : ['.json']}}],
+				});
+				const writable = await handle.createWritable();
+				await writable.write(JSON.stringify(value));
+				await writable.close();
+			}
+		};
+		cCntRubiksCube.#worker.postMessage({mtype : 'export', value : 0}); 
 	}
 	rotateOnWorldAxis(in_axis, in_rad) {
 		const reparentChildren = (a, b) => [...a.children].forEach(in_e => b.attach(in_e));
@@ -1841,6 +1894,12 @@ const ID_NEXT_LEVEL = randomString();
 		text : 'shuffle x10',
 		func : makeShuffle(10)
 	},
+/*
+	{
+		text : 'export',
+		func : () => cCntRubiksCube.exportPdb()
+	},
+*/
 	{
 		text : 'help',
 		func : uiHelp
