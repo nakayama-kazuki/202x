@@ -647,6 +647,7 @@ suites.forEach(in_suite => {
 })(false);
 
 class cReversi {
+	static maximizedRecMap = new Map();
 	static #maximize(in_evaluator, in_player, in_candArr) {
 		const evaluated = new Map();
 		in_candArr.forEach(in_ix => evaluated.set(in_ix, (in_evaluator)(in_player, in_ix)));
@@ -665,8 +666,11 @@ class cReversi {
 			}
 		}
 		if (max.indexes.length === 0) {
-			console.log(evaluated);
-			throw new Error();
+			throw new Error('not found from : ' + in_candArr.join(','));
+		}
+		const rec = cReversi.maximizedRecMap.get(in_player) ?? 0;
+		if (rec < max.value) {
+			cReversi.maximizedRecMap.set(in_player, max.value);
 		}
 		return max.indexes;
 	}
@@ -924,6 +928,7 @@ class cReversi {
 			this.#npcArgoPriority.push((argoArr.slice(0, i + 1))[arrRand]());
 		}
 		this.#updateOptionsAll();
+		cReversi.maximizedRecMap.clear();
 		// console.log(this.#conf.tagIndexes);
 	}
 	#initTagIndexesRadiating() {
@@ -3296,7 +3301,15 @@ class cGameController {
 		}
 	}
 	async npc(in_reversi, in_colony, in_world) {
-		if (in_reversi.playAutomatically(this.#curIndex, this.curNPCStrategy())) {
+		const player = this.#curIndex;
+		if (in_reversi.playAutomatically(player, this.curNPCStrategy())) {
+			const threshold = 100;
+			const max = cReversi.maximizedRecMap.get(player) ?? 0;
+			if (max > threshold) {
+				const scriptArr = ['Too easy', 'Pathetic', 'So predictable'];
+				gFigure.shortSpeak(scriptArr[arrRand]());
+				cReversi.maximizedRecMap.set(player, 0);
+			}
 			await this.#playLastAction(in_reversi, in_colony, in_world);
 			return true;
 		} else {
@@ -3490,15 +3503,18 @@ const gFigure = (() => {
 		return elem;
 	})());
 	// figure speak
-	const speak = makeSpeaker({
-		width : figure.width + 50,
-		tail : 'br',
-		from : 'br',
-		vertical : figure.from.b + 100,
-		horizontal : figure.from.r + figure.width + 20,
-		fontSize : 'normal',
-		display : 2000
-	});
+	const _speak = in_displayTime => {
+		return makeSpeaker({
+			width : figure.width + 50,
+			tail : 'br',
+			from : 'br',
+			vertical : figure.from.b + 100,
+			horizontal : figure.from.r + figure.width + 20,
+			fontSize : 'normal',
+			display : in_displayTime
+		});
+	};
+	const speak = {l : _speak(2000), s : _speak(250)};
 	return {
 		show(in_src, in_text) {
 			container.style.visibility = 'visible';
@@ -3508,8 +3524,11 @@ const gFigure = (() => {
 		hide() {
 			container.style.visibility = 'hidden';
 		},
-		speak(in_text) {
-			speak(in_text);
+		longSpeak(in_text) {
+			speak.l(in_text);
+		},
+		shortSpeak(in_text) {
+			speak.s(in_text);
 		}
 	};
 })();
@@ -3579,7 +3598,7 @@ function initializeByLevel() {
 				await gController.moveViewTo(piece, gWorld);
 			}
 			if (!gReversi.flippable(in_player)) {
-				gFigure.speak('I can rotate cylinder.');
+				gFigure.longSpeak('I can rotate cylinder.');
 			}
 			return;
 		}
@@ -3655,7 +3674,7 @@ SOUND.ERROR.then(in_decompress => {
 async function uiUndo() {
 	if (await gController.pcUndo(gReversi, gColony, gWorld)) {
 		updateChart();
-		gFigure.speak('I have returned.');
+		gFigure.longSpeak('I have returned.');
 	} else {
 		knock();
 	}
