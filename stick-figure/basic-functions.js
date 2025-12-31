@@ -1635,8 +1635,8 @@ export class cSphericalWorld {
 	#zoomMax = Number.POSITIVE_INFINITY;
 	#userObjects = new Set();
 	#hooks = {
-		loopSet : new Set,
-		updateMap : new Map
+		loopSet : new Set(),
+		updateMap : new Map()
 	};
 	constructor(in_radius) {
 		// scene
