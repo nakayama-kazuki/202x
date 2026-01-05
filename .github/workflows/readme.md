@@ -115,9 +115,9 @@ Important points :
 
 Inside the repository, prepare :
 
-- `Dockerfile`
-- `bootstrap`
-- application script called by `bootstrap`
+- `Dockerfile` : [dockerfile.txt](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/personalitytest/lambda/dockerfile.txt)
+- `bootstrap` : [bootstrap.txt](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/personalitytest/lambda/bootstrap.txt)
+- application script : [handler.php](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/personalitytest/lambda/handler.php)
 
 ---
 
