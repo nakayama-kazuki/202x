@@ -84,7 +84,7 @@ jobs:
     - name: lambda-build-container
       if: contains(env.FILES, env.APPL3PATH)
       run: |
-        docker build -t personalitytest:latest ${{ env.APPL3PATH }}/lambda
+        docker build -f ${{ env.APPL3PATH }}lambda/dockerfile.txt -t personalitytest:latest ${{ env.APPL3PATH }}
         docker tag personalitytest:latest ${{ secrets.AWS_ECR_URI }}/personalitytest:latest
     - name: lambda-push-container
       if: contains(env.FILES, env.APPL3PATH)
