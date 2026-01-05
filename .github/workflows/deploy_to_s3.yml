@@ -76,7 +76,24 @@ jobs:
     - name: sync-4
       if: contains(env.FILES, env.APPL3PATH)
       run: |
-        aws s3 sync ${{ env.APPL3PATH }} s3://pj-corridor.net/personalitytest/ --exclude ".git/*"
+        aws s3 sync ${{ env.APPL3PATH }} s3://pj-corridor.net/personalitytest/ --exclude ".git/*" --exclude "lambda/**"
+    - name: lambda-login-to-ecr
+      if: contains(env.FILES, env.APPL3PATH)
+      run: |
+        aws ecr get-login-password --region ap-northeast-1 | docker login --username AWS --password-stdin ${{ secrets.AWS_ECR_URI }}
+    - name: lambda-build-container
+      if: contains(env.FILES, env.APPL3PATH)
+      run: |
+        docker build -t personalitytest:latest ${{ env.APPL3PATH }}/lambda
+        docker tag personalitytest:latest ${{ secrets.AWS_ECR_URI }}/personalitytest:latest
+    - name: lambda-push-container
+      if: contains(env.FILES, env.APPL3PATH)
+      run: |
+        docker push ${{ secrets.AWS_ECR_URI }}/personalitytest:latest
+    - name: lambda-update-function
+      if: contains(env.FILES, env.APPL3PATH)
+      run: |
+        aws lambda update-function-code --function-name personalitytest --image-uri ${{ secrets.AWS_ECR_URI }}/personalitytest:latest
     - name: sync-5
       if: contains(env.FILES, env.GA256PATH)
       run: |
