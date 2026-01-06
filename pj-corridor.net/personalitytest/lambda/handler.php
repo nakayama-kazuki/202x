@@ -1,15 +1,19 @@
 <?php
 
+define('IS_LAMBDA', isset($_ENV['AWS_LAMBDA_FUNCTION_NAME']));
+
 function request(): array {
-	if (getenv('AWS_LAMBDA_RUNTIME_API')) {
+	if (IS_LAMBDA) {
 		$ev = json_decode(stream_get_contents(STDIN), true);
+		$wouldDecode = !empty($ev['isBase64Encoded']);
+		$body = $wouldDecode ? base64_decode($ev['body'], true) : ($ev['body'] ?? '');
 		return [
 			'method'  => $ev['requestContext']['http']['method'] ?? '',
 			'path'	  => $ev['rawPath'] ?? '',
 			'query'   => $ev['queryStringParameters'] ?? [],
 			'headers' => $ev['headers'] ?? [],
 			'cookies' => $ev['cookies'] ?? [],
-			'body'	  => $ev['body'] ?? ''
+			'body'	  => $body
 		];
 	} else {
 		return [
@@ -24,7 +28,7 @@ function request(): array {
 }
 
 function response($in_status, $in_headers, $in_body): void {
-	if (getenv('AWS_LAMBDA_RUNTIME_API')) {
+	if (IS_LAMBDA) {
 		print json_encode([
 			'statusCode' => $in_status,
 			'headers' => $in_headers,
