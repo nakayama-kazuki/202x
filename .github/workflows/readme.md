@@ -138,4 +138,4 @@ Register the following secrets :
 
 ## 08. GitHub Actions : create workflow
 
-Create workflow file : [deploy_to_s3.yml](https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/deploy_to_s3.yml)
+Create workflow file : [deploy-corridor.yml](https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/deploy-corridor.yml)
