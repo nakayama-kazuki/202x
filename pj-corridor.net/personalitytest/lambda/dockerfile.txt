@@ -2,6 +2,7 @@ FROM public.ecr.aws/lambda/provided:al2
 
 RUN yum install -y php-cli && yum clean all
 COPY lambda/bootstrap.txt /var/runtime/bootstrap
+RUN sed -i 's/\r$//' /var/runtime/bootstrap
 COPY lambda/handler.php /var/task/handler.php
 RUN chmod +x /var/runtime/bootstrap
 CMD ["bootstrap"]
