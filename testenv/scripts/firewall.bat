@@ -1,11 +1,15 @@
 @powershell "$THISFILE=\"%~f0\"; $PSCODE=[scriptblock]::Create((Get-Content $THISFILE | Where-Object {$_.ReadCount -gt 1}) -join \"`n\"); & $PSCODE %*" & goto :eof
 
-#
-# firwall setting as follows :
-#
-# localhost --[o]--> TCP 80/443/500 localhost
-# otherhost --[x]--> TCP 80/443/500 localhost
-#
+###
+### firwall setting as follows :
+###
+### > firewall.bat
+### localhost --[o]--> TCP 80/443/500 localhost
+### otherhost --[x]--> TCP 80/443/500 localhost
+###
+### > firewall.bat -Rollback
+### remove rules
+###
 
 param(
 	[switch]$Rollback
@@ -16,11 +20,19 @@ $principal = New-Object Security.Principal.WindowsPrincipal($identity)
 $IsAdmin = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
 if (-not $IsAdmin) {
-	Start-Process powershell -ArgumentList @('-ExecutionPolicy', 'Bypass', '-File', $THISFILE) -Verb RunAs
+	Write-Host 'this script must be run as administrator.' -ForegroundColor Red
 	exit
 }
 
 $ruleArr = @(
+	@{
+		DisplayName = 'Block inbound TCP 5000 from non-localhost'
+		Action = 'Block'
+		Direction = 'Inbound'
+		Protocol = 'TCP'
+		LocalPort = 5000
+		RemoteAddress = 'Any'
+	},
 	@{
 		DisplayName = 'Allow inbound TCP 5000 from localhost'
 		Action = 'Allow'
@@ -30,11 +42,12 @@ $ruleArr = @(
 		RemoteAddress = '127.0.0.1'
 	},
 	@{
-		DisplayName = 'Block inbound TCP 5000 from non-localhost'
+		DisplayName = 'Block HTTP(S) from non-localhost'
 		Action = 'Block'
 		Direction = 'Inbound'
 		Protocol = 'TCP'
-		LocalPort = 5000
+		LocalPort = @(80, 443)
+		RemoteAddress = 'Any'
 	},
 	@{
 		DisplayName = 'Allow HTTP(S) from localhost'
@@ -43,13 +56,6 @@ $ruleArr = @(
 		Protocol = 'TCP'
 		LocalPort = @(80, 443)
 		RemoteAddress = '127.0.0.1'
-	},
-	@{
-		DisplayName = 'Block HTTP(S) from non-localhost'
-		Action = 'Block'
-		Direction = 'Inbound'
-		Protocol = 'TCP'
-		LocalPort = @(80, 443)
 	}
 )
 
@@ -61,14 +67,14 @@ foreach ($rule in $ruleArr) {
 			Remove-NetFirewallRule -DisplayName $name -Confirm:$false
 			Write-Host "Removed rule : ${name}"
 		} else {
-			Write-Host "Rule not found (skip) : ${name}"
+			Write-Host "Rule not found (skip) : ${name}" -ForegroundColor Red
 		}
 	} else {
 		if (-not $exists) {
 			New-NetFirewallRule @rule | Out-Null
 			Write-Host "Added rule : ${name}"
 		} else {
-			Write-Host "Rule already exists : ${name}"
+			Write-Host "Rule already exists : ${name}" -ForegroundColor Red
 		}
 	}
 }
