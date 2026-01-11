@@ -1,5 +1,12 @@
 @powershell "$THISFILE=\"%~f0\"; $PSCODE=[scriptblock]::Create((Get-Content $THISFILE | Where-Object {$_.ReadCount -gt 1}) -join \"`n\"); & $PSCODE %*" & goto :eof
 
+#
+# firwall setting as follows :
+#
+# localhost --[o]--> TCP 80/443/500 localhost
+# otherhost --[x]--> TCP 80/443/500 localhost
+#
+
 param(
 	[switch]$Rollback
 )
