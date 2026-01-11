@@ -10,31 +10,31 @@
 
 - [x] パフォーマンス優先 + フォントの縁を滑らか
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/p01.png' width='350' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/p01.png' width='350' style='border: 1px solid silver;' />
 
 - [x] マルチタスクをすべてオフ
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/p02.png' width='350' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/p02.png' width='350' style='border: 1px solid silver;' />
 
 - [x] タスクバーで不要な項目をオフ
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/p03.png' width='350' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/p03.png' width='350' style='border: 1px solid silver;' />
 
 - [x] フォルダの表示をカスタマイズ
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/p04.png' width='350' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/p04.png' width='350' style='border: 1px solid silver;' />
 
 - [x] 高度なジェスチャをすべてオフ
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/p05.png' width='350' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/p05.png' width='350' style='border: 1px solid silver;' />
 
 - [x] 不要な通知をオフ
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/p07.png' width='350' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/p07.png' width='350' style='border: 1px solid silver;' />
 
 - [x] エディタの関連付けが負ける場合に OS 側で規定値設定
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/p08.png' width='350' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/p08.png' width='350' style='border: 1px solid silver;' />
 
 ## Apache
 
@@ -59,11 +59,11 @@
 Microsoft PowerToys
 
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/p09.png' width='350' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/p09.png' width='350' style='border: 1px solid silver;' />
 
 ## コンテキストメニューの仕様復元
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/p10.png' width='350' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/p10.png' width='350' style='border: 1px solid silver;' />
 
 ## git + tortoiseGit
 
