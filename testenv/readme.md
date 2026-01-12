@@ -45,7 +45,24 @@ httpd.conf などの編集のために最初にエディタをインストール
 - [x] [Apache](https://www.apachelounge.com/download/) をインストール
 - [x] [Microsoft](https://learn.microsoft.com/ja-jp/cpp/windows/latest-supported-vc-redist) から VCRUNTIME140.dll ( VC_redist.x64.exe ) を取得
 
-### HTTPS 設定
+### 自己署名証明書
+
+- [x] 自己署名証明書用の OpenSSL の CSR ( [ここでは openssl-localhost.cnf](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/openssl-localhost.cnf) ) を用意
+- [x] 秘密鍵を生成
+
+```
+openssl.exe genrsa -out localhost.key 2048
+```
+
+- [x] CSR + 秘密鍵でサーバ証明書を生成
+
+```
+openssl.exe req -new -x509 -key localhost.key -out localhost.crt -days 3650 -config openssl-localhost.cnf
+```
+
+- [x] 証明書を Windows にインストール
+
+
 
 ### PHP
 
