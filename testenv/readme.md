@@ -4,7 +4,7 @@
 
 最初に誤操作を誘発する機能をオフにする。
 
-- [x] パフォーマンス優先 + フォントの縁を滑らか
+- [x] 全てオフにしてフォントの縁を滑らかのみオン
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p01.png' width='350' style='border: 1px solid #000000;' />
 
@@ -24,11 +24,12 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p05.png' width='350' style='border: 1px solid #000000;' />
 
-- [x] 不要な通知をオフ
+- [x] 全ての（もしくは不要な）通知をオフ
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p07.png' width='350' style='border: 1px solid #000000;' />
 
 - [x] エディタの関連付けが負ける場合に OS 側で規定値設定
+-- 例えば `txt` や `ini` など
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p08.png' width='350' style='border: 1px solid #000000;' />
 
@@ -36,7 +37,7 @@
 
 設定ファイルなどの編集のためにエディタをインストールする。
 
-- [x] [秀丸の場合](https://hide.maruo.co.jp/software/hidemaru.html)
+- [x] [例えば秀丸の場合](https://hide.maruo.co.jp/software/hidemaru.html)
 	- ライセンスキーを取得（企業の場合はワークフローから利用申請）
 - [x] エディタの UIUX を普段使いの体裁に整える
 
@@ -58,7 +59,8 @@
 ```
 openssl.exe genrsa -out localhost.key 2048
 ```
-- [x] 自己署名証明書用の OpenSSL の CSR を作成（[openssl-localhost.cnf](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/openssl-localhost.cnf)）
+- [x] 自己署名証明書用の OpenSSL の CSR を作成
+	- [scripts/openssl-localhost.cnf](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/openssl-localhost.cnf)
 - [x] 秘密鍵 + CSR で自己署名サーバ証明書を生成
 
 ```
@@ -73,6 +75,18 @@ openssl.exe req -new -x509 -key localhost.key -out localhost.crt -days 3650 -con
 ### 3.3. PHP
 
 - [x] [PHP](https://windows.php.net/download/)
+- [x] 以下の有効化
+
+```
+extension=gd
+extension=openssl
+extension=sockets
+extension=mbstring
+
+... omitted ...
+
+extension_dir = "ext"
+```
 
 ### 3.4. Python
 
@@ -80,21 +94,27 @@ Python はローカルテスト環境の場合 TCP 5000 アクセス、プロダ
 
 - [x] [Python](https://www.python.org/downloads/windows/)
 - [x] 設定 → アプリ → アプリの詳細設定 → アプリ実行エイリアスの python.exe / python3.exe をオフ
-- [x] ローカルテスト環境 + Lambda 共通テンプレートを複製～編集してアプリケーションを開発（[template.py](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/template.py)）
-- [x] アプリケーションをランチャに Drag and Drop してサーバ起動（[restart-python.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/restart-python.bat)）
+- [x] ローカルテスト環境 + Lambda 共通テンプレートを複製～編集してアプリケーションを開発
+	- [scripts/template.py](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/template.py)
+- [x] アプリケーションを再起動ランチャに Drag and Drop してサーバ起動
+	- [scripts/restart-python.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/restart-python.bat)
 	- Lambda の場合はアプリケーションをそのままアップロード
 
 ### 3.5. Apache 設定変更～起動
 
-- [x] 最小限の機能のみを有効化した httpd.conf を作成（[template-httpd.conf](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/template-httpd.conf)）
+- [x] 最小限の機能のみを有効化した httpd.conf を作成
+	- [scripts/template-httpd.conf](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/template-httpd.conf)
 	- 秘密鍵 + 自己署名証明書、PHP、Python 関連のパスを適宜設定
-	- 必要に応じ `VirtualHost` を追加し hosts を編集（[edit-hosts.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/edit-hosts.bat)）
-- [x] Apache をサービスとして起動（[httpd-autostart.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/httpd-autostart.bat)）
+	- 必要に応じ `VirtualHost` を追加し hosts を編集
+		- [scripts/edit-hosts.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/edit-hosts.bat)
+- [x] Apache をサービスとして起動
+	- [scripts/httpd-autostart.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/httpd-autostart.bat)
 	- 以降は PC 起動時に Apache も起動
 
 ### 3.6. Firewall
 
-- [x] ローカルテスト環境へのインバウンドな TCP 80/443/5000 アクセスを遮断（[firewall.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/firewall.bat)）
+- [x] ローカルテスト環境へのインバウンドな TCP 80/443/5000 アクセスを遮断
+	- [scripts/firewall.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/firewall.bat)
 	- OS 設定と httpd.conf 側の `Require local` 設定を併用
 	- 以降はロールバックしない限り設定を維持
 - [x] ロールバック用に firewall.bat のショートカットを用意し、項目に `-Rollback` オプションを含めたパスを指定
@@ -132,11 +152,18 @@ git config --global user.email "fuga"
 	- 設定からメニュー表示内容を調整（例えば追加や削除）
 	- 初回 push 時に認証
 
+## 7. デスクトップショートカット
+
+"C:\_PATH_TO_\cmd.exe" /k chcp 65001
+"C:\_PATH_TO_\chrome.exe"
+"C:\_PATH_TO_\chrome.exe" --incognito
+
 ## 7. その他アプリケーション
 
 - [x] Firefox
 - [x] WinMerge
 - [x] GIMP
+- [x] ImageMagick
 - [x] LINE PC 版
 - [x] Slack
 
