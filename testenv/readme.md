@@ -52,7 +52,7 @@ httpd.conf などの編集のために最初にエディタをインストール
 ```
 openssl.exe genrsa -out localhost.key 2048
 ```
-- [x] 自己署名証明書用の OpenSSL の CSR ( [openssl-localhost.cnf](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/openssl-localhost.cnf) ) を用意
+- [x] 自己署名証明書用の OpenSSL の CSR を作成（[openssl-localhost.cnf](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/openssl-localhost.cnf)）
 - [x] 秘密鍵 + CSR で自己署名証明書（サーバ証明書）を生成
 
 ```
@@ -60,7 +60,7 @@ openssl.exe req -new -x509 -key localhost.key -out localhost.crt -days 3650 -con
 ```
 
 - [x] 証明書を Windows に自己署名証明書（サーバ証明書）をインストール
--- Firefox はプライバシーとセキュリティー設定からインストール
+	- Firefox はプライバシーとセキュリティー設定からインストール
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p11.png' width='350' style='border-style: solid;' />
 
@@ -75,9 +75,9 @@ openssl.exe req -new -x509 -key localhost.key -out localhost.crt -days 3650 -con
 
 ### Apache 設定変更～起動
 
-- [x] 最小限の機能に限定した [httpd.conf](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/template-httpd.conf) を利用
--- 秘密鍵 + 自己署名証明書、PHP、Python 関連のパスを適宜設定
-- [x] [httpd-autostart.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/httpd-autostart.bat) から Apache をサービスとして起動
+- [x] 最小限の機能に限定した httpd.conf を作成（[httpd.conf](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/template-httpd.conf)）
+	- 秘密鍵 + 自己署名証明書、PHP、Python 関連のパスを適宜設定
+- [x] Apache をサービスとして起動（[httpd-autostart.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/httpd-autostart.bat)）
 
 ## Firewall
 
