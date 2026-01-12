@@ -4,8 +4,8 @@
 ### firwall setting as follows :
 ###
 ### > firewall.bat
-### localhost --[o]--> TCP 80/443/500 localhost
-### otherhost --[x]--> TCP 80/443/500 localhost
+### localhost --[o]--> TCP 80/443/5000 localhost
+### otherhost --[x]--> TCP 80/443/5000 localhost
 ###
 ### > firewall.bat -Rollback
 ### remove rules
