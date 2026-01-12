@@ -1,6 +1,6 @@
 # Windows PC のセットアップ
 
-## Windows 動作環境調整
+## Windows 動作調整
 
 誤操作を誘発する機能をオフにする。
 
@@ -40,12 +40,16 @@
 - [x] エディタの UIUX を普段使いの体裁に整える
 - [x] ライセンスキーを取得（企業の場合はワークフローから利用申請）
 
-## Apache
+## ローカルテスト環境
+
+### Apache
 
 - [x] [Apache](https://www.apachelounge.com/download/) をインストール
 - [x] [Microsoft](https://learn.microsoft.com/ja-jp/cpp/windows/latest-supported-vc-redist) から VCRUNTIME140.dll ( VC_redist.x64.exe ) を取得
 
 ### 秘密鍵 + 自己署名サーバ証明書
+
+ローカルテスト環境で HTTPS 接続エラーを出さないための設定。
 
 - [x] 秘密鍵を生成
 
@@ -82,11 +86,13 @@ Python はローカル（Windows PC）の場合ポート 5000 で HTTP アクセ
 - [x] 最小限の機能のみを有効化した httpd.conf を作成（[httpd.conf](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/template-httpd.conf)）
 	- 秘密鍵 + 自己署名証明書、PHP、Python 関連のパスを適宜設定
 - [x] Apache をサービスとして起動（[httpd-autostart.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/httpd-autostart.bat)）
+	- 以降は PC 起動時に Apache も起動
 
 ## Firewall
 
 - [x] インバウンドな TCP 80/443/5000 を遮断（[firewall.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/firewall.bat)）
-	- ロールバック用に [firewall.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/firewall.bat) のシュートカットを作り項目に `-Rollback` オプションを指定する
+	- 以降はロールバックしない限り設定を維持
+	- ロールバック用に [firewall.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/firewall.bat) のショートカットを用意し、項目に `-Rollback` オプションを指定する
 
 ## キーの無効化
 
@@ -97,9 +103,12 @@ Python はローカル（Windows PC）の場合ポート 5000 で HTTP アクセ
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p09.png' width='350' style='border: 1px solid #000000;' />
 
+- [x] Keyboard Manager 以外すべてオフにする
+	- これを失念すると PowerToys による新たな誤操作が発生する
+
 ## コンテキストメニューの仕様復元
 
-- [x] レジストリエディタを用いてビギナー向けの新仕様を以前の状態に復元
+- [x] レジストリエディタを用いて二階層化された新仕様を以前の一階層に復元
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p10.png' width='350' style='border: 1px solid #000000;' />
 
