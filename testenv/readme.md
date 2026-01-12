@@ -1,6 +1,6 @@
 # Windows PC のセットアップ
 
-## Windows 動作調整
+## 1. Windows 動作調整
 
 誤操作を誘発する機能をオフにする。
 
@@ -32,7 +32,7 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p08.png' width='350' style='border: 1px solid #000000;' />
 
-## エディタ
+## 2. エディタ
 
 設定ファイルなどの編集のために最初にエディタをインストールする。
 
@@ -40,14 +40,16 @@
 - [x] エディタの UIUX を普段使いの体裁に整える
 - [x] ライセンスキーを取得（企業の場合はワークフローから利用申請）
 
-## ローカルテスト環境
+## 3. ローカルテスト環境
 
-### Apache
+### 3.1. Apache
 
-- [x] [Apache](https://www.apachelounge.com/download/) をインストール
+設定は後で修正するのでこのタイミングでは適当な設定で動作確認。
+
+- [x] [Apache](https://www.apachelounge.com/download/)
 - [x] [Microsoft](https://learn.microsoft.com/ja-jp/cpp/windows/latest-supported-vc-redist) から VCRUNTIME140.dll ( VC_redist.x64.exe ) を取得
 
-### 秘密鍵 + 自己署名サーバ証明書
+### 3.2. 秘密鍵 + 自己署名サーバ証明書
 
 ローカルテスト環境で HTTPS 接続エラーを出さないための設定。
 
@@ -68,37 +70,37 @@ openssl.exe req -new -x509 -key localhost.key -out localhost.crt -days 3650 -con
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p11.png' width='350' style='border: 1px solid #000000;' />
 
-### PHP
+### 3.3. PHP
 
-- [x] [PHP](https://windows.php.net/download/) をインストール
+- [x] [PHP](https://windows.php.net/download/)
 
-### Python
+### 3.4. Python
 
-Python はローカル（Windows PC）の場合ポート 5000 で HTTP アクセスし、プロダクションでは Lambda 経由での実行を想定する。
+Python はローカル（Windows PC）の場合ポート 5000 で HTTP アクセス、プロダクションでは Lambda 経由での実行を想定する。
 
-- [x] [Python](https://www.python.org/downloads/windows/) をインストール
+- [x] [Python](https://www.python.org/downloads/windows/)
 - [x] アプリ → アプリの詳細設定 → アプリ実行エイリアスの python.exe / python3.exe をオフ
 - [x] [template.py](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/template.py) を複製してアプリケーションを開発し [restart-python.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/restart-python.bat) に Drag and Drop してサーバ起動
 	- Lambda の場合はアプリケーションをそのままアップロード
 
-### Apache 設定変更～起動
+### 3.5. Apache 設定変更～起動
 
-- [x] 最小限の機能のみを有効化した httpd.conf を作成（[httpd.conf](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/template-httpd.conf)）
+- [x] 最小限の機能のみを有効化した httpd.conf を作成（[template-httpd.conf](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/template-httpd.conf)）
 	- 秘密鍵 + 自己署名証明書、PHP、Python 関連のパスを適宜設定
 - [x] Apache をサービスとして起動（[httpd-autostart.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/httpd-autostart.bat)）
 	- 以降は PC 起動時に Apache も起動
 
-## Firewall
+### 3.6. Firewall
 
-- [x] インバウンドな TCP 80/443/5000 を遮断（[firewall.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/firewall.bat)）
+- [x] ローカルテスト環境へのインバウンドな TCP 80/443/5000 を遮断（[firewall.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/firewall.bat)）
 	- 以降はロールバックしない限り設定を維持
-	- ロールバック用に [firewall.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/firewall.bat) のショートカットを用意し、項目に `-Rollback` オプションを指定する
+	- ロールバック用に firewall.bat のショートカットを用意し、項目に `-Rollback` オプションを指定する
 
-## キーの無効化
+## 4. キーの無効化
 
 誤操作を誘発するキーを無効化する。
 
-- [x] [Microsoft PowerToys](https://learn.microsoft.com/ja-jp/windows/powertoys/) をインストール
+- [x] [Microsoft PowerToys](https://learn.microsoft.com/ja-jp/windows/powertoys/)
 - [x] Insert + Caps Lock + Num Lock を Disable にする
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p09.png' width='350' style='border: 1px solid #000000;' />
@@ -106,13 +108,32 @@ Python はローカル（Windows PC）の場合ポート 5000 で HTTP アクセ
 - [x] Keyboard Manager 以外すべてオフにする
 	- これを失念すると PowerToys による新たな誤操作が発生する
 
-## コンテキストメニューの仕様復元
+## 5. コンテキストメニューの仕様復元
 
 - [x] レジストリエディタを用いて二階層化された新仕様を以前の一階層に復元
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p10.png' width='350' style='border: 1px solid #000000;' />
 
-## git + tortoiseGit
+## 6. git + tortoiseGit
 
+- [x] [Git for Windows/x64 Setup](https://git-scm.com/install/windows)
 
+```
+git config --global user.name "hoge"
+git config --global user.email "fuga"
+```
+
+- [x] [TortoiseGit](https://tortoisegit.org/download/)
+	- 必要に応じ Language Packs も
+- [x] リポジトリのクローン
+	- 設定からメニュー表示内容を調整（例えば追加や削除）
+	- 初回 push 時に認証
+
+## 7. その他アプリケーション
+
+- [x] Firefox
+- [x] WinMerge
+- [x] GIMP
+- [x] LINE PC 版
+- [x] Slack
 
