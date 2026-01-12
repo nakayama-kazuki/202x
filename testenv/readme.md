@@ -70,9 +70,12 @@ openssl.exe req -new -x509 -key localhost.key -out localhost.crt -days 3650 -con
 
 ### Python
 
+Python はローカル（Windows PC）の場合ポート 5000 で HTTP アクセスし、プロダクションでは Lambda 経由での実行を想定する。
+
 - [x] [Python](https://www.python.org/downloads/windows/) をインストール
 - [x] アプリ → アプリの詳細設定 → アプリ実行エイリアスの python.exe / python3.exe をオフ
-- [x] サーバ起動は
+- [x] [template.py](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/template.py) を複製してアプリケーションを開発し [restart-python.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/restart-python.bat) に Drag and Drop してサーバ起動
+	- Lambda の場合はアプリケーションをそのままアップロード
 
 ### Apache 設定変更～起動
 
@@ -87,12 +90,16 @@ openssl.exe req -new -x509 -key localhost.key -out localhost.crt -days 3650 -con
 
 ## キーの無効化
 
-Microsoft PowerToys
+誤操作を誘発するキーを無効化する。
 
+- [x] [Microsoft PowerToys](https://learn.microsoft.com/ja-jp/windows/powertoys/) をインストール
+- [x] Insert + Caps Lock + Num Lock を Disable にする
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p09.png' width='350' style='border: 1px solid #000000;' />
 
 ## コンテキストメニューの仕様復元
+
+- [x] レジストリエディタを用いてビギナー向けの新仕様を以前の状態に復元
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p10.png' width='350' style='border: 1px solid #000000;' />
 
