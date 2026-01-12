@@ -74,6 +74,8 @@ openssl.exe req -new -x509 -key localhost.key -out localhost.crt -days 3650 -con
 
 ### 3.3. PHP
 
+Apache 設定と Firewall でアクセス制御をおこなうので PHP はプロダクション向けの設定でなくてもよい。
+
 - [x] [PHP](https://windows.php.net/download/)
 - [x] 以下の有効化
 
@@ -155,6 +157,7 @@ git config --global user.email "fuga"
 ## 7. デスクトップショートカット
 
 - [x] `"C:\_PATH_TO_\cmd.exe" /k chcp 65001`
+	- 日本語エラーメッセージ対応
 - [x] `"C:\_PATH_TO_\chrome.exe"`
 	- イントラ & ログインサイト閲覧用
 - [x] `"C:\_PATH_TO_\chrome.exe" --incognito`
