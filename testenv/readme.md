@@ -2,7 +2,7 @@
 
 ## 1. Windows 動作調整
 
-誤操作を誘発する機能をオフにする。
+最初に誤操作を誘発する機能をオフにする。
 
 - [x] パフォーマンス優先 + フォントの縁を滑らか
 
@@ -34,11 +34,11 @@
 
 ## 2. エディタ
 
-設定ファイルなどの編集のために最初にエディタをインストールする。
+設定ファイルなどの編集のためにエディタをインストールする。
 
-- [x] 最初に [普段使いのエディタ](https://hide.maruo.co.jp/software/hidemaru.html) をインストール
+- [x] [秀丸の場合](https://hide.maruo.co.jp/software/hidemaru.html)
+	- ライセンスキーを取得（企業の場合はワークフローから利用申請）
 - [x] エディタの UIUX を普段使いの体裁に整える
-- [x] ライセンスキーを取得（企業の場合はワークフローから利用申請）
 
 ## 3. ローカルテスト環境
 
@@ -76,11 +76,12 @@ openssl.exe req -new -x509 -key localhost.key -out localhost.crt -days 3650 -con
 
 ### 3.4. Python
 
-Python はローカル（Windows PC）の場合ポート 5000 で HTTP アクセス、プロダクションでは Lambda 経由での実行を想定する。
+Python はローカルテスト環境の場合 TCP 5000 アクセス、プロダクションでは Lambda 経由のアクセスを想定する。
 
 - [x] [Python](https://www.python.org/downloads/windows/)
 - [x] アプリ → アプリの詳細設定 → アプリ実行エイリアスの python.exe / python3.exe をオフ
-- [x] [template.py](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/template.py) を複製してアプリケーションを開発し [restart-python.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/restart-python.bat) に Drag and Drop してサーバ起動
+- [x] ローカルテスト環境 + Lambda 共通テンプレートを複製～編集してアプリケーションを開発（[template.py](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/template.py)）
+- [x] アプリケーションをランチャに Drag and Drop してサーバ起動（[restart-python.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/restart-python.bat)）
 	- Lambda の場合はアプリケーションをそのままアップロード
 
 ### 3.5. Apache 設定変更～起動
@@ -92,9 +93,9 @@ Python はローカル（Windows PC）の場合ポート 5000 で HTTP アクセ
 
 ### 3.6. Firewall
 
-- [x] ローカルテスト環境へのインバウンドな TCP 80/443/5000 を遮断（[firewall.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/firewall.bat)）
+- [x] ローカルテスト環境へのインバウンドな TCP 80/443/5000 アクセスを遮断（[firewall.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/firewall.bat)）
 	- 以降はロールバックしない限り設定を維持
-	- ロールバック用に firewall.bat のショートカットを用意し、項目に `-Rollback` オプションを指定する
+- [x] ロールバック用に firewall.bat のショートカットを用意し、項目に `-Rollback` オプションを含めたパスを指定
 
 ## 4. キーの無効化
 
@@ -124,7 +125,7 @@ git config --global user.email "fuga"
 ```
 
 - [x] [TortoiseGit](https://tortoisegit.org/download/)
-	- 必要に応じ Language Packs も
+	- 必要に応じ Language Packs を追加
 - [x] リポジトリのクローン
 	- 設定からメニュー表示内容を調整（例えば追加や削除）
 	- 初回 push 時に認証
