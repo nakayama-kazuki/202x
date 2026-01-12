@@ -1,6 +1,9 @@
 @echo off
 
-REM *** check if you are an administrator ***
+REM *** Using this script, you can register httpd.exe as a service, and restart httpd.exe.
+REM *** Change "APACHE_HOME=C:\_PATH_\_TO_\_APACHE_" to match your environment.
+
+REM *** check if you are an administrator
 
 net session >nul 2>&1
 if errorlevel 1 (
@@ -8,7 +11,7 @@ if errorlevel 1 (
 	exit /b
 )
 
-REM *** register httpd.exe as a service / restart ***
+REM *** register httpd.exe as a service / restart
 
 set "APACHE_HOME=C:\_PATH_\_TO_\_APACHE_"
 set "APACHE_BIN=%APACHE_HOME%\bin"
