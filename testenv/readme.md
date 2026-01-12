@@ -29,7 +29,7 @@
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p07.png' width='350' style='border: 1px solid #000000;' />
 
 - [x] エディタの関連付けが負ける場合に OS 側で規定値設定
--- 例えば `txt` や `ini` など
+	- 例えば `txt` や `ini` など
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p08.png' width='350' style='border: 1px solid #000000;' />
 
@@ -154,16 +154,12 @@ git config --global user.email "fuga"
 
 ## 7. デスクトップショートカット
 
-"C:\_PATH_TO_\cmd.exe" /k chcp 65001
-"C:\_PATH_TO_\chrome.exe"
-"C:\_PATH_TO_\chrome.exe" --incognito
-
-## 7. その他アプリケーション
-
-- [x] Firefox
-- [x] WinMerge
-- [x] GIMP
-- [x] ImageMagick
-- [x] LINE PC 版
-- [x] Slack
+- [x] `"C:\_PATH_TO_\cmd.exe" /k chcp 65001`
+- [x] `"C:\_PATH_TO_\chrome.exe"`
+	- イントラ & ログインサイト閲覧用
+- [x] `"C:\_PATH_TO_\chrome.exe" --incognito`
+	- Cookie 汚染回避の一般サイト閲覧用
+- [x] ダウンロードや設定はよく使うのでデスクトップにあると便利
+- [x] その他直接探せないアプリは `Win + R` から `shell:AppsFolder` で Applications を開きショートカット作成
+- [x] ツール（bat）に ico を設定
 
