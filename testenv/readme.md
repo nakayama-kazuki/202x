@@ -34,7 +34,7 @@
 
 ## エディタ
 
-httpd.conf などの編集のために最初にエディタをインストール。
+設定ファイルなどの編集のために最初にエディタをインストールする。
 
 - [x] 最初に [普段使いのエディタ](https://hide.maruo.co.jp/software/hidemaru.html) をインストール
 - [x] エディタの UIUX を普段使いの体裁に整える
@@ -45,7 +45,7 @@ httpd.conf などの編集のために最初にエディタをインストール
 - [x] [Apache](https://www.apachelounge.com/download/) をインストール
 - [x] [Microsoft](https://learn.microsoft.com/ja-jp/cpp/windows/latest-supported-vc-redist) から VCRUNTIME140.dll ( VC_redist.x64.exe ) を取得
 
-### 秘密鍵 + 自己署名証明書
+### 秘密鍵 + 自己署名サーバ証明書
 
 - [x] 秘密鍵を生成
 
@@ -53,13 +53,13 @@ httpd.conf などの編集のために最初にエディタをインストール
 openssl.exe genrsa -out localhost.key 2048
 ```
 - [x] 自己署名証明書用の OpenSSL の CSR を作成（[openssl-localhost.cnf](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/openssl-localhost.cnf)）
-- [x] 秘密鍵 + CSR で自己署名証明書（サーバ証明書）を生成
+- [x] 秘密鍵 + CSR で自己署名サーバ証明書を生成
 
 ```
 openssl.exe req -new -x509 -key localhost.key -out localhost.crt -days 3650 -config openssl-localhost.cnf
 ```
 
-- [x] 証明書を Windows に自己署名証明書（サーバ証明書）をインストール
+- [x] 証明書を Windows に自己署名サーバ証明書をインストール
 	- Firefox はプライバシーとセキュリティー設定からインストール
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p11.png' width='350' style='border: 1px solid #000000;' />
