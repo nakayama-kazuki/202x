@@ -79,7 +79,7 @@ openssl.exe req -new -x509 -key localhost.key -out localhost.crt -days 3650 -con
 Python はローカルテスト環境の場合 TCP 5000 アクセス、プロダクションでは Lambda 経由のアクセスを想定する。
 
 - [x] [Python](https://www.python.org/downloads/windows/)
-- [x] アプリ → アプリの詳細設定 → アプリ実行エイリアスの python.exe / python3.exe をオフ
+- [x] 設定 → アプリ → アプリの詳細設定 → アプリ実行エイリアスの python.exe / python3.exe をオフ
 - [x] ローカルテスト環境 + Lambda 共通テンプレートを複製～編集してアプリケーションを開発（[template.py](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/template.py)）
 - [x] アプリケーションをランチャに Drag and Drop してサーバ起動（[restart-python.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/restart-python.bat)）
 	- Lambda の場合はアプリケーションをそのままアップロード
@@ -88,12 +88,14 @@ Python はローカルテスト環境の場合 TCP 5000 アクセス、プロダ
 
 - [x] 最小限の機能のみを有効化した httpd.conf を作成（[template-httpd.conf](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/template-httpd.conf)）
 	- 秘密鍵 + 自己署名証明書、PHP、Python 関連のパスを適宜設定
+	- 必要に応じ `VirtualHost` を追加し hosts を編集（[edit-hosts.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/edit-hosts.bat)）
 - [x] Apache をサービスとして起動（[httpd-autostart.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/httpd-autostart.bat)）
 	- 以降は PC 起動時に Apache も起動
 
 ### 3.6. Firewall
 
 - [x] ローカルテスト環境へのインバウンドな TCP 80/443/5000 アクセスを遮断（[firewall.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/firewall.bat)）
+	- OS 設定と httpd.conf 側の `Require local` 設定を併用
 	- 以降はロールバックしない限り設定を維持
 - [x] ロールバック用に firewall.bat のショートカットを用意し、項目に `-Rollback` オプションを含めたパスを指定
 
