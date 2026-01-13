@@ -30,7 +30,7 @@ if errorlevel 1 (
 )
 
 REM --- Check service state ---
-for /f "tokens=3" %%S in ('sc query "%SERVICE_NAME%" ^| findstr STATE') do (
+for /f "tokens=4" %%S in ('sc query "%SERVICE_NAME%" ^| findstr STATE') do (
 	set STATE=%%S
 )
 
