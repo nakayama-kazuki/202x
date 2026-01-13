@@ -105,7 +105,7 @@ Python はローカルテスト環境の場合 TCP 5000 アクセス、プロダ
 ### 3.5. Apache 設定変更～起動
 
 - [x] 最小限の機能のみを有効化した httpd.conf を作成
-	- [scripts/template-httpd.conf](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/template-httpd.conf)
+	- [scripts/httpd.conf](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/httpd.conf)
 	- 秘密鍵 + 自己署名証明書、PHP、Python 関連のパスを適宜設定
 	- 必要に応じ `VirtualHost` を追加し hosts を編集
 		- [scripts/edit-hosts.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/edit-hosts.bat)
