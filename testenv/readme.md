@@ -114,13 +114,13 @@ Python はローカルサンドボックス環境の場合 TCP 5000 アクセス
 
 - [x] [Python](https://www.python.org/downloads/windows/)
 - [x] 設定 → アプリ → アプリの詳細設定 → アプリ実行エイリアスの python.exe / python3.exe をオフ
-- [x] ローカルサンドボックス環境 + Lambda 共通テンプレートを複製～編集してアプリケーションを開発
+- [x] ローカルサンドボックス環境 + Lambda 共通テンプレートを複製 ～ 編集してアプリケーションを開発
 	- [scripts/template.py](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/template.py)
 - [x] アプリケーションを再起動ランチャに Drag and Drop してサーバ起動
 	- [scripts/restart-python.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/restart-python.bat)
 	- Lambda の場合はアプリケーションをそのままアップロード
 
-### 3.5. Apache 設定変更～起動
+### 3.5. Apache 設定変更 ～ 起動
 
 - [x] 最小限の機能のみを有効化し `Require local` とした httpd.conf を作成
 	- [scripts/httpd.conf](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/httpd.conf)
@@ -168,8 +168,8 @@ git config --global user.email "fuga"
 
 - [x] [TortoiseGit](https://tortoisegit.org/download/)
 	- 必要に応じ Language Packs を追加
+	- 設定からコンテキストメニュー表示内容を調整（例えば追加や削除）
 - [x] リポジトリのクローン
-	- 設定からメニュー表示内容を調整（例えば追加や削除）
 	- 初回 push 時に認証
 
 ## 7. デスクトップショートカット
