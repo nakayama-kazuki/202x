@@ -1,21 +1,47 @@
 @powershell "$THISFILE=\"%~f0\"; $PSCODE=[scriptblock]::create((Get-Content $THISFILE | Where-Object {$_.readcount -gt 1}) -join \"`n\"); & $PSCODE %*" & goto:eof
 
+<#
+	Using this script, you can launch a python application by dragging file onto it
+	Change 'C:\_PATH_\_TO_\httpd.conf' to match your environment.
+#>
+
 param(
-    [string]$pathToApp
+	[string]$pathToApp
 )
 
-if (-not $pathToApp) {
-    Write-Host 'drag & drop a .py file onto this bat.'
-    pause
-    exit 1
+$HTTPD_CONF = 'C:\_PATH_\_TO_\httpd.conf'
+
+function Start-PythonWithPort {
+	param(
+		[string]$pathToApp,
+		[int]$port
+	)
+	$lineArr = netstat -ano | Select-String ":${port}\s+.*\s+\d+$"
+	foreach ($line in $lineArr) {
+		$targetPid = ($line.Line -split '\s+')[-1]
+		taskkill /PID $targetPid /F
+	}
+	Start-Process python -ArgumentList @("${pathToApp}", '--port', $port) -WorkingDirectory (Split-Path $pathToApp)
 }
 
-$port = 5000
-
-$lineArr = netstat -ano | Select-String ":${port}\s+.*LISTENING"
-foreach ($line in $lineArr) {
-    $targetPid = ($line -split '\s+')[-1]
-    taskkill /PID $targetPid /F
+if ($pathToApp) {
+	if (Test-Path $HTTPD_CONF) {
+		$defineLine = Get-Content $HTTPD_CONF | Where-Object { $_ -match '^\s*Define\s+PORT_PYTHON\s+(\d+)' } | Select-Object -First 1
+		if (-not $defineLine) {
+			Write-Host "PORT_PYTHON is not defined in ${HTTPD_CONF}" -ForegroundColor Red
+			pause
+			exit 1
+		}
+		$port = [int]($defineLine -replace '.*\s+(\d+)$', '$1')
+		Write-Host "start ${pathToApp} using ${port}"
+		Start-PythonWithPort $pathToApp $port
+	} else {
+		Write-Host "not found : ${HTTPD_CONF}" -ForegroundColor Red
+		pause
+		exit 1
+	}
+} else {
+	Write-Host 'drag & drop a .py file onto this bat.' -ForegroundColor Red
+	pause
+	exit 1
 }
-
-Start-Process python -ArgumentList @("${pathToApp}", '--port', $port) -WorkingDirectory (Split-Path $pathToApp)

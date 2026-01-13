@@ -1,15 +1,16 @@
 @powershell "$THISFILE=\"%~f0\"; $PSCODE=[scriptblock]::Create((Get-Content $THISFILE | Where-Object {$_.ReadCount -gt 1}) -join \"`n\"); & $PSCODE %*" & goto :eof
 
-###
-### firwall setting as follows :
-###
-### > firewall.bat
-### localhost --[o]--> TCP 80/443/5000 localhost
-### otherhost --[x]--> TCP 80/443/5000 localhost
-###
-### > firewall.bat -Rollback
-### remove rules
-###
+<#
+	Using this script, you can apply / remove firewall settings.
+
+	> firewall.bat
+		apply "DisplayName" rules :
+			localhost --[o]--> TCP 80/443/5000 localhost
+			otherhost --[x]--> TCP 80/443/5000 localhost
+
+	> firewall.bat -Rollback
+		remove "DisplayName" rules
+#>
 
 param(
 	[switch]$Rollback
