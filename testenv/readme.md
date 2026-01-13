@@ -174,8 +174,8 @@ git config --global user.email "fuga"
 
 ## 7. デスクトップショートカット
 
-- [x] `"C:\_PATH_TO_\cmd.exe" /k chcp 65001`
-	- 日本語エラーメッセージ対応
+- [x] コマンドは UTF8 エラーメッセージ対応
+	- `"C:\_PATH_TO_\cmd.exe" /k chcp 65001`
 - [x] ブラウザをイントラ or ログイン用と一般サイト閲覧用（Cookie 汚染許容）に分離。以下は Chrome の場合
 	- `"C:\_PATH_TO_\chrome.exe"`
 	- `"C:\_PATH_TO_\chrome.exe" --incognito`
