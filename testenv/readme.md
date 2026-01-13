@@ -144,7 +144,7 @@ Python はローカルテスト環境の場合 TCP 5000 アクセス、プロダ
 誤操作を誘発するキーを無効化する。
 
 - [x] [Microsoft PowerToys](https://learn.microsoft.com/ja-jp/windows/powertoys/)
-- [x] Insert + Caps Lock + Num Lock を Disable にする
+- [x] `Insert` + `Caps Lock` + `Num Lock` を Disable にする
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p09.png' width='350' style='border: 1px solid #000000;' />
 
