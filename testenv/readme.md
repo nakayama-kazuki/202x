@@ -176,10 +176,9 @@ git config --global user.email "fuga"
 
 - [x] `"C:\_PATH_TO_\cmd.exe" /k chcp 65001`
 	- 日本語エラーメッセージ対応
-- [x] `"C:\_PATH_TO_\chrome.exe"`
-	- イントラ & ログインサイト閲覧用
-- [x] `"C:\_PATH_TO_\chrome.exe" --incognito`
-	- Cookie 汚染回避の一般サイト閲覧用
+- [x] ブラウザをイントラ or ログイン用と一般サイト閲覧用（Cookie 汚染許容）に分離。以下は Chrome の場合
+	- `"C:\_PATH_TO_\chrome.exe"`
+	- `"C:\_PATH_TO_\chrome.exe" --incognito`
 - [x] ダウンロードや設定はよく使うのでデスクトップにあると便利
 - [x] その他直接探せないアプリは `Win + R` から `shell:AppsFolder` で Applications を開きショートカット作成
 - [x] [ツール類](https://github.com/nakayama-kazuki/2021/tree/master/tool) に ico を設定
