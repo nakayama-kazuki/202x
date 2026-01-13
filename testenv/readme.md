@@ -29,18 +29,19 @@
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p07.png' width='350' style='border: 1px solid #000000;' />
 
 - [x] エディタの関連付けが負ける場合に OS 側で規定値設定
-	- 例えば `txt` や `ini` など
+	- 例えば `txt` や `html` や `js` や `ini` など
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p08.png' width='350' style='border: 1px solid #000000;' />
 
-## 2. エディタと辞書
+## 2. 入力支援
 
-PC 移行の場合は移行対象の辞書をあらかじめ出力する。
-
-- [x] [例えば秀丸の場合](https://hide.maruo.co.jp/software/hidemaru.html)
+- [x] エディタをインストール（[例えば秀丸](https://hide.maruo.co.jp/software/hidemaru.html)）
 	- ライセンスキーを取得（企業の場合はワークフローから利用申請）
-- [x] エディタの UIUX を普段使いの体裁に整える
-- [x] ユーザー辞書ツール → ツール → テキストファイルからの登録
+	- UIUX を普段使いの体裁に調整
+- [x] PC 移行時のエクスポート + インポート
+	- デフォルトブラウザのブックマーク
+	- ユーザー辞書の設定
+		- ユーザー辞書ツール → ツール → テキストファイルからの登録
 
 ```
 !Microsoft IME Dictionary Tool
