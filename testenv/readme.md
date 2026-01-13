@@ -33,13 +33,28 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p08.png' width='350' style='border: 1px solid #000000;' />
 
-## 2. エディタ
+## 2. エディタと辞書
 
 設定ファイルなどの編集のためにエディタをインストールする。
 
 - [x] [例えば秀丸の場合](https://hide.maruo.co.jp/software/hidemaru.html)
 	- ライセンスキーを取得（企業の場合はワークフローから利用申請）
 - [x] エディタの UIUX を普段使いの体裁に整える
+- [x] ユーザー辞書ツール → ツール → テキストファイルからの登録
+
+```
+!Microsoft IME Dictionary Tool
+!Version:
+!Format:WORDLIST
+!User Dictionary Name:imjp15cu.dic
+!Output File Name:
+!DateTime: 
+
+よみ<TAB>単語<TAB>品詞
+よみ<TAB>単語<TAB>品詞
+よみ<TAB>単語<TAB>品詞
+よみ<TAB>単語<TAB>品詞
+```
 
 ## 3. ローカルテスト環境
 
