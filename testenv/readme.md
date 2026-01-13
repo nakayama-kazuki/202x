@@ -35,6 +35,8 @@
 
 ## 2. 入力支援
 
+後続作業に影響が大きいものから優先対応。
+
 - [x] エディタをインストール（[例えば秀丸](https://hide.maruo.co.jp/software/hidemaru.html)）
 	- ライセンスキーを取得（企業の場合はワークフローから利用申請）
 	- UIUX を普段使いの体裁に調整
@@ -180,5 +182,5 @@ git config --global user.email "fuga"
 	- Cookie 汚染回避の一般サイト閲覧用
 - [x] ダウンロードや設定はよく使うのでデスクトップにあると便利
 - [x] その他直接探せないアプリは `Win + R` から `shell:AppsFolder` で Applications を開きショートカット作成
-- [x] ツール（bat）に ico を設定
+- [x] [ツール類](https://github.com/nakayama-kazuki/2021/tree/master/tool) に ico を設定
 
