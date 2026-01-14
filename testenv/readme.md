@@ -4,7 +4,7 @@
 
 最初に誤操作を誘発する機能をオフにする。
 
-- [x] 全てオフにしてフォントの縁を滑らかのみオン
+- [x] `Win + R` から `sysdm.cpl` でフォントの「縁を滑らか」以外をオフ
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p01.png' width='350' style='border: 1px solid #000000;' />
 
@@ -16,7 +16,7 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p03.png' width='350' style='border: 1px solid #000000;' />
 
-- [x] フォルダの表示をカスタマイズ
+- [x] `Win + R` から `control folders` でフォルダの表示をカスタマイズ
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p04.png' width='350' style='border: 1px solid #000000;' />
 
