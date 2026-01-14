@@ -4,9 +4,13 @@
 
 最初に誤操作を誘発する機能をオフにする。
 
-- [x] `Win + R` から `sysdm.cpl` でフォントの「縁を滑らか」以外をオフ
+- [x] パフォーマンスオプション（`Win + R` から `sysdm.cpl`）でフォントの「縁を滑らか」以外をオフ
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p01.png' width='350' style='border: 1px solid #000000;' />
+
+- [x] フォルダーオプション（`Win + R` から `control folders`）でエクスプローラーの振る舞いを調整
+
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p04.png' width='350' style='border: 1px solid #000000;' />
 
 - [x] マルチタスクをすべてオフ
 
@@ -15,10 +19,6 @@
 - [x] タスクバーで不要な項目をオフ
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p03.png' width='350' style='border: 1px solid #000000;' />
-
-- [x] `Win + R` から `control folders` でフォルダの表示をカスタマイズ
-
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p04.png' width='350' style='border: 1px solid #000000;' />
 
 - [x] 高度なジェスチャをすべてオフ
 
