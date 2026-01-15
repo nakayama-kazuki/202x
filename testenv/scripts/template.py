@@ -3,28 +3,52 @@
 BASE_PATH = '/'
 # BASE_PATH = '/hello'
 
-import os
-import sys
-import json
-import base64
-
 from typing import Dict, Any
+
+HTML_TEMPLATE = """<html>
+<style type='text/css'>
+TABLE {{
+	border-collapse : collapse;
+}}
+TD {{
+	border : 1px solid black;
+}}
+SPAN {{
+	margin : 5px;
+}}
+</style>
+<body>
+<table>{rows}</table>
+</body>
+</html>"""
 
 def application(in_req: Dict[str, Any]) -> Dict[str, Any]:
     """ need to implement what you want to do """
     targetArr = ['method', 'path', 'query']
     data: Dict[str, Any] = {}
+    rowArr = []
     for key in targetArr:
-        data[key] = in_req.get(key)
+        value = in_req.get(key)
+        rowArr.append(
+            f"<tr><td><span>{key}</span></td><td><span>{value}</span></td></tr>"
+        )
+    html = HTML_TEMPLATE.format(rows=''.join(rowArr))
     return {
         'status' : 200,
         'headers' : {
-            'Content-Type': 'application/json'
+            'Content-Type': 'text/html'
         },
-        'body' : json.dumps(data, ensure_ascii=False)
+        'body' : html
     }
 
+####
 #### you don't need to edit code below
+####
+
+import os
+import sys
+import json
+import base64
 
 def request_from_lambda() -> Dict[str, Any]:
     ev = json.load(sys.stdin)
@@ -65,8 +89,7 @@ if __name__ == '__main__':
     else:
         from flask import Flask, request, Response
         app = Flask(__name__)
-        @app.route(BASE_PATH, defaults={'path': ''}, methods=['GET', 'POST', 'PUT', 'DELETE'])
-        def routeEntry(path: str):
+        def entry(path: str):
             src = request_from_flask(request)
             dst = application(src)
             return Response(
@@ -74,6 +97,11 @@ if __name__ == '__main__':
                 status=dst['status'],
                 headers=dst['headers']
             )
+        entry = app.route(
+            BASE_PATH,
+            defaults={'path': ''},
+            methods=['GET', 'POST', 'PUT', 'DELETE']
+        )(entry)
         import argparse
         p = argparse.ArgumentParser()
         p.add_argument("--port", type=int, required=True)
