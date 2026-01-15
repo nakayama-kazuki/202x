@@ -171,3 +171,10 @@ git config --global user.email "fuga"
 - [x] その他直接探せないアプリは `Win + R` から `shell:AppsFolder` で Applications を開きショートカット作成
 - [x] [ツール類](https://github.com/nakayama-kazuki/2021/tree/master/tool) に ico を設定
 
+## 8. オンラインミーティング
+
+- [x] プロフィール + 背景画像
+-- Zoom の場合 `C:\_PATH_TO_\Zoom\data\VirtualBkgnd_Custom\*` はビットマップ
+- [x] 参加体験（カメラやマイクの on / off 等）は Zoom アプリの設定画面から
+
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/future.png' width='350' style='border: 1px solid #000000;' />
