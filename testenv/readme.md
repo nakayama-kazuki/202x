@@ -92,21 +92,9 @@ openssl.exe req -new -x509 -key localhost.key -out localhost.crt -days 3650 -con
 
 ### 3.3. PHP
 
-Apache 設定と Firewall でアクセス制御をおこなうので PHP はプロダクション向けの設定でなくてもよい。
-
 - [x] [PHP](https://windows.php.net/download/)
-- [x] [ツール類](https://github.com/nakayama-kazuki/2021/tree/master/tool) で利用する機能を有効化
-
-```
-extension=gd
-extension=openssl
-extension=sockets
-extension=mbstring
-
-... omitted ...
-
-extension_dir = "ext"
-```
+- [x] [ツール類](https://github.com/nakayama-kazuki/2021/tree/master/tool) で利用する機能を有効化した php.ini を作成
+	- [scripts/php.ini](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/php.ini)
 
 ### 3.4. Python
 
