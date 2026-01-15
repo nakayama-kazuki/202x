@@ -143,7 +143,9 @@ Python はローカルサンドボックス環境の場合 TCP 5000 アクセス
 
 - [x] レジストリエディタを用いて二階層化された新仕様を以前の一階層に復元
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p10.png' width='350' style='border: 1px solid #000000;' />
+```
+reg.exe add "HKEY_CURRENT_USER\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32" /f /ve
+```
 
 ## 6. git + tortoiseGit
 
@@ -174,7 +176,7 @@ git config --global user.email "fuga"
 ## 8. オンラインミーティング
 
 - [x] プロフィール + 背景画像
--- Zoom の場合 `C:\_PATH_TO_\Zoom\data\VirtualBkgnd_Custom\*` はビットマップ
+	- Zoom の場合 `C:\_PATH_TO_\Zoom\data\VirtualBkgnd_Custom\*` はビットマップ
 - [x] 参加体験（カメラやマイクの on / off 等）は Zoom アプリの設定画面から
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/future.png' width='350' style='border: 1px solid #000000;' />
