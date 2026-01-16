@@ -90,7 +90,7 @@ function Convert-HtmlToText {
 		}
 		$converted += ($fragment.Value -replace '\s+', ' ')
 	}
-	return $converted.TrimEnd()
+	return [System.Net.WebUtility]::HtmlDecode($converted.TrimEnd())
 }
 
 $clipboard = [ClipboardHtml]::RegisterClipboardFormat("HTML Format")
