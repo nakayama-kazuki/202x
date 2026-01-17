@@ -103,7 +103,11 @@ Python はローカルサンドボックス環境の場合 TCP 5000 アクセス
 - [x] [Python](https://www.python.org/downloads/windows/)
 - [x] 設定 → アプリ → アプリの詳細設定 → アプリ実行エイリアスの `python.exe` / `python3.exe` をオフ
 - [x] ローカルサンドボックス環境向けの軽量 HTTP サーバを導入
-	- `pip install flask`
+
+```
+pip install flask
+```
+
 - [x] ローカルサンドボックス環境 + Lambda 共通テンプレートを複製 ～ 編集してアプリケーションを開発
 	- [scripts/template.py](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/template.py)
 - [x] アプリケーションを再起動ランチャに Drag and Drop してサーバ起動
