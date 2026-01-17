@@ -126,7 +126,7 @@ $html = [regex]::Replace($raw, '<(\w+)(\s+[^>]+)>', '<$1>')
 # 2. convert to text
 $text = Convert-HtmlToText $html
 
-# 3. extracrt links
+# 3. extract links
 $links = [regex]::Matches($raw, '(?i)<a\s+[^>]*href\s*=\s*"(.*?)"', 'Singleline') | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique
 
 if ($links.Count -gt 0) {
