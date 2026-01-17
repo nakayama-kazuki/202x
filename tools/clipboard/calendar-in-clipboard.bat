@@ -1,5 +1,10 @@
 @powershell "$THISFILE='%~f0'; $PSCODE=[scriptblock]::create((Get-Content $THISFILE | Where-Object {$_.readcount -gt 1}) -join [Environment]::NewLine); & $PSCODE %*" & goto:eof
 
+<#
+	Using this script, you can create calendar in the clipboard.
+	ex. calendar-in-clipboard.bat -offsetMonth 1
+#>
+
 param (
 	[int]$offsetMonth = 0
 )

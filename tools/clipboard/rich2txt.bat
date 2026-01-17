@@ -1,5 +1,11 @@
 @powershell "$THISFILE='%~f0'; $PSCODE=[scriptblock]::create((Get-Content $THISFILE | Where-Object {$_.readcount -gt 1}) -join [Environment]::NewLine); & $PSCODE %*" & goto:eof
 
+<#
+	Using this script,
+	you can convert HTML in the clipboard (ex. text copied from Slack)
+	into plain text with preserved list formatting.
+#>
+
 Add-Type @"
 using System;
 using System.Runtime.InteropServices;
