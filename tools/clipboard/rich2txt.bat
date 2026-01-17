@@ -22,14 +22,17 @@ public static class ClipboardHtml {
 }
 "@
 
-$QUOT = '"'
+$QUOT = ''
 $INDENT = '  '
 $MARKER = '- '
 
-$iElemArr = @('a', 'span', 'strong', 'em', 'b', 'i', 'code')
-$bElemArr = @('div', 'p', 'section', 'article', 'blockquote')
-$lElemArr = @('ul', 'ol')
-$liTag = 'li'
+$elems = @{
+	alone  = @('br', 'img', 'hr')
+	inline = @('a', 'span', 'strong', 'em', 'b', 'i', 'code')
+	block = @('div', 'p', 'section', 'article', 'blockquote')
+	list = @('ul', 'ol')
+	item = @('li')
+}
 
 function Convert-HtmlToText {
 	param(
@@ -37,54 +40,50 @@ function Convert-HtmlToText {
 	)
 	$converted = ''
 	$indentLevel = 0
-	$inInline  = $false
-	$liOpen = $false
-	$fragmentArr = [regex]::Matches($in_html, '(?s)<br\s*/?>|</?\w+>|[^<]+')
+	$itemOpened = $false
+	$fragmentArr = [regex]::Matches($in_html, '(?s)<\w+\s*/?>|</\w+>|[^<]+')
 	foreach ($fragment in $fragmentArr) {
-		if ($fragment.Value -match '^<br') {
-			$converted += "`n"
+		if ($fragment.Value -match '^<(\w+)\b') {
+			$tag = $matches[1].ToLower()
+			if ($elems.alone -contains $tag) {
+				$converted += "`n"
+				continue
+			}
+			if ($elems.inline -contains $tag) {
+				$converted += $QUOT
+			} elseif ($elems.list -contains $tag) {
+				if ($itemOpened) {
+					$converted += "`n"
+					$itemOpened = $false
+				}
+				$indentLevel++
+			} elseif ($elems.item -contains $tag) {
+				if ($itemOpened) {
+					$converted += "`n"
+				}
+				$converted += (($INDENT * ($indentLevel - 1)) + $MARKER)
+				$itemOpened = $true
+			}
 			continue
 		}
 		if ($fragment.Value -match '^</(\w+)>') {
 			$tag = $matches[1].ToLower()
-			if ($iElemArr -contains $tag) {
+			if ($elems.inline -contains $tag) {
 				$converted += $QUOT
-				$inInline = $false
-			} elseif ($tag -eq $liTag) {
-				if ($liOpen) {
+			} elseif ($elems.item -contains $tag) {
+				if ($itemOpened) {
 					$converted += "`n"
-					$liOpen = $false
+					$itemOpened = $false
 				}
-			} elseif ($lElemArr -contains $tag) {
-				if ($liOpen) {
+			} elseif ($elems.list -contains $tag) {
+				if ($itemOpened) {
 					$converted += "`n"
-					$liOpen = $false
+					$itemOpened = $false
 				}
 				$indentLevel--
 				$converted += "`n"
-			} elseif ($bElemArr -contains $tag) {
+			} elseif ($elems.block -contains $tag) {
 				$converted += "`n"
-			}
-			continue
-		}
-		if ($fragment.Value -match '^<(\w+)>') {
-			$tag = $matches[1].ToLower()
-
-			if ($iElemArr -contains $tag) {
-				$converted += $QUOT
-				$inInline = $true
-			} elseif ($lElemArr -contains $tag) {
-				if ($liOpen) {
-					$converted += "`n"
-					$liOpen = $false
-				}
-				$indentLevel++
-			} elseif ($tag -eq $liTag) {
-				if ($liOpen) {
-					$converted += "`n"
-				}
-				$converted += (($INDENT * ($indentLevel - 1)) + $MARKER)
-				$liOpen = $true
 			}
 			continue
 		}
@@ -112,15 +111,27 @@ try {
 	[ClipboardHtml]::CloseClipboard() | Out-Null
 }
 
-$html = [System.Text.Encoding]::UTF8.GetString($bytes)
+$raw = [System.Text.Encoding]::UTF8.GetString($bytes)
 
 $FRAGMENT_S = '<!--StartFragment-->'
 $FRAGMENT_E = '<!--EndFragment-->'
 
-$s = $html.IndexOf($FRAGMENT_S) + $FRAGMENT_S.Length
-$e = $html.IndexOf($FRAGMENT_E)
+$s = $raw.IndexOf($FRAGMENT_S) + $FRAGMENT_S.Length
+$e = $raw.IndexOf($FRAGMENT_E)
+$raw = $raw.Substring($s, $e - $s)
 
-$html = $html.Substring($s, $e - $s)
-$html = [regex]::Replace($html, '<(\w+)(\s+[^>]+)>', '<$1>')
+# 1. remove attribute
+$html = [regex]::Replace($raw, '<(\w+)(\s+[^>]+)>', '<$1>')
 
-Set-Clipboard -Value (Convert-HtmlToText $html)
+# 2. convert to text
+$text = Convert-HtmlToText $html
+
+# 3. extracrt links
+$links = [regex]::Matches($raw, '(?i)<a\s+[^>]*href\s*=\s*"(.*?)"', 'Singleline') | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique
+
+if ($links.Count -gt 0) {
+	$text += "`n`nlink :`n"
+	$text += ($links -join "`n")
+}
+
+Set-Clipboard -Value $text
