@@ -25,18 +25,28 @@ SPAN {{
 """
 
 def your_entry(in_ev, in_ctx):
-    """ change 'your_entry' to your Lambda setting """
+    """
+    In the AWS Lambda handler setting,
+    specify a string composed of the file name (without '.py')
+    and this function name ('your_entry'), joined by a dot ('.').
+    """
     return handler_lambda(in_ev, in_ctx)
+
+from datetime import datetime, timezone, timedelta
+
+def row(in_key: str, in_value) -> str:
+    return f"<tr><td><span>{in_key}</span></td><td><span>{in_value}</span></td></tr>"
 
 def application(in_req: Dict[str, Any]) -> Dict[str, Any]:
     """ need to implement what you want to do """
-    targetArr = ['method', 'path', 'query']
     rowArr = []
+    JST = timezone(timedelta(hours=9))
+    now = datetime.now(JST).strftime('%Y-%m-%d %H:%M:%S JST')
+    rowArr.append(row('timestamp', now))
+    targetArr = ['method', 'path', 'query']
     for key in targetArr:
         value = in_req.get(key)
-        rowArr.append(
-            f"<tr><td><span>{key}</span></td><td><span>{value}</span></td></tr>"
-        )
+        rowArr.append(row(key, value))
     html = HTML_TEMPLATE.format(rows=''.join(rowArr))
     return {
         'status' : 200,
