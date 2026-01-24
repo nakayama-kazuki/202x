@@ -31,16 +31,24 @@
 			"Resource": "arn:aws:cloudfront::256385929234:distribution/E3MI1AH6ZMA0VR"
 		},
 		{
-			"Sid": "ExplicitDenyAccountLevelAndIAM",
+			"Sid": "ExplicitDenyAccountAndBilling",
 			"Effect": "Deny",
 			"Action": [
-				"iam:*",
 				"organizations:*",
 				"account:*",
 				"billing:*",
 				"budgets:*",
 				"cur:*",
 				"ce:*"
+			],
+			"Resource": "*"
+		},
+		{
+			"Sid": "DenyIAMExceptReadPolicy",
+			"Effect": "Deny",
+			"NotAction": [
+				"iam:GetPolicy",
+				"iam:GetPolicyVersion"
 			],
 			"Resource": "*"
 		},
