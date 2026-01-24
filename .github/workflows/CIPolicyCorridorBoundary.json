@@ -50,6 +50,11 @@
 				"iam:GetPolicy",
 				"iam:GetPolicyVersion"
 			],
+			"Condition": {
+				"StringEquals": {
+					"aws:RequestedService": "iam.amazonaws.com"
+				}
+			},
 			"Resource": "*"
 		},
 		{
