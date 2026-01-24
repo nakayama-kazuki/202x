@@ -1,0 +1,23 @@
+{
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Sid": "CloudWatchLogs",
+			"Effect": "Allow",
+			"Action": [
+				"logs:CreateLogGroup",
+				"logs:CreateLogStream",
+				"logs:PutLogEvents"
+			],
+			"Resource": "*"
+		},
+		{
+			"Sid": "BedrockInvoke",
+			"Effect": "Allow",
+			"Action": [
+				"bedrock:InvokeModel"
+			],
+			"Resource": "*"
+		}
+	]
+}
