@@ -6,29 +6,24 @@ on:
     branches:
       - main
     paths:
-      - 'pj-corridor.net/index.html'
-      - 'pj-corridor.net/ads.txt'
-      - 'pj-corridor.net/images/**'
-      - 'pj-corridor.net/cube3d/**'
+      - 'pj-corridor.net/**'
       - 'stick-figure/**'
-      - 'pj-corridor.net/personalitytest/**'
-      - 'pj-corridor.net/gallery-256/**'
-      - 'pj-corridor.net/gallery-fullcolor/**'
-      - 'pj-corridor.net/side-six/**'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      INDEXPATH: pj-corridor.net/index.html
-      ADTXTPATH: pj-corridor.net/ads.txt
-      IMAGEPATH: pj-corridor.net/images/
-      APPL1PATH: pj-corridor.net/cube3d/
-      APPL2PATH: stick-figure/
-      APPL3PATH: pj-corridor.net/personalitytest/
-      GA256PATH: pj-corridor.net/gallery-256/
-      GAFULPATH: pj-corridor.net/gallery-fullcolor/
-      APPL4PATH: pj-corridor.net/side-six/
+      INDEXOBJ: pj-corridor.net/index.html
+      ADTXTOBJ: pj-corridor.net/ads.txt
+      IMAGEDIR: pj-corridor.net/images/
+      APPL1DIR: pj-corridor.net/cube3d/
+      APPL2DIR: stick-figure/
+      APPL3DIR: pj-corridor.net/personalitytest/
+      GA256DIR: pj-corridor.net/gallery-256/
+      GAFULDIR: pj-corridor.net/gallery-fullcolor/
+      APPL4DIR: pj-corridor.net/side-six/
+      S3BUCKET: pj-corridor.net
+      VERSION: version.txt
     steps:
     - name: checkout
       uses: actions/checkout@v4
@@ -38,6 +33,26 @@ jobs:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ap-northeast-1
+    - name: prepare version file
+      run: |
+        echo "${{ github.sha }}" > "${{ env.VERSION }}"
+    - name: check IAM policy
+      run: |
+        set -e
+        for POLICY in CIPolicyCorridorBoundary.json AppPolicyPersonalitytest.json; do
+          echo "Checking policy: ${POLICY}"
+          ARN="arn:aws:iam::256385929234:policy/${POLICY}"
+          VID=$(aws iam get-policy \
+            --policy-arn "${ARN}" \
+            --query 'Policy.DefaultVersionId' \
+            --output text)
+          aws iam get-policy-version \
+            --policy-arn "${ARN}" \
+            --version-id "${VID}" \
+            --query 'PolicyVersion.Document' \
+            --output json > "current-${POLICY}"
+          diff ".github/workflows/${POLICY}" "current-${POLICY}"
+        done
     - name: pre-check modified
       run: |
         git fetch --depth=2
@@ -49,65 +64,69 @@ jobs:
       run: |
         FILES=$(git diff --name-only $PREV_SHA $CURR_SHA | tr '\n' ' ')
         echo "FILES=$FILES" >> $GITHUB_ENV
-    - name: copy-1
-      if: contains(env.FILES, env.INDEXPATH)
+    - name: copy
+      if: contains(env.FILES, env.INDEXOBJ)
       run: |
-        aws s3 cp ${{ env.INDEXPATH }} s3://pj-corridor.net/index.html
-    - name: copy-1-1
-      if: contains(env.FILES, env.ADTXTPATH)
+        SRC="${{ env.INDEXOBJ }}"
+        DST="s3://${{ env.S3BUCKET }}/"
+        aws s3 cp "${SRC}" "${DST}"
+        aws s3 cp "${{ env.VERSION }}" "${DST}"
+    - name: copy
+      if: contains(env.FILES, env.ADTXTOBJ)
       run: |
-        aws s3 cp ${{ env.ADTXTPATH }} s3://pj-corridor.net/ads.txt
-    - name: sync-1-2
-      if: contains(env.FILES, env.IMAGEPATH)
+        SRC="${{ env.ADTXTOBJ }}"
+        DST="s3://${{ env.S3BUCKET }}/"
+        aws s3 cp "${SRC}" "${DST}"
+        aws s3 cp "${{ env.VERSION }}" "${DST}"
+    - name: sync-images
+      if: contains(env.FILES, env.IMAGEDIR)
       run: |
-        aws s3 sync ${{ env.IMAGEPATH }} s3://pj-corridor.net/images/ --exclude ".git/*"
-    - name: sync-2
-      if: contains(env.FILES, env.APPL1PATH)
+        SRC="${{ env.IMAGEDIR }}"
+        DST="s3://${{ env.S3BUCKET }}/images/"
+        aws s3 sync "${SRC}" "${DST}" --exclude ".git/*"
+        aws s3 cp "${{ env.VERSION }}" "${DST}"
+    - name: sync-cube3d
+      if: contains(env.FILES, env.APPL1DIR)
       run: |
-        echo "${{ github.sha }}" > "version.txt"
-        aws s3 cp version.txt s3://pj-corridor.net/cube3d/version.txt
-        aws s3 sync ${{ env.APPL1PATH }} s3://pj-corridor.net/cube3d/ --exclude ".git/*"
-    - name: sync-3
-      if: contains(env.FILES, env.APPL2PATH)
+        SRC="${{ env.APPL1DIR }}"
+        DST="s3://${{ env.S3BUCKET }}/cube3d/"
+        aws s3 sync "${SRC}" "${DST}" --exclude ".git/*"
+        aws s3 cp "${{ env.VERSION }}" "${DST}"
+    - name: sync-stick-figure
+      if: contains(env.FILES, env.APPL2DIR)
       run: |
-        echo "${{ github.sha }}" > "version.txt"
-        aws s3 cp version.txt s3://pj-corridor.net/stick-figure/version.txt
-        aws s3 sync ${{ env.APPL2PATH }} s3://pj-corridor.net/stick-figure/ --exclude ".git/*"
-    - name: sync-4
-      if: contains(env.FILES, env.APPL3PATH)
+        SRC="${{ env.APPL2DIR }}"
+        DST="s3://${{ env.S3BUCKET }}/stick-figure/"
+        aws s3 sync "${SRC}" "${DST}" --exclude ".git/*"
+        aws s3 cp "${{ env.VERSION }}" "${DST}"
+    - name: sync-personalitytest
+      if: contains(env.FILES, env.APPL3DIR)
       run: |
-        aws s3 sync ${{ env.APPL3PATH }} s3://pj-corridor.net/personalitytest/ --exclude ".git/*" --exclude "lambda/**"
-    - name: lambda-login-to-ecr
-      if: contains(env.FILES, env.APPL3PATH)
+        SRC="${{ env.APPL3DIR }}"
+        DST="s3://${{ env.S3BUCKET }}/personalitytest/"
+        aws s3 sync "${SRC}" "${DST}" --exclude ".git/*" --exclude "lambda/**"
+        aws s3 cp "${{ env.VERSION }}" "${DST}"
+    - name: sync-gallery-256
+      if: contains(env.FILES, env.GA256DIR)
       run: |
-        aws ecr get-login-password --region ap-northeast-1 | docker login --username AWS --password-stdin ${{ secrets.AWS_ECR_URI }}
-    - name: lambda-build-container
-      if: contains(env.FILES, env.APPL3PATH)
+        SRC="${{ env.GA256DIR }}"
+        DST="s3://${{ env.S3BUCKET }}/gallery-256/"
+        aws s3 sync "${SRC}" "${DST}" --exclude ".git/*"
+        aws s3 cp "${{ env.VERSION }}" "${DST}"
+    - name: sync-gallery-fullcolor
+      if: contains(env.FILES, env.GAFULDIR)
       run: |
-        docker build -f ${{ env.APPL3PATH }}lambda/dockerfile.txt -t personalitytest:latest ${{ env.APPL3PATH }}
-        docker tag personalitytest:latest ${{ secrets.AWS_ECR_URI }}/personalitytest:latest
-    - name: lambda-push-container
-      if: contains(env.FILES, env.APPL3PATH)
+        SRC="${{ env.GAFULDIR }}"
+        DST="s3://${{ env.S3BUCKET }}/gallery-fullcolor/"
+        aws s3 sync "${SRC}" "${DST}" --exclude ".git/*"
+        aws s3 cp "${{ env.VERSION }}" "${DST}"
+    - name: sync-side-six
+      if: contains(env.FILES, env.APPL4DIR)
       run: |
-        docker push ${{ secrets.AWS_ECR_URI }}/personalitytest:latest
-    - name: lambda-update-function
-      if: contains(env.FILES, env.APPL3PATH)
-      run: |
-        aws lambda update-function-code --function-name personalitytest --image-uri ${{ secrets.AWS_ECR_URI }}/personalitytest:latest
-    - name: sync-5
-      if: contains(env.FILES, env.GA256PATH)
-      run: |
-        aws s3 sync ${{ env.GA256PATH }} s3://pj-corridor.net/gallery-256/ --exclude ".git/*"
-    - name: sync-6
-      if: contains(env.FILES, env.GAFULPATH)
-      run: |
-        aws s3 sync ${{ env.GAFULPATH }} s3://pj-corridor.net/gallery-fullcolor/ --exclude ".git/*"
-    - name: sync-7
-      if: contains(env.FILES, env.APPL4PATH)
-      run: |
-        echo "${{ github.sha }}" > "version.txt"
-        aws s3 cp version.txt s3://pj-corridor.net/side-six/version.txt
-        aws s3 sync ${{ env.APPL4PATH }} s3://pj-corridor.net/side-six/ --exclude ".git/*"
+        SRC="${{ env.APPL4DIR }}"
+        DST="s3://${{ env.S3BUCKET }}/side-six/"
+        aws s3 sync "${SRC}" "${DST}" --exclude ".git/*"
+        aws s3 cp "${{ env.VERSION }}" "${DST}"
     - name: clear cache
       run: |
         aws cloudfront create-invalidation --distribution-id ${{ secrets.AWS_CLOUDFRONT_DISTRIBUTION }} --paths "/*"
