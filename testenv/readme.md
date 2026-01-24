@@ -98,7 +98,7 @@ openssl.exe req -new -x509 -key localhost.key -out localhost.crt -days 3650 -con
 
 ### 3.4. Python
 
-Python はローカルサンドボックス環境の場合 TCP 5000 アクセス、プロダクションでは Lambda 経由のアクセスを想定する。
+Python はローカルサンドボックス環境の場合 TCP 5000 アクセス、プロダクションでは Lambda 経由のアクセスを想定する（[Web / Lambda 共通テンプレート](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/template.py)）。
 
 - [x] [Python](https://www.python.org/downloads/windows/)
 - [x] 設定 → アプリ → アプリの詳細設定 → アプリ実行エイリアスの `python.exe` / `python3.exe` をオフ
@@ -112,7 +112,7 @@ pip install flask
 	- [scripts/template.py](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/template.py)
 - [x] アプリケーションを再起動ランチャに Drag and Drop してサーバ起動
 	- [scripts/restart-python.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/restart-python.bat)
-	- Lambda の場合はアプリケーションをそのままアップロード
+	- Lambda の場合はアプリケーションを [zip](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/zip-util.bat) でアップロード
 
 ### 3.5. Apache 設定変更 ～ 起動
 
