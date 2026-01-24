@@ -51,9 +51,9 @@ jobs:
             --version-id "${VID}" \
             --query 'PolicyVersion.Document' \
             --output json > "current-${POLICY}"
-          jq -S . ".github/workflows/${POLICY}" > "expected-${POLICY}.sorted"
+          jq -S . ".github/workflows/${POLICY}" > "${POLICY}.sorted"
           jq -S . "current-${POLICY}" > "current-${POLICY}.sorted"
-          diff "expected-${POLICY}.sorted" "actual-${POLICY}.sorted"
+          diff "${POLICY}.sorted" "current-${POLICY}.sorted"
         done
     - name: pre-check modified
       run: |
