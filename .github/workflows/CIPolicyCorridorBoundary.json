@@ -43,6 +43,18 @@
 				"ce:*"
 			],
 			"Resource": "*"
+		},
+		{
+			"Sid": "AllowReadOwnPolicies",
+			"Effect": "Allow",
+			"Action": [
+				"iam:GetPolicy",
+				"iam:GetPolicyVersion"
+			],
+			"Resource": [
+				"arn:aws:iam::256385929234:policy/CIPolicyCorridorBoundary.json",
+				"arn:aws:iam::256385929234:policy/AppPolicyPersonalitytest.json"
+			]
 		}
 	]
 }
