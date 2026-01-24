@@ -2,7 +2,7 @@
 	"Version": "2012-10-17",
 	"Statement": [
 		{
-			"Sid": "AllowS3OnlyPjCorridor",
+			"Sid": "upper-limit-of-s3",
 			"Effect": "Allow",
 			"Action": "s3:*",
 			"Resource": [
@@ -11,19 +11,19 @@
 			]
 		},
 		{
-			"Sid": "AllowECROnlyPersonalitytest",
+			"Sid": "upper-limit-of-ecr",
 			"Effect": "Allow",
 			"Action": "ecr:*",
 			"Resource": "arn:aws:ecr:ap-northeast-1:256385929234:repository/personalitytest"
 		},
 		{
-			"Sid": "AllowLambdaOnlyPersonalitytest",
+			"Sid": "upper-limit-of-lambda",
 			"Effect": "Allow",
 			"Action": "lambda:*",
 			"Resource": "arn:aws:lambda:ap-northeast-1:256385929234:function:personalitytest"
 		},
 		{
-			"Sid": "AllowCloudFrontInvalidate",
+			"Sid": "upper-limit-of-cloudfront",
 			"Effect": "Allow",
 			"Action": [
 				"cloudfront:CreateInvalidation"
@@ -31,7 +31,19 @@
 			"Resource": "arn:aws:cloudfront::256385929234:distribution/E3MI1AH6ZMA0VR"
 		},
 		{
-			"Sid": "ExplicitDenyAccountAndBilling",
+			"Sid": "upper-limit-of-iam",
+			"Effect": "Allow",
+			"Action": [
+				"iam:GetPolicy",
+				"iam:GetPolicyVersion"
+			],
+			"Resource": [
+				"arn:aws:iam::256385929234:policy/CIPolicyCorridorBoundary.json",
+				"arn:aws:iam::256385929234:policy/AppPolicyPersonalitytest.json"
+			]
+		},
+		{
+			"Sid": "other-services-are-all-denied",
 			"Effect": "Deny",
 			"Action": [
 				"organizations:*",
@@ -42,32 +54,6 @@
 				"ce:*"
 			],
 			"Resource": "*"
-		},
-		{
-			"Sid": "DenyIAMExceptReadPolicy",
-			"Effect": "Deny",
-			"NotAction": [
-				"iam:GetPolicy",
-				"iam:GetPolicyVersion"
-			],
-			"Condition": {
-				"StringEquals": {
-					"aws:RequestedService": "iam.amazonaws.com"
-				}
-			},
-			"Resource": "*"
-		},
-		{
-			"Sid": "AllowReadOwnPolicies",
-			"Effect": "Allow",
-			"Action": [
-				"iam:GetPolicy",
-				"iam:GetPolicyVersion"
-			],
-			"Resource": [
-				"arn:aws:iam::256385929234:policy/CIPolicyCorridorBoundary.json",
-				"arn:aws:iam::256385929234:policy/AppPolicyPersonalitytest.json"
-			]
 		}
 	]
 }
