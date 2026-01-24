@@ -28,8 +28,8 @@
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p07.png' width='350' style='border: 1px solid #000000;' />
 
-- [x] エディタの関連付けが負ける場合に OS 側で規定値設定
-	- 例えば `txt` や `html` や `js` や `ini` など
+- [x] エディタの関連付けが負ける場合の OS 側規定値設定
+	- `txt` + `html` + `js` + `ini` など
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p08.png' width='350' style='border: 1px solid #000000;' />
 
@@ -40,6 +40,8 @@
 - [x] エディタをインストール（[例えば秀丸](https://hide.maruo.co.jp/software/hidemaru.html)）
 	- ライセンスキーを取得（企業の場合はワークフローから利用申請）
 	- UIUX を普段使いの体裁に調整
+	- 関連付け（`conf` + `cnf` + `json` + `md` + `php` + `py` + `ts` + `yml` など）
+
 - [x] PC 移行時のエクスポート + インポート
 	- デフォルトブラウザのブックマーク
 	- ユーザー辞書の設定
@@ -63,7 +65,7 @@
 
 ### 3.1. Apache
 
-httpd.conf は後で修正するのでこのタイミングでは適当な設定で動作確認。
+このタイミングでは適当な設定で動作確認（`httpd.conf` は後で修正）。
 
 - [x] [Apache](https://www.apachelounge.com/download/)
 - [x] [Microsoft](https://learn.microsoft.com/ja-jp/cpp/windows/latest-supported-vc-redist) から VCRUNTIME140.dll ( VC_redist.x64.exe ) を取得
@@ -93,12 +95,12 @@ openssl.exe req -new -x509 -key localhost.key -out localhost.crt -days 3650 -con
 ### 3.3. PHP
 
 - [x] [PHP](https://windows.php.net/download/)
-- [x] [ツール類](https://github.com/nakayama-kazuki/2021/tree/master/tool) で利用する機能を有効化した php.ini を作成
+- [x] [ツール類](https://github.com/nakayama-kazuki/2021/tree/master/tool) で利用する機能を有効化した `php.ini` を作成
 	- [scripts/php.ini](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/php.ini)
 
 ### 3.4. Python
 
-Python は [Web / Lambda 共通テンプレート](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/template.py) を利用しローカルサンドボックス環境の場合 TCP 5000 アクセス、プロダクションでは Lambda 経由のアクセスを想定する。
+Python は [共通テンプレート](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/template.py) を利用し、ローカルサンドボックス環境の場合 TCP 5000 アクセス、プロダクションでは Lambda 経由のアクセスを想定する。
 
 - [x] [Python](https://www.python.org/downloads/windows/)
 - [x] 設定 → アプリ → アプリの詳細設定 → アプリ実行エイリアスの `python.exe` / `python3.exe` をオフ
@@ -112,14 +114,14 @@ pip install flask
 	- [scripts/template.py](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/template.py)
 - [x] アプリケーションを再起動ランチャに Drag and Drop してサーバ起動
 	- [scripts/restart-python.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/restart-python.bat)
-	- [Lambda の場合](https://github.com/nakayama-kazuki/202x/tree/main/.github/workflows) は [zip](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/zip-util.bat) をアップロード
+	- なお [Lambda の場合](https://github.com/nakayama-kazuki/202x/tree/main/.github/workflows) は [zip](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/zip-util.bat) をアップロード
 
 ### 3.5. Apache 設定変更 ～ 起動
 
-- [x] 最小限の機能のみを有効化し `Require local` とした httpd.conf を作成
+- [x] 最小限の機能のみを有効化し `Require local` とした `httpd.conf` を作成
 	- [scripts/httpd.conf](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/httpd.conf)
 	- 秘密鍵 + 自己署名証明書、PHP、Python 関連のパスを適宜設定
-	- 必要に応じ `VirtualHost` を追加し hosts を編集
+	- 必要に応じ `VirtualHost` を追加し `hosts` を編集
 		- [scripts/edit-hosts.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/edit-hosts.bat)
 - [x] Apache をサービスとして起動
 	- [scripts/httpd-autostart.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/httpd-autostart.bat)
@@ -129,9 +131,9 @@ pip install flask
 
 - [x] ローカルサンドボックス環境へのインバウンドな TCP 80/443/5000 アクセスを遮断
 	- [scripts/firewall.bat](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/firewall.bat)
-	- OS 設定と httpd.conf 側の `Require local` 設定を併用
+	- OS 設定と `httpd.conf` 側の `Require local` 設定を併用
 	- 以降はロールバックしない限り設定を維持
-- [x] ロールバック用に firewall.bat のショートカットを用意し、項目に `-Rollback` オプションを含めたパスを指定
+- [x] ロールバック用に `firewall.bat` のショートカットを用意し、項目に `-Rollback` オプションを含めたパスを指定
 
 ## 4. キーの無効化
 
