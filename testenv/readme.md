@@ -170,7 +170,14 @@ git config --global user.email "fuga"
 - [x] リポジトリのクローン
 	- 初回 push 時に認証
 
-## 7. デスクトップショートカット
+## 7. スタートアップ
+
+- [x] 不要なスタートアップアプリの無効化
+	- `Ctrl` + `Alt` + `Delete` → タスクマネージャー → スタートアップアプリ
+
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p12.png' width='350' style='border: 1px solid #000000;' />
+
+## 8. デスクトップショートカット
 
 - [x] コマンドは UTF8 エラーメッセージ対応
 	- `"C:\_PATH_TO_\cmd.exe" /k chcp 65001`
@@ -181,7 +188,7 @@ git config --global user.email "fuga"
 - [x] その他直接探せないアプリは `Win + R` から `shell:AppsFolder` で Applications を開きショートカット作成
 - [x] [ツール類](https://github.com/nakayama-kazuki/2021/tree/master/tool) に ico を設定
 
-## 8. オンラインミーティング
+## 9. オンラインミーティング
 
 - [x] プロフィール + 背景画像
 	- Zoom の場合 `C:\_PATH_TO_\Zoom\data\VirtualBkgnd_Custom\*` はビットマップ
