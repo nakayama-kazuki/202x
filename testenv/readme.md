@@ -170,10 +170,9 @@ git config --global user.email "fuga"
 - [x] リポジトリのクローン
 	- 初回 push 時に認証
 
-## 7. スタートアップ
+## 7. 不要なスタートアップアプリの無効化
 
-- [x] 不要なスタートアップアプリの無効化
-	- `Ctrl` + `Alt` + `Delete` → タスクマネージャー → スタートアップアプリ
+- [x] `Ctrl` + `Alt` + `Delete` → タスクマネージャー → スタートアップアプリ
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p12.png' width='350' style='border: 1px solid #000000;' />
 
