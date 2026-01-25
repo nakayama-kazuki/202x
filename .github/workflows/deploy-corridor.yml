@@ -17,7 +17,7 @@ jobs:
       ADTXTOBJ: pj-corridor.net/ads.txt
       IMAGEDIR: pj-corridor.net/images/
       APPL1DIR: pj-corridor.net/cube3d/
-      APPL2DIR: stick-figure/
+      APPL2DIR: pj-corridor.net/stick-figure/
       APPL3DIR: pj-corridor.net/personalitytest/
       GA256DIR: pj-corridor.net/gallery-256/
       GAFULDIR: pj-corridor.net/gallery-fullcolor/
