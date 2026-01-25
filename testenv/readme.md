@@ -29,7 +29,7 @@
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p07.png' width='350' style='border: 1px solid #000000;' />
 
 - [x] エディタの関連付けが負ける場合の OS 側規定値設定
-	- `txt` + `html` + `js` + `ini` など
+	- `txt` + `html` + `js` + `log` + `ini` など
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/testenv/img/p08.png' width='350' style='border: 1px solid #000000;' />
 
