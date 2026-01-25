@@ -81,7 +81,7 @@ jobs:
           if [[ "${MODIFIEDLIST}" == *"${SRC}"* ]]; then
             DST="s3://${{ env.S3BUCKET }}/"
             aws s3 cp "${SRC}" "${DST}"
-            aws s3 cp "${{ env.VERSION }}" "$DST"
+            aws s3 cp "${{ env.VERSION }}" "${DST}"
           fi
         done
     - name: sync-directories
