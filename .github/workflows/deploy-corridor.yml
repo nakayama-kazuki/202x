@@ -7,21 +7,22 @@ on:
       - main
     paths:
       - 'pj-corridor.net/**'
-      - 'stick-figure/**'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      INDEXOBJ: pj-corridor.net/index.html
-      ADTXTOBJ: pj-corridor.net/ads.txt
-      IMAGEDIR: pj-corridor.net/images/
-      APPL1DIR: pj-corridor.net/cube3d/
-      APPL2DIR: pj-corridor.net/stick-figure/
-      APPL3DIR: pj-corridor.net/personalitytest/
-      GA256DIR: pj-corridor.net/gallery-256/
-      GAFULDIR: pj-corridor.net/gallery-fullcolor/
-      APPL4DIR: pj-corridor.net/side-six/
+      MODIFIEDLIST: ""
+      ROOTDIR: pj-corridor.net
+      INDEXFILE: index.html
+      ADTXTFILE: ads.txt
+      IMAGEDIR: images
+      APPL1DIR: cube3d
+      APPL2DIR: stick-figure
+      APPL3DIR: personalitytest
+      GA256DIR: gallery-256
+      GAFULDIR: gallery-fullcolor
+      APPL4DIR: side-six
       S3BUCKET: pj-corridor.net
       VERSION: version.txt
     steps:
@@ -38,7 +39,7 @@ jobs:
         echo "${{ github.sha }}" > "${{ env.VERSION }}"
     - name: check IAM policy
       run: |
-        set -e
+        set -euo pipefail
         for POLICY in CIPolicyCorridorBoundary.json AppPolicyPersonalitytest.json; do
           echo "Checking policy: ${POLICY}"
           ARN="arn:aws:iam::256385929234:policy/${POLICY}"
@@ -57,6 +58,7 @@ jobs:
         done
     - name: pre-check modified
       run: |
+        set -euo pipefail
         git fetch --depth=2
         echo "CURR_SHA=${{ github.sha }}" >> $GITHUB_ENV
         echo "PREV_SHA=$(git rev-parse ${{ github.sha }}^)" >> $GITHUB_ENV
@@ -64,71 +66,44 @@ jobs:
         echo "PREV_SHA=$(git rev-parse ${{ github.sha }}^)"
     - name: check modified
       run: |
-        FILES=$(git diff --name-only $PREV_SHA $CURR_SHA | tr '\n' ' ')
-        echo "FILES=$FILES" >> $GITHUB_ENV
-    - name: copy
-      if: contains(env.FILES, env.INDEXOBJ)
+        set -euo pipefail
+        MODIFIEDLIST=$(git diff --name-only $PREV_SHA $CURR_SHA | tr '\n' ' ')
+        echo "MODIFIEDLIST=${MODIFIEDLIST}" >> $GITHUB_ENV
+    - name: copy-files
       run: |
-        SRC="${{ env.INDEXOBJ }}"
-        DST="s3://${{ env.S3BUCKET }}/"
-        aws s3 cp "${SRC}" "${DST}"
-        aws s3 cp "${{ env.VERSION }}" "${DST}"
-    - name: copy
-      if: contains(env.FILES, env.ADTXTOBJ)
+        set -euo pipefail
+        FILES=(
+          "${{ env.INDEXFILE }}"
+          "${{ env.ADTXTFILE }}"
+        )
+        for FILE in "${FILES[@]}"; do
+          SRC="${{ env.ROOTDIR }}/${FILE}"
+          if [[ "${MODIFIEDLIST}" == *"${SRC}"* ]]; then
+            DST="s3://${{ env.S3BUCKET }}/"
+            aws s3 cp "${SRC}" "${DST}"
+            aws s3 cp "${{ env.VERSION }}" "$DST"
+          fi
+        done
+    - name: sync-directories
       run: |
-        SRC="${{ env.ADTXTOBJ }}"
-        DST="s3://${{ env.S3BUCKET }}/"
-        aws s3 cp "${SRC}" "${DST}"
-        aws s3 cp "${{ env.VERSION }}" "${DST}"
-    - name: sync-images
-      if: contains(env.FILES, env.IMAGEDIR)
-      run: |
-        SRC="${{ env.IMAGEDIR }}"
-        DST="s3://${{ env.S3BUCKET }}/images/"
-        aws s3 sync "${SRC}" "${DST}" --exclude ".git/*"
-        aws s3 cp "${{ env.VERSION }}" "${DST}"
-    - name: sync-cube3d
-      if: contains(env.FILES, env.APPL1DIR)
-      run: |
-        SRC="${{ env.APPL1DIR }}"
-        DST="s3://${{ env.S3BUCKET }}/cube3d/"
-        aws s3 sync "${SRC}" "${DST}" --exclude ".git/*"
-        aws s3 cp "${{ env.VERSION }}" "${DST}"
-    - name: sync-stick-figure
-      if: contains(env.FILES, env.APPL2DIR)
-      run: |
-        SRC="${{ env.APPL2DIR }}"
-        DST="s3://${{ env.S3BUCKET }}/stick-figure/"
-        aws s3 sync "${SRC}" "${DST}" --exclude ".git/*"
-        aws s3 cp "${{ env.VERSION }}" "${DST}"
-    - name: sync-personalitytest
-      if: contains(env.FILES, env.APPL3DIR)
-      run: |
-        SRC="${{ env.APPL3DIR }}"
-        DST="s3://${{ env.S3BUCKET }}/personalitytest/"
-        aws s3 sync "${SRC}" "${DST}" --exclude ".git/*" --exclude "lambda/**"
-        aws s3 cp "${{ env.VERSION }}" "${DST}"
-    - name: sync-gallery-256
-      if: contains(env.FILES, env.GA256DIR)
-      run: |
-        SRC="${{ env.GA256DIR }}"
-        DST="s3://${{ env.S3BUCKET }}/gallery-256/"
-        aws s3 sync "${SRC}" "${DST}" --exclude ".git/*"
-        aws s3 cp "${{ env.VERSION }}" "${DST}"
-    - name: sync-gallery-fullcolor
-      if: contains(env.FILES, env.GAFULDIR)
-      run: |
-        SRC="${{ env.GAFULDIR }}"
-        DST="s3://${{ env.S3BUCKET }}/gallery-fullcolor/"
-        aws s3 sync "${SRC}" "${DST}" --exclude ".git/*"
-        aws s3 cp "${{ env.VERSION }}" "${DST}"
-    - name: sync-side-six
-      if: contains(env.FILES, env.APPL4DIR)
-      run: |
-        SRC="${{ env.APPL4DIR }}"
-        DST="s3://${{ env.S3BUCKET }}/side-six/"
-        aws s3 sync "${SRC}" "${DST}" --exclude ".git/*"
-        aws s3 cp "${{ env.VERSION }}" "${DST}"
+        set -euo pipefail
+        DIRS=(
+          "${{ env.IMAGEDIR }}"
+          "${{ env.APPL1DIR }}"
+          "${{ env.APPL2DIR }}"
+          "${{ env.APPL3DIR }}"
+          "${{ env.GA256DIR }}"
+          "${{ env.GAFULDIR }}"
+          "${{ env.APPL4DIR }}"
+        )
+        for DIR in "${DIRS[@]}"; do
+          SRC="${{ env.ROOTDIR }}/${DIR}"
+          if [[ "$MODIFIEDLIST" == *"$SRC"* ]]; then
+            DST="s3://${{ env.S3BUCKET }}/${DIR}/"
+            aws s3 sync "${SRC}" "${DST}" --exclude ".git/*" --exclude "lambda/**"
+            aws s3 cp "${{ env.VERSION }}" "${DST}"
+          fi
+        done
     - name: clear cache
       run: |
         aws cloudfront create-invalidation --distribution-id ${{ secrets.AWS_CLOUDFRONT_DISTRIBUTION }} --paths "/*"
