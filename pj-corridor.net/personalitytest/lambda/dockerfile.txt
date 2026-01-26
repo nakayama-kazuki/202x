@@ -1,3 +1,0 @@
-FROM public.ecr.aws/lambda/php:8.1-arm64
-COPY lambda/handler.php /var/task/handler.php
-CMD ["handler.php"]
