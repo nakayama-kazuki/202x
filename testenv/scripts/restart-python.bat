@@ -21,7 +21,11 @@ function Start-PythonWithPort {
 		$targetPid = ($line.Line -split '\s+')[-1]
 		taskkill /PID $targetPid /F
 	}
-	Start-Process python -ArgumentList @("${pathToApp}", '--port', $port) -WorkingDirectory (Split-Path $pathToApp)
+	# to use os.environ["LAMBDA_SECRET"]
+	$env:LAMBDA_SECRET = "qwerty1234"
+	Set-Location (Split-Path $pathToApp)
+	python $pathToApp --port $port
+	pause
 }
 
 if ($pathToApp) {
