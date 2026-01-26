@@ -2,59 +2,55 @@
 
 from typing import Dict, Any
 
-BASE_PATH = '/'
-# BASE_PATH = '/hello'
-
-HTML_TEMPLATE = """
-<html>
-<style type='text/css'>
-TABLE {{
-	border-collapse : collapse;
-}}
-TD {{
-	border : 1px solid black;
-}}
-SPAN {{
-	margin : 5px;
-}}
-</style>
-<body>
-<table>{rows}</table>
-</body>
-</html>
-"""
-
-def your_entry(in_ev, in_ctx):
-    """
-    In the AWS Lambda handler setting,
-    specify a string composed of the file name (without '.py')
-    and this function name ('your_entry'), joined by a dot ('.').
-    """
+def handler(in_ev, in_ctx):
+    """ change 'handler' to your Lambda setting """
     return handler_lambda(in_ev, in_ctx)
 
-from datetime import datetime, timezone, timedelta
-
-def row(in_key: str, in_value) -> str:
-    return f"<tr><td><span>{in_key}</span></td><td><span>{in_value}</span></td></tr>"
-
-def application(in_req: Dict[str, Any]) -> Dict[str, Any]:
-    """ need to implement what you want to do """
-    rowArr = []
-    JST = timezone(timedelta(hours=9))
-    now = datetime.now(JST).strftime('%Y-%m-%d %H:%M:%S JST')
-    rowArr.append(row('timestamp', now))
-    targetArr = ['method', 'path', 'query']
-    for key in targetArr:
-        value = in_req.get(key)
-        rowArr.append(row(key, value))
-    html = HTML_TEMPLATE.format(rows=''.join(rowArr))
+def proc1(in_req, in_rfc7231):
     return {
         'status' : 200,
         'headers' : {
-            'Content-Type' : 'text/html'
+            'Content-Type' : 'text/plain',
+            'Date' : in_rfc7231
         },
-        'body' : html
+        'body' : 'api1 ( ' + in_rfc7231 + ' ) '
     }
+
+def proc2(in_req, in_rfc7231):
+    return {
+        'status' : 200,
+        'headers' : {
+            'Content-Type' : 'text/plain',
+            'Date' : in_rfc7231
+        },
+        'body' : 'api2 ( ' + in_rfc7231 + ' ) '
+    }
+
+BASE_PATH = '/'
+API1_PATH = '/api1'
+API2_PATH = '/api2'
+
+ROUTES = {
+    ('GET', API1_PATH) : proc1,
+    ('POST', API2_PATH) : proc2
+}
+
+from email.utils import formatdate
+from time import time
+
+def application(in_req: Dict[str, Any]) -> Dict[str, Any]:
+    route = ROUTES.get((in_req.get('method'), in_req.get('path')))
+    rfc7231 = formatdate(timeval=time(), usegmt=True)
+    if route is None:
+        return {
+            'status' : 404,
+            'headers' : {
+                'Content-Type' : 'text/plain',
+                'Date' : rfc7231
+            },
+            'body' : 'path may be wrong ...'
+        }
+    return route(in_req, rfc7231)
 
 ####
 #### you don't need to edit code below
@@ -74,7 +70,12 @@ def handler_lambda(in_ev, in_ctx):
         'cookies' : in_ev.get('cookies') or [],
         'body' : body
     }
-    return application(src)
+    dst = application(src)
+    return {
+        'statusCode' : dst['status'],
+        'headers' : dst['headers'],
+        'body' : dst['body']
+    }
 
 def handler_flask(in_req) -> Dict[str, Any]:
     src = {
@@ -98,9 +99,9 @@ if __name__ == '__main__':
             headers=dst['headers']
         )
     entry = app.route(
-        BASE_PATH,
+        BASE_PATH + '<path:path>',
         defaults={'path': ''},
-        methods=['GET', 'POST', 'PUT', 'DELETE']
+        methods=['GET', 'POST']
     )(entry)
     import argparse
     p = argparse.ArgumentParser()
