@@ -3,6 +3,7 @@
 <#
 	Using this script, you can launch a python application by dragging file onto it
 	Change 'C:\_PATH_\_TO_\httpd.conf' to match your environment.
+	If needed, add definition to $PYTHON_ENV for "os.environ"
 #>
 
 param(
@@ -10,6 +11,10 @@ param(
 )
 
 $HTTPD_CONF = 'C:\_PATH_\_TO_\httpd.conf'
+
+$PYTHON_ENV = @{
+	LAMBDA_SECRET = "qwerty1234"
+}
 
 function Start-PythonWithPort {
 	param(
@@ -21,8 +26,9 @@ function Start-PythonWithPort {
 		$targetPid = ($line.Line -split '\s+')[-1]
 		taskkill /PID $targetPid /F
 	}
-	# to use os.environ["LAMBDA_SECRET"]
-	$env:LAMBDA_SECRET = "qwerty1234"
+	foreach ($key in $PYTHON_ENV.Keys) {
+		$env:$key = $PYTHON_ENV[$key]
+	}
 	Set-Location (Split-Path $pathToApp)
 	python $pathToApp --port $port
 	pause
