@@ -1,9 +1,10 @@
 @powershell "$THISFILE=\"%~f0\"; $PSCODE=[scriptblock]::create((Get-Content $THISFILE | Where-Object {$_.readcount -gt 1}) -join \"`n\"); & $PSCODE %*" & goto:eof
 
 <#
-	Using this script, you can launch a python application by dragging file onto it
+	Using this script, you can launch a python application by dragging file onto it.
+	Change '@powershel' to '@powershel -NoExit', you can check error messages.
 	Change 'C:\_PATH_\_TO_\httpd.conf' to match your environment.
-	If needed, add definition to $PYTHON_ENV for "os.environ"
+	If needed, add definition to $PYTHON_ENV for "os.environ".
 #>
 
 param(
@@ -27,11 +28,10 @@ function Start-PythonWithPort {
 		taskkill /PID $targetPid /F
 	}
 	foreach ($key in $PYTHON_ENV.Keys) {
-		$env:$key = $PYTHON_ENV[$key]
+		Set-Item -Path "Env:$key" -Value $PYTHON_ENV[$key]
 	}
 	Set-Location (Split-Path $pathToApp)
 	python $pathToApp --port $port
-	pause
 }
 
 if ($pathToApp) {
