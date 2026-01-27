@@ -82,7 +82,8 @@ def handler_flask(in_req) -> Dict[str, Any]:
         'method' : in_req.method,
         'path' : in_req.path,
         'query' : in_req.args.to_dict(flat=True),
-        'headers' : dict(in_req.headers),
+        # normalize header names to lowercase to match API Gateway (Lambda)
+        'headers' : {k.lower(): v for k, v in in_req.headers.items()},
         'cookies' : in_req.cookies,
         'body' : in_req.get_data(as_text=True)
     }

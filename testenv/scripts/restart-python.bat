@@ -25,7 +25,9 @@ function Start-PythonWithPort {
 	$lineArr = netstat -ano | Select-String ":${port}\s+.*\s+\d+$"
 	foreach ($line in $lineArr) {
 		$targetPid = ($line.Line -split '\s+')[-1]
-		taskkill /PID $targetPid /F
+		if ($targetPid -ne '0') {
+			taskkill /PID $targetPid /F
+		}
 	}
 	foreach ($key in $PYTHON_ENV.Keys) {
 		Set-Item -Path "Env:$key" -Value $PYTHON_ENV[$key]
