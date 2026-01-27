@@ -71,6 +71,13 @@ def handler_lambda(in_ev, in_ctx):
         'body' : body
     }
     dst = application(src)
+    if isinstance(dst['body'], (bytes, bytearray)):
+        return {
+            'statusCode' : dst['status'],
+            'headers' : dst['headers'],
+            'body' : base64.b64encode(dst['body']).decode('ascii'),
+            'isBase64Encoded' : True
+        }
     return {
         'statusCode' : dst['status'],
         'headers' : dst['headers'],
