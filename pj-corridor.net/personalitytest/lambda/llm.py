@@ -12,29 +12,107 @@ import secrets
 import email.utils
 import time
 import datetime
+import base64
+import urllib.parse
+
+def make_token(in_minute: str, in_random: str) -> str:
+    raw = f"{os.environ['LAMBDA_SECRET']}{in_minute}{in_random}".encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()
+
+def encode_payload(in_payload: str) -> str:
+    return base64.urlsafe_b64encode(in_payload.encode("utf-8")).decode("ascii").rstrip("=")
+
+def decode_payload(in_encoded: str) -> str:
+    padding = "=" * (-len(in_encoded) % 4)
+    return base64.urlsafe_b64decode((in_encoded + padding).encode("ascii")).decode("utf-8")
+
+THRESHOLD_MINUTES = 15
 
 def set_challenge_cookie(in_req, in_rfc7231):
     minute = f"{datetime.datetime.utcnow().minute:02d}"
     random = secrets.token_hex(16)
-    raw = f"{os.environ['LAMBDA_SECRET']}{minute}{random}".encode("utf-8")
-    token = hashlib.sha256(raw).hexdigest()
+    token = make_token(minute, random)
+    encoded = encode_payload(f"token={token}&random={random}")
+    second = THRESHOLD_MINUTES * 60
+    cookie_field_arr = [
+        f"challenge={encoded}",
+        f"Max-Age={second}",
+        "Path=/",
+        "HttpOnly",
+        "Secure",
+        "SameSite=Strict"
+    ]
     return {
         'status' : 200,
         'headers' : {
             'Content-Type' : 'text/plain',
-            'Date' : in_rfc7231
+            'Date' : in_rfc7231,
+            'Set-Cookie' : "; ".join(cookie_field_arr)
         },
-        'body' : 'Set-Cookie: token=' + token + '&random=' + random
+        'body' : 'challenge issued ( ' + random + ' )'
     }
 
+def parse_cookie(in_cookie_field: str) -> dict:
+    parsed = {}
+    if not in_cookie_field:
+        return parsed
+    parts = in_cookie_field.split(';')
+    for part in parts:
+        if '=' in part:
+            k, v = part.split('=', 1)
+            parsed[k.strip()] = v.strip()
+    return parsed
+
+def verify_token(in_token: str, in_random: str) -> bool:
+    minute = datetime.datetime.utcnow().minute
+    for diff in range(0, THRESHOLD_MINUTES + 1):
+        past = (minute - diff + 60) % 60
+        if make_token(past, in_random) == in_token:
+            return True
+    return False
+
 def generate_llm_text(in_req, in_rfc7231):
+    cookies = parse_cookie(in_req['headers'].get('cookie', ''))
+    encoded = cookies.get('challenge')
+    if not encoded:
+        return {
+            'status' : 401,
+            'headers' : {
+                'Content-Type' : 'text/plain',
+                'Date' : in_rfc7231
+            },
+            'body' : 'not issued'
+        }
+    try:
+        payload = decode_payload(encoded)
+        params = urllib.parse.parse_qs(payload)
+        token = params.get('token', [None])[0]
+        random = params.get('random', [None])[0]
+    except Exception:
+        return {
+            'status' : 401,
+            'headers' : {
+                'Content-Type' : 'text/plain',
+                'Date' : in_rfc7231
+            },
+            'body' : 'invalid challenge'
+        }
+    if not verify_token(token, random):
+        return {
+            'status' : 403,
+            'headers' : {
+                'Content-Type' : 'text/plain',
+                'Date' : in_rfc7231
+            },
+            'body' : 'expired ( ' + random + ' )'
+        }
     return {
         'status' : 200,
         'headers' : {
             'Content-Type' : 'text/plain',
             'Date' : in_rfc7231
         },
-        'body' : 'generate ( ' + in_rfc7231 + ' ) '
+        'body' : 'verified ( ' + random + ' )'
     }
 
 BASE_PATH = '/'
@@ -43,10 +121,9 @@ APP2_PATH = '/generate'
 
 ROUTES = {
     ('GET', APP1_PATH) : set_challenge_cookie,
-    ('POST', APP2_PATH) : generate_llm_text
+    #('POST', APP2_PATH) : generate_llm_text
+    ('GET', APP2_PATH) : generate_llm_text
 }
-
-
 
 def application(in_req: Dict[str, Any]) -> Dict[str, Any]:
     route = ROUTES.get((in_req.get('method'), in_req.get('path')))
@@ -92,7 +169,8 @@ def handler_flask(in_req) -> Dict[str, Any]:
         'method' : in_req.method,
         'path' : in_req.path,
         'query' : in_req.args.to_dict(flat=True),
-        'headers' : dict(in_req.headers),
+		# normalize header names to lowercase to match API Gateway (Lambda)
+        'headers' : {k.lower(): v for k, v in in_req.headers.items()},
         'cookies' : in_req.cookies,
         'body' : in_req.get_data(as_text=True)
     }
