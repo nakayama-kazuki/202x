@@ -28,7 +28,7 @@ def decode_payload(in_encoded: str) -> str:
 
 THRESHOLD_MINUTES = 15
 
-def set_challenge_cookie(in_req, in_rfc7231):
+def challenge_pixel(in_req, in_rfc7231):
     minute = f"{datetime.datetime.utcnow().minute:02d}"
     random = secrets.token_hex(16)
     token = make_token(minute, random)
@@ -45,11 +45,12 @@ def set_challenge_cookie(in_req, in_rfc7231):
     return {
         'status' : 200,
         'headers' : {
-            'Content-Type' : 'text/plain',
+            'Content-Type' : 'image/gif',
             'Date' : in_rfc7231,
-            'Set-Cookie' : "; ".join(cookie_field_arr)
+            'Set-Cookie' : "; ".join(cookie_field_arr),
+            'Cache-Control' : 'no-store'
         },
-        'body' : 'challenge issued ( ' + random + ' )'
+        'body' : base64.b64decode("R0lGODlhAQABAPAAAAAAAAAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==")
     }
 
 def parse_cookie(in_cookie_field: str) -> dict:
@@ -66,46 +67,34 @@ def parse_cookie(in_cookie_field: str) -> dict:
 def verify_token(in_token: str, in_random: str) -> bool:
     minute = datetime.datetime.utcnow().minute
     for diff in range(0, THRESHOLD_MINUTES + 1):
-        past = (minute - diff + 60) % 60
-        if make_token(past, in_random) == in_token:
+        past = (minute - diff) % 60
+        if make_token(f"{past:02d}", in_random) == in_token:
             return True
     return False
 
-def generate_llm_text(in_req, in_rfc7231):
+def response_text(in_code, in_rfc7231, in_text):
+    return {
+        'status' : in_code,
+        'headers' : {
+            'Content-Type' : 'text/plain',
+            'Date' : in_rfc7231
+        },
+        'body' : in_text
+    }
+
+def llm_generate(in_req, in_rfc7231):
     cookies = parse_cookie(in_req['headers'].get('cookie', ''))
     encoded = cookies.get('challenge')
     if not encoded:
-        return {
-            'status' : 401,
-            'headers' : {
-                'Content-Type' : 'text/plain',
-                'Date' : in_rfc7231
-            },
-            'body' : 'not issued'
-        }
+        return response_text(401, in_rfc7231, 'not issued')
     try:
-        payload = decode_payload(encoded)
-        params = urllib.parse.parse_qs(payload)
+        params = urllib.parse.parse_qs(decode_payload(encoded))
         token = params.get('token', [None])[0]
         random = params.get('random', [None])[0]
     except Exception:
-        return {
-            'status' : 401,
-            'headers' : {
-                'Content-Type' : 'text/plain',
-                'Date' : in_rfc7231
-            },
-            'body' : 'invalid challenge'
-        }
+        return response_text(401, in_rfc7231, 'invalid challenge')
     if not verify_token(token, random):
-        return {
-            'status' : 403,
-            'headers' : {
-                'Content-Type' : 'text/plain',
-                'Date' : in_rfc7231
-            },
-            'body' : 'expired ( ' + random + ' )'
-        }
+        return response_text(403, in_rfc7231, 'expired ( ' + token + ', ' + random + ' )')
     return {
         'status' : 200,
         'headers' : {
@@ -116,13 +105,13 @@ def generate_llm_text(in_req, in_rfc7231):
     }
 
 BASE_PATH = '/'
-APP1_PATH = '/challenge'
-APP2_PATH = '/generate'
+CHALLENGE_PIXEL_PATH = BASE_PATH + 'challenge'
+LLM_GENERATE_PATH = BASE_PATH + 'generate'
 
 ROUTES = {
-    ('GET', APP1_PATH) : set_challenge_cookie,
-    #('POST', APP2_PATH) : generate_llm_text
-    ('GET', APP2_PATH) : generate_llm_text
+    ('GET', CHALLENGE_PIXEL_PATH) : challenge_pixel,
+    #('POST', LLM_GENERATE_PATH) : llm_generate
+    ('GET', LLM_GENERATE_PATH) : llm_generate
 }
 
 def application(in_req: Dict[str, Any]) -> Dict[str, Any]:
@@ -158,6 +147,13 @@ def handler_lambda(in_ev, in_ctx):
         'body' : body
     }
     dst = application(src)
+    if isinstance(dst['body'], (bytes, bytearray)):
+        return {
+            'statusCode' : dst['status'],
+            'headers' : dst['headers'],
+            'body' : base64.b64encode(dst['body']).decode('ascii'),
+            'isBase64Encoded' : True
+        }
     return {
         'statusCode' : dst['status'],
         'headers' : dst['headers'],
@@ -169,7 +165,7 @@ def handler_flask(in_req) -> Dict[str, Any]:
         'method' : in_req.method,
         'path' : in_req.path,
         'query' : in_req.args.to_dict(flat=True),
-		# normalize header names to lowercase to match API Gateway (Lambda)
+        # normalize header names to lowercase to match API Gateway (Lambda)
         'headers' : {k.lower(): v for k, v in in_req.headers.items()},
         'cookies' : in_req.cookies,
         'body' : in_req.get_data(as_text=True)
