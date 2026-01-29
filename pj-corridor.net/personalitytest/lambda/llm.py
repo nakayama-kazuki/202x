@@ -1,5 +1,63 @@
 #!/usr/bin/env python3
 
+####
+#### Template for prompts given to the LLM.
+#### The input is always in English, and the output language is specified by {{accept_language}}.
+####
+
+PROMPT_TEMPLATE = """
+You are an expert explaining personality assessment results.
+
+[Task]
+Generate a friendly explanation.
+
+[User Facts]
+{{user_input}}
+
+[Output Language]
+{{accept_language}}
+"""
+
+####
+#### HTML for testing queries to the entry points {{challenge_pixel_path}} and {{generate_fetch_path}} in the test web environment.
+#### When you modify the prompt template, input this console output into the AI to run tests.
+####
+
+LOCAL_TEST_HTML = """
+<html>
+<body>
+<img src='.{{challenge_pixel_path}}' style='width: 1px; height: 1px; visibility: hidden;' />
+<form id='test-form'>
+<label>
+sample input : <input type='text' id='input-text' value='test input' />
+</label>
+<button type='submit'>send</button>
+</form>
+<script>
+const form = document.getElementById('test-form');
+form.addEventListener('submit', async (in_ev) => {
+    in_ev.preventDefault();
+    const payload = {text : document.getElementById('input-text').value};
+    try {
+        const response = await fetch('.{{generate_fetch_path}}', {
+            method : 'POST',
+            headers : {
+              'Content-Type' : 'application/json'
+            },
+            // required to send challenge cookie
+            credentials : 'include',
+            body : JSON.stringify(payload)
+        });
+        console.log('response : ', await response.text());
+    } catch (err) {
+        console.error(err);
+    }
+});
+</script>
+</body>
+</html>
+"""
+
 from typing import Dict, Any
 
 def handler(in_ev, in_ctx):
@@ -82,7 +140,26 @@ def response_text(in_code, in_rfc7231, in_text):
         'body' : in_text
     }
 
-def llm_generate(in_req, in_rfc7231):
+def detect_language(in_req):
+    lang = in_req['headers'].get('accept-language', '')
+    if 'ja' in lang.lower():
+        return 'Japanese'
+    return 'English'
+
+import json
+
+def input_to_dict(in_req) -> dict:
+    if not in_req.get('body'):
+        return {}
+    try:
+        return json.loads(in_req['body'])
+    except Exception:
+        return {}
+
+def invoke_model(in_prompt: str) -> str:
+    return in_prompt
+
+def generate_fetch(in_req, in_rfc7231):
     cookies = parse_cookie(in_req['headers'].get('cookie', ''))
     encoded = cookies.get('challenge')
     if not encoded:
@@ -95,27 +172,51 @@ def llm_generate(in_req, in_rfc7231):
         return response_text(401, in_rfc7231, 'invalid challenge')
     if not verify_token(token, random):
         return response_text(403, in_rfc7231, 'expired ( ' + token + ', ' + random + ' )')
+    prompt = PROMPT_TEMPLATE
+    prompt = prompt.replace(
+        "{{user_input}}",
+        json.dumps(input_to_dict(in_req), ensure_ascii=False)
+    )
+    prompt = prompt.replace(
+        "{{accept_language}}",
+        detect_language(in_req)
+    )
+    return {
+        'status': 200,
+        'headers': {
+            'Content-Type': 'text/plain',
+            'Date': in_rfc7231
+        },
+        'body': invoke_model(prompt)
+    }
+
+def local_test(in_req, in_rfc7231):
+    html = LOCAL_TEST_HTML
+    html = html.replace("{{challenge_pixel_path}}", CHALLENGE_PIXEL_PATH)
+    html = html.replace("{{generate_fetch_path}}", GENERATE_FETCH_PATH)
     return {
         'status' : 200,
         'headers' : {
-            'Content-Type' : 'text/plain',
+            'Content-Type' : 'text/html',
             'Date' : in_rfc7231
         },
-        'body' : 'verified ( ' + random + ' )'
+        'body' : html
     }
 
 BASE_PATH = '/'
+TEST_PATH = BASE_PATH + 'test'
 CHALLENGE_PIXEL_PATH = BASE_PATH + 'challenge'
-LLM_GENERATE_PATH = BASE_PATH + 'generate'
+GENERATE_FETCH_PATH = BASE_PATH + 'generate'
 
 ROUTES = {
+    ('GET', TEST_PATH) : local_test,
     ('GET', CHALLENGE_PIXEL_PATH) : challenge_pixel,
-    #('POST', LLM_GENERATE_PATH) : llm_generate
-    ('GET', LLM_GENERATE_PATH) : llm_generate
+    ('POST', GENERATE_FETCH_PATH) : generate_fetch
 }
 
 def application(in_req: Dict[str, Any]) -> Dict[str, Any]:
-    route = ROUTES.get((in_req.get('method'), in_req.get('path')))
+    path = in_req.get('path')
+    route = ROUTES.get((in_req.get('method'), path))
     rfc7231 = email.utils.formatdate(timeval=time.time(), usegmt=True)
     if route is None:
         return {
@@ -124,7 +225,7 @@ def application(in_req: Dict[str, Any]) -> Dict[str, Any]:
                 'Content-Type' : 'text/plain',
                 'Date' : rfc7231
             },
-            'body' : 'path may be wrong ...'
+            'body' : 'path ( ' + path + ' ) may be wrong ...'
         }
     return route(in_req, rfc7231)
 
