@@ -17,7 +17,9 @@
 			"Action": [
 				"bedrock:InvokeModel"
 			],
-			"Resource": "*"
+			"Resource": [
+				"arn:aws:bedrock:ap-northeast-1::foundation-model/amazon.nova-micro*"
+			]
 		}
 	]
 }
