@@ -100,7 +100,7 @@ openssl.exe req -new -x509 -key localhost.key -out localhost.crt -days 3650 -con
 
 ### 3.4. Python
 
-Python は [共通テンプレート](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/template.py) を利用し、ローカルサンドボックス環境の場合 TCP 5000 アクセス、プロダクションでは Lambda 経由のアクセスを想定する。
+Python は [共通テンプレート](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/template.py) を利用し、ローカルサンドボックス環境の場合 TCP 5000 アクセス、プロダクションでは Lambda（zip 形式 + API Gateway 抜きの CloudFront 直結）経由のアクセスを想定する。
 
 - [x] [Python](https://www.python.org/downloads/windows/)
 - [x] 設定 → アプリ → アプリの詳細設定 → アプリ実行エイリアスの `python.exe` / `python3.exe` をオフ
