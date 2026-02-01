@@ -74,16 +74,21 @@ jobs:
           --scope "${SCOPE_IS_FIXED}" \
           --region "${REGION_IS_FIXED}" \
           > "current-${POLICY}"
-        jq -S '
-          del(
-            .Id,
-            .ARN,
-            .Capacity,
-            .LabelNamespace,
-            .ManagedByFirewallManager,
-            .RetrofittedByFirewallManager
-          )
-        ' ".github/workflows/${POLICY}" > "${POLICY}.sorted"
+        sed \
+          -e 's/"SearchString": "POST"/"SearchString": "UE9TVA=="/g' \
+          -e 's/"SearchString": "PUT"/"SearchString": "UFVU"/g' \
+          -e 's/"SearchString": "DELETE"/"SearchString": "REVMRVRF"/g' \
+          ".github/workflows/${POLICY}" \
+        | jq -S '
+            del(
+              .Id,
+              .ARN,
+              .Capacity,
+              .LabelNamespace,
+              .ManagedByFirewallManager,
+              .RetrofittedByFirewallManager
+            )
+          ' > "${POLICY}.sorted"
         jq -S '
           .WebACL
           | del(
