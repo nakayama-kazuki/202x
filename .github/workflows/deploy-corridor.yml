@@ -61,11 +61,17 @@ jobs:
         set -euo pipefail
         POLICY=WAFPolicyCorridor.json
         NAME="corridor-waf"
-        SCOPE="CLOUDFRONT"
+        SCOPE_IS_FIXED="CLOUDFRONT"
         REGION_IS_FIXED="us-east-1"
+        WEB_ACL_ID=$(aws wafv2 list-web-acls \
+          --scope "${SCOPE_IS_FIXED}" \
+          --region "${REGION_IS_FIXED}" \
+          --query "WebACLs[?Name=='${NAME}'].Id | [0]" \
+          --output text)
         aws wafv2 get-web-acl \
           --name "${NAME}" \
-          --scope "${SCOPE}" \
+          --id "${WEB_ACL_ID}" \
+          --scope "${SCOPE_IS_FIXED}" \
           --region "${REGION_IS_FIXED}" \
           > "current-${POLICY}"
         jq -S '
