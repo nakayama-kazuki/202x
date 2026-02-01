@@ -1,0 +1,228 @@
+{
+    "Name": "corridor-waf",
+    "Id": "52316ce9-b578-429d-b5d7-cd1e6de4e700",
+    "ARN": "arn:aws:wafv2:us-east-1:256385929234:global/webacl/corridor-waf/52316ce9-b578-429d-b5d7-cd1e6de4e700",
+    "DefaultAction": {
+        "Allow": {}
+    },
+    "VisibilityConfig": {
+        "SampledRequestsEnabled": true,
+        "CloudWatchMetricsEnabled": true,
+        "MetricName": "corridor-waf"
+    },
+    "Description": "",
+    "Rules": [
+        {
+            "Name": "GeoRule",
+            "Priority": 5,
+            "Statement": {
+                "GeoMatchStatement": {
+                    "CountryCodes": [
+                        "CU",
+                        "IR",
+                        "KP",
+                        "RU",
+                        "SY",
+                        "VE"
+                    ]
+                }
+            },
+            "VisibilityConfig": {
+                "SampledRequestsEnabled": true,
+                "CloudWatchMetricsEnabled": true,
+                "MetricName": "GeoRule"
+            },
+            "Action": {
+                "Block": {}
+            }
+        },
+        {
+            "Name": "GlobalRateBasedRule",
+            "Priority": 6,
+            "Statement": {
+                "RateBasedStatement": {
+                    "Limit": 240,
+                    "AggregateKeyType": "IP",
+                    "EvaluationWindowSec": 120
+                }
+            },
+            "VisibilityConfig": {
+                "SampledRequestsEnabled": true,
+                "CloudWatchMetricsEnabled": true,
+                "MetricName": "GlobalRateBasedRule"
+            },
+            "Action": {
+                "Block": {}
+            }
+        },
+        {
+            "Name": "RateBasedRulePOST",
+            "Priority": 8,
+            "Statement": {
+                "RateBasedStatement": {
+                    "Limit": 20,
+                    "AggregateKeyType": "IP",
+                    "EvaluationWindowSec": 120,
+                    "ScopeDownStatement": {
+                        "OrStatement": {
+                            "Statements": [
+                                {
+                                    "ByteMatchStatement": {
+                                        "SearchString": "POST",
+                                        "FieldToMatch": {
+                                            "Method": {}
+                                        },
+                                        "TextTransformations": [
+                                            {
+                                                "Priority": 0,
+                                                "Type": "NONE"
+                                            }
+                                        ],
+                                        "PositionalConstraint": "EXACTLY"
+                                    }
+                                },
+                                {
+                                    "ByteMatchStatement": {
+                                        "SearchString": "PUT",
+                                        "FieldToMatch": {
+                                            "Method": {}
+                                        },
+                                        "TextTransformations": [
+                                            {
+                                                "Priority": 0,
+                                                "Type": "NONE"
+                                            }
+                                        ],
+                                        "PositionalConstraint": "EXACTLY"
+                                    }
+                                },
+                                {
+                                    "ByteMatchStatement": {
+                                        "SearchString": "DELETE",
+                                        "FieldToMatch": {
+                                            "Method": {}
+                                        },
+                                        "TextTransformations": [
+                                            {
+                                                "Priority": 0,
+                                                "Type": "NONE"
+                                            }
+                                        ],
+                                        "PositionalConstraint": "EXACTLY"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "VisibilityConfig": {
+                "SampledRequestsEnabled": true,
+                "CloudWatchMetricsEnabled": true,
+                "MetricName": "RateBasedRulePOST"
+            },
+            "Action": {
+                "Block": {}
+            }
+        },
+        {
+            "Name": "AWS-AWSManagedRulesAmazonIpReputationList",
+            "Priority": 10,
+            "Statement": {
+                "ManagedRuleGroupStatement": {
+                    "VendorName": "AWS",
+                    "Name": "AWSManagedRulesAmazonIpReputationList",
+                    "RuleActionOverrides": [
+                        {
+                            "Name": "AWSManagedReconnaissanceList",
+                            "ActionToUse": {
+                                "Block": {}
+                            }
+                        },
+                        {
+                            "Name": "AWSManagedIPDDoSList",
+                            "ActionToUse": {
+                                "Block": {}
+                            }
+                        }
+                    ]
+                }
+            },
+            "VisibilityConfig": {
+                "SampledRequestsEnabled": true,
+                "CloudWatchMetricsEnabled": true,
+                "MetricName": "AWS-AWSManagedRulesAmazonIpReputationList"
+            },
+            "OverrideAction": {
+                "None": {}
+            }
+        },
+        {
+            "Name": "AWS-AWSManagedRulesAnonymousIpList",
+            "Priority": 12,
+            "Statement": {
+                "ManagedRuleGroupStatement": {
+                    "VendorName": "AWS",
+                    "Name": "AWSManagedRulesAnonymousIpList"
+                }
+            },
+            "VisibilityConfig": {
+                "SampledRequestsEnabled": true,
+                "CloudWatchMetricsEnabled": true,
+                "MetricName": "AWS-AWSManagedRulesAnonymousIpList"
+            },
+            "OverrideAction": {
+                "None": {}
+            }
+        },
+        {
+            "Name": "AWS-AWSManagedRulesCommonRuleSet",
+            "Priority": 13,
+            "Statement": {
+                "ManagedRuleGroupStatement": {
+                    "VendorName": "AWS",
+                    "Name": "AWSManagedRulesCommonRuleSet"
+                }
+            },
+            "VisibilityConfig": {
+                "SampledRequestsEnabled": true,
+                "CloudWatchMetricsEnabled": true,
+                "MetricName": "AWS-AWSManagedRulesCommonRuleSet"
+            },
+            "OverrideAction": {
+                "None": {}
+            }
+        }
+    ],
+    "Capacity": 786,
+    "ManagedByFirewallManager": false,
+    "LabelNamespace": "awswaf:256385929234:webacl:corridor-waf:",
+    "RetrofittedByFirewallManager": false,
+    "OnSourceDDoSProtectionConfig": {
+        "ALBLowReputationMode": "ACTIVE_UNDER_DDOS"
+    },
+    "ApplicationConfig": {
+        "Attributes": [
+            {
+                "Name": "ApplicationCategory",
+                "Values": [
+                    "contentAndPublishing",
+                    "apiAndIntegration"
+                ]
+            },
+            {
+                "Name": "TrafficSource",
+                "Values": [
+                    "api",
+                    "web"
+                ]
+            },
+            {
+                "Name": "ProtectionsName",
+                "Values": [
+                    "Recommended"
+                ]
+            }
+        ]
+    }
+}
