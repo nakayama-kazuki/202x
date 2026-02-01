@@ -75,15 +75,14 @@ jobs:
           --region "${REGION_IS_FIXED}" \
           > "current-${POLICY}"
         jq -S '
-          .WebACL
-          | del(
-              .Id,
-              .ARN,
-              .Capacity,
-              .LabelNamespace,
-              .ManagedByFirewallManager,
-              .RetrofittedByFirewallManager
-            )
+          del(
+            .Id,
+            .ARN,
+            .Capacity,
+            .LabelNamespace,
+            .ManagedByFirewallManager,
+            .RetrofittedByFirewallManager
+          )
         ' ".github/workflows/${POLICY}" > "${POLICY}.sorted"
         jq -S '
           .WebACL
