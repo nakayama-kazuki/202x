@@ -56,6 +56,41 @@ jobs:
           jq -S . "current-${POLICY}" > "current-${POLICY}.sorted"
           diff "${POLICY}.sorted" "current-${POLICY}.sorted"
         done
+    - name: check WAF policy
+      run: |
+        set -euo pipefail
+        POLICY=WAFPolicyCorridor.json
+        NAME="corridor-waf"
+        SCOPE="CLOUDFRONT"
+        REGION_IS_FIXED="us-east-1"
+        aws wafv2 get-web-acl \
+          --name "${NAME}" \
+          --scope "${SCOPE}" \
+          --region "${REGION_IS_FIXED}" \
+          > "current-${POLICY}"
+        jq -S '
+          .WebACL
+          | del(
+              .Id,
+              .ARN,
+              .Capacity,
+              .LabelNamespace,
+              .ManagedByFirewallManager,
+              .RetrofittedByFirewallManager
+            )
+        ' "${POLICY}" > "${POLICY}.sorted"
+        jq -S '
+          .WebACL
+          | del(
+              .Id,
+              .ARN,
+              .Capacity,
+              .LabelNamespace,
+              .ManagedByFirewallManager,
+              .RetrofittedByFirewallManager
+            )
+        ' "current-${POLICY}" > "current-${POLICY}.sorted"
+        diff "${POLICY}.sorted" "current-${POLICY}.sorted"
     - name: pre-check modified
       run: |
         set -euo pipefail
