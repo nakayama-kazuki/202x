@@ -43,6 +43,15 @@
 			]
 		},
 		{
+			"Sid": "AllowReadOnlyWAFv2",
+			"Effect": "Allow",
+			"Action": [
+				"wafv2:ListWebACLs",
+				"wafv2:GetWebACL"
+			],
+			"Resource": "*"
+		},
+		{
 			"Sid": "OtherServicesAreAllDenied",
 			"Effect": "Deny",
 			"Action": [
