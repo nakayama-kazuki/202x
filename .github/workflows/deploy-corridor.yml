@@ -84,7 +84,7 @@ jobs:
               .ManagedByFirewallManager,
               .RetrofittedByFirewallManager
             )
-        ' "${POLICY}" > "${POLICY}.sorted"
+        ' ".github/workflows/${POLICY}" > "${POLICY}.sorted"
         jq -S '
           .WebACL
           | del(
