@@ -150,13 +150,14 @@ jobs:
           fi
         done
     - name: deploy lambda (zip)
+      if: contains(env.MODIFIEDLIST, '${{ env.APPL3DIR }}/lambda/')
       run: |
         set -euo pipefail
-        WORKDIR="${{ env.ROOTDIR }}/${{ env.APPL3DIR }}/lambda"
+        LAMBDADIR="${{ env.ROOTDIR }}/${{ env.APPL3DIR }}/lambda"
         APP=llm.py
         ZIP="${APP}.zip"
         rm -f "${ZIP}"
-        zip -q -j "${ZIP}" "${WORKDIR}/${APP}"
+        zip -q -j "${ZIP}" "${LAMBDADIR}/${APP}"
         aws lambda update-function-code \
           --function-name personalitytest \
           --zip-file "fileb://${ZIP}"
