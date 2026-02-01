@@ -149,6 +149,17 @@ jobs:
             aws s3 cp "${{ env.VERSION }}" "${DST}"
           fi
         done
+    - name: deploy lambda (zip)
+      run: |
+        set -euo pipefail
+        WORKDIR="${{ env.ROOTDIR }}/${{ env.APPL3DIR }}/lambda"
+        APP=llm.py
+        ZIP="${APP}.zip"
+        rm -f "${ZIP}"
+        zip -q -j "${ZIP}" "${WORKDIR}/${APP}"
+        aws lambda update-function-code \
+          --function-name personalitytest \
+          --zip-file "fileb://${ZIP}"
     - name: clear cache
       run: |
         aws cloudfront create-invalidation --distribution-id ${{ secrets.AWS_CLOUDFRONT_DISTRIBUTION }} --paths "/*"
