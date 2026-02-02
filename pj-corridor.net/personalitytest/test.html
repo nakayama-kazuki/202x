@@ -1,0 +1,32 @@
+<html>
+<body>
+<img src='/personalitytest/lambda/challenge' style='width: 1px; height: 1px; visibility: hidden;' />
+<form id='test-form'>
+<label>
+sample input : <input type='text' id='input-text' value='test input' />
+</label>
+<button type='submit'>send</button>
+</form>
+<script>
+const form = document.getElementById('test-form');
+form.addEventListener('submit', async (in_ev) => {
+	in_ev.preventDefault();
+	const payload = {text : document.getElementById('input-text').value};
+	try {
+		const response = await fetch('/personalitytest/lambda/generate', {
+			method : 'POST',
+			headers : {
+			  'Content-Type' : 'application/json'
+			},
+			// required to send challenge cookie
+			credentials : 'include',
+			body : JSON.stringify(payload)
+		});
+		console.log('response : ', await response.text());
+	} catch (err) {
+		console.error(err);
+	}
+});
+</script>
+</body>
+</html>
