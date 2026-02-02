@@ -228,7 +228,16 @@ def invoke_model(in_prompt: str) -> str:
     return payload['results'][0]['outputText']
 
 def generate_fetch(in_req, in_rfc7231):
-    cookies = parse_cookie(in_req['headers'].get('cookie', ''))
+    # cookies = parse_cookie(in_req['headers'].get('cookie', ''))
+    cookies = {}
+    raw_cookies = in_req.get('cookies')
+    if isinstance(raw_cookies, list):
+        for c in raw_cookies:
+            if '=' in c:
+                k, v = c.split('=', 1)
+                cookies[k] = v
+    elif isinstance(raw_cookies, dict):
+        cookies = raw_cookies
     encoded = cookies.get('challenge')
     if not encoded:
         return response_text(401, in_rfc7231, 'not issued')
