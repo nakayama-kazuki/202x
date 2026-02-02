@@ -271,7 +271,11 @@ def local_test(in_req, in_rfc7231):
         'body' : html
     }
 
-BASE_PATH = '/'
+if 'AWS_LAMBDA_FUNCTION_NAME' not in os.environ:
+    BASE_PATH = '/'
+else:
+    BASE_PATH = '/personalitytest/lambda/'
+
 TEST_PATH = BASE_PATH + 'test'
 CHALLENGE_PIXEL_PATH = BASE_PATH + 'challenge'
 GENERATE_FETCH_PATH = BASE_PATH + 'generate'
