@@ -218,14 +218,15 @@ def invoke_model(in_prompt: str) -> str:
         return in_prompt
     import boto3
     client = boto3.client('bedrock-runtime', region_name='ap-northeast-1')
+    # $aws bedrock list-foundation-models --region ap-northeast-1 | grep nova
     response = client.invoke_model(
-        modelId='amazon.nova-micro-v1',
+        modelId='amazon.nova-micro-v1:0',
         contentType='application/json',
         accept='application/json',
-        body=json.dumps({'inputText' : in_prompt})
+        body=json.dumps({'input' : in_prompt})
     )
     payload = json.loads(response['body'].read().decode('utf-8'))
-    return payload['results'][0]['outputText']
+    return payload['outputText']
 
 def generate_fetch(in_req, in_rfc7231):
     # cookies = parse_cookie(in_req['headers'].get('cookie', ''))
