@@ -150,7 +150,7 @@ jobs:
           fi
         done
     - name: deploy lambda (zip)
-      if: contains(env.MODIFIEDLIST, env.APPL3DIR + '/lambda/')
+      if: contains(env.MODIFIEDLIST, format('{0}/lambda/', env.APPL3DIR))
       run: |
         set -euo pipefail
         LAMBDADIR="${{ env.ROOTDIR }}/${{ env.APPL3DIR }}/lambda"
