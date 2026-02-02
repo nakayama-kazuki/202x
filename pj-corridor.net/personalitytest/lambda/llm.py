@@ -218,7 +218,7 @@ def invoke_model(in_prompt: str) -> str:
         return in_prompt
     import boto3
     client = boto3.client('bedrock-runtime', region_name='ap-northeast-1')
-    # to check modelId, see "$ aws bedrock list-foundation-models --region ap-northeast-1 | grep nova"
+    # to get modelId, check "$ aws bedrock list-foundation-models --region ap-northeast-1 | grep nova"
     response = client.invoke_model(
         modelId='amazon.nova-micro-v1:0',
         contentType='application/json',
