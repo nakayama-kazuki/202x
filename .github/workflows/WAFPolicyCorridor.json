@@ -174,27 +174,9 @@
             "OverrideAction": {
                 "None": {}
             }
-        },
-        {
-            "Name": "AWS-AWSManagedRulesCommonRuleSet",
-            "Priority": 13,
-            "Statement": {
-                "ManagedRuleGroupStatement": {
-                    "VendorName": "AWS",
-                    "Name": "AWSManagedRulesCommonRuleSet"
-                }
-            },
-            "VisibilityConfig": {
-                "SampledRequestsEnabled": true,
-                "CloudWatchMetricsEnabled": true,
-                "MetricName": "AWS-AWSManagedRulesCommonRuleSet"
-            },
-            "OverrideAction": {
-                "None": {}
-            }
         }
     ],
-    "Capacity": 786,
+    "Capacity": 86,
     "ManagedByFirewallManager": false,
     "LabelNamespace": "awswaf:256385929234:webacl:corridor-waf:",
     "RetrofittedByFirewallManager": false,
