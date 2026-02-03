@@ -155,12 +155,18 @@ jobs:
         set -euo pipefail
         LAMBDADIR="${{ env.ROOTDIR }}/${{ env.APPL3DIR }}/lambda"
         APP=llm.py
-        ZIP="${APP}.zip"
-        rm -f "${ZIP}"
-        zip -q -j "${ZIP}" "${LAMBDADIR}/${APP}"
+        SRC=(
+          "${LAMBDADIR}/${APP}"
+          "${{ env.VERSION }}"
+        )
+        DST="${APP}.zip"
+        rm -f "${DST}"
+        for f in "${SRC[@]}"; do
+          zip -q -j "${DST}" "${f}"
+        done
         aws lambda update-function-code \
           --function-name personalitytest \
-          --zip-file "fileb://${ZIP}"
+          --zip-file "fileb://${DST}"
     - name: clear cache
       run: |
         aws cloudfront create-invalidation --distribution-id ${{ secrets.AWS_CLOUDFRONT_DISTRIBUTION }} --paths "/*"
