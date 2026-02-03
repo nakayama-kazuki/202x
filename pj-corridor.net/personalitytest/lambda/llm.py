@@ -281,17 +281,36 @@ def local_test(in_req, in_rfc7231):
         'body' : html
     }
 
+def get_version(in_req, in_rfc7231):
+    target = 'version.txt'
+    try:
+        with open(target, 'r', encoding='utf-8') as f:
+            version = f.read().strip()
+    except FileNotFoundError:
+        return response_text(404, in_rfc7231, target + ' not found')
+    return {
+        'status': 200,
+        'headers': {
+            'Content-Type': 'text/plain',
+            'Date': in_rfc7231
+        },
+        'body': version
+    }
+
+
 if 'AWS_LAMBDA_FUNCTION_NAME' not in os.environ:
     BASE_PATH = '/'
 else:
     BASE_PATH = '/personalitytest/lambda/'
 
 TEST_PATH = BASE_PATH + 'test'
+VERSION_PATH = BASE_PATH + 'version'
 CHALLENGE_PIXEL_PATH = BASE_PATH + 'challenge'
 GENERATE_FETCH_PATH = BASE_PATH + 'generate'
 
 ROUTES = {
     ('GET', TEST_PATH) : local_test,
+    ('GET', VERSION_PATH) : get_version,
     ('GET', CHALLENGE_PIXEL_PATH) : challenge_pixel,
     ('POST', GENERATE_FETCH_PATH) : generate_fetch
 }
@@ -301,14 +320,7 @@ def application(in_req: Dict[str, Any]) -> Dict[str, Any]:
     route = ROUTES.get((in_req.get('method'), path))
     rfc7231 = email.utils.formatdate(timeval=time.time(), usegmt=True)
     if route is None:
-        return {
-            'status' : 404,
-            'headers' : {
-                'Content-Type' : 'text/plain',
-                'Date' : rfc7231
-            },
-            'body' : 'path ( ' + path + ' ) may be wrong ...'
-        }
+        return response_text(404, rfc7231, 'path ( ' + path + ' ) may be wrong ...')
     return route(in_req, rfc7231)
 
 ####
