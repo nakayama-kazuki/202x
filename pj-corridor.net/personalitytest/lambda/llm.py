@@ -218,15 +218,23 @@ def invoke_model(in_prompt: str) -> str:
         return in_prompt
     import boto3
     client = boto3.client('bedrock-runtime', region_name='ap-northeast-1')
-    # to get modelId, check "$ aws bedrock list-foundation-models --region ap-northeast-1 | grep nova"
-    response = client.invoke_model(
+    response = client.converse(
+        # to get modelId, check "$ aws bedrock list-foundation-models --region ap-northeast-1 | grep nova"
         modelId='amazon.nova-micro-v1:0',
-        contentType='application/json',
-        accept='application/json',
-        body=json.dumps({'input' : in_prompt})
+        messages=[
+            {
+                "role": "user",
+                "content": [{"text": in_prompt}],
+            }
+        ],
+        inferenceConfig={
+            "temperature": 0.1,
+            "topP": 0.9,
+            "maxTokens": 500,
+            "stopSequences": []
+        }
     )
-    payload = json.loads(response['body'].read().decode('utf-8'))
-    return payload['outputText']
+    return response["output"]["message"]["content"][0]["text"]
 
 def generate_fetch(in_req, in_rfc7231):
     # cookies = parse_cookie(in_req['headers'].get('cookie', ''))
@@ -302,6 +310,10 @@ if 'AWS_LAMBDA_FUNCTION_NAME' not in os.environ:
     BASE_PATH = '/'
 else:
     BASE_PATH = '/personalitytest/lambda/'
+
+####
+#### These path names ( version, challenge, ... ) are not used directly in the AWS configuration
+####
 
 TEST_PATH = BASE_PATH + 'test'
 VERSION_PATH = BASE_PATH + 'version'
