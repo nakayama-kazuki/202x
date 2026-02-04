@@ -11,25 +11,28 @@ $ aws bedrock list-foundation-models --region ap-northeast-1 | grep nova
 その結果 `ap-northeast-1` でも `amazon.nova-micro-v1:0` を利用できることを確認できたが
 
 ```
-[ERROR] ValidationException: An error occurred (ValidationException) when calling the InvokeModel operation: Invocation of model ID amazon.nova-micro-v1:0 with on-demand throughput isn't supported. Retry your request with the ID or ARN of an inference profile that contains this model.
+[ERROR] ValidationException:
+An error occurred (ValidationException) when calling the InvokeModel operation:
+Invocation of model ID amazon.nova-micro-v1:0 with on-demand throughput isn't supported.
+Retry your request with the ID or ARN of an inference profile that contains this model.
 ```
 
-の on-demand 非対応となるので [llm.py](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/personalitytest/lambda/llm.py) では暫定回避のためにリージョンを変更
+と on-demand は非対応らしいので [llm.py](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/personalitytest/lambda/llm.py) では暫定回避のためにリージョンを変更。
 
 ```
 # client = boto3.client('bedrock-runtime', region_name='ap-northeast-1')
 client = boto3.client("bedrock-runtime", region_name="us-east-1")
 ```
 
-## 2. IAM User + IAM Role + IAM Policy
+## 2. IAM User / Role / Policy
 
 アプリケーションや CI で使う User / Role / Policy の作成。現在 CI には IAM User を使い、アクセスキーやシークレットを GitHub 側で保持しているが、必要に応じ OIDC ベースの Role への移行を検討する。
 
-|json|目的|
+|ポリシー定義|ポリシーの目的|
 |---|---|
 |[AppPolicyPersonalitytest.json](https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/AppPolicyPersonalitytest.json)|主な目的は Bedrock での AI モデル呼び出しの許可|
 |[CIPolicyCorridorAllow.json](https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/CIPolicyCorridorAllow.json)|CI に対する許可設定|
-|[CIPolicyCorridorBoundary.json](https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/CIPolicyCorridorBoundary.json)|CI に対する許可設定の上限 + 拒否設定（防波堤）|
+|[CIPolicyCorridorBoundary.json](https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/CIPolicyCorridorBoundary.json)|CI に対する許可設定の上限 + 拒否設定 = 防波堤|
 
 ```
 iam user
@@ -49,7 +52,9 @@ iam user ( github-actions )
         +- CIPolicyCorridorBoundary.json
 ```
 
-## 3. Lambda
+## 3. S3
+
+## 4. Lambda
 
 - Lambda 環境変数設定
   - `Configuration` → `Environment variables` → `LAMBDA_XXXX=YYYY`
@@ -63,7 +68,7 @@ iam user ( github-actions )
   - [llm.py](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/personalitytest/lambda/llm.py) の場合 `llm.handler`
 - Lambda → 関数 → XXXXX → 設定 → 関数 URL の生成
 
-## 4. CloudFront
+## 5. CloudFront
 
 - ディストリビューション下にオリジン作成
   - S3（静的コンテンツ）用オリジン
@@ -74,11 +79,11 @@ iam user ( github-actions )
   - WAF の適用を S3 / Lambda で分けたい場合はディストリビューションも分離
     - その場合はドメインも分離
 
-## 5. WAF
+## 6. WAF
 
 WCU 観点でコスト対効果を考慮した [WAFPolicyCorridor.json](https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/WAFPolicyCorridor.json) を適用。
 
-|ルール名|ルールの目的|
+|ルールの名称|ルールの目的|
 |---|---|
 |GeoRule|攻撃が多い国の IP 遮断|
 |GlobalRateBasedRule|リクエスの上限|
@@ -86,15 +91,15 @@ WCU 観点でコスト対効果を考慮した [WAFPolicyCorridor.json](https://
 |AWS-AWSManagedRulesAmazonIpReputationList|AWS 認定攻撃 IP 遮断|
 |AWS-AWSManagedRulesAnonymousIpList|トンネリング等身元隠蔽 IP 遮断|
 
-## 6. GitHub
+## 7. GitHub
 
 `Repository Settings` → `Secrets and variables` → `Actions` から以下を設定
 
 - `AWS_ACCESS_KEY_ID` ( from 2 )
 - `AWS_SECRET_ACCESS_KEY` ( from 2 )
-- `AWS_CLOUDFRONT_DISTRIBUTION` ( from 4 )
+- `AWS_CLOUDFRONT_DISTRIBUTION` ( from 5 )
 
-## 7. CI
+## 8. CI
 
 [deploy-corridor.yml](https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/deploy-corridor.yml) にて以下を実行。
 
