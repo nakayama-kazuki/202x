@@ -25,6 +25,8 @@ client = boto3.client("bedrock-runtime", region_name="us-east-1")
 
 アプリケーションや CI で使う User / Role / Policy の作成。現在 CI には IAM User を使い、アクセスキーやシークレットを GitHub 側で保持しているが、必要に応じ OIDC ベースの Role への移行を検討する。
 
+|json|目的|
+|---|---|
 |[AppPolicyPersonalitytest.json](https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/AppPolicyPersonalitytest.json)|主な目的は Bedrock での AI モデル呼び出しの許可|
 |[CIPolicyCorridorAllow.json](https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/CIPolicyCorridorAllow.json)|CI に対する許可設定|
 |[CIPolicyCorridorBoundary.json](https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/CIPolicyCorridorBoundary.json)|CI に対する許可設定の上限 + 拒否設定（防波堤）|
@@ -76,6 +78,8 @@ iam user ( github-actions )
 
 WCU 観点でコスト対効果を考慮した [WAFPolicyCorridor.json](https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/WAFPolicyCorridor.json) を適用。
 
+|ルール名|ルールの目的|
+|---|---|
 |GeoRule|攻撃が多い国の IP 遮断|
 |GlobalRateBasedRule|リクエスの上限|
 |RateBasedRulePOST|POAT / PUT / DELETE の上限|
