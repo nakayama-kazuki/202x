@@ -25,15 +25,14 @@
 			"Resource": "arn:aws:cloudfront::256385929234:distribution/E3MI1AH6ZMA0VR"
 		},
 		{
-			"Sid": "UpperLimitOfIAM",
+			"Sid": "UpperLimitOfIAMReadOnly",
 			"Effect": "Allow",
 			"Action": [
 				"iam:GetPolicy",
 				"iam:GetPolicyVersion"
 			],
 			"Resource": [
-				"arn:aws:iam::256385929234:policy/CIPolicyCorridorBoundary.json",
-				"arn:aws:iam::256385929234:policy/AppPolicyPersonalitytest.json"
+				"arn:aws:iam::256385929234:policy/*"
 			]
 		},
 		{
