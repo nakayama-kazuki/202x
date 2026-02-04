@@ -1,141 +1,103 @@
-# Setup memo for GitHub Actions CI (S3 + CloudFront + ECR + Lambda)
+# AWS 環境 + CI 設定
 
-This document describes the minimum steps required to set up a GitHub Actions based CI/CD pipeline using AWS S3, ECR, Lambda, and CloudFront.
+## 1. Bedrock
 
-The focus is on :
+利用可能な AI モデル探す。
 
-- clear separation of responsibilities
-- avoiding IAM black boxes
-- keeping a record that can be reviewed later
+```
+$ aws bedrock list-foundation-models --region ap-northeast-1 | grep nova
+```
 
----
+その結果 `ap-northeast-1` でも `amazon.nova-micro-v1:0` を利用できることを確認できたが
 
-## Prerequisites
+```
+[ERROR] ValidationException: An error occurred (ValidationException) when calling the InvokeModel operation: Invocation of model ID amazon.nova-micro-v1:0 with on-demand throughput isn't supported. Retry your request with the ID or ARN of an inference profile that contains this model.
+```
 
-- AWS account
-- AWS region decided (e.g. `ap-northeast-1`)
-- GitHub repository
+の on-demand 非対応となるので [llm.py](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/personalitytest/lambda/llm.py) では暫定回避のためにリージョンを変更
 
----
+```
+# client = boto3.client('bedrock-runtime', region_name='ap-northeast-1')
+client = boto3.client("bedrock-runtime", region_name="us-east-1")
+```
 
-## 01. AWS IAM : create permissions boundary
+## 2. IAM User + IAM Role + IAM Policy
 
-Create a **permissions boundary policy** ( JSON ) for GitHub Actions.
+アプリケーションや CI で使う User / Role / Policy の作成。現在 CI には IAM User を使い、アクセスキーやシークレットを GitHub 側で保持しているが、必要に応じ OIDC ベースの Role への移行を検討する。
 
-- [github-actions-boundary.json](https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/github-actions-boundary.json)
-- Purpose :
-  - limit CI operations to project-related resources
-  - prevent privilege escalation ( IAM, billing, organization, etc. )
+|[AppPolicyPersonalitytest.json](https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/AppPolicyPersonalitytest.json)|主な目的は Bedrock での AI モデル呼び出しの許可|
+|[CIPolicyCorridorAllow.json](https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/CIPolicyCorridorAllow.json)|CI に対する許可設定|
+|[CIPolicyCorridorBoundary.json](https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/CIPolicyCorridorBoundary.json)|CI に対する許可設定の上限 + 拒否設定（防波堤）|
 
----
+```
+iam user
+|
++- Lambda
+    |
+    +- AppRolePersonalitytest 
+        |
+        +- AppPolicyPersonalitytest.json
 
-## 02. AWS IAM : create IAM user for GitHub Actions
+iam user ( github-actions )
+    |
+    +- deploy-corridor.yml
+        |
+        +- CIPolicyCorridorAllow.json
+        |
+        +- CIPolicyCorridorBoundary.json
+```
 
-Create a dedicated IAM user for GitHub Actions ( machine user ).
+## 3. Lambda
 
-### 02-1. Attach allow policies
+- Lambda 環境変数設定
+  - `Configuration` → `Environment variables` → `LAMBDA_XXXX=YYYY`
+  - テスト環境でも `LAMBDA_XXXX` が [使えるように考慮](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/restart-python.bat)
+- 試行錯誤をすると Lambda が勝手に Role を作るので消去
+- 環境に応じて Python のラッパー層の実装を変更する必要があるので留意
+  - コンテナ Python と zip Python
+  - CloudFront → Lambda と CloudFront → API Gateway → Lambda
+- zip Lambda では Python ファイルは必ず xxxx.py
+- Lambda のハンドラ設定で `ファイルのベース名 + "." + 関数名` を指定
+  - [llm.py](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/personalitytest/lambda/llm.py) の場合 `llm.handler`
+- Lambda → 関数 → XXXXX → 設定 → 関数 URL の生成
 
-Attach the following AWS managed policies ( intentionally broad at this stage ) :
+## 4. CloudFront
 
-- `AmazonEC2ContainerRegistryPowerUser`
-- `AmazonS3FullAccess`
-- `AWSLambda_FullAccess`
-- `CloudFrontFullAccess`
+- ディストリビューション下にオリジン作成
+  - S3（静的コンテンツ）用オリジン
+  - Lambda（動的コンテンツ）用オリジン
+- ビヘイビアで S3 と Lambda の振り分け設定
+- 必要に応じて検討
+  - 認証や API のバージョニングを考慮する場合は API Gateway を利用
+  - WAF の適用を S3 / Lambda で分けたい場合はディストリビューションも分離
+    - その場合はドメインも分離
 
-These policies allow CI to :
+## 5. WAF
 
-- push container images
-- deploy static files
-- update Lambda functions
-- invalidate CloudFront cache
+WCU 観点でコスト対効果を考慮した [WAFPolicyCorridor.json](https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/WAFPolicyCorridor.json) を適用。
 
-### 02-2. Apply permissions boundary
+|GeoRule|攻撃が多い国の IP 遮断|
+|GlobalRateBasedRule|リクエスの上限|
+|RateBasedRulePOST|POAT / PUT / DELETE の上限|
+|AWS-AWSManagedRulesAmazonIpReputationList|AWS 認定攻撃 IP 遮断|
+|AWS-AWSManagedRulesAnonymousIpList|トンネリング等身元隠蔽 IP 遮断|
 
-Attach the permissions boundary created in **01** to this IAM user.
+## 6. GitHub
 
-This boundary :
+`Repository Settings` → `Secrets and variables` → `Actions` から以下を設定
 
-- does **not** grant permissions by itself
-- limits the *maximum* permissions the user can ever have
+- `AWS_ACCESS_KEY_ID` ( from 2 )
+- `AWS_SECRET_ACCESS_KEY` ( from 2 )
+- `AWS_CLOUDFRONT_DISTRIBUTION` ( from 4 )
 
----
+## 7. CI
 
-## 03. AWS IAM : create access keys
+[deploy-corridor.yml](https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/deploy-corridor.yml) にて以下を実行。
 
-Create access keys for the IAM user.
+- AWS 適用済みポリシー & リポジトリ内の json の整合チェック
+- AWS へのデプロイ
+  - ルートに配置したファイルの `aws s3 cp`
+  - 各ディレクトリの `aws s3 sync`
+  - `aws lambda update-function-code`
+  - `aws cloudfront create-invalidation`
 
-You will obtain :
-
-- **Access Key ID**
-- **Secret Access Key**
-
-These will be registered as GitHub Secrets later.
-
----
-
-## 04. AWS S3 : set up S3 bucket
-
-Create and configure the S3 bucket for static asset deployment.
-
-Example :
-
-- bucket name : `pj-corridor.net`
-
----
-
-## 05. AWS CloudFront : set up distribution
-
-Create a CloudFront distribution in front of the S3 bucket.
-
-- Note the **Distribution ID**
-  - this will be used for cache invalidation from CI
-
----
-
-## 06. AWS ECR & Lambda : container-based Lambda setup
-
-### 06-1. Create ECR repository
-
-Create an ECR repository for Lambda container images.
-
-- Example repository name : `personalitytest`
-- Note the **ECR repository URI**
-  ( without tag, e.g. `:latest` )
-
-### 06-2. Create Lambda function
-
-Because [php](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/personalitytest/lambda/handler.php) is not supported by zip, create a Lambda function using **Container image** ( not ZIP ).
-
-Important points :
-
-- architecture : `arm64`
-- runtime selection is **not used** ( container-based Lambda )
-
-### 06-3. Prepare container artifacts
-
-Inside the repository, prepare :
-
-- `Dockerfile` : [dockerfile.txt](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/personalitytest/lambda/dockerfile.txt)
-- `bootstrap` : [bootstrap.txt](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/personalitytest/lambda/bootstrap.txt)
-- application script : [handler.php](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/personalitytest/lambda/handler.php)
-
----
-
-## 07. GitHub : register repository secrets
-
-In GitHub :
-
-`Repository Settings` > `Secrets and variables` > `Actions`
-
-Register the following secrets :
-
-- `AWS_ACCESS_KEY_ID` ( from 03 )
-- `AWS_SECRET_ACCESS_KEY` ( from 03 )
-- `AWS_CLOUDFRONT_DISTRIBUTION` ( from 05 )
-- `AWS_ECR_URI` ( from 06-1, registry URI )
-
----
-
-## 08. GitHub Actions : create workflow
-
-Create workflow file : [deploy-corridor.yml](https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/deploy-corridor.yml)
