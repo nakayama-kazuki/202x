@@ -1,4 +1,4 @@
-name: deploy to pj-corridor.net
+name: pj-corridor.net
 
 on:
   workflow_dispatch:
@@ -6,10 +6,101 @@ on:
     branches:
       - main
     paths:
+      - '.github/workflows/*'
       - 'pj-corridor.net/**'
 
 jobs:
-  deploy:
+  check-policy:
+    runs-on: ubuntu-latest
+    env:
+      POL_CI1: CIPolicyCorridorAllow.json
+      POL_CI2: CIPolicyCorridorBoundary.json
+      POL_APP: AppPolicyPersonalitytest.json
+      POL_WAF: WAFPolicyCorridor.json
+    steps:
+    - name: checkout
+      uses: actions/checkout@v4
+    - name: configure credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ap-northeast-1
+    - name: check IAM policy
+      run: |
+        set -euo pipefail
+        for POLICY in "${{ env.POL_CI1 }}" "${{ env.POL_CI2 }}" "${{ env.POL_APP }}"; do
+          echo "Checking policy: ${POLICY}"
+          ARN="arn:aws:iam::256385929234:policy/${POLICY}"
+          VID=$(aws iam get-policy \
+            --policy-arn "${ARN}" \
+            --query 'Policy.DefaultVersionId' \
+            --output text)
+          aws iam get-policy-version \
+            --policy-arn "${ARN}" \
+            --version-id "${VID}" \
+            --query 'PolicyVersion.Document' \
+            --output json > "current-${POLICY}"
+          jq -S . ".github/workflows/${POLICY}" > "${POLICY}.sorted"
+          jq -S . "current-${POLICY}" > "current-${POLICY}.sorted"
+          diff "${POLICY}.sorted" "current-${POLICY}.sorted"
+        done
+    - name: check WAF policy
+      run: |
+        set -euo pipefail
+        POLICY="${{ env.POL_WAF }}"
+        NAME="corridor-waf"
+        SCOPE_IS_FIXED="CLOUDFRONT"
+        REGION_IS_FIXED="us-east-1"
+        WEB_ACL_ID=$(aws wafv2 list-web-acls \
+          --scope "${SCOPE_IS_FIXED}" \
+          --region "${REGION_IS_FIXED}" \
+          --query "WebACLs[?Name=='${NAME}'].Id | [0]" \
+          --output text)
+        aws wafv2 get-web-acl \
+          --name "${NAME}" \
+          --id "${WEB_ACL_ID}" \
+          --scope "${SCOPE_IS_FIXED}" \
+          --region "${REGION_IS_FIXED}" \
+          > "current-${POLICY}"
+        METHODS=(
+          "POST"
+          "PUT"
+          "DELETE"
+          "GET"
+          "HEAD"
+          "OPTIONS"
+        )
+        SED_ARGS=()
+        for m in "${METHODS[@]}"; do
+          b64=$(printf '%s' "$m" | base64 -w0) 
+          SED_ARGS+=("-e" "s/\"SearchString\": \"${m}\"/\"SearchString\": \"${b64}\"/g")
+        done
+        sed "${SED_ARGS[@]}" ".github/workflows/${POLICY}" \
+        | jq -S '
+            del(
+              .Id,
+              .ARN,
+              .Capacity,
+              .LabelNamespace,
+              .ManagedByFirewallManager,
+              .RetrofittedByFirewallManager
+            )
+          ' > "${POLICY}.sorted"
+        jq -S '
+          .WebACL
+          | del(
+              .Id,
+              .ARN,
+              .Capacity,
+              .LabelNamespace,
+              .ManagedByFirewallManager,
+              .RetrofittedByFirewallManager
+            )
+        ' "current-${POLICY}" > "current-${POLICY}.sorted"
+        diff "${POLICY}.sorted" "current-${POLICY}.sorted"
+  deploy-to-aws:
+    needs: check-policy
     runs-on: ubuntu-latest
     env:
       MODIFIEDLIST: ""
@@ -37,82 +128,16 @@ jobs:
     - name: prepare version file
       run: |
         echo "${{ github.sha }}" > "${{ env.VERSION }}"
-    - name: check IAM policy
-      run: |
-        set -euo pipefail
-        for POLICY in CIPolicyCorridorBoundary.json AppPolicyPersonalitytest.json; do
-          echo "Checking policy: ${POLICY}"
-          ARN="arn:aws:iam::256385929234:policy/${POLICY}"
-          VID=$(aws iam get-policy \
-            --policy-arn "${ARN}" \
-            --query 'Policy.DefaultVersionId' \
-            --output text)
-          aws iam get-policy-version \
-            --policy-arn "${ARN}" \
-            --version-id "${VID}" \
-            --query 'PolicyVersion.Document' \
-            --output json > "current-${POLICY}"
-          jq -S . ".github/workflows/${POLICY}" > "${POLICY}.sorted"
-          jq -S . "current-${POLICY}" > "current-${POLICY}.sorted"
-          diff "${POLICY}.sorted" "current-${POLICY}.sorted"
-        done
-    - name: check WAF policy
-      run: |
-        set -euo pipefail
-        POLICY=WAFPolicyCorridor.json
-        NAME="corridor-waf"
-        SCOPE_IS_FIXED="CLOUDFRONT"
-        REGION_IS_FIXED="us-east-1"
-        WEB_ACL_ID=$(aws wafv2 list-web-acls \
-          --scope "${SCOPE_IS_FIXED}" \
-          --region "${REGION_IS_FIXED}" \
-          --query "WebACLs[?Name=='${NAME}'].Id | [0]" \
-          --output text)
-        aws wafv2 get-web-acl \
-          --name "${NAME}" \
-          --id "${WEB_ACL_ID}" \
-          --scope "${SCOPE_IS_FIXED}" \
-          --region "${REGION_IS_FIXED}" \
-          > "current-${POLICY}"
-        sed \
-          -e 's/"SearchString": "POST"/"SearchString": "UE9TVA=="/g' \
-          -e 's/"SearchString": "PUT"/"SearchString": "UFVU"/g' \
-          -e 's/"SearchString": "DELETE"/"SearchString": "REVMRVRF"/g' \
-          ".github/workflows/${POLICY}" \
-        | jq -S '
-            del(
-              .Id,
-              .ARN,
-              .Capacity,
-              .LabelNamespace,
-              .ManagedByFirewallManager,
-              .RetrofittedByFirewallManager
-            )
-          ' > "${POLICY}.sorted"
-        jq -S '
-          .WebACL
-          | del(
-              .Id,
-              .ARN,
-              .Capacity,
-              .LabelNamespace,
-              .ManagedByFirewallManager,
-              .RetrofittedByFirewallManager
-            )
-        ' "current-${POLICY}" > "current-${POLICY}.sorted"
-        diff "${POLICY}.sorted" "current-${POLICY}.sorted"
     - name: pre-check modified
       run: |
         set -euo pipefail
         git fetch --depth=2
         echo "CURR_SHA=${{ github.sha }}" >> $GITHUB_ENV
         echo "PREV_SHA=$(git rev-parse ${{ github.sha }}^)" >> $GITHUB_ENV
-        echo "CURR_SHA=${{ github.sha }}"
-        echo "PREV_SHA=$(git rev-parse ${{ github.sha }}^)"
     - name: check modified
       run: |
         set -euo pipefail
-        MODIFIEDLIST=$(git diff --name-only $PREV_SHA $CURR_SHA | tr '\n' ' ')
+        MODIFIEDLIST=$(git diff --name-only "${PREV_SHA}" "${CURR_SHA}" | tr '\n' ' ')
         echo "MODIFIEDLIST=${MODIFIEDLIST}" >> $GITHUB_ENV
     - name: copy-files
       run: |
@@ -121,14 +146,17 @@ jobs:
           "${{ env.INDEXFILE }}"
           "${{ env.ADTXTFILE }}"
         )
+        INVALROOT=false
         for FILE in "${FILES[@]}"; do
           SRC="${{ env.ROOTDIR }}/${FILE}"
           if [[ "${MODIFIEDLIST}" == *"${SRC}"* ]]; then
             DST="s3://${{ env.S3BUCKET }}/"
             aws s3 cp "${SRC}" "${DST}"
             aws s3 cp "${{ env.VERSION }}" "${DST}"
+            INVALROOT=true
           fi
         done
+        echo "INVALROOT=${INVALROOT}" >> $GITHUB_ENV
     - name: sync-directories
       run: |
         set -euo pipefail
@@ -141,33 +169,43 @@ jobs:
           "${{ env.GAFULDIR }}"
           "${{ env.APPL4DIR }}"
         )
+        INVALDIRS=()
         for DIR in "${DIRS[@]}"; do
           SRC="${{ env.ROOTDIR }}/${DIR}"
-          if [[ "$MODIFIEDLIST" == *"$SRC"* ]]; then
+          if [[ "${MODIFIEDLIST}" == *"${SRC}"* ]]; then
             DST="s3://${{ env.S3BUCKET }}/${DIR}/"
             aws s3 sync "${SRC}" "${DST}" --exclude ".git/*" --exclude "lambda/**"
+            INVALDIRS+=("/${DIR}/*")
             aws s3 cp "${{ env.VERSION }}" "${DST}"
           fi
         done
+        echo "INVALDIRS=${INVALDIRS[*]}" >> $GITHUB_ENV
     - name: deploy lambda (zip)
       if: contains(env.MODIFIEDLIST, format('{0}/lambda/', env.APPL3DIR))
       run: |
         set -euo pipefail
         LAMBDADIR="${{ env.ROOTDIR }}/${{ env.APPL3DIR }}/lambda"
         APP=llm.py
-        SRC=(
+        FILES=(
           "${LAMBDADIR}/${APP}"
           "${{ env.VERSION }}"
         )
         DST="${APP}.zip"
         rm -f "${DST}"
-        for f in "${SRC[@]}"; do
-          zip -q -j "${DST}" "${f}"
+        for src in "${FILES[@]}"; do
+          zip -q -j "${DST}" "${src}"
         done
         aws lambda update-function-code \
           --function-name personalitytest \
           --zip-file "fileb://${DST}"
     - name: clear cache
       run: |
-        aws cloudfront create-invalidation --distribution-id ${{ secrets.AWS_CLOUDFRONT_DISTRIBUTION }} --paths "/*"
-
+        IFS=' ' read -r -a PATHS <<< "${INVALDIRS:-}"
+        if [[ "${INVALROOT}" == "true" ]]; then
+          PATHS+=("/*")
+        fi
+        if [ "${#PATHS[@]}" -gt 0 ]; then
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ secrets.AWS_CLOUDFRONT_DISTRIBUTION }}" \
+            --paths "${PATHS[@]}"
+        fi
