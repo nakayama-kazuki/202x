@@ -54,6 +54,14 @@
 		},
 		{
 			"Effect": "Allow",
+			"Action": [
+				"iam:GetPolicy",
+				"iam:GetPolicyVersion"
+			],
+			"Resource": "arn:aws:iam::256385929234:policy/*"
+		},
+		{
+			"Effect": "Allow",
 			"Action": "iam:PassRole",
 			"Resource": "arn:aws:iam::*:role/*"
 		}
