@@ -220,7 +220,6 @@ def invoke_model(in_prompt: str) -> str:
     # client = boto3.client('bedrock-runtime', region_name='ap-northeast-1')
     client = boto3.client("bedrock-runtime", region_name="us-east-1")
     response = client.converse(
-        # to get modelId, check "$ aws bedrock list-foundation-models --region ap-northeast-1 | grep nova"
         modelId='amazon.nova-micro-v1:0',
         messages=[
             {
