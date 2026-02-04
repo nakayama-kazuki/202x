@@ -64,6 +64,14 @@
 			"Effect": "Allow",
 			"Action": "iam:PassRole",
 			"Resource": "arn:aws:iam::*:role/*"
+		},
+		{
+			"Effect": "Allow",
+			"Action": [
+				"wafv2:ListWebACLs",
+				"wafv2:GetWebACL"
+			],
+			"Resource": "*"
 		}
 	]
 }
