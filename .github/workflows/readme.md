@@ -17,7 +17,7 @@ Invocation of model ID amazon.nova-micro-v1:0 with on-demand throughput isn't su
 Retry your request with the ID or ARN of an inference profile that contains this model.
 ```
 
-と on-demand は非対応らしいので [llm.py](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/personalitytest/lambda/llm.py) では暫定回避のためにリージョンを変更。
+と on-demand は非対応なので [llm.py](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/personalitytest/lambda/llm.py) では暫定回避のためにリージョンを変更。
 
 ```
 # client = boto3.client('bedrock-runtime', region_name='ap-northeast-1')
@@ -57,15 +57,15 @@ iam user ( github-actions )
 ## 4. Lambda
 
 - Lambda 環境変数設定
-  - `Configuration` → `Environment variables` → `LAMBDA_XXXX=YYYY`
-  - テスト環境でも `LAMBDA_XXXX` が [使えるように考慮](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/restart-python.bat)
+  - Configuration → Environment variables → `LAMBDA_XXXX=YYYY`
+  - テスト環境でも [同じ環境変数を使えるよう](https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/restart-python.bat) に考慮
 - 試行錯誤をすると Lambda が勝手に Role を作るので消去
 - 環境に応じて Python のラッパー層の実装を変更する必要があるので留意
   - コンテナ Python と zip Python
   - CloudFront → Lambda と CloudFront → API Gateway → Lambda
-- zip Lambda では Python ファイルは必ず xxxx.py
+- zip Lambda では Python ファイルは必ず `xxxx.py`
 - Lambda のハンドラ設定で `ファイルのベース名 + "." + 関数名` を指定
-  - [llm.py](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/personalitytest/lambda/llm.py) の場合 `llm.handler`
+  - [llm.py](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/personalitytest/lambda/llm.py) の場合 `llm.handler` となる
 - Lambda → 関数 → XXXXX → 設定 → 関数 URL の生成
 
 ## 5. CloudFront
@@ -93,7 +93,7 @@ WCU 観点でコスト対効果を考慮した [WAFPolicyCorridor.json](https://
 
 ## 7. GitHub
 
-`Repository Settings` → `Secrets and variables` → `Actions` から以下を設定
+Repository Settings → Secrets and variables → Actions から以下を設定
 
 - `AWS_ACCESS_KEY_ID` ( from 2 )
 - `AWS_SECRET_ACCESS_KEY` ( from 2 )
