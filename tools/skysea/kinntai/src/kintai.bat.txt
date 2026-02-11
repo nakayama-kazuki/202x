@@ -1,0 +1,49 @@
+@python -c "exec(''.join(open(r'%~f0', encoding='utf-8').readlines()[1:]))" %* & goto:eof
+
+import sys
+import csv
+import datetime
+import collections
+
+if len(sys.argv) < 2:
+    print('drag & drop input file')
+    sys.exit(1)
+
+ENCODING = 'cp932'
+
+COL_OPERATION = '操作種別'
+COL_OPERATION_S = '操作開始'
+COL_OPERATION_E = '操作終了'
+COL_LOGIN = 'ログイン名'
+COL_TIME = '日時'
+
+work_map = collections.defaultdict(
+    lambda: collections.defaultdict(
+        lambda: {'s-time': None, 'e-time': None}
+    )
+)
+
+with open(sys.argv[1], encoding=ENCODING, newline='') as f:
+    reader = csv.DictReader(f)
+    for row in reader:
+        op = row[COL_OPERATION]
+        if op not in (COL_OPERATION_S, COL_OPERATION_E):
+            continue
+        login = row[COL_LOGIN]
+        dt = datetime.datetime.strptime(row[COL_TIME], '%Y/%m/%d %H:%M:%S')
+        day = dt.date()
+        rec = work_map[login][day]
+        if op == COL_OPERATION_S:
+            if rec['s-time'] is None or dt < rec['s-time']:
+                rec['s-time'] = dt
+        if op == COL_OPERATION_E:
+            if rec['e-time'] is None or dt > rec['e-time']:
+                rec['e-time'] = dt
+
+for login, days in work_map.items():
+    for day, rec in days.items():
+        if rec['s-time'] and rec['e-time']:
+            work_time = rec['e-time'] - rec['s-time']
+            print(f'{login}, {day}, {work_time}')
+
+input('enter')
