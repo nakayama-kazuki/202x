@@ -1,5 +1,13 @@
 @python -c "exec(''.join(open(r'%~f0', encoding='utf-8').readlines()[1:]))" %* & goto:eof
 
+# how to execute
+# 1. drag & drop "xxx.csv" on kintai.bat
+# 2. command
+# 2.1. $ kintai.bat xxx.csv
+# 2.2. $ kintai.bat xxx.csv > output.txt
+# 2.3. $ kintai.bat xxx.csv login-name
+# 2.4. $ kintai.bat xxx.csv login-name > output.txt
+
 import sys
 import csv
 import datetime
@@ -8,6 +16,8 @@ import collections
 if len(sys.argv) < 2:
     print('drag & drop input file')
     sys.exit(1)
+
+target = sys.argv[2] if len(sys.argv) >= 3 else None
 
 ENCODING = 'cp932'
 
@@ -30,6 +40,8 @@ with open(sys.argv[1], encoding=ENCODING, newline='') as f:
         if op not in (COL_OPERATION_S, COL_OPERATION_E):
             continue
         login = row[COL_LOGIN]
+        if target and login != target:
+            continue
         dt = datetime.datetime.strptime(row[COL_TIME], '%Y/%m/%d %H:%M:%S')
         day = dt.date()
         rec = work_map[login][day]
