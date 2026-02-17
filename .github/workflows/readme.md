@@ -21,7 +21,7 @@ Invocation of model ID amazon.nova-micro-v1:0 with on-demand throughput isn't su
 Retry your request with the ID or ARN of an inference profile that contains this model.
 ```
 
-と on-demand は非対応なので [llm.py](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/personalitytest/lambda/llm.py) では暫定回避のためにリージョンを変更。
+と on-demand は非対応なので [llm.py](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/personalitytest/lambda/llm.py) では暫定回避のためにリージョンを変更。将来的には inference profile 経由で `ap-northeast-1` に戻すことを検討。
 
 ```
 # client = boto3.client('bedrock-runtime', region_name='ap-northeast-1')
