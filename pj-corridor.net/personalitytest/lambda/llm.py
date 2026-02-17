@@ -77,14 +77,14 @@ Supporter traits include the following characteristics:
 """
 
 ####
-#### HTML for testing queries to the entry points {{challenge_pixel_path}} and {{generate_fetch_path}} in the test web environment.
+#### HTML for testing queries to the entry points {{challenge_pixel_url}} and {{generate_fetch_url}} in the test web environment.
 #### When you modify the prompt template, input this console output into the AI to run tests.
 ####
 
-LOCAL_TEST_HTML = """
+SMOKETEST_HTML = """
 <html>
 <body>
-<img src='.{{challenge_pixel_path}}' style='width: 1px; height: 1px; visibility: hidden;' />
+<img src='{{challenge_pixel_url}}' style='width: 1px; height: 1px; visibility: hidden;' />
 <form id='test-form'>
 <label>
 sample input : <input type='text' id='input-text' value='test input' />
@@ -97,7 +97,7 @@ form.addEventListener('submit', async (in_ev) => {
     in_ev.preventDefault();
     const payload = {text : document.getElementById('input-text').value};
     try {
-        const response = await fetch('.{{generate_fetch_path}}', {
+        const response = await fetch('{{generate_fetch_url}}', {
             method : 'POST',
             headers : {
               'Content-Type' : 'application/json'
@@ -133,7 +133,7 @@ import urllib.parse
 import json
 
 def make_token(in_minute: str, in_random: str) -> str:
-    raw = f'{os.environ["LAMBDA_SECRET"]}{in_minute}{in_random}'.encode('utf-8')
+    raw = f"{os.environ['LAMBDA_SECRET']}{in_minute}{in_random}".encode('utf-8')
     return hashlib.sha256(raw).hexdigest()
 
 def encode_payload(in_payload: str) -> str:
@@ -146,7 +146,7 @@ def decode_payload(in_encoded: str) -> str:
 THRESHOLD_MINUTES = 15
 
 def challenge_pixel(in_req, in_rfc7231):
-    minute = f'{datetime.datetime.utcnow().minute:02d}'
+    minute = f'{datetime.datetime.now(datetime.UTC).minute:02d}'
     random = secrets.token_hex(16)
     token = make_token(minute, random)
     encoded = encode_payload(f'token={token}&random={random}')
@@ -182,7 +182,7 @@ def parse_cookie(in_cookie_field: str) -> dict:
     return parsed
 
 def verify_token(in_token: str, in_random: str) -> bool:
-    minute = datetime.datetime.utcnow().minute
+    minute = datetime.datetime.now(datetime.UTC).minute
     for diff in range(0, THRESHOLD_MINUTES + 1):
         past = (minute - diff) % 60
         if make_token(f'{past:02d}', in_random) == in_token:
@@ -218,23 +218,23 @@ def invoke_model(in_prompt: str) -> str:
         return in_prompt
     import boto3
     # client = boto3.client('bedrock-runtime', region_name='ap-northeast-1')
-    client = boto3.client("bedrock-runtime", region_name="us-east-1")
+    client = boto3.client('bedrock-runtime', region_name='us-east-1')
     response = client.converse(
         modelId='amazon.nova-micro-v1:0',
         messages=[
             {
-                "role": "user",
-                "content": [{"text": in_prompt}],
+                'role' : 'user',
+                'content' : [{'text': in_prompt}],
             }
         ],
         inferenceConfig={
-            "temperature": 0.1,
-            "topP": 0.9,
-            "maxTokens": 500,
-            "stopSequences": []
+            'temperature' : 0.1,
+            'topP' : 0.9,
+            'maxTokens' : 500,
+            'stopSequences' : []
         }
     )
-    return response["output"]["message"]["content"][0]["text"]
+    return response['output']['message']['content'][0]['text']
 
 def generate_fetch(in_req, in_rfc7231):
     # cookies = parse_cookie(in_req['headers'].get('cookie', ''))
@@ -267,19 +267,41 @@ def generate_fetch(in_req, in_rfc7231):
         '{{accept_language}}',
         detect_language(in_req)
     )
+    origin = in_req['headers'].get('origin')
     return {
         'status': 200,
         'headers': {
             'Content-Type': 'text/plain',
-            'Date': in_rfc7231
+            'Access-Control-Allow-Origin' : origin,
+            'Access-Control-Allow-Credentials' : 'true',
+            'Vary' : 'Origin',
+            'Date' : in_rfc7231
         },
         'body': invoke_model(prompt)
     }
 
-def local_test(in_req, in_rfc7231):
-    html = LOCAL_TEST_HTML
-    html = html.replace('{{challenge_pixel_path}}', CHALLENGE_PIXEL_PATH)
-    html = html.replace('{{generate_fetch_path}}', GENERATE_FETCH_PATH)
+def preflight_generate(in_req, in_rfc7231):
+    origin = in_req['headers'].get('origin')
+    if origin not in CORS_ALLOW:
+        return response_text(403, in_rfc7231, origin + ' is not allowed')
+    return {
+        'status' : 204,
+        'headers' : {
+            'Date' : in_rfc7231,
+            'Access-Control-Allow-Origin' : origin,
+            'Access-Control-Allow-Credentials' : 'true',
+            'Access-Control-Allow-Methods' : 'POST, OPTIONS',
+            'Access-Control-Allow-Headers' : 'Content-Type',
+            'Vary' : 'Origin'
+        },
+        'body' : ''
+    }
+
+def smoketest(in_req, in_rfc7231):
+    base = 'https://' + in_req['headers'].get('host')
+    html = SMOKETEST_HTML
+    html = html.replace('{{challenge_pixel_url}}', base + CHALLENGE_PIXEL_PATH)
+    html = html.replace('{{generate_fetch_url}}', base + GENERATE_FETCH_PATH)
     return {
         'status' : 200,
         'headers' : {
@@ -305,25 +327,30 @@ def get_version(in_req, in_rfc7231):
         'body': version
     }
 
-
-if 'AWS_LAMBDA_FUNCTION_NAME' not in os.environ:
-    BASE_PATH = '/'
-else:
+if 'AWS_LAMBDA_FUNCTION_NAME' in os.environ:
     BASE_PATH = '/personalitytest/lambda/'
+    CORS_ALLOW = {'https://pj-corridor.net'}
+else:
+    if 'APACHE_UPATH' in os.environ:
+        BASE_PATH = os.environ['APACHE_UPATH']
+    else:
+        BASE_PATH = '/'
+    CORS_ALLOW = {'https://localhost', 'https://127.0.0.1'}
 
 ####
 #### These path names ( version, challenge, ... ) are not used directly in the AWS configuration
 ####
 
-TEST_PATH = BASE_PATH + 'test'
+SMOKETEST_PATH = BASE_PATH + 'test'
 VERSION_PATH = BASE_PATH + 'version'
 CHALLENGE_PIXEL_PATH = BASE_PATH + 'challenge'
 GENERATE_FETCH_PATH = BASE_PATH + 'generate'
 
 ROUTES = {
-    ('GET', TEST_PATH) : local_test,
+    ('GET', SMOKETEST_PATH) : smoketest,
     ('GET', VERSION_PATH) : get_version,
     ('GET', CHALLENGE_PIXEL_PATH) : challenge_pixel,
+    ('OPTIONS', GENERATE_FETCH_PATH) : preflight_generate,
     ('POST', GENERATE_FETCH_PATH) : generate_fetch
 }
 
@@ -332,7 +359,7 @@ def application(in_req: Dict[str, Any]) -> Dict[str, Any]:
     route = ROUTES.get((in_req.get('method'), path))
     rfc7231 = email.utils.formatdate(timeval=time.time(), usegmt=True)
     if route is None:
-        return response_text(404, rfc7231, 'path ( ' + path + ' ) may be wrong ...')
+        return response_text(404, rfc7231, 'path ( ' + path + ' ) or method may be wrong ...')
     return route(in_req, rfc7231)
 
 ####
