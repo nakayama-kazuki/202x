@@ -1,0 +1,37 @@
+name: make lambda function url private
+
+on:
+  workflow_dispatch:
+
+jobs:
+  make-private:
+    runs-on: ubuntu-latest
+    env:
+      ACCOUNT: 256385929234
+      FUNCTION: personalitytest
+    steps:
+    - name: configure credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ap-northeast-1
+    - name: add permission to cloudfront
+      run: |
+        aws lambda remove-permission \
+          --function-name "${{ env.FUNCTION }}" \
+          --statement-id AllowCloudFrontInvoke \
+          2>/dev/null || true
+        aws lambda add-permission \
+          --function-name "${{ env.FUNCTION }}" \
+          --statement-id AllowCloudFrontInvoke \
+          --action lambda:InvokeFunctionUrl \
+          --principal cloudfront.amazonaws.com \
+          --function-url-auth-type AWS_IAM \
+          --source-arn "arn:aws:cloudfront::${{ env.ACCOUNT }}:distribution/${{ secrets.AWS_CLOUDFRONT_LAMBDA_DISTRIBUTION }}"
+    - name: make lambda function url private
+      run: |
+        set -euo pipefail
+        aws lambda update-function-url-config \
+          --function-name "${{ env.FUNCTION }}" \
+          --auth-type AWS_IAM

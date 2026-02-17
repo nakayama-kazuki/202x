@@ -1,4 +1,4 @@
-name: pj-corridor.net
+name: deploy pj-corridor.net + api.pj-corridor.net
 
 on:
   workflow_dispatch:
@@ -16,7 +16,7 @@ jobs:
       POL_CI1: CIPolicyCorridorAllow.json
       POL_CI2: CIPolicyCorridorBoundary.json
       POL_APP: AppPolicyPersonalitytest.json
-      POL_WAF: WAFPolicyCorridor.json
+      POL_WAF: WAFPolicyApiCorridor.json
     steps:
     - name: checkout
       uses: actions/checkout@v4
@@ -206,6 +206,6 @@ jobs:
         fi
         if [ "${#PATHS[@]}" -gt 0 ]; then
           aws cloudfront create-invalidation \
-            --distribution-id "${{ secrets.AWS_CLOUDFRONT_DISTRIBUTION }}" \
+            --distribution-id "${{ secrets.AWS_CLOUDFRONT_S3_DISTRIBUTION }}" \
             --paths "${PATHS[@]}"
         fi
