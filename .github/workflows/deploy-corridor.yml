@@ -13,6 +13,7 @@ jobs:
   check-policy:
     runs-on: ubuntu-latest
     env:
+      ACCOUNT: 256385929234
       POL_CI1: CIPolicyCorridorAllow.json
       POL_CI2: CIPolicyCorridorBoundary.json
       POL_APP: AppPolicyPersonalitytest.json
@@ -31,7 +32,7 @@ jobs:
         set -euo pipefail
         for POLICY in "${{ env.POL_CI1 }}" "${{ env.POL_CI2 }}" "${{ env.POL_APP }}"; do
           echo "Checking policy: ${POLICY}"
-          ARN="arn:aws:iam::256385929234:policy/${POLICY}"
+          ARN="arn:aws:iam::${{ env.ACCOUNT }}:policy/${POLICY}"
           VID=$(aws iam get-policy \
             --policy-arn "${ARN}" \
             --query 'Policy.DefaultVersionId' \

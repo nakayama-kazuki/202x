@@ -28,7 +28,11 @@
 			"Action": [
 				"lambda:GetFunction",
 				"lambda:UpdateFunctionCode",
-				"lambda:UpdateFunctionConfiguration"
+				"lambda:UpdateFunctionConfiguration",
+				"lambda:AddPermission",
+				"lambda:RemovePermission",
+				"lambda:UpdateFunctionUrlConfig",
+				"lambda:GetFunctionUrlConfig"
 			],
 			"Resource": "arn:aws:lambda:ap-northeast-1:*:function:*"
 		},
