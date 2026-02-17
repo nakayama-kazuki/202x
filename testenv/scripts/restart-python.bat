@@ -38,13 +38,25 @@ function Start-PythonWithPort {
 
 if ($pathToApp) {
 	if (Test-Path $HTTPD_CONF) {
-		$defineLine = Get-Content $HTTPD_CONF | Where-Object { $_ -match '^\s*Define\s+PORT_PYTHON\s+(\d+)' } | Select-Object -First 1
-		if (-not $defineLine) {
+		$defines = @{}
+		Get-Content $HTTPD_CONF | ForEach-Object {
+			if ($_ -match '^\s*Define\s+(\w+)\s+"?([^"]+)"?') {
+				$defines[$matches[1]] = $matches[2]
+			}
+		}
+		if ($defines.ContainsKey('PORT_PYTHON')) {
+			$port = [int]$defines['PORT_PYTHON']
+		} else {
 			Write-Host "PORT_PYTHON is not defined in ${HTTPD_CONF}" -ForegroundColor Red
-			pause
 			exit 1
 		}
-		$port = [int]($defineLine -replace '.*\s+(\d+)$', '$1')
+		if ($defines.ContainsKey('UPATH_PYTHON')) {
+			$upath = $defines['UPATH_PYTHON']
+			$PYTHON_ENV['APACHE_UPATH'] = $upath
+		} else {
+			Write-Host "UPATH_PYTHON is not defined in ${HTTPD_CONF}" -ForegroundColor Red
+			exit 1
+		}
 		Write-Host "start ${pathToApp} using ${port}"
 		Start-PythonWithPort $pathToApp $port
 	} else {
