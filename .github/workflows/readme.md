@@ -71,6 +71,7 @@ iam user ( github-actions )
 - Lambda のハンドラ設定で `ファイルのベース名 + "." + 関数名` を指定
   - [llm.py](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/personalitytest/lambda/llm.py) の場合 `llm.handler` となる
 - Lambda → 関数 → XXXXX → 設定 → 関数 URL の生成
+  - 関数 URL を [プライベート化](https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/spot-private-lambda.yml) する場合は API Gateway が必要
 
 ## 6. WAF
 
