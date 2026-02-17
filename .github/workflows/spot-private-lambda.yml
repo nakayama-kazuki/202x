@@ -35,6 +35,7 @@ jobs:
           --function-name "${{ env.FUNCTION }}" \
           --auth-type NONE
     - name: make lambda function url private
+      # to use private mode, you must access the lambda function via api gateway.
       if: github.event.inputs.mode == 'private'
       run: |
         aws lambda add-permission \
