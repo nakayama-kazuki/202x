@@ -1,10 +1,19 @@
-name: make lambda function url private
+name: toggle lambda function url auth
 
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: "Select auth mode"
+        required: true
+        type: choice
+        options:
+          - public
+          - private
+        default: public
 
 jobs:
-  make-private:
+  toggle-auth:
     runs-on: ubuntu-latest
     env:
       ACCOUNT: 256385929234
@@ -16,12 +25,18 @@ jobs:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ap-northeast-1
-    - name: add permission to cloudfront
+    - name: initialize to public baseline
       run: |
         aws lambda remove-permission \
           --function-name "${{ env.FUNCTION }}" \
           --statement-id AllowCloudFrontInvoke \
           2>/dev/null || true
+        aws lambda update-function-url-config \
+          --function-name "${{ env.FUNCTION }}" \
+          --auth-type NONE
+    - name: make lambda function url private
+      if: github.event.inputs.mode == 'private'
+      run: |
         aws lambda add-permission \
           --function-name "${{ env.FUNCTION }}" \
           --statement-id AllowCloudFrontInvoke \
@@ -29,9 +44,6 @@ jobs:
           --principal cloudfront.amazonaws.com \
           --function-url-auth-type AWS_IAM \
           --source-arn "arn:aws:cloudfront::${{ env.ACCOUNT }}:distribution/${{ secrets.AWS_CLOUDFRONT_LAMBDA_DISTRIBUTION }}"
-    - name: make lambda function url private
-      run: |
-        set -euo pipefail
         aws lambda update-function-url-config \
           --function-name "${{ env.FUNCTION }}" \
           --auth-type AWS_IAM
