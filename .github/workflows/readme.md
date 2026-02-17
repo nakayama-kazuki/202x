@@ -1,6 +1,10 @@
 # AWS 環境 + CI 設定
 
-## 1. Bedrock
+## 1. Certificate Manager @us-east-1
+
+サブドメイン含めて利用するワイルドカード証明書作成。
+
+## 2. Bedrock
 
 利用可能な AI モデル探す。
 
@@ -24,7 +28,7 @@ Retry your request with the ID or ARN of an inference profile that contains this
 client = boto3.client("bedrock-runtime", region_name="us-east-1")
 ```
 
-## 2. IAM User / Role / Policy
+## 3. IAM User / Role / Policy
 
 アプリケーションや CI で使う User / Role / Policy の作成。現在 CI には IAM User を使い、アクセスキーやシークレットを GitHub 側で保持しているが、必要に応じ OIDC ベースの Role への移行を検討する。
 
@@ -52,9 +56,9 @@ iam user ( github-actions )
         +- CIPolicyCorridorBoundary.json
 ```
 
-## 3. S3
+## 4. S3
 
-## 4. Lambda
+## 5. Lambda
 
 - Lambda 環境変数設定
   - Configuration → Environment variables → `LAMBDA_XXXX=YYYY`
@@ -68,17 +72,6 @@ iam user ( github-actions )
   - [llm.py](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/personalitytest/lambda/llm.py) の場合 `llm.handler` となる
 - Lambda → 関数 → XXXXX → 設定 → 関数 URL の生成
 
-## 5. CloudFront
-
-- ディストリビューション下にオリジン作成
-  - S3（静的コンテンツ）用オリジン
-  - Lambda（動的コンテンツ）用オリジン
-- ビヘイビアで S3 と Lambda の振り分け設定
-- 必要に応じて検討
-  - 認証や API のバージョニングを考慮する場合は API Gateway を利用
-  - WAF の適用を S3 / Lambda で分けたい場合はディストリビューションも分離
-    - その場合はドメインも分離
-
 ## 6. WAF
 
 WCU 観点でコスト対効果を考慮した [WAFPolicyCorridor.json](https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/WAFPolicyCorridor.json) を適用。
@@ -91,7 +84,21 @@ WCU 観点でコスト対効果を考慮した [WAFPolicyCorridor.json](https://
 |AWS-AWSManagedRulesAmazonIpReputationList|AWS 認定攻撃 IP 遮断|
 |AWS-AWSManagedRulesAnonymousIpList|トンネリング等身元隠蔽 IP 遮断|
 
-## 7. GitHub
+## 7. CloudFront
+
+- 静的コンテンツ用ディストリビューション作成
+  - オリジンに S3 指定
+- 動的コンテンツ用ディストリビューション作成
+  - オリジンに Lambda 指定
+  - WAF をアタッチ
+- 認証や API のバージョニングを考慮する場合は API Gateway の利用も検討
+
+## 8. Route 53
+
+- 静的コンテンツ（S3）用ディストリビューション（CloudFront URL）向け A レコード追加
+- 動的コンテンツ（Lambda）用ディストリビューション（CloudFront URL）向け A レコード追加
+
+## 9. GitHub
 
 Repository Settings → Secrets and variables → Actions から以下を設定
 
@@ -99,7 +106,7 @@ Repository Settings → Secrets and variables → Actions から以下を設定
 - `AWS_SECRET_ACCESS_KEY` ( from 2 )
 - `AWS_CLOUDFRONT_DISTRIBUTION` ( from 5 )
 
-## 8. CI
+## 10. CI
 
 [deploy-corridor.yml](https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/deploy-corridor.yml) にて以下を実行。
 
