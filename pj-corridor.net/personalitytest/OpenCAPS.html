@@ -89,21 +89,33 @@ label:has(input:enabled):hover {
 <script>
 
 class i18n {
-	static #defaultLang = 'en';
-	static #supportLang = ['ja', i18n.#defaultLang, 'fr', 'de', 'es', 'pt', 'hi', 'ko', 'zh'];
-	static #browserLang;
+	static #defaultCode = 'en';
+	static #supportCode = {
+		en : 'English',
+		ja : 'Japanese',
+		fr : 'French',
+		de : 'German',
+		es : 'Spanish',
+		pt : 'Portuguese',
+		hi : 'Hindi',
+		ko : 'Korean',
+		zh : 'Chinese'
+	};
+	static #browserCode = i18n.#defaultCode;
 	static {
-		const raw = navigator.languages?.[0] || navigator.language || i18n.#defaultLang;
+		const raw = navigator.languages?.[0] || navigator.language || i18n.#defaultCode;
 		const lang = raw.toLowerCase();
-		i18n.#browserLang = i18n.#defaultLang;
-		for (let i = 0; i < i18n.#supportLang.length; i++) {
-			if (lang.startsWith(i18n.#supportLang[i])) {
-				i18n.#browserLang = i18n.#supportLang[i];
+		for (const code of Object.keys(i18n.#supportCode)) {
+			if (lang.startsWith(code)) {
+				i18n.#browserCode = code;
 				break;
 			}
 		}
-		// const forTest = 'en';
-		// i18n.#browserLang = forTest;
+		//const testCode = 'en';
+		//i18n.#browserCode = testCode;
+	}
+	static get browserLanguage() {
+		return i18n.#supportCode[i18n.#browserCode];
 	}
 	static #fnv1a32(in_text) {
 		let h = 0x811c9dc5;
@@ -115,19 +127,19 @@ class i18n {
 	}
 	static #mapping = Object.create(null);
 	static text(in_hash, in_denyConflict = true) {
-		if (Object.hasOwn(in_hash, i18n.#defaultLang)) {
-			if (Object.hasOwn(in_hash, i18n.#browserLang)) {
-				const key = i18n.#fnv1a32(in_hash[i18n.#browserLang]);
+		if (Object.hasOwn(in_hash, i18n.#defaultCode)) {
+			if (Object.hasOwn(in_hash, i18n.#browserCode)) {
+				const key = i18n.#fnv1a32(in_hash[i18n.#browserCode]);
 				if (Object.hasOwn(i18n.#mapping, key) && in_denyConflict) {
 					throw new Error(key + ' already exist');
 				}
-				i18n.#mapping[key] = in_hash[i18n.#defaultLang];
-				return in_hash[i18n.#browserLang];
+				i18n.#mapping[key] = in_hash[i18n.#defaultCode];
+				return in_hash[i18n.#browserCode];
 			} else {
-				return in_hash[i18n.#defaultLang];
+				return in_hash[i18n.#defaultCode];
 			}
 		} else {
-			throw new Error(i18n.#defaultLang + ' is required.');
+			throw new Error(i18n.#defaultCode + ' is required.');
 		}
 	}
 	static defaultLangText(in_text) {
@@ -2054,7 +2066,11 @@ const uiEvaluate = (() => {
 			gState.finish();
 			(async () => {
 				const result = composeResult(in_qIx => closure.cardArr[in_qIx].getResult().aIx);
-				const resp = await llm({summary : result.llmSummary, qa : result.llmQaArr});
+				const resp = await llm({
+					summary : result.llmSummary,
+					qa : result.llmQaArr,
+					lang : i18n.browserLanguage
+				});
 				localStorage.setItem(closure.lsKey, JSON.stringify({result, resp}));
 				gState.result();
 				uiFeedback(result, resp);
