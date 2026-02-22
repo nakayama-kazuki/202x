@@ -7,72 +7,22 @@
 
 PROMPT_TEMPLATE = """
 
-You are a specialist in personality assessment.
-Based on the answers to the diagnostic questions for Controller / Analyzer / Promoter / Supporter tendencies, and referring to the rule-based diagnostic result, please provide feedback written in {{accept_language}} for items 1-4 below.
+You are an expert in social psychology and profiling. Based on both the overall summary and the individual responses below, provide balanced and constructive feedback written in {{accept_language}}.
 
-1. Overall assessment of tendencies, strengths, and weaknesses (within 200 characters)
-2. Job roles where strengths can be utilized effectively, and points to be mindful of when leveraging those strengths (within 200 characters)
-3. Recommended skill development areas and methods for skill improvement (within 200 characters)
-4. Points to keep in mind in interpersonal relationships (within 200 characters)
+[Overall Summary]
 
-[Answers to the Questions]
+{{summary}}
 
--  I tend to be somewhat assertive
--  I have slightly strong passion for the future
--  I sometimes feel frustrated when my help is not appreciated
--  I am somewhat competitive
--  I give a warm impression on first meeting
--  I do not easily let others get close to me
--  I tend to care about how others see me
--  I have a slightly high need for recognition regarding my work output
--  I am relatively good at asking others about things I do not know
--  I do not feel jealousy when my friends talk closely with others
--  When someone asks me for a favor, I find it hard to say no
--  I tend to stand out at parties or social gatherings
--  I often make plans before doing something
--  When making decisions, I do not necessarily seek others' agreement
--  I often find myself naturally taking charge of a situation
--  I am relatively weak when it comes to change
--  I express my emotions easily
--  Even when I am tired, I push myself to work
--  I get irritated when things do not go as I want
--  When in a team, I tend to put myself last
--  I try to do as many things as possible in a short time
--  I am quick to notice others' shortcomings
--  I lack cheerfulness and childlike qualities
--  I am often a perfectionist
--  I sometimes work on things even if I am not fully convinced
--  I would not describe myself as ambitious
--  I have difficulty recovering from failure
--  I tend to focus on the positive aspects of things and become optimistic
--  I often worry about others' evaluations
--  I tend to compare myself with others
--  I sometimes make decisions even when information is insufficient
--  I am not good at casual small talk
--  I do not believe that serving others is particularly important
--  I rarely go out of my way to take care of people I dislike
--  I am not shy around strangers
--  I give things a fair amount of thought before taking action
--  I clearly state when I dislike something
--  I speak frankly about what I think
--  I am often told that I am a fun person
--  I talk more than I listen to others
+[Responses]
 
-[Diagnostic Result]
+{{answers}}
 
-Your Supporter traits are strong, followed by relatively strong Controller traits.
-Supporter traits include the following characteristics:
+Please address the following two points clearly and concisely, within {{words}} words each:
 
--  Enjoys helping others
--  Warm and gentle
--  Highly cooperative and motivated in the workplace
--  Not particularly interested in making plans or setting goals
--  Takes time to make decisions
--  Skilled at reading people's emotions
--  Has strong intuition
--  Makes judgments based on emotions
--  Not comfortable taking risks
--  Prioritizes human relationships over business matters
+1. Strengths and how to leverage them effectively in professional contexts
+2. Practical advice for navigating new projects and workplace relationships successfully
+
+Write each response as a cohesive paragraph in natural prose. Do not use bullet points or numbered lists. Do not simply restate the summary or responses. Focus on practical and actionable insights rather than abstract generalities.
 
 """
 
@@ -258,16 +208,20 @@ def generate_fetch(in_req, in_rfc7231):
         return response_text(401, in_rfc7231, 'invalid challenge')
     if not verify_token(token, random):
         return response_text(403, in_rfc7231, 'expired ( ' + token + ', ' + random + ' )')
+    payload = input_to_dict(in_req)
+    summary_text = '\n'.join(payload.get('summary', []))
+    answers_text = '\n'.join(
+        f"- {item.get('q', '')}: {item.get('a', '')}"
+        for item in payload.get('qa', [])
+    )
     prompt = PROMPT_TEMPLATE
-    prompt = prompt.replace(
-        '{{user_input}}',
-        json.dumps(input_to_dict(in_req), ensure_ascii=False)
-    )
-    prompt = prompt.replace(
-        '{{accept_language}}',
-        detect_language(in_req)
-    )
+    prompt = prompt.replace('{{summary}}', summary_text)
+    prompt = prompt.replace('{{answers}}', answers_text)
+    prompt = prompt.replace('{{accept_language}}', detect_language(in_req))
+    prompt = prompt.replace('{{words}}', str(300))
     origin = in_req['headers'].get('origin')
+    if not origin or origin not in CORS_ALLOW:
+        return response_text(403, in_rfc7231, origin + ' is not allowed')
     return {
         'status': 200,
         'headers': {
@@ -282,7 +236,7 @@ def generate_fetch(in_req, in_rfc7231):
 
 def preflight_generate(in_req, in_rfc7231):
     origin = in_req['headers'].get('origin')
-    if origin not in CORS_ALLOW:
+    if not origin or origin not in CORS_ALLOW:
         return response_text(403, in_rfc7231, origin + ' is not allowed')
     return {
         'status' : 204,
