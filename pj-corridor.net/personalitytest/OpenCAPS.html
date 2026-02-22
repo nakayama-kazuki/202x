@@ -1836,7 +1836,7 @@ function createUiMatrix(in_score) {
 	Object.assign(root.style, {
 		position: 'relative',
 		width: '70%',
-		maxWidth: '600px'
+		maxWidth: '500px'
 	});
 	const quadrants = document.createElement('div');
 	Object.assign(quadrants.style, {
@@ -2128,7 +2128,11 @@ if (testmode) {
 	gState.finish();
 	setTimeout(async () => {
 		const result = composeResult(in_qIx => Math.floor(Math.random() * ANSWERS.length));
-		const resp = await llm({summary : result.llmSummary, qa : result.llmQaArr});
+		const resp = await llm({
+			summary : result.llmSummary,
+			qa : result.llmQaArr,
+			lang : i18n.browserLanguage
+		});
 		gState.result();
 		uiFeedback(result, resp);
 	}, 1000);
