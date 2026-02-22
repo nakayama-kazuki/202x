@@ -1984,7 +1984,7 @@ const APIENTRY = (in_hostname=> {
 	const mapping = {
 		'localhost' : 'https://localhost/python/',
 		'127.0.0.1' : 'https://127.0.0.1/python/',
-		'pj-corridor.net' : 'api.pj-corridor.net/personalitytest/lambda/'
+		'pj-corridor.net' : 'https://api.pj-corridor.net/personalitytest/lambda/'
 	};
 	if (Object.hasOwn(mapping, in_hostname)) {
 		return mapping[in_hostname];
