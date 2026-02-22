@@ -22,7 +22,7 @@ Please address the following two points clearly and concisely, within {{words}} 
 1. Strengths and how to leverage them effectively in professional contexts
 2. Practical advice for navigating new projects and workplace relationships successfully
 
-Write each response as a cohesive paragraph in natural prose. Do not use bullet points or numbered lists. Do not simply restate the summary or responses. Focus on practical and actionable insights rather than abstract generalities.
+Write each response as a cohesive paragraph in natural prose. Do not use bullet points or numbered lists. Do not simply restate the summary or responses. Do not describe the traits by repeating or paraphrasing the questionnaire items. Instead, infer likely behavioral tendencies and real-world implications based on the responses. Focus on practical and actionable insights rather than abstract generalities.
 
 """
 
@@ -149,12 +149,6 @@ def response_text(in_code, in_rfc7231, in_text):
         'body' : in_text
     }
 
-def detect_language(in_req):
-    lang = in_req['headers'].get('accept-language', '')
-    if 'ja' in lang.lower():
-        return 'Japanese'
-    return 'English'
-
 def input_to_dict(in_req) -> dict:
     if not in_req.get('body'):
         return {}
@@ -217,11 +211,11 @@ def generate_fetch(in_req, in_rfc7231):
     prompt = PROMPT_TEMPLATE
     prompt = prompt.replace('{{summary}}', summary_text)
     prompt = prompt.replace('{{answers}}', answers_text)
-    prompt = prompt.replace('{{accept_language}}', detect_language(in_req))
+    prompt = prompt.replace('{{accept_language}}', payload.get('lang', 'English'))
     prompt = prompt.replace('{{words}}', str(300))
     origin = in_req['headers'].get('origin')
     if not origin or origin not in CORS_ALLOW:
-        return response_text(403, in_rfc7231, origin + ' is not allowed')
+        return response_text(403, in_rfc7231, 'origin is not allowed')
     return {
         'status': 200,
         'headers': {
@@ -237,7 +231,7 @@ def generate_fetch(in_req, in_rfc7231):
 def preflight_generate(in_req, in_rfc7231):
     origin = in_req['headers'].get('origin')
     if not origin or origin not in CORS_ALLOW:
-        return response_text(403, in_rfc7231, origin + ' is not allowed')
+        return response_text(403, in_rfc7231, 'origin is not allowed')
     return {
         'status' : 204,
         'headers' : {
