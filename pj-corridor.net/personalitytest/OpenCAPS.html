@@ -752,53 +752,53 @@ const LT50LLM = 'The result does not show any tendencies of ';
 
 const LEVELS = new Map([
 	[
-		80,
+		75,
+		{
+			LLM : 'The result very strongly shows ',
+			UI : i18n.text({
+				en : 'A very strong tendency observed in you',
+				ja : 'あなたにみられる非常に強い傾向',
+				fr : 'Tendance très forte observée chez vous',
+				de : 'Sehr starke bei Ihnen erkennbare Tendenz',
+				es : 'Tendencia muy fuerte observada en usted',
+				pt : 'Tendência muito forte observada em você',
+				hi : 'आपमें देखी जाने वाली अत्यंत प्रबल प्रवृत्ति',
+				ko : '당신에게서 매우 강하게 나타나는 성향',
+				zh : '在你身上表现得非常强烈的倾向'
+			})
+		}
+	],
+	[
+		65,
 		{
 			LLM : 'The result strongly shows ',
 			UI : i18n.text({
-				en : 'You strongly show the following tendencies.',
-				ja : 'あなたには以下の傾向が強くみられます',
-				fr : 'Vous montrez fortement les tendances suivantes.',
-				de : 'Sie zeigen stark die folgenden Tendenzen.',
-				es : 'Muestras fuertemente las siguientes tendencias.',
-				pt : 'Você demonstra fortemente as seguintes tendências.',
-				hi : 'आपमें निम्नलिखित प्रवृत्तियाँ प्रबल रूप से दिखाई देती हैं।',
-				ko : '당신에게는 다음과 같은 성향이 강하게 나타납니다.',
-				zh : '你明显表现出以下倾向。'
+				en : 'A strong tendency observed in you',
+				ja : 'あなたにみられる強い傾向',
+				fr : 'Tendance forte observée chez vous',
+				de : 'Starke bei Ihnen erkennbare Tendenz',
+				es : 'Tendencia fuerte observada en usted',
+				pt : 'Tendência forte observada em você',
+				hi : 'आपमें देखी जाने वाली प्रबल प्रवृत्ति',
+				ko : '당신에게서 강하게 나타나는 성향',
+				zh : '在你身上表现明显的倾向'
 			})
 		}
 	],
 	[
-		70,
+		55,
 		{
 			LLM : 'The result shows ',
 			UI : i18n.text({
-				en : 'You show the following tendencies.',
-				ja : 'あなたには以下の傾向がみられます',
-				fr : 'Vous montrez les tendances suivantes.',
-				de : 'Sie zeigen die folgenden Tendenzen.',
-				es : 'Muestras las siguientes tendencias.',
-				pt : 'Você demonstra as seguintes tendências.',
-				hi : 'आपमें निम्नलिखित प्रवृत्तियाँ दिखाई देती हैं।',
-				ko : '당신에게는 다음과 같은 성향이 나타납니다.',
-				zh : '你表现出以下倾向。'
-			})
-		}
-	],
-	[
-		60,
-		{
-			LLM : 'The result slightly shows ',
-			UI : i18n.text({
-				en : 'You slightly show the following tendencies.',
-				ja : 'あなたには以下の傾向が少しみられます',
-				fr : 'Vous montrez légèrement les tendances suivantes.',
-				de : 'Sie zeigen die folgenden Tendenzen leicht.',
-				es : 'Muestras ligeramente las siguientes tendencias.',
-				pt : 'Você demonstra levemente as seguintes tendências.',
-				hi : 'आपमें निम्नलिखित प्रवृत्तियाँ थोड़ी दिखाई देती हैं।',
-				ko : '당신에게는 다음과 같은 성향이 약간 나타납니다.',
-				zh : '你略微表现出以下倾向。'
+				en : 'A tendency observed in you',
+				ja : 'あなたにみられる傾向',
+				fr : 'Tendance observée chez vous',
+				de : 'Bei Ihnen erkennbare Tendenz',
+				es : 'Tendencia observada en usted',
+				pt : 'Tendência observada em você',
+				hi : 'आपमें देखी जाने वाली प्रवृत्ति',
+				ko : '당신에게 나타나는 성향',
+				zh : '在你身上表现出的倾向'
 			})
 		}
 	]
@@ -1442,6 +1442,31 @@ const QUESTIONS = [
 	}
 ];
 
+const HEADERS = [
+	i18n.text({
+		en : 'Practical advice for work and relationship building',
+		ja : '仕事や人間関係構築の実践的なアドバイス',
+		fr : 'Conseils pratiques pour le travail et la construction des relations',
+		de : 'Praktische Hinweise für Arbeit und Beziehungsaufbau',
+		es : 'Consejos prácticos para el trabajo y la construcción de relaciones',
+		pt : 'Conselhos práticos para o trabalho e construção de relacionamentos',
+		hi : 'काम और संबंध निर्माण के लिए व्यावहारिक सलाह',
+		ko : '업무 및 인간관계 형성을 위한 실질적인 조언',
+		zh : '关于工作和建立人际关系的实用建议'
+	}),
+	i18n.text({
+		en : 'Your unofficial user manual: how to work well with you',
+		ja : 'あなたの取り扱い説明書',
+		fr : 'Guide (non officiel) pour bien collaborer avec vous',
+		de : 'Inoffizieller Leitfaden für eine gute Zusammenarbeit mit Ihnen',
+		es : 'Guía no oficial para trabajar eficazmente contigo',
+		pt : 'Guia não oficial para trabalhar de forma eficaz com você',
+		hi : 'आपके साथ प्रभावी ढंग से काम करने की अनौपचारिक मार्गदर्शिका',
+		ko : '당신과 효과적으로 협업하기 위한 비공식 가이드',
+		zh : '与你高效合作的非官方指南'
+	})
+];
+
 const APIERROR = i18n.text({
 	en : '( Now LLM is not available )',
 	ja : '（現在 LLM は利用できません）',
@@ -1646,8 +1671,9 @@ function composeResult(in_callback) {
 	result.uiScores[tempArr[1].caps].user--;
 	tempArr.forEach((in_e, in_ix) => result.uiScores[in_e.caps].rank = in_ix + 1);
 	// 3. enriching according to LEVELS
+	const sortedScores = Object.entries(result.uiScores).sort((a, b) => a[1].rank - b[1].rank);
 	const summary = {};
-	for (const [feature, {full, user}] of Object.entries(result.uiScores)) {
+	for (const [feature, {full, user}] of sortedScores) {
 		const percent = (user / full) * 100;
 		for (const [threshold, {LLM, UI}] of LEVELS.entries()) {
 			if (percent < threshold) {
@@ -1965,23 +1991,47 @@ function createUiTrait(in_trait, in_resp) {
 		borderRadius: '5px',
 		padding : '1em'
 	});
-	const general = document.createElement('div');
-	general.textContent = in_resp;
-	general.style.marginBottom = '1em';
-	root.appendChild(general);
-	for (const [labelText, featureArr] of Object.entries(in_trait)) {
-		const section = document.createElement('section');
-		const header = document.createElement('div');
-		header.textContent = labelText;
-		section.appendChild(header);
-		const ul = document.createElement('ul');
-		section.appendChild(ul);
-		featureArr.forEach(in_e => {
-			const li = document.createElement('li');
-			li.textContent = in_e;
-			ul.appendChild(li);
-		});
-		root.appendChild(section);
+	const addTrait = in_section => {
+		let added = false;
+		for (const [labelText, featureArr] of Object.entries(in_trait)) {
+			added = true;
+			const header = document.createElement('div');
+			header.textContent = labelText;
+			in_section.appendChild(header);
+			const ul = document.createElement('ul');
+			in_section.appendChild(ul);
+			featureArr.forEach(in_e => {
+				const li = document.createElement('li');
+				li.textContent = in_e;
+				ul.appendChild(li);
+			});
+		}
+		if (added) {
+			in_section.style.marginBottom = '1em';
+		}
+	};
+	const addDesc = (in_section, in_header, in_desc) => {
+		const head = document.createElement('div');
+		head.textContent = in_header;
+		head.style.marginBottom = '1em';
+		in_section.appendChild(head);
+		const body = document.createElement('div');
+		body.textContent = in_desc;
+		in_section.appendChild(body);
+		in_section.style.marginBottom = '1em';
+	};
+	const secArr = [];
+	for (let i = 0; i < 3; i++) {
+		secArr[i] = document.createElement('section');
+		root.appendChild(secArr[i]);
+	}
+	if (in_resp) {
+		addDesc(secArr[0], HEADERS[0], in_resp.practicalAdvice)
+		addTrait(secArr[1]);
+		addDesc(secArr[2], HEADERS[1], in_resp.briefGuide)
+	} else {
+		addTrait(secArr[0]);
+		secArr[1].textContent = APIERROR;
 	}
 	return wrapping(root);
 }
@@ -2034,11 +2084,11 @@ async function llm(in_payload) {
 			body : JSON.stringify(in_payload)
 		});
 		if (!response.ok) {
-			return APIERROR;
+			return null;
 		}
-		return await response.text();
+		return await response.json();
 	} catch (err) {
-		return APIERROR;
+		return null;
 	}
 }
 
