@@ -2,12 +2,12 @@
 
 ####
 #### Template for prompts given to the LLM.
-#### The input is always in English, and the output language is specified by {{accept_language}}.
+#### The input is always in English, and the output language is specified by {{lang}}.
 ####
 
 PROMPT_TEMPLATE = """
 
-You are an expert in social psychology and profiling. Based on both the overall summary and the individual responses below, provide balanced and constructive feedback written in {{accept_language}}.
+You are an expert in social psychology and profiling. Based on both the overall summary and the individual responses below, provide balanced and constructive feedback for the respondent. Write the feedback in {{lang}}.
 
 [Overall Summary]
 
@@ -15,14 +15,27 @@ You are an expert in social psychology and profiling. Based on both the overall 
 
 [Responses]
 
-{{answers}}
+{{qa}}
 
-Please address the following two points clearly and concisely, within {{words}} words each:
+Please address the following two points clearly and concisely (approximately {{words}} words for each feedback):
 
-1. Practical advice on how you can leverage your strengths to succeed in new projects and professional environments (addressed directly to you).
-2. A brief "guide to working with you" for colleagues or friends, explaining how they can best understand and collaborate with you.
+1. Advice on how the respondent can leverage their strengths as inferred from the responses to build relationships and succeed at work.
+2. A brief guide for colleagues or friends on how to best understand and collaborate effectively with the respondent.
 
-Write each response as a cohesive paragraph in natural prose. Do not use bullet points or numbered lists. Do not simply restate or paraphrase the questionnaire items. Instead, infer likely behavioral tendencies and real-world implications based on the responses. Focus on practical and actionable insights rather than abstract generalities. If it strengthens persuasiveness and feels natural in {{accept_language}}, you may incorporate a culturally appropriate proverb or commonly used expression.
+Each response must be written as a cohesive paragraph in natural prose. Do not use bullet points or numbered lists. Do not simply restate or paraphrase the questionnaire items. Instead, infer likely behavioral tendencies and real-world implications from the responses. Focus on practical and actionable insights rather than abstract generalities.
+
+The first response must address the individual directly using "you". If appropriate in {{lang}}, you may briefly compare the respondent to a culturally familiar role or metaphor (e.g., a "steady anchor" or a "bridge-builder").
+
+The second response must be written for colleagues or friends and use them as the grammatical subject (e.g., "Colleagues should ..." rather than addressing the respondent as "you").
+
+Return the result strictly in valid JSON format with the following structure:
+
+{
+    "practicalAdvice": "...",
+    "briefGuide": "..."
+}
+
+Return ONLY a JSON object. Do not wrap it in markdown. Do not include code fences.
 
 """
 
@@ -204,14 +217,14 @@ def generate_fetch(in_req, in_rfc7231):
         return response_text(403, in_rfc7231, 'expired ( ' + token + ', ' + random + ' )')
     payload = input_to_dict(in_req)
     summary_text = '\n'.join(payload.get('summary', []))
-    answers_text = '\n'.join(
+    qa_text = '\n'.join(
         f"- {item.get('q', '')}: {item.get('a', '')}"
         for item in payload.get('qa', [])
     )
     prompt = PROMPT_TEMPLATE
     prompt = prompt.replace('{{summary}}', summary_text)
-    prompt = prompt.replace('{{answers}}', answers_text)
-    prompt = prompt.replace('{{accept_language}}', payload.get('lang', 'English'))
+    prompt = prompt.replace('{{qa}}', qa_text)
+    prompt = prompt.replace('{{lang}}', payload.get('lang', 'English'))
     prompt = prompt.replace('{{words}}', str(300))
     origin = in_req['headers'].get('origin')
     if not origin or origin not in CORS_ALLOW:
