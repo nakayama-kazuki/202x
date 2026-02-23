@@ -232,7 +232,7 @@ def generate_fetch(in_req, in_rfc7231):
     return {
         'status': 200,
         'headers': {
-            'Content-Type': 'text/plain',
+            'Content-Type': 'application/json',
             'Access-Control-Allow-Origin' : origin,
             'Access-Control-Allow-Credentials' : 'true',
             'Vary' : 'Origin',
