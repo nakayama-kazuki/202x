@@ -19,10 +19,10 @@ You are an expert in social psychology and profiling. Based on both the overall 
 
 Please address the following two points clearly and concisely, within {{words}} words each:
 
-1. Strengths and how to leverage them effectively in professional contexts
-2. Practical advice for navigating new projects and workplace relationships successfully
+1. Practical advice on how you can leverage your strengths to succeed in new projects and professional environments (addressed directly to you).
+2. A brief "guide to working with you" for colleagues or friends, explaining how they can best understand and collaborate with you.
 
-Write each response as a cohesive paragraph in natural prose. Do not use bullet points or numbered lists. Do not simply restate the summary or responses. Do not describe the traits by repeating or paraphrasing the questionnaire items. Instead, infer likely behavioral tendencies and real-world implications based on the responses. Focus on practical and actionable insights rather than abstract generalities.
+Write each response as a cohesive paragraph in natural prose. Do not use bullet points or numbered lists. Do not simply restate or paraphrase the questionnaire items. Instead, infer likely behavioral tendencies and real-world implications based on the responses. Focus on practical and actionable insights rather than abstract generalities. If it strengthens persuasiveness and feels natural in {{accept_language}}, you may incorporate a culturally appropriate proverb or commonly used expression.
 
 """
 
