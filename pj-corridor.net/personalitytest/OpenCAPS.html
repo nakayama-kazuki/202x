@@ -1442,6 +1442,18 @@ const QUESTIONS = [
 	}
 ];
 
+const APIERROR = i18n.text({
+	en : '( Now LLM is not available )',
+	ja : '（現在 LLM は利用できません）',
+	fr : '( Le LLM n’est pas disponible pour le moment )',
+	de : '( Das LLM ist derzeit nicht verfügbar )',
+	es : '( El LLM no está disponible en este momento )',
+	pt : '( O LLM não está disponível no momento )',
+	hi : '( इस समय LLM उपलब्ध नहीं है )',
+	ko : '( 현재 LLM을 사용할 수 없습니다 )',
+	zh : '（当前 LLM 不可用）'
+});
+
 function culcScore(in_sum, in_eval, in_answer_ix) {
 	/*
 		in_sum, in_eval :
@@ -2014,7 +2026,6 @@ const APIENTRY = (in_hostname=> {
 
 async function llm(in_payload) {
 	console.log(in_payload);
-	const errorText = '( Now LLM is not available )';
 	try {
 		const response = await fetch(APIENTRY + 'generate', {
 			method : 'POST',
@@ -2023,11 +2034,11 @@ async function llm(in_payload) {
 			body : JSON.stringify(in_payload)
 		});
 		if (!response.ok) {
-			return errorText;
+			return APIERROR;
 		}
 		return await response.text();
 	} catch (err) {
-		return errorText;
+		return APIERROR;
 	}
 }
 
