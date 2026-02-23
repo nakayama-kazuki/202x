@@ -6,6 +6,10 @@
 <script async src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7863584801355594' crossorigin='anonymous'></script>
 <style type='text/css'>
 
+.cCheck::before {
+	content : "\2705 ";
+}
+
 #iEvaluate {
 	position : relative;
 	overflow : hidden;
@@ -1995,9 +1999,10 @@ function createUiTrait(in_trait, in_resp) {
 		let added = false;
 		for (const [labelText, featureArr] of Object.entries(in_trait)) {
 			added = true;
-			const header = document.createElement('div');
-			header.textContent = labelText;
-			in_section.appendChild(header);
+			const head = document.createElement('div');
+			head.textContent = labelText;
+			head.className = 'cCheck';
+			in_section.appendChild(head);
 			const ul = document.createElement('ul');
 			in_section.appendChild(ul);
 			featureArr.forEach(in_e => {
@@ -2013,6 +2018,7 @@ function createUiTrait(in_trait, in_resp) {
 	const addDesc = (in_section, in_header, in_desc) => {
 		const head = document.createElement('div');
 		head.textContent = in_header;
+		head.className = 'cCheck';
 		head.style.marginBottom = '1em';
 		in_section.appendChild(head);
 		const body = document.createElement('div');

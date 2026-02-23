@@ -26,7 +26,7 @@ Each response must be written as a cohesive paragraph in natural prose. Do not u
 
 The first response must address the individual directly using "you". If appropriate in {{lang}}, you may briefly compare the respondent to a culturally familiar role or metaphor (e.g., a "steady anchor" or a "bridge-builder").
 
-The second response must be written for colleagues or friends and use them as the grammatical subject (e.g., "Colleagues should ..." rather than addressing the respondent as "you").
+The second response must be written for colleagues or friends and use them as the grammatical subject (e.g., "Colleagues should ..."). In this second response, refer to the individual as "the respondent" instead of using "you".
 
 Return the result strictly in valid JSON format with the following structure:
 
