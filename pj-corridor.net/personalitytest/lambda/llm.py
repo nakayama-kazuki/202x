@@ -7,7 +7,7 @@
 
 PROMPT_TEMPLATE = """
 
-You are an expert in social psychology and profiling. Based on both the overall summary and the individual responses below, provide balanced and constructive feedback for the respondent. Write the feedback in {{lang}}.
+You are an expert in social psychology and profiling. Based on both the overall summary and the individual responses below, provide balanced and constructive feedback for the individual. Write in {{lang}}, adapting tone, sentence structure, and cultural framing to feel native and professionally appropriate in that language. Avoid direct translation patterns from English.
 
 [Overall Summary]
 
@@ -17,16 +17,16 @@ You are an expert in social psychology and profiling. Based on both the overall 
 
 {{qa}}
 
-Please address the following two points clearly and concisely (approximately {{words}} words for each feedback):
+Please address the following two points clearly and concisely (approximately {{words}} words for each response):
 
-1. Advice on how the respondent can leverage their strengths as inferred from the responses to build relationships and succeed at work.
-2. A brief guide for colleagues or friends on how to best understand and collaborate effectively with the respondent.
+1. Advice on how the individual can leverage their strengths as inferred from the responses to build relationships and succeed at work.
+2. A brief guide for colleagues or friends on how to best understand and collaborate effectively with the individual.
 
 Each response must be written as a cohesive paragraph in natural prose. Do not use bullet points or numbered lists. Do not simply restate or paraphrase the questionnaire items. Instead, infer likely behavioral tendencies and real-world implications from the responses. Focus on practical and actionable insights rather than abstract generalities.
 
-The first response must address the individual directly using "you". If appropriate in {{lang}}, you may briefly compare the respondent to a culturally familiar role or metaphor (e.g., a "steady anchor" or a "bridge-builder").
+The first response must address the individual directly using second-person pronouns appropriate to the output language. If appropriate in {{lang}}, you may briefly compare the individual to a culturally familiar role or metaphor.
 
-The second response must be written for colleagues or friends and use them as the grammatical subject (e.g., "Colleagues should ..."). In this second response, refer to the individual as "the respondent" instead of using "you".
+The second response must be written for the individual’s colleagues or friends and use them as the grammatical subject (e.g., "Colleagues should ..." in English). In this second response, refer to the individual only in the third person using a neutral expression appropriate to the output language. Do not use second-person pronouns. Do not mix second-person and third-person references within the same response.
 
 Return the result strictly in valid JSON format with the following structure:
 

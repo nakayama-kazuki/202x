@@ -7,7 +7,8 @@
 <style type='text/css'>
 
 .cCheck::before {
-	content : "\2705 ";
+	content : "\2705";
+	margin-right : 0.3em;
 }
 
 #iEvaluate {
@@ -2073,7 +2074,7 @@ const APIENTRY = (in_hostname=> {
 	}
 })(location.hostname);
 
-(function issueChallenge(){
+(function issueChallenge() {
 	const img = document.createElement('img');
 	img.src = APIENTRY + 'challenge';
 	img.style.visibility = 'hidden';
@@ -2187,25 +2188,40 @@ const uiEvaluate = (() => {
 	};
 })();
 
-//const testmode = true;
-const testmode = false;
+async function sha256hex(in_text) {
+	const encoded = new TextEncoder().encode(in_text);
+	const buff = await crypto.subtle.digest('SHA-256', encoded);
+	return Array.from(new Uint8Array(buff)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
-if (testmode) {
-	uiEvaluate(false);
-	gState.finish();
-	setTimeout(async () => {
-		const result = composeResult(in_qIx => Math.floor(Math.random() * ANSWERS.length));
+async function queryHashIs(in_param, in_hash) {
+	const params = new URLSearchParams(location.search);
+	const raw = params.get(in_param);
+	if (!raw) {
+		return false;
+	}
+	const hashed = await sha256hex(raw);
+	return (hashed === in_hash);
+}
+
+const TESTHASH = '487b91042c7cf27a19e23ea8699f5f354b1a0c3af9e418138dc6150d830f970d';
+
+(async () => {
+	if (await queryHashIs('mode', TESTHASH)) {
+		uiEvaluate(false);
+		gState.finish();
+		const result = composeResult(() => Math.floor(Math.random() * ANSWERS.length));
 		const resp = await llm({
-			summary : result.llmSummary,
-			qa : result.llmQaArr,
-			lang : i18n.browserLanguage
+			summary: result.llmSummary,
+			qa: result.llmQaArr,
+			lang: i18n.browserLanguage
 		});
 		gState.result();
 		uiFeedback(result, resp);
-	}, 1000);
-} else {
-	uiEvaluate(true);
-}
+	} else {
+		uiEvaluate(true);
+	}
+})();
 
 </script>
 </body>
