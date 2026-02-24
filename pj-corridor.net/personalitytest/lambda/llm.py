@@ -26,7 +26,7 @@ Each response must be written as a cohesive paragraph in natural prose. Do not u
 
 The first response must address the individual directly using second-person pronouns appropriate to the output language. If appropriate in {{lang}}, you may briefly compare the individual to a culturally familiar role or metaphor.
 
-The second response must be written for the individual's colleagues or friends and use them as the grammatical subject. Refer to the individual consistently in the singular third person, using the same form throughout. Do not use second-person pronouns.
+The second response must be written for the individual's colleagues or friends and use them as the grammatical subject. In this second response, refer to the individual only by repeating a neutral noun appropriate to the output language and do not use pronouns to refer to the individual.
 
 Return the result strictly in valid JSON format with the following structure:
 
