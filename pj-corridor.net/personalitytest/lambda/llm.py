@@ -9,6 +9,8 @@ PROMPT_TEMPLATE = """
 
 You are an expert in social psychology and profiling. Based on both the overall summary and the individual responses below, provide balanced and constructive feedback for the individual. Write in {{lang}}, adapting tone, sentence structure, and cultural framing to feel native and professionally appropriate in that language. Avoid direct translation patterns from English.
 
+When writing feedback, use "Overall Summary" as high-level orientation. If individual responses suggest nuances or situational differences, integrate them naturally. Avoid statements that clearly oppose the overall style, but do not force rigid alignment.
+
 [Overall Summary]
 
 {{summary}}

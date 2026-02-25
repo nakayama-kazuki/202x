@@ -235,6 +235,7 @@ const FEATURES = Object.freeze({
 			zh : '作为战略核心和指挥者发挥关键作用。'
 		}),
 		MATRIX : {STATEMENT : 'S', SENTIMENT : 'W', POSITION : 'RT'},
+		SUMMARY : '( action-oriented, decisive, fast-paced )',
 		DETAILS : [
 			i18n.text({
 				en : 'Action-oriented, ambitious, and energetic.',
@@ -373,6 +374,7 @@ const FEATURES = Object.freeze({
 			zh : '负责分析与战略制定。'
 		}),
 		MATRIX : {STATEMENT : 'W', SENTIMENT : 'W', POSITION : 'RB'},
+		SUMMARY : '( logical, cautious, structured )',
 		DETAILS : [
 			i18n.text({
 				en : 'Cautious in action.',
@@ -511,6 +513,7 @@ const FEATURES = Object.freeze({
 			zh : '活跃并带动团队活动氛围。'
 		}),
 		MATRIX : {STATEMENT : 'S', SENTIMENT : 'S', POSITION : 'LT'},
+		SUMMARY : '( energetic, future-oriented, adaptable )',
 		DETAILS : [
 			i18n.text({
 				en : 'Full of ideas and highly creative.',
@@ -638,6 +641,7 @@ const FEATURES = Object.freeze({
 			zh : '在幕后提供坚实的支持。'
 		}),
 		MATRIX : {STATEMENT : 'W', SENTIMENT : 'S', POSITION : 'LB'},
+		SUMMARY : '( warm, relationship-oriented, cooperative )',
 		DETAILS : [
 			i18n.text({
 				en : 'Enjoys helping and supporting others.',
@@ -759,7 +763,7 @@ const LEVELS = new Map([
 	[
 		75,
 		{
-			LLM : 'The result very strongly shows ',
+			LLMPREFIX : 'In the same overall profile, the results suggest very strong tendencies toward ',
 			UI : i18n.text({
 				en : 'A very strong tendency observed in you',
 				ja : 'あなたにみられる非常に強い傾向',
@@ -776,7 +780,7 @@ const LEVELS = new Map([
 	[
 		65,
 		{
-			LLM : 'The result strongly shows ',
+			LLMPREFIX : 'In the same overall profile, the results suggest strong tendencies toward ',
 			UI : i18n.text({
 				en : 'A strong tendency observed in you',
 				ja : 'あなたにみられる強い傾向',
@@ -793,7 +797,7 @@ const LEVELS = new Map([
 	[
 		55,
 		{
-			LLM : 'The result shows ',
+			LLMPREFIX : 'In the same overall profile, the results indicate noticeable tendencies toward ',
 			UI : i18n.text({
 				en : 'A tendency observed in you',
 				ja : 'あなたにみられる傾向',
@@ -1680,15 +1684,15 @@ function composeResult(in_callback) {
 	const summary = {};
 	for (const [feature, {full, user}] of sortedScores) {
 		const percent = (user / full) * 100;
-		for (const [threshold, {LLM, UI}] of LEVELS.entries()) {
+		for (const [threshold, {LLMPREFIX, UI}] of LEVELS.entries()) {
 			if (percent < threshold) {
 				continue;
 			}
 			// summary ( for llmSummary )
-			if (!Object.hasOwn(summary, LLM)) {
-				summary[LLM] = [];
+			if (!Object.hasOwn(summary, LLMPREFIX)) {
+				summary[LLMPREFIX] = [];
 			}
-			summary[LLM].push(feature);
+			summary[LLMPREFIX].push(feature + FEATURES[feature].SUMMARY);
 			// uiTrait
 			if (!Object.hasOwn(result.uiTrait, UI)) {
 				result.uiTrait[UI] = [];
@@ -1701,8 +1705,8 @@ function composeResult(in_callback) {
 	}
 	const f = new Intl.ListFormat('en', {style : 'long', type : 'conjunction'});
 	if (Object.keys(summary).length > 0) {
-		for (const [key, value] of Object.entries(summary)) {
-			result.llmSummary.push(key + f.format(value) + '.');
+		for (const [llmPrefix, featureArr] of Object.entries(summary)) {
+			result.llmSummary.push(llmPrefix + f.format(featureArr) + '.');
 		}
 	} else {
 		result.llmSummary.push(LT50LLM + f.format(Object.values(TYPES)) + '.');
