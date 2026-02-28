@@ -232,6 +232,12 @@ def generate_fetch(in_req, in_rfc7231):
     origin = in_req['headers'].get('origin')
     if not origin or origin not in CORS_ALLOW:
         return response_text(403, in_rfc7231, 'origin is not allowed')
+    raw = invoke_model(prompt)
+    try:
+        parsed = json.loads(raw)
+        body = json.dumps(parsed, ensure_ascii=False)
+    except Exception:
+        return response_text(500, in_rfc7231, 'invalid llm json')
     return {
         'status': 200,
         'headers': {
@@ -241,7 +247,7 @@ def generate_fetch(in_req, in_rfc7231):
             'Vary' : 'Origin',
             'Date' : in_rfc7231
         },
-        'body': invoke_model(prompt)
+        'body': body
     }
 
 def preflight_generate(in_req, in_rfc7231):
