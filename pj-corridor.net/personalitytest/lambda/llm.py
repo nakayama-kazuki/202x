@@ -7,6 +7,43 @@
 
 PROMPT_TEMPLATE = """
 
+You are an expert in social psychology and profiling. "[Responses]" contains the questions and answers used to determine which of the four communication styles - "Controller", "Analyzer", "Promoter", or "Supporter" - the user (hereafter referred to as the "Respondent") most closely aligns with. "[Overall Summary]" is the diagnostic result mechanically calculated from "[Responses]".
+
+Based on both "[Responses]" and "[Overall Summary]" provide the following feedback:
+
+1. Advice for the Respondent on how to leverage their strengths to achieve success at work.
+2. Advice for the Respondent’s colleagues or friends on how to build constructive relationships with the Respondent.
+
+Please follow these rules:
+
+- Each response must be written in {{lang}}.
+- Each response should be approximately {{words}} words in length.
+- Each response must be written as a single cohesive paragraph in natural prose (do not use bullet points or numbered lists).
+- Do not directly quote or summarize the content of "[Responses]" or "[Overall Summary]." Instead, infer likely behavioral tendencies and strengths from them and provide advice based on those inferences.
+- Treat "[Overall Summary]" as the overarching tendency, and if "[Responses]" suggest nuances or exceptions, integrate them naturally.
+- Provide practical and concrete suggestions rather than abstract generalities.
+- The first response must address the Respondent directly, using second-person pronouns appropriate to {{lang}}.
+- The second response must be written for the Respondent’s colleagues or friends. The grammatical subject must be the colleagues or friends, and when referring to the Respondent, use a neutral noun appropriate to {{lang}} repeatedly instead of pronouns.
+
+- The output must be valid JSON in the following structure (do not wrap it in Markdown and do not use code fences):
+
+{
+    "practicalAdvice": "...",
+    "briefGuide": "..."
+}
+
+[Overall Summary]
+
+{{summary}}
+
+[Responses]
+
+{{qa}}
+
+"""
+
+PROMPT_TEMPLATE_OLD = """
+
 You are an expert in social psychology and profiling. Based on both the overall summary and the individual responses below, provide balanced and constructive feedback for the individual. Write in {{lang}}, adapting tone, sentence structure, and cultural framing to feel native and professionally appropriate in that language. Avoid direct translation patterns from English.
 
 When writing feedback, use "Overall Summary" as high-level orientation. If individual responses suggest nuances or situational differences, integrate them naturally. Avoid statements that clearly oppose the overall style, but do not force rigid alignment.
