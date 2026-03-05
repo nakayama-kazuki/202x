@@ -1,0 +1,104 @@
+@python -c "exec(''.join(open(r'%~f0', encoding='utf-8').readlines()[1:]))" %* & goto:eof
+
+# how to use :
+# 
+# 1. drag & drop "xxx.csv" on kintai.bat
+# 
+# 2. command
+# 2.1. $ kintai.bat xxx.csv
+# 2.2. $ kintai.bat xxx.csv > output.txt
+# 2.3. $ kintai.bat xxx.csv login-name
+# 2.4. $ kintai.bat xxx.csv login-name > output.txt
+# 
+# output format :
+# 
+# login-name, YYYY-MM-DD, hh:mm:ss, hh:mm:ss
+# - The first hh:mm:ss is the duration from the first login to the last logoff.
+# - The second hh:mm:ss is the actual working time, excluding intermediate logoff periods.
+# - The third hh:mm:ss is "the first one" - "the second one"
+
+import sys
+import csv
+import datetime
+import collections
+
+if len(sys.argv) < 2:
+    print('drag & drop input file')
+    sys.exit(1)
+
+target = sys.argv[2] if len(sys.argv) >= 3 else None
+
+ENCODING = 'cp932'
+
+COL_OPERATION = '操作種別'
+COL_OPERATION_S = '操作開始'
+COL_OPERATION_E = '操作終了'
+COL_LOGIN = 'ログイン名'
+COL_TIME = '日時'
+
+# Workday starts at this hour (e.g., 5 means 05:00 to next day 04:59:59)
+START_HOUR = 5
+
+# login -> list of (datetime, op)
+logs = collections.defaultdict(list)
+
+with open(sys.argv[1], encoding=ENCODING, newline='') as f:
+    reader = csv.DictReader(f)
+    for row in reader:
+        op = row[COL_OPERATION]
+        if op not in (COL_OPERATION_S, COL_OPERATION_E):
+            continue
+        login = row[COL_LOGIN]
+        if target and login != target:
+            continue
+        dt = datetime.datetime.strptime(row[COL_TIME], '%Y/%m/%d %H:%M:%S')
+        logs[login].append((dt, op))
+
+for login, entries in logs.items():
+    entries.sort()
+    days = collections.defaultdict(list)
+    for dt, op in entries:
+        if dt.hour < START_HOUR:
+            work_day = (dt - datetime.timedelta(days=1)).date()
+        else:
+            work_day = dt.date()
+        days[work_day].append((dt, op))
+
+    for day, day_logs in sorted(days.items()):
+        day_start = datetime.datetime.combine(
+            day, datetime.time(START_HOUR, 0, 0)
+        )
+        day_end = day_start + datetime.timedelta(days=1) - datetime.timedelta(seconds=1)
+        start_time = None
+        end_time = None
+        # each entry is a (start, end) pair
+        sessions = []
+        current_start = None
+        for dt, op in day_logs:
+            if dt < day_start or dt > day_end:
+                continue
+            if op == COL_OPERATION_S:
+                if start_time is None:
+                    start_time = dt
+                current_start = dt
+            elif op == COL_OPERATION_E:
+                end_time = dt
+                if current_start:
+                    sessions.append((current_start, dt))
+                    current_start = None
+        if start_time is None:
+            continue
+        if end_time is None:
+            end_time = day_end
+        total_span = end_time - start_time
+        actual = datetime.timedelta()
+        for s, e in sessions:
+            if e < s:
+                continue
+            actual += (e - s)
+        diff = total_span - actual
+        if diff < datetime.timedelta():
+            diff = datetime.timedelta()
+        print(f'{login}, {day}, {total_span}, {actual}, {diff}')
+
+input('enter')
