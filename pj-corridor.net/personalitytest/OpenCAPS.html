@@ -6,12 +6,17 @@
 <script async src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7863584801355594' crossorigin='anonymous'></script>
 <style type='text/css'>
 
-.cCheck::before {
-	content : "\2705";
-	margin-right : 0.3em;
+:root {
+	--card-around : 1em;
+	--text-spacing : 0.3em;
 }
 
-#iEvaluate {
+.cCheck::before {
+	content : "\2705";
+	margin-right : var(--text-spacing);
+}
+
+#iStage1st {
 	position : relative;
 	overflow : hidden;
 	background-color : #eeeeee;
@@ -30,13 +35,29 @@
 }
 
 #iTestList {
+	padding-top : var(--card-around);
 	transition : transform 0.40s cubic-bezier(.22,.61,.36,1);
 }
 
-label:has(input:enabled):hover {
+.cCard {
+	margin : var(--card-around);
+}
+
+.cControl label {
+	padding : 0.2em 0.5em;
+	border-radius : 99px;
+}
+
+.cControl label span {
+	margin-left : var(--text-spacing);
+}
+
+.cControl label:hover {
 	background-color : yellow;
-	border-radius : 5px;
-	padding-right : 0.5em;
+}
+
+.cDisabled .cControl {
+	pointer-events : none;
 }
 
 #iBack {
@@ -71,7 +92,7 @@ label:has(input:enabled):hover {
 </head>
 <body>
 
-<div id='iEvaluate' style='display : none;'>
+<div id='iStage1st' style='display : none;'>
 <div id='iInvoking'  style='display : none;'>
 <svg width='48' height='48' viewBox='0 0 50 50'>
 	<circle cx='25' cy='25' r='20' fill='none' stroke='#999999' stroke-width='4' stroke-linecap='round' stroke-dasharray='90 150'>
@@ -88,74 +109,21 @@ label:has(input:enabled):hover {
 	</svg>
 </button>
 </div>
-<div id='iFeedback' style='display : none;'>
+<div id='iStage2nd' style='display : none;'>
 </div>
 
-<script>
+<script type='module'>
 
-class i18n {
-	static #defaultCode = 'en';
-	static #supportCode = {
-		en : 'English',
-		ja : 'Japanese',
-		fr : 'French',
-		de : 'German',
-		es : 'Spanish',
-		pt : 'Portuguese',
-		hi : 'Hindi',
-		ko : 'Korean',
-		zh : 'Chinese'
-	};
-	static #browserCode = i18n.#defaultCode;
-	static {
-		const raw = navigator.languages?.[0] || navigator.language || i18n.#defaultCode;
-		const lang = raw.toLowerCase();
-		for (const code of Object.keys(i18n.#supportCode)) {
-			if (lang.startsWith(code)) {
-				i18n.#browserCode = code;
-				break;
-			}
-		}
-		//const testCode = 'en';
-		//i18n.#browserCode = testCode;
-	}
-	static get browserLanguage() {
-		return i18n.#supportCode[i18n.#browserCode];
-	}
-	static #fnv1a32(in_text) {
-		let h = 0x811c9dc5;
-		for (let i = 0; i < in_text.length; i++) {
-			h ^= in_text.charCodeAt(i);
-			h = Math.imul(h, 0x01000193);
-		}
-		return (h >>> 0).toString(16);
-	}
-	static #mapping = Object.create(null);
-	static text(in_hash, in_denyConflict = true) {
-		if (Object.hasOwn(in_hash, i18n.#defaultCode)) {
-			if (Object.hasOwn(in_hash, i18n.#browserCode)) {
-				const key = i18n.#fnv1a32(in_hash[i18n.#browserCode]);
-				if (Object.hasOwn(i18n.#mapping, key) && in_denyConflict) {
-					throw new Error(key + ' already exist');
-				}
-				i18n.#mapping[key] = in_hash[i18n.#defaultCode];
-				return in_hash[i18n.#browserCode];
-			} else {
-				return in_hash[i18n.#defaultCode];
-			}
-		} else {
-			throw new Error(i18n.#defaultCode + ' is required.');
-		}
-	}
-	static defaultLangText(in_text) {
-		const key = i18n.#fnv1a32(in_text);
-		if (Object.hasOwn(i18n.#mapping, key)) {
-			return i18n.#mapping[key];
-		} else {
-			return in_text;
-		}
-	}
-}
+import {
+	i18n,
+	cControl,
+	cCard,
+	cState,
+	cLLM,
+	queryHashIs
+} from './OpenAssessmentLib.js';
+
+const APP = 'opencaps';
 
 const TYPES = Object.freeze({
 	C : 'Controller',
@@ -759,9 +727,11 @@ const FEATURES = Object.freeze({
 
 const LT50LLM = 'The result does not show any tendencies of ';
 
+const THRESHOLDS = [75, 65, 55];
+
 const LEVELS = new Map([
 	[
-		75,
+		THRESHOLDS[0],
 		{
 			LLMPREFIX : 'In the same overall profile, the results suggest very strong tendencies toward ',
 			UI : i18n.text({
@@ -778,7 +748,7 @@ const LEVELS = new Map([
 		}
 	],
 	[
-		65,
+		THRESHOLDS[1],
 		{
 			LLMPREFIX : 'In the same overall profile, the results suggest strong tendencies toward ',
 			UI : i18n.text({
@@ -795,7 +765,7 @@ const LEVELS = new Map([
 		}
 	],
 	[
-		55,
+		THRESHOLDS[2],
 		{
 			LLMPREFIX : 'In the same overall profile, the results indicate noticeable tendencies toward ',
 			UI : i18n.text({
@@ -813,7 +783,7 @@ const LEVELS = new Map([
 	]
 ]);
 
-const ANSWERS = Object.freeze([
+const OPTIONS = Object.freeze([
 	i18n.text({
 		en : 'Applies',
 		ja : 'あてはまる',
@@ -1505,12 +1475,12 @@ function culcScore(in_sum, in_eval, in_answer_ix) {
 		}
 	*/
 	const culcrated = {...in_sum};
-	for (const caps of Object.values(TYPES)) {
-		if (!Object.hasOwn(in_eval, caps)) {
+	for (const openType of Object.values(TYPES)) {
+		if (!Object.hasOwn(in_eval, openType)) {
 			continue;
 		}
-		const maxIx = ANSWERS.length - 1;
-		const weight = in_eval[caps];
+		const maxIx = OPTIONS.length - 1;
+		const weight = in_eval[openType];
 		const incTotal = maxIx * Math.abs(weight);
 		let incScore;
 		if (weight > 0) {
@@ -1518,8 +1488,8 @@ function culcScore(in_sum, in_eval, in_answer_ix) {
 		} else {
 			incScore = in_answer_ix * Math.abs(weight);
 		}
-		const curr = culcrated[caps] ?? {full : 0, user : 0};
-		culcrated[caps] = {
+		const curr = culcrated[openType] ?? {full : 0, user : 0};
+		culcrated[openType] = {
 			full : curr.full + incTotal,
 			user : curr.user + incScore
 		};
@@ -1527,101 +1497,9 @@ function culcScore(in_sum, in_eval, in_answer_ix) {
 	return culcrated;
 }
 
-class cCard {
-	static margin = '1.5em';
-	static #E = in_name => document.createElement(in_name);
-	static #T = in_text => document.createTextNode(in_text);
-	#root = null;
-	constructor(in_qArr, in_qIx, in_aArr) {
-		/*
-			card
-			|
-			+- question
-			|
-			+- options
-				|
-				+- component
-				|	|
-				|	+- label
-				|		|
-				|		+- input
-				|		|
-				|		+- ANSWERS[0]
-				|
-				+- ...
-		*/
-		const prefix = crypto.randomUUID();
-		this.#root = cCard.#E('div');
-		this.#root.style.margin = cCard.margin;
-		const question = cCard.#E('div');
-		question.style.marginBottom = '0.5em';
-		question.className = 'cQuestion';
-		const count = '( ' + (in_qIx + 1) + ' / ' + in_qArr.length + ' )';
-		question.textContent = count + ' ' + in_qArr[in_qIx].Desc;
-		this.#root.appendChild(question);
-		const options = cCard.#E('div');
-		for (let aIx = 0; aIx < in_aArr.length; aIx++) {
-			const component = cCard.#E('div');
-			const label = cCard.#E('label');
-			label.htmlFor = prefix + '-' + aIx;
-			component.appendChild(label);
-			const input = cCard.#E('input');
-			input.id = label.htmlFor;
-			input.type = 'radio';
-			input.checked = false;
-			input.disabled = true;
-			input.name = prefix;
-			input.dataset.q = String(in_qIx);
-			input.dataset.a = String(aIx);
-			label.appendChild(input);
-			label.appendChild(cCard.#T(in_aArr[aIx]));
-			options.appendChild(component);
-		}
-		this.#root.appendChild(options);
-		this.#root.addEventListener('change', in_ev => {
-			if (in_ev.target instanceof HTMLInputElement) {
-				const ev = new CustomEvent('answered', {
-					bubbles : true,
-					detail : this.getResult()
-				});
-				this.#root.dispatchEvent(ev);
-			}
-		});
-	}
-	get element() {
-		return this.#root;
-	}
-	#forEachInput(in_callback) {
-		const nodeList = this.#root.querySelectorAll('input');
-		nodeList.forEach(in_node => in_callback(in_node));
-	}
-	disable() {
-		this.#forEachInput(in_input => {
-			in_input.disabled = true;
-		});	}
-	enable(in_duration = 0) {
-		setTimeout(() => {
-			this.#forEachInput(in_input => {
-				in_input.checked = false;
-				in_input.disabled = false;
-			});
-		}, in_duration);
-	}
-	getResult() {
-		const result = {qIx : -1, aIx : -1};
-		this.#forEachInput(in_input => {
-			result.qIx = Number(in_input.dataset.q);
-			if (in_input.checked) {
-				result.aIx = Number(in_input.dataset.a);
-			}
-		});
-		return result;
-	}
-}
-
 function scroll(in_card, in_list) {
-	const styles = getComputedStyle(in_card.element);
-	const offset = in_card.element.offsetTop - parseFloat(styles.marginTop);
+	const styles = getComputedStyle(in_card.domElem);
+	const offset = in_card.domElem.offsetTop - parseFloat(styles.marginTop);
 	in_list.style.transform = 'translateY(' + (offset * -1) + 'px)';
 }
 
@@ -1647,7 +1525,7 @@ function composeResult(in_callback) {
 		|
 		+- uiScores
 		|	|
-		|	+- 'Controller'
+		|	+- 'openType-1'
 		|	|	|
 		|	|	+- full : 99
 		|	|	|
@@ -1670,19 +1548,20 @@ function composeResult(in_callback) {
 		const aIx = (in_callback)(qIx);
 		result.llmQaArr.push({
 			q : i18n.defaultLangText(QUESTIONS[qIx].Desc),
-			a : i18n.defaultLangText(ANSWERS[aIx])
+			a : i18n.defaultLangText(OPTIONS[aIx])
 		});
 		result.uiScores = culcScore(result.uiScores, QUESTIONS[qIx].Eval, aIx);
 	}
 	// 2. ranking + adhoc trick for tie-break
-	const tempArr = Object.entries(result.uiScores).map(([in_caps, in_score]) => ({caps : in_caps, user : in_score.user}));
+	const tempArr = Object.entries(result.uiScores).map(([in_openType, in_score]) =>
+		({openType : in_openType, user : in_score.user, full : in_score.full}));
 	tempArr.sort((a, b) => b.user - a.user);
-	result.uiScores[tempArr[1].caps].user--;
-	tempArr.forEach((in_e, in_ix) => result.uiScores[in_e.caps].rank = in_ix + 1);
+	result.uiScores[tempArr[1].openType].user--;
+	tempArr[1].user--;
+	tempArr.forEach((in_e, in_ix) => result.uiScores[in_e.openType].rank = in_ix + 1);
 	// 3. enriching according to LEVELS
-	const sortedScores = Object.entries(result.uiScores).sort((a, b) => a[1].rank - b[1].rank);
 	const summary = {};
-	for (const [feature, {full, user}] of sortedScores) {
+	for (const {openType, full, user} of tempArr) {
 		const percent = (user / full) * 100;
 		for (const [threshold, {LLMPREFIX, UI}] of LEVELS.entries()) {
 			if (percent < threshold) {
@@ -1692,12 +1571,12 @@ function composeResult(in_callback) {
 			if (!Object.hasOwn(summary, LLMPREFIX)) {
 				summary[LLMPREFIX] = [];
 			}
-			summary[LLMPREFIX].push(feature + FEATURES[feature].SUMMARY);
+			summary[LLMPREFIX].push(openType + FEATURES[openType].SUMMARY);
 			// uiTrait
 			if (!Object.hasOwn(result.uiTrait, UI)) {
 				result.uiTrait[UI] = [];
 			}
-			FEATURES[feature].DETAILS.forEach(in_feature => {
+			FEATURES[openType].DETAILS.forEach(in_feature => {
 				result.uiTrait[UI].push(in_feature);
 			});
 			break;
@@ -1715,86 +1594,11 @@ function composeResult(in_callback) {
 	return result;
 }
 
-class cState {
-	static #UI = Object.freeze({
-		EVALUATE : Symbol(),
-		INVOKING : Symbol(),
-		FEEDBACK : Symbol()
-	});
-	static #TRANSITIONS = {
-		[cState.#UI.EVALUATE] : {
-			finish : cState.#UI.INVOKING,
-			cached : cState.#UI.FEEDBACK
-		},
-		[cState.#UI.INVOKING] : {
-			result : cState.#UI.FEEDBACK
-		},
-		[cState.#UI.FEEDBACK] : {
-			retry : cState.#UI.EVALUATE
-		}
-	};
-	#curr = null;
-	constructor() {
-		this.#curr = cState.#UI.EVALUATE;
-		this.#apply();
-	}
-	#transition(in_action) {
-		const next = cState.#TRANSITIONS[this.#curr]?.[in_action];
-		if (!next) {
-			throw new Error('invalid transition : ' + in_action);
-		}
-		this.#curr = next;
-	}
-	#apply() {
-		const css = in_sel => document.querySelector(in_sel).style;
-		const evaluate = css('#iEvaluate');
-		const feedback = css('#iFeedback');
-		const invoking = css('#iInvoking');
-		switch (this.#curr) {
-		case cState.#UI.EVALUATE:
-			evaluate.display = '';
-			evaluate.opacity = '';
-			evaluate.pointerEvents = '';
-			feedback.display = 'none';
-			invoking.display = 'none';
-			break;
-		case cState.#UI.INVOKING:
-			evaluate.display = '';
-			evaluate.opacity = '0.5';
-			evaluate.pointerEvents = 'none'; 
-			feedback.display = 'none';
-			invoking.display = '';
-			invoking.position = 'absolute';
-			invoking.left = '50%';
-			invoking.top = '50%';
-			invoking.transform = 'translate(-50%, -50%)';
-			break;
-		case cState.#UI.FEEDBACK:
-			evaluate.display = 'none';
-			feedback.display = '';
-			invoking.display = 'none';
-			break;
-		}
-	}
-	finish() {
-		this.#transition('finish');
-		this.#apply();
-	}
-	cached() {
-		this.#transition('cached');
-		this.#apply();
-	}
-	result() {
-		this.#transition('result');
-		this.#apply();
-	}
-	retry() {
-		this.#transition('retry');
-		this.#apply();
-	}
-}
-
-const gState = new cState();
+const gState = new cState({
+	STAGE1ST : document.querySelector('#iStage1st'),
+	INVOKING : document.querySelector('#iInvoking'),
+	STAGE2ND : document.querySelector('#iStage2nd')
+});
 
 function wrapping(in_child) {
 	const wrapper = document.createElement('div');
@@ -1829,21 +1633,21 @@ function createUiBar(in_score) {
 		borderRadius: '5px',
 		padding : '1em'
 	});
-	for (const caps of Object.values(TYPES)) {
+	for (const openType of Object.values(TYPES)) {
 		const tr = document.createElement('tr');
 		table.appendChild(tr);
-		const {user, full} = in_score[caps];
+		const {user, full} = in_score[openType];
 		const percent = Math.round((user / full) * 100);
 		// label
 		const labelCell = document.createElement('td');
 		tr.appendChild(labelCell);
 		labelCell.style.whiteSpace = 'nowrap';
-		labelCell.textContent = caps + ' ( ' + percent + '% )';
+		labelCell.textContent = openType + ' ( ' + percent + '% )';
 		// bar
 		const barCell = document.createElement('td');
 		tr.appendChild(barCell);
 		barCell.style.paddingLeft = '0.5em';
-		barCell.style.width = '100%'; 
+		barCell.style.width = '100%';
 		const bgBar = document.createElement('div');
 		barCell.appendChild(bgBar);
 		bgBar.style.background = '#dddddd';
@@ -1852,11 +1656,14 @@ function createUiBar(in_score) {
 		bgBar.style.overflow = 'hidden';
 		const fgBar = document.createElement('div');
 		bgBar.appendChild(fgBar);
+		fgBar.style.background = FEATURES[openType].COLOR;
 		fgBar.style.height = '1em';
-		fgBar.style.width = percent + '%';
-		fgBar.style.background = FEATURES[caps].COLOR;
 		fgBar.style.borderRadius = '0.5em';
-		fgBar.style.transition = 'width 2s ease';
+		fgBar.style.width = '0%';
+		setTimeout(() => {
+			fgBar.style.transition = 'width 0.8s ease';
+			fgBar.style.width = percent + '%';
+		}, 100);
 	}
 	return wrapping(table);
 }
@@ -1915,9 +1722,9 @@ function createUiMatrix(in_score) {
 		cells[pos] = cell;
 	}
 	// quadrants
-	for (const [caps, info] of Object.entries(FEATURES)) {
+	for (const [openType, info] of Object.entries(FEATURES)) {
 		const colors = {fgTitle : '#ccc', bgLabel : '#ccc', bgQuadrant : '#eee'};
-		if (in_score[caps].rank === 1) {
+		if (in_score[openType].rank === 1) {
 			colors.fgTitle = '#000';
 			colors.bgLabel = info.COLOR;
 			colors.bgQuadrant = info.COLOR + '33';
@@ -1934,7 +1741,7 @@ function createUiMatrix(in_score) {
 			borderRadius : '100px',
 			marginBottom : '0.7em'
 		});
-		capsLabel.textContent = caps;
+		capsLabel.textContent = openType;
 		const capsTitle = document.createElement('div');
 		Object.assign(capsTitle.style, {
 			color : colors.fgTitle,
@@ -2059,52 +1866,90 @@ function createUiRetry() {
 	});
 	button.textContent = 'Retry';
 	button.addEventListener('click', in_ev => {
-		gState.retry();
-		(uiEvaluate)(false)
+		gState.transition(cState.BACK);
+		(uiStage1st)(false)
 	});
 	return wrapping(button);
 }
 
-const APIENTRY = (in_hostname=> {
-	const mapping = {
-		'localhost' : 'https://localhost/python/',
-		'127.0.0.1' : 'https://127.0.0.1/python/',
-		'pj-corridor.net' : 'https://api.pj-corridor.net/personalitytest/lambda/'
-	};
-	if (Object.hasOwn(mapping, in_hostname)) {
-		return mapping[in_hostname];
-	} else {
-		throw new Error(in_hostname + ' is not supported.');
-	}
-})(location.hostname);
-
-(function issueChallenge() {
-	const img = document.createElement('img');
-	img.src = APIENTRY + 'challenge';
-	img.style.visibility = 'hidden';
-	document.body.appendChild(img);
-})();
-
-async function llm(in_payload) {
-	console.log(in_payload);
-	try {
-		const response = await fetch(APIENTRY + 'generate', {
-			method : 'POST',
-			headers : {'Content-Type' : 'application/json'},
-			credentials : 'include',
-			body : JSON.stringify(in_payload)
+function createUiCard(in_qIx) {
+	const controlArr = [];
+	/*
+		|
+		+- cCard[0]
+		|	|
+		|	+- description
+		|	|
+		|	+- cControl[0]
+		|	|	|
+		|	|	+- label
+		|	|		|
+		|	|		+- radio
+		|	|		|
+		|	|		+- span
+		|	|			|
+		|	|			+- text ( option[0] )
+		|	|
+		|	+- cControl[1]
+		|	|
+		|	+- ...
+		|
+		+- cCard[1]
+		|
+		+- ...
+	*/
+	OPTIONS.forEach(in_option => {
+		const control = new cControl({
+			optionArr : [in_option],
+			initIx : cControl.UNSELECTED,
+			render : (in_input, in_currIx) => {
+				const checked = (in_currIx === 0);
+				if (in_input.hasChildNodes()) {
+					in_input.querySelector('input').checked = checked;
+					return;
+				}
+				const label = document.createElement('label');
+				const input = document.createElement('input');
+				input.type = 'radio';
+				input.checked = checked;
+				label.appendChild(input);
+				const span = document.createElement('span');
+				span.textContent = in_option;
+				label.appendChild(span);
+				in_input.appendChild(label);
+			},
+			transition : (in_ev, in_input, in_currIx) => {
+				const radios = in_input.querySelectorAll('input');
+				return Array.from(radios).findIndex(in_radio => in_radio.checked);
+			}
 		});
-		if (!response.ok) {
-			return null;
+		controlArr.push(control);
+	});
+	const partsArr = [
+		'(',
+		String(in_qIx + 1),
+		'/',
+		String(QUESTIONS.length),
+		')',
+		QUESTIONS[in_qIx].Desc
+	]
+	return new cCard({
+		description : partsArr.join(' '),
+		controlArr : controlArr,
+		transition : (in_detail, in_controls) => {
+			// mutual exclusion as an alternative to htmlFor
+			in_controls.forEach(in_ctrl => {
+				if (in_ctrl !== in_detail.control) {
+					in_ctrl.setIx(cControl.UNSELECTED, true);
+				}
+			});
+			return true;
 		}
-		return await response.json();
-	} catch (err) {
-		return null;
-	}
+	});
 }
 
-function uiFeedback(in_result, in_resp) {
-	const view = document.querySelector('#iFeedback');
+function uiStage2nd(in_result, in_resp) {
+	const view = document.querySelector('#iStage2nd');
 	view.replaceChildren();
 	const bar = createUiBar(in_result.uiScores);
 	view.appendChild(bar);
@@ -2114,9 +1959,13 @@ function uiFeedback(in_result, in_resp) {
 	view.appendChild(trait);
 	const retry = createUiRetry();
 	view.appendChild(retry);
+	if (in_resp && !in_resp.meta.isBedrockResponse) {
+		// developer can use this for prompting
+		console.log(in_resp.meta.debugInformation);
+	}
 }
 
-const uiEvaluate = (() => {
+const uiStage1st = (() => {
 	const closure = {
 		list : document.querySelector('#iTestList'),
 		back : document.querySelector('#iBack'),
@@ -2124,106 +1973,97 @@ const uiEvaluate = (() => {
 		currIx : 0,
 		cardArr : []
 	};
-	closure.list.addEventListener('answered', in_ev => {
-		const result = in_ev.detail;
-		const prev = closure.cardArr[result.qIx];
+	closure.list.addEventListener('cardCompleted', in_ev => {
+		const prev = closure.cardArr[closure.currIx];
 		prev.disable();
-		if (result.qIx < QUESTIONS.length - 1) {
-			closure.currIx = result.qIx + 1;
+		if (closure.currIx < QUESTIONS.length - 1) {
+			closure.currIx++;
 			const curr = closure.cardArr[closure.currIx];
 			curr.enable();
 			const delayAfterAnswered = 200;
 			setTimeout(() => scroll(curr, closure.list), delayAfterAnswered);
 		} else {
-			gState.finish();
+			gState.transition(cState.DONE);
 			(async () => {
-				const result = composeResult(in_qIx => closure.cardArr[in_qIx].getResult().aIx);
-				const resp = await llm({
+				const result = composeResult(in_qIx => {
+					const ixArr = closure.cardArr[in_qIx].currIxArr;
+					return ixArr.findIndex(in_ix => in_ix === 0);
+				});
+				const resp = await cLLM.invoke({
+					app : APP,
 					summary : result.llmSummary,
 					qa : result.llmQaArr,
 					lang : i18n.browserLanguage
 				});
 				localStorage.setItem(closure.lsKey, JSON.stringify({result, resp}));
-				gState.result();
-				uiFeedback(result, resp);
+				gState.transition(cState.DONE);
+				uiStage2nd(result, resp);
 			})();
 		}
 	});
 	closure.back.addEventListener('click', in_ev => {
 		if (closure.currIx === 0) {
 			return;
+		} else {
+			const prev = closure.cardArr[closure.currIx];
+			prev.disable();
 		}
 		closure.currIx--;
 		const curr = closure.cardArr[closure.currIx];
 		scroll(curr, closure.list);
-		const delayAfterDisplayed = 100;
-		const style =getComputedStyle(closure.list);
-		let duration = parseFloat(style.transitionDuration);
-		if (!style.transitionDuration.endsWith('ms')) {
-			duration = duration * 1000;
-		}
-		curr.enable(duration + delayAfterDisplayed);
+		const handler = () => {
+			curr.enable();
+			curr.reset(cControl.UNSELECTED);
+			closure.list.removeEventListener('transitionend', handler);
+		};
+		closure.list.addEventListener('transitionend', handler);
 	});
 	return (in_useCache = true) => {
 		const stored = localStorage.getItem(closure.lsKey);
 		if (in_useCache && stored) {
 			const {result, resp} = JSON.parse(stored);
-			gState.cached();
-			uiFeedback(result, resp);
+			gState.transition(cState.SKIP);
+			uiStage2nd(result, resp);
 		} else {
 			// shuffle
 			QUESTIONS.sort(() => Math.random() - 0.5);
 			// reset contents
 			closure.cardArr = [];
 			closure.list.replaceChildren();
-			closure.list.style.paddingTop = cCard.margin;
-			closure.list.style.paddingBottom = cCard.margin;
+			// create contents
 			for (let qIx = 0; qIx < QUESTIONS.length; qIx++) {
-				const card = new cCard(QUESTIONS, qIx, ANSWERS);
-				closure.list.appendChild(card.element);
+				const card = createUiCard(qIx);
+				card.disable();
+				closure.list.appendChild(card.domElem);
 				closure.cardArr.push(card);
 			}
 			closure.currIx = 0;
 			closure.cardArr[0].enable();
 			scroll(closure.cardArr[0], closure.list);
-			const view = document.querySelector('#iEvaluate');
-			view.style.height = closure.cardArr[0].element.offsetHeight * 2.0 + 'px';
+			const view = document.querySelector('#iStage1st');
+			view.style.height = closure.cardArr[0].domElem.offsetHeight * 2.0 + 'px';
 		}
 	};
 })();
 
-async function sha256hex(in_text) {
-	const encoded = new TextEncoder().encode(in_text);
-	const buff = await crypto.subtle.digest('SHA-256', encoded);
-	return Array.from(new Uint8Array(buff)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-async function queryHashIs(in_param, in_hash) {
-	const params = new URLSearchParams(location.search);
-	const raw = params.get(in_param);
-	if (!raw) {
-		return false;
-	}
-	const hashed = await sha256hex(raw);
-	return (hashed === in_hash);
-}
-
 const TESTHASH = '487b91042c7cf27a19e23ea8699f5f354b1a0c3af9e418138dc6150d830f970d';
 
 (async () => {
+	cLLM.activate();
 	if (await queryHashIs('mode', TESTHASH)) {
-		uiEvaluate(false);
-		gState.finish();
-		const result = composeResult(() => Math.floor(Math.random() * ANSWERS.length));
-		const resp = await llm({
-			summary: result.llmSummary,
-			qa: result.llmQaArr,
-			lang: i18n.browserLanguage
+		uiStage1st(false);
+		gState.transition(cState.DONE);
+		const result = composeResult(() => Math.floor(Math.random() * OPTIONS.length));
+		const resp = await cLLM.invoke({
+			app : APP,
+			summary : result.llmSummary,
+			qa : result.llmQaArr,
+			lang : i18n.browserLanguage
 		});
-		gState.result();
-		uiFeedback(result, resp);
+		gState.transition(cState.DONE);
+		uiStage2nd(result, resp);
 	} else {
-		uiEvaluate(true);
+		uiStage1st(true);
 	}
 })();
 
