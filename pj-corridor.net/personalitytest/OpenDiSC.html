@@ -1925,15 +1925,15 @@ const HEADERS = [
 		zh : '关于工作和建立人际关系的实用建议'
 	}),
 	i18n.text({
-		en : 'Your unofficial user manual: how to work well with you (for colleagues and friends)',
-		ja : 'あなたの取り扱い説明書（同僚・友人向け）',
-		fr : 'Guide (non officiel) pour bien collaborer avec vous (à l’attention des collègues et amis)',
-		de : 'Inoffizieller Leitfaden für eine gute Zusammenarbeit mit Ihnen (für Kolleginnen, Kollegen und Freunde)',
-		es : 'Guía no oficial para trabajar eficazmente contigo (para colegas y amigos)',
-		pt : 'Guia não oficial para trabalhar de forma eficaz com você (para colegas e amigos)',
-		hi : 'आपके साथ प्रभावी ढंग से काम करने की अनौपचारिक मार्गदर्शिका (सहकर्मियों और मित्रों के लिए)',
-		ko : '당신과 효과적으로 협업하기 위한 비공식 가이드 (동료 및 친구용)',
-		zh : '与你高效合作的非官方指南（面向同事和朋友）'
+		en : 'DiSC styles that work well with you (supervisors and subordinates)',
+		ja : 'あなたと相性の良い DiSC タイプの上司や部下',
+		fr : 'Styles DiSC qui fonctionnent bien avec vous (supérieurs et subordonnés)',
+		de : 'DiSC-Typen, die gut mit Ihnen zusammenarbeiten (Vorgesetzte und Mitarbeitende)',
+		es : 'Estilos DiSC que funcionan bien contigo (supervisores y subordinados)',
+		pt : 'Estilos DiSC que funcionam bem com você (supervisores e subordinados)',
+		hi : 'वे DiSC शैलियाँ जो आपके साथ अच्छी तरह काम करती हैं (वरिष्ठ और अधीनस्थ)',
+		ko : '당신과 잘 맞는 DiSC 유형 (상사와 부하)',
+		zh : '与你合作良好的 DiSC 类型（上司与下属）'
 	})
 ];
 
@@ -2345,7 +2345,7 @@ function createUiTrait(in_trait, in_resp) {
 	if (in_resp) {
 		addDesc(secArr[0], HEADERS[0], in_resp.adviceForRespondent)
 		addTrait(secArr[1]);
-		addDesc(secArr[2], HEADERS[1], in_resp.adviceForColleagues)
+		addDesc(secArr[2], HEADERS[1], in_resp.compatibleDiscTypes)
 	} else {
 		addTrait(secArr[0]);
 		secArr[1].textContent = APIERROR;
