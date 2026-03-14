@@ -2365,6 +2365,7 @@ function createUiRetry() {
 	});
 	button.textContent = 'Retry';
 	button.addEventListener('click', in_ev => {
+		cLLM.refreshChallenge();
 		gState.transition(cState.BACK);
 		(uiStage1st)(false)
 	});
@@ -2568,7 +2569,7 @@ const uiStage1st = (() => {
 const TESTHASH = '487b91042c7cf27a19e23ea8699f5f354b1a0c3af9e418138dc6150d830f970d';
 
 (async () => {
-	cLLM.activate();
+	cLLM.refreshChallenge();
 	const maxLen = QUESTIONS.reduce((in_max, in_opt) => {
 		const lengthArr = Object.values(in_opt).map(in_text => in_text.length);
 		return Math.max(in_max, ...lengthArr);

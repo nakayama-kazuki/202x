@@ -375,12 +375,12 @@ export class cLLM {
 		'pj-corridor.net' : 'https://api.pj-corridor.net/personalitytest/lambda/'
 	};
 	static #entry = '';
-	static activate() {
+	static refreshChallenge() {
 		if (Object.hasOwn(cLLM.#mapping, location.hostname)) {
 			cLLM.#entry = cLLM.#mapping[location.hostname];
 			// set-cookie
 			const img = new Image();
-			img.src = cLLM.#entry + 'challenge';
+			img.src = cLLM.#entry + 'challenge?t=' + Date.now();
 		} else {
 			throw new Error('hostname is not supported');
 		}
