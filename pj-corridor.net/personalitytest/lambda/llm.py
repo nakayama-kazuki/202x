@@ -5,9 +5,9 @@
 #### The input is always in English, and the output language is specified by {{lang}}.
 ####
 
-PROMPT_TEMPLATE = """
+PROMPT_TEMPLATE_CAPS = """
 
-You are an expert in social psychology and profiling. "[Responses]" contains the questions and answers used to determine which of the four communication styles - "Controller", "Analyzer", "Promoter", or "Supporter" - the user (hereafter referred to as the "Respondent") most closely aligns with. "[Overall Summary]" is the diagnostic result mechanically calculated from "[Responses]".
+You are an expert in social psychology and behavioral profiling. "[Responses]" contains the questions and answers used to determine which of the four communication styles - "Controller", "Analyzer", "Promoter", or "Supporter" - the user (hereafter referred to as the "Respondent") most closely aligns with. "[Overall Summary]" is the diagnostic result mechanically calculated from "[Responses]".
 
 Based on both "[Responses]" and "[Overall Summary]", provide the following feedback:
 
@@ -19,17 +19,17 @@ Please follow these rules:
 - Each response must be written in {{lang}}.
 - Each response should be approximately {{words}} words in length.
 - Each response must be written as a single cohesive paragraph in natural prose (do not use bullet points or numbered lists).
-- Do not directly quote or summarize the content of "[Responses]" or "[Overall Summary]." Instead, infer likely behavioral tendencies and strengths from them and provide advice based on those inferences.
-- Treat "[Overall Summary]" as the overarching tendency, and if "[Responses]" suggest nuances or exceptions, integrate them naturally.
+- Do not directly quote or summarize the content of "[Responses]" or "[Overall Summary]". Instead, infer behavioral patterns and tendencies from them.
+- Treat "[Overall Summary]" as the dominant tendency, while using "[Responses]" to infer nuance or secondary traits.
 - Provide practical and concrete suggestions rather than abstract generalities.
 - The first response must address the Respondent directly, using second-person pronouns appropriate to {{lang}}.
-- The second response must be written for the Respondent’s colleagues or friends. The grammatical subject must be the colleagues or friends, and when referring to the Respondent, use a neutral noun appropriate to {{lang}} repeatedly instead of pronouns.
+- The second response must be written for the Respondent’s colleagues or friends. The grammatical subject must be the colleagues or friends, and when referring to the Respondent, use a neutral noun which means "Respondent" in {{lang}}.
 
-- The output must be valid JSON in the following structure (do not wrap it in Markdown and do not use code fences):
+The output must be valid JSON in the following structure (do not wrap it in Markdown and do not use code fences):
 
 {
-    "adviceForRespondent": "...",
-    "adviceForColleagues": "..."
+    "adviceForRespondent" : "...",
+    "adviceForColleagues" : "..."
 }
 
 [Overall Summary]
@@ -41,6 +41,48 @@ Please follow these rules:
 {{qa}}
 
 """
+
+PROMPT_TEMPLATE_DISC = """
+
+You are an expert in social psychology and behavioral profiling. "[Responses]" contains the list of traits the Respondent selected during a DiSC ("Drive", "Influence", "Steadiness", or "Compliance") style assessment. "[Overall Summary]" is the diagnostic result mechanically calculated from those responses.
+
+Based on both "[Responses]" and "[Overall Summary]", provide the following feedback:
+
+1. Advice for the Respondent on how to leverage their natural behavioral tendencies to succeed at work.
+2. Advice for the Respondent's colleagues or friends on how to build constructive relationships with the Respondent.
+
+Please follow these rules:
+
+- Each response must be written in {{lang}}.
+- Each response should be approximately {{words}} words in length.
+- Each response must be written as a single cohesive paragraph in natural prose (do not use bullet points or numbered lists).
+- Do not directly quote or summarize the content of "[Responses]" or "[Overall Summary]". Instead, infer behavioral patterns and tendencies from them.
+- Treat "[Overall Summary]" as the dominant tendency, while using "[Responses]" to infer nuance or secondary traits.
+- Provide practical and concrete suggestions rather than abstract generalities.
+- The first response must address the Respondent directly, using second-person pronouns appropriate to {{lang}}.
+- The second response must be written for colleagues or friends. The grammatical subject must be the colleagues or friends, and when referring to the Respondent, use a neutral noun appropriate to {{lang}} repeatedly instead of pronouns.
+
+The output must be valid JSON in the following structure (do not wrap it in Markdown and do not use code fences):
+
+{
+    "adviceForRespondent" : "...",
+    "adviceForColleagues" : "..."
+}
+
+[Overall Summary]
+
+{{summary}}
+
+[Responses]
+
+{{qa}}
+
+"""
+
+PROMPT_TEMPLATES = {
+    'opencaps' : PROMPT_TEMPLATE_CAPS,
+    'opendisc' : PROMPT_TEMPLATE_DISC
+}
 
 ####
 #### HTML for testing queries to the entry points {{challenge_pixel_url}} and {{generate_fetch_url}} in the test web environment.
@@ -175,7 +217,14 @@ def input_to_dict(in_req) -> dict:
 
 def invoke_model(in_prompt: str) -> str:
     if 'AWS_LAMBDA_FUNCTION_NAME' not in os.environ:
-        return in_prompt
+        return json.dumps({
+            "adviceForRespondent" : "",
+            "adviceForColleagues" : "",
+            "meta": {
+                "isBedrockResponse" : False,
+                "debugInformation" : in_prompt
+            }
+        }, ensure_ascii=False)
     import boto3
     # client = boto3.client('bedrock-runtime', region_name='ap-northeast-1')
     client = boto3.client('bedrock-runtime', region_name='us-east-1')
@@ -194,7 +243,16 @@ def invoke_model(in_prompt: str) -> str:
             'stopSequences' : []
         }
     )
-    return response['output']['message']['content'][0]['text']
+    raw = response['output']['message']['content'][0]['text']
+    try:
+        parsed = json.loads(raw)
+        parsed["meta"] = {
+            "isBedrockResponse" : True,
+            "debugInformation" : None
+        }
+        return json.dumps(parsed, ensure_ascii=False)
+    except Exception:
+        return None
 
 def generate_fetch(in_req, in_rfc7231):
     # cookies = parse_cookie(in_req['headers'].get('cookie', ''))
@@ -224,31 +282,31 @@ def generate_fetch(in_req, in_rfc7231):
         f"- {item.get('q', '')}: {item.get('a', '')}"
         for item in payload.get('qa', [])
     )
-    prompt = PROMPT_TEMPLATE
+    origin = in_req['headers'].get('origin')
+    if not origin or origin not in CORS_ALLOW:
+        return response_text(403, in_rfc7231, 'origin is not allowed')
+    prompt = PROMPT_TEMPLATES.get(payload.get('app'))
+    if not prompt:
+        return response_text(400, in_rfc7231, 'invalid app')
     prompt = prompt.replace('{{summary}}', summary_text)
     prompt = prompt.replace('{{qa}}', qa_text)
     prompt = prompt.replace('{{lang}}', payload.get('lang', 'English'))
     prompt = prompt.replace('{{words}}', str(300))
-    origin = in_req['headers'].get('origin')
-    if not origin or origin not in CORS_ALLOW:
-        return response_text(403, in_rfc7231, 'origin is not allowed')
-    raw = invoke_model(prompt)
-    try:
-        parsed = json.loads(raw)
-        body = json.dumps(parsed, ensure_ascii=False)
-    except Exception:
+    body = invoke_model(prompt)
+    if body is not None:
+        return {
+            'status': 200,
+            'headers': {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin' : origin,
+                'Access-Control-Allow-Credentials' : 'true',
+                'Vary' : 'Origin',
+                'Date' : in_rfc7231
+            },
+            'body' : body
+        }
+    else:
         return response_text(500, in_rfc7231, 'invalid llm json')
-    return {
-        'status': 200,
-        'headers': {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin' : origin,
-            'Access-Control-Allow-Credentials' : 'true',
-            'Vary' : 'Origin',
-            'Date' : in_rfc7231
-        },
-        'body': body
-    }
 
 def preflight_generate(in_req, in_rfc7231):
     origin = in_req['headers'].get('origin')
