@@ -23,7 +23,7 @@ Please follow these rules:
 - Treat "[Overall Summary]" as the dominant tendency, while using "[Responses]" to infer nuance or secondary traits.
 - Provide practical and concrete suggestions rather than abstract generalities.
 - The first response must address the Respondent directly, using second-person pronouns appropriate to {{lang}}.
-- The second response must be written for the Respondent’s colleagues or friends. The grammatical subject must be the colleagues or friends, and when referring to the Respondent, use a neutral noun which means "Respondent" in {{lang}}.
+- The second response must be written for the Respondent's colleagues or friends. The grammatical subject must be the colleagues or friends, and when referring to the Respondent, consistently use the noun "Respondent".
 
 The output must be valid JSON in the following structure (do not wrap it in Markdown and do not use code fences):
 
@@ -49,7 +49,7 @@ You are an expert in social psychology and behavioral profiling. "[Responses]" c
 Based on both "[Responses]" and "[Overall Summary]", provide the following feedback:
 
 1. Advice for the Respondent on how to leverage their natural behavioral tendencies to succeed at work.
-2. Advice for the Respondent's colleagues or friends on how to build constructive relationships with the Respondent.
+2. Describe the types of supervisors and subordinates who tend to work well with the Respondent, and explain why their working styles are compatible.
 
 Please follow these rules:
 
@@ -60,13 +60,13 @@ Please follow these rules:
 - Treat "[Overall Summary]" as the dominant tendency, while using "[Responses]" to infer nuance or secondary traits.
 - Provide practical and concrete suggestions rather than abstract generalities.
 - The first response must address the Respondent directly, using second-person pronouns appropriate to {{lang}}.
-- The second response must be written for colleagues or friends. The grammatical subject must be the colleagues or friends, and when referring to the Respondent, use a neutral noun appropriate to {{lang}} repeatedly instead of pronouns.
+- The second response must describe compatible supervisors and subordinates using the DiSC types (Drive, Influence, Steadiness, Compliance).
 
 The output must be valid JSON in the following structure (do not wrap it in Markdown and do not use code fences):
 
 {
     "adviceForRespondent" : "...",
-    "adviceForColleagues" : "..."
+    "compatibleDiscTypes" : "..."
 }
 
 [Overall Summary]
