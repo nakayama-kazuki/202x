@@ -38,8 +38,8 @@ export class i18n {
 				break;
 			}
 		}
-		//const testCode = 'en';
-		//i18n.#browserCode = testCode;
+		// const testCode = 'en';
+		// i18n.#browserCode = testCode;
 	}
 	static get browserLanguage() {
 		return i18n.#supportCode[i18n.#browserCode];
@@ -57,8 +57,10 @@ export class i18n {
 		if (Object.hasOwn(in_hash, i18n.#defaultCode)) {
 			if (Object.hasOwn(in_hash, i18n.#browserCode)) {
 				const key = i18n.#fnv1a32(in_hash[i18n.#browserCode]);
-				if (Object.hasOwn(i18n.#mapping, key) && in_denyConflict) {
-					throw new Error(key + ' already exist');
+				if (Object.hasOwn(i18n.#mapping, key)) {
+					if ((i18n.#mapping[key] !== in_hash[i18n.#defaultCode]) && in_denyConflict) {
+						throw new Error(key + ' already exist');
+					}
 				}
 				i18n.#mapping[key] = in_hash[i18n.#defaultCode];
 				return in_hash[i18n.#browserCode];
