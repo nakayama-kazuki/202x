@@ -49,7 +49,7 @@ You are an expert in social psychology and behavioral profiling. "[Responses]" c
 Based on both "[Responses]" and "[Overall Summary]", provide the following feedback:
 
 1. Advice for the Respondent on how to leverage their natural behavioral tendencies to succeed at work.
-2. Describe the types of supervisors and subordinates who tend to work well with the Respondent, and explain why their working styles are compatible.
+2. Assume the Respondent becomes a CEO. Describe which DiSC personality types would make the most effective "right-hand" partner for the Respondent, and explain why their behavioral tendencies would complement the Respondent's leadership style.
 
 Please follow these rules:
 
@@ -60,13 +60,13 @@ Please follow these rules:
 - Treat "[Overall Summary]" as the dominant tendency, while using "[Responses]" to infer nuance or secondary traits.
 - Provide practical and concrete suggestions rather than abstract generalities.
 - The first response must address the Respondent directly, using second-person pronouns appropriate to {{lang}}.
-- The second response must describe compatible supervisors and subordinates using the DiSC types (Drive, Influence, Steadiness, Compliance).
+- The second response must describe the most suitable "right-hand" partner for the Respondent using the DiSC types (Drive, Influence, Steadiness, Compliance).
 
 The output must be valid JSON in the following structure (do not wrap it in Markdown and do not use code fences):
 
 {
     "adviceForRespondent" : "...",
-    "compatibleDiscTypes" : "..."
+    "idealRightHandType" : "..."
 }
 
 [Overall Summary]
