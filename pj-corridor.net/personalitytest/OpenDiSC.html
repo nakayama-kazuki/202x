@@ -46,7 +46,7 @@
 
 .cControl {
 	position : relative;
-	height : 1.5em;
+	min-height : 1.5em;
 }
 
 .cControl .cLCaption {
@@ -56,13 +56,16 @@
 }
 
 .cControl .cControlInput {
-	position: absolute;
-	left : calc(var(--question-width) + 1.5em);
+	margin-left : calc(var(--question-width) + 1em);
+	display : flex;
+	flex-wrap : wrap;
 }
 
 .cControl label {
-	padding : 0.2em 0.5em;
+	padding : 0em 0.5em;
 	border-radius : 99px;
+	display : inline-flex;
+	white-space : nowrap;
 }
 
 .cControl label span {
