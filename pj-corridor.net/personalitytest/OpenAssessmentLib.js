@@ -387,24 +387,36 @@ export class cLLM {
 			throw new Error('hostname is not supported');
 		}
 	}
-	static async invoke(in_payload) {
+	static async invoke(in_payload, in_retry = 3) {
 		//console.log(in_payload);
 		if (!cLLM.#entry) {
 			throw new Error('not activated');
 		}
-		try {
-			const response = await fetch(cLLM.#entry + 'generate', {
-				method : 'POST',
-				headers : {'Content-Type' : 'application/json'},
-				credentials : 'include',
-				body : JSON.stringify(in_payload)
-			});
-			if (!response.ok) {
-				return null;
+		for (let trial = 0; trial < in_retry; trial++) {
+			const ctrl = new AbortController();
+			const waitTime = (5 + trial) * 1000
+			const timer = setTimeout(() => ctrl.abort(), waitTime);
+			try {
+				const response = await fetch(cLLM.#entry + 'generate', {
+					method : 'POST',
+					headers : {'Content-Type' : 'application/json'},
+					credentials : 'include',
+					body : JSON.stringify(in_payload),
+					signal : ctrl.signal
+				});
+				clearTimeout(timer);
+				if (!response.ok) {
+					return null;
+				}
+				return await response.json();
+			} catch (err) {
+				clearTimeout(timer);
+				if (trial === in_retry - 1) {
+					return null;
+				}
+				console.log('timeout : ' + trial);
 			}
-			return await response.json();
-		} catch (err) {
-			return null;
 		}
+		return null;
 	}
 }

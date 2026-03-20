@@ -157,6 +157,57 @@ const ORANGE = '#FFAA00';
 const GREEN = '#118811';
 const SKYBLUE = '#5588FF';
 
+const MATRIX = Object.freeze({
+	EXTRAVERSION : {
+		HIGH : i18n.text({
+			en : 'Outgoing',
+			ja : '外向的',
+			fr : 'Extraverti',
+			de : 'Extravertiert',
+			es : 'Extrovertido',
+			pt : 'Extrovertido',
+			hi : 'बहिर्मुखी',
+			ko : '외향적',
+			zh : '外向'
+		}),
+		LOW : i18n.text({
+			en : 'Reserved',
+			ja : '内向的',
+			fr : 'Réservé',
+			de : 'Zurückhaltend',
+			es : 'Reservado',
+			pt : 'Reservado',
+			hi : 'अंतर्मुखी',
+			ko : '내향적',
+			zh : '内向'
+		})
+	},
+	FOCUS : {
+		TASK : i18n.text({
+			en : 'Task-oriented',
+			ja : '仕事志向',
+			fr : 'Orienté tâches',
+			de : 'Sachorientiert',
+			es : 'Orientado a tareas',
+			pt : 'Orientado a tarefas',
+			hi : 'कार्य-केंद्रित',
+			ko : '업무 중심',
+			zh : '任务导向'
+		}),
+		PEOPLE : i18n.text({
+			en : 'People-oriented',
+			ja : '人間関係志向',
+			fr : 'Orienté personnes',
+			de : 'Menschenorientiert',
+			es : 'Orientado a personas',
+			pt : 'Orientado a pessoas',
+			hi : 'लोगों पर केंद्रित',
+			ko : '사람 중심',
+			zh : '人际导向'
+		})
+	}
+});
+
 const FEATURES = Object.freeze({
 	[TYPES.D] : {
 		COLOR : RED,
@@ -182,6 +233,11 @@ const FEATURES = Object.freeze({
 			ko : '주도권 상실',
 			zh : '主导权的丧失'
 		}),
+		MATRIX : {
+			EXTRAVERSION : 'HIGH',
+			FOCUS : 'TASK',
+			POSITION : 'LT'
+		},
 		DETAILS : [
 			i18n.text({
 				en : 'Speaks opinions clearly. Takes control.',
@@ -319,6 +375,11 @@ const FEATURES = Object.freeze({
 			ko : '거절당하는 것',
 			zh : '被拒绝'
 		}),
+		MATRIX : {
+			EXTRAVERSION : 'HIGH',
+			FOCUS : 'PEOPLE',
+			POSITION : 'RT'
+		},
 		DETAILS : [
 			i18n.text({
 				en : 'Strives to build an environment that influences and inspires others.',
@@ -456,6 +517,11 @@ const FEATURES = Object.freeze({
 			ko : '급격한 변화',
 			zh : '突然的变化'
 		}),
+		MATRIX : {
+			EXTRAVERSION : 'LOW',
+			FOCUS : 'PEOPLE',
+			POSITION : 'RB'
+		},
 		DETAILS : [
 			i18n.text({
 				en : 'Strives to cooperate with others to accomplish tasks.',
@@ -593,6 +659,11 @@ const FEATURES = Object.freeze({
 			ko : '업무에 대한 비판',
 			zh : '对工作的批评'
 		}),
+		MATRIX : {
+			EXTRAVERSION : 'LOW',
+			FOCUS : 'TASK',
+			POSITION : 'LB'
+		},
 		DETAILS : [
 			i18n.text({
 				en : 'Strives to work meticulously within the current framework to maintain quality and accuracy.',
@@ -1928,15 +1999,15 @@ const HEADERS = [
 		zh : '关于工作和建立人际关系的实用建议'
 	}),
 	i18n.text({
-		en : 'Your ideal right-hand partner if you were a CEO',
-		ja : 'あなたが CEO になったときの理想の右腕の人材',
-		fr : 'La personne idéale pour être votre bras droit si vous étiez PDG',
-		de : 'Die ideale rechte Hand für Sie, wenn Sie CEO wären',
-		es : 'La persona ideal para ser tu mano derecha si fueras CEO',
-		pt : 'A pessoa ideal para ser seu braço direito se você fosse CEO',
-		hi : 'यदि आप CEO हों तो आपका आदर्श दाहिना हाथ कौन होगा',
-		ko : '당신이 CEO라면 이상적인 오른팔 인재',
-		zh : '如果你成为 CEO，你理想的得力助手人选'
+		en : 'DiSC styles that work well with you (supervisors and subordinates)',
+		ja : 'あなたと相性の良い DiSC タイプの上司や部下',
+		fr : 'Styles DiSC qui fonctionnent bien avec vous (supérieurs et subordonnés)',
+		de : 'DiSC-Typen, die gut mit Ihnen zusammenarbeiten (Vorgesetzte und Mitarbeitende)',
+		es : 'Estilos DiSC que funcionan bien contigo (supervisores y subordinados)',
+		pt : 'Estilos DiSC que funcionam bem com você (supervisores e subordinados)',
+		hi : 'वे DiSC शैलियाँ जो आपके साथ अच्छी तरह काम करती हैं (वरिष्ठ और अधीनस्थ)',
+		ko : '당신과 잘 맞는 DiSC 유형 (상사와 부하)',
+		zh : '与你合作良好的 DiSC 类型（上司与下属）'
 	})
 ];
 
@@ -1950,6 +2021,18 @@ const APIERROR = i18n.text({
 	hi : '( इस समय LLM उपलब्ध नहीं है )',
 	ko : '( 현재 LLM을 사용할 수 없습니다 )',
 	zh : '（当前 LLM 不可用）'
+});
+
+const ABOUT = i18n.text({
+	en : 'A DISC assessment is a pseudoscientific personality testing tool based on psychologist William Moulton Marstons DISC emotional and behavioural theory, first published in 1928. These assessments claim to improve job performance by categorizing individuals into four personality traits: dominance, inducement, submission, and compliance.',
+	ja : 'DISC 診断は、1928 年に心理学者ウィリアム・モールトン・マーストンによって提唱された感情・行動理論に基づく擬似科学的な性格診断ツールです。この診断では、人を「支配性」「感化性」「従属性」「慎重性」の 4 つの特性に分類することで、仕事のパフォーマンス向上につながるとされています。',
+	fr : 'L’évaluation DISC est un outil de test de personnalité pseudoscientifique basé sur la théorie émotionnelle et comportementale DISC du psychologue William Moulton Marston, publiée pour la première fois en 1928. Ces évaluations prétendent améliorer les performances professionnelles en classant les individus en quatre traits de personnalité : dominance, influence, soumission et conformité.',
+	de : 'Die DISC-Analyse ist ein pseudowissenschaftliches Persönlichkeitsdiagnose-Tool, das auf der emotionalen und verhaltensbezogenen DISC-Theorie des Psychologen William Moulton Marston basiert, die erstmals 1928 veröffentlicht wurde. Diese Tests behaupten, die Arbeitsleistung zu verbessern, indem sie Menschen in vier Persönlichkeitstypen einteilen: Dominanz, Einfluss, Unterordnung und Gewissenhaftigkeit.',
+	es : 'La evaluación DISC es una herramienta de evaluación de personalidad pseudocientífica basada en la teoría emocional y conductual DISC del psicólogo William Moulton Marston, publicada por primera vez en 1928. Estas evaluaciones afirman mejorar el rendimiento laboral al clasificar a las personas en cuatro rasgos de personalidad: dominancia, influencia, sumisión y cumplimiento.',
+	pt : 'A avaliação DISC é uma ferramenta de teste de personalidade pseudocientífica baseada na teoria emocional e comportamental DISC do psicólogo William Moulton Marston, publicada pela primeira vez em 1928. Essas avaliações afirmam melhorar o desempenho no trabalho ao classificar os indivíduos em quatro traços de personalidade: dominância, influência, submissão e conformidade.',
+	hi : 'DISC मूल्यांकन एक छद्मवैज्ञानिक व्यक्तित्व परीक्षण उपकरण है जो मनोवैज्ञानिक विलियम मौल्टन मार्स्टन की 1928 में प्रकाशित DISC भावनात्मक और व्यवहारिक सिद्धांत पर आधारित है। ये परीक्षण लोगों को चार व्यक्तित्व गुणों—प्रभुत्व, प्रभाव, अधीनता और अनुपालन—में वर्गीकृत करके कार्य प्रदर्शन में सुधार का दावा करते हैं।',
+	ko : 'DISC 평가는 1928년에 심리학자 윌리엄 몰턴 마스턴이 발표한 DISC 감정 및 행동 이론에 기반한 유사과학적 성격 검사 도구입니다. 이 평가는 사람을 지배형, 영향형, 복종형, 신중형의 네 가지 성격 특성으로 분류하여 업무 성과를 향상시킨다고 주장합니다.',
+	zh : 'DISC 评估是一种基于心理学家威廉·莫尔顿·马斯顿于 1928 年提出的DISC情绪与行为理论的伪科学性人格测试工具。该评估声称通过将个体划分为支配型、影响型、顺从型和服从型四种人格特质，从而提升工作表现。'
 });
 
 function scroll(in_card, in_list) {
@@ -2171,131 +2254,236 @@ function createUiBar(in_score) {
 	return wrapping(table);
 }
 
+const svg = ((in_square_size, in_stroke_size) => {
+	const half = in_square_size / 2;
+	const r = half - in_stroke_size / 2;
+	const adjustment = 0.85;
+	const offset = half - (half * adjustment);
+	const closure = {
+		circle : {
+			width : in_stroke_size * adjustment,
+			cx : half,
+			cy : half,
+			r : r
+		},
+		cross : {
+			width : in_stroke_size,
+			x11 : offset,
+			y11 : offset,
+			x12 : in_square_size - offset,
+			y12 : in_square_size - offset,
+			x21 : in_square_size - offset,
+			y21 : offset,
+			x22 : offset,
+			y22 : in_square_size - offset
+		}
+	};
+	const svgElem = in_name => document.createElementNS('http://www.w3.org/2000/svg', in_name);
+	return {
+		circle : (in_color = '#000000') => {
+			const root = svgElem('svg');
+			root.setAttribute('viewBox', [0, 0, in_square_size, in_square_size].join(' '));
+			const circle = svgElem('circle');
+			circle.setAttribute('cx', closure.circle.cx);
+			circle.setAttribute('cy', closure.circle.cy);
+			circle.setAttribute('r', closure.circle.r);
+			circle.setAttribute('fill', 'none');
+			circle.setAttribute('stroke', in_color);
+			circle.setAttribute('stroke-width', closure.circle.width);
+			circle.setAttribute('stroke-linecap', 'round');
+			root.appendChild(circle);
+			return root;
+		},
+		cross : (in_color = '#000000') => {
+			const root = svgElem('svg');
+			root.setAttribute('viewBox', [0, 0, in_square_size, in_square_size].join(' '));
+			const line1 = svgElem('line');
+			line1.setAttribute('x1', closure.cross.x11);
+			line1.setAttribute('y1', closure.cross.y11);
+			line1.setAttribute('x2', closure.cross.x12);
+			line1.setAttribute('y2', closure.cross.y12);
+			line1.setAttribute('stroke', in_color);
+			line1.setAttribute('stroke-width', closure.cross.width);
+			root.appendChild(line1);
+			const line2 = svgElem('line');
+			line2.setAttribute('x1', closure.cross.x21);
+			line2.setAttribute('y1', closure.cross.y21);
+			line2.setAttribute('x2', closure.cross.x22);
+			line2.setAttribute('y2', closure.cross.y22);
+			line2.setAttribute('stroke', in_color);
+			line2.setAttribute('stroke-width', closure.cross.width);
+			root.appendChild(line2);
+			return root;
+		}
+	};
+})(100, 25);
+
 function createUiMatrix(in_score) {
-	const rank1 = Object.keys(in_score).find(key => in_score[key].rank === 1);
-	const info = FEATURES[rank1];
+	/*
+		root ( relative )
+		|
+		+- quadrants ( grid + rounded box )
+		|	|
+		|	+- LT
+		|	|
+		|	+- RT
+		|	|
+		|	+- ...
+		|
+		+- axis label (top)
+		|
+		+- axis label (bottom)
+		|
+		+- ...
+	*/
 	const root = document.createElement('div');
 	Object.assign(root.style, {
-		position : 'relative',
-		width : '70%',
-		maxWidth : '400px',
-		background : info.COLOR + '22',
-		border : '2px solid #ccc',
-		borderRadius : '5px',
-		padding : '2em 1.5em',
-		display : 'flex',
-		flexDirection : 'column',
-		alignItems : 'center',
-		gap : '2em'
+		position: 'relative',
+		width: '70%',
+		maxWidth: '500px'
 	});
-	const mark = ((in_square_size, in_stroke_size) => {
-		const half = in_square_size / 2;
-		const r = half - in_stroke_size / 2;
-		const adjustment = 0.85;
-		const offset = half - (half * adjustment);
-		return {
-			circle : {
-				width : in_stroke_size * adjustment,
-				cx : half,
-				cy : half,
-				r : r
-			},
-			cross : {
-				width : in_stroke_size,
-				x11 : offset,
-				y11 : offset,
-				x12 : in_square_size - offset,
-				y12 : in_square_size - offset,
-				x21 : in_square_size - offset,
-				y21 : offset,
-				x22 : offset,
-				y22 : in_square_size - offset
-			}
-		};
-	})(100, 25);
-	// POSITIVE
-	const positive = document.createElement('div');
-	Object.assign(positive.style, {
-		position : 'relative',
-		fontSize : '1em',
-		color : 'black',
-		textAlign : 'center'
+	const quadrants = document.createElement('div');
+	Object.assign(quadrants.style, {
+		display: 'grid',
+		gridTemplateColumns: '1fr 1fr',
+		gridTemplateRows: '1fr 1fr',
+		aspectRatio: '1 / 1',
+		background: '#ffffff',
+		border: '1px solid #ccc',
+		borderRadius: '5px',
+		overflow: 'hidden'
 	});
-	positive.textContent = info.POSITIVE;
-	const positiveMark = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-	positiveMark.setAttribute('viewBox', '0 0 100 100');
-	Object.assign(positiveMark.style, {
+	root.appendChild(quadrants);
+	// see "FEATURES[].MATRIX.POSITION"
+	const order = ['LT', 'RT', 'LB', 'RB'];
+	const cells = {};
+	for (const pos of order) {
+		const cell = document.createElement('div');
+		Object.assign(cell.style, {
+			position : 'relative',
+			border : '1px solid #ccc'
+		});
+		quadrants.appendChild(cell);
+		cells[pos] = cell;
+	}
+	// quadrants
+	for (const [openType, info] of Object.entries(FEATURES)) {
+		const colors = {fgTitle : '#ccc', bgLabel : '#ccc', bgQuadrant : '#eee'};
+		if (in_score[openType].rank === 1) {
+			colors.fgTitle = '#000';
+			colors.bgLabel = info.COLOR;
+			colors.bgQuadrant = info.COLOR + '33';
+		}
+		const cell = cells[info.MATRIX.POSITION];
+		Object.assign(cell.style, {background : colors.bgQuadrant});
+		// 1. POSITIVE
+		const openTypePositive = document.createElement('div');
+		Object.assign(openTypePositive.style, {
+			position : 'absolute',
+			top : '25%',
+			left : '50%',
+			transform : 'translate(-50%, -50%)',
+			color : colors.fgTitle,
+			fontSize : '0.8em',
+			lineHeight : '1.3em',
+			maxWidth : '90%'
+		});
+		openTypePositive.textContent = info.POSITIVE;
+		const positiveMark = svg.circle(colors.bgLabel);
+		Object.assign(positiveMark.style, {
+			position : 'absolute',
+			left : '50%',
+			top : '50%',
+			transform : 'translate(-50%, -50%)',
+			width : '3em',
+			height : '3em',
+			opacity : '0.20'
+		});
+		openTypePositive.appendChild(positiveMark);
+		cell.appendChild(openTypePositive);
+		// 2. TYPE
+		const openTypeLabel = document.createElement('div');
+		Object.assign(openTypeLabel.style, {
+			position : 'absolute',
+			top : '50%',
+			left : '50%',
+			transform : 'translate(-50%, -50%)',
+			background : colors.bgLabel,
+			color : '#fff',
+			fontSize : '1em',
+			fontWeight : '700',
+			padding : '0.2em 0.8em',
+			borderRadius : '100px'
+		});
+		openTypeLabel.textContent = openType;
+		cell.appendChild(openTypeLabel);
+		// 3. NEGATIVE
+		const openTypeNegative = document.createElement('div');
+		Object.assign(openTypeNegative.style, {
+			position : 'absolute',
+			top : '75%',
+			left : '50%',
+			transform : 'translate(-50%, -50%)',
+			color : colors.fgTitle,
+			fontSize : '0.8em',
+			lineHeight : '1.3em',
+			maxWidth : '90%'
+		});
+		openTypeNegative.textContent = info.NEGATIVE;
+		const negativeMark = svg.cross(colors.bgLabel);
+		Object.assign(negativeMark.style, {
+			position : 'absolute',
+			left : '50%',
+			top : '50%',
+			transform : 'translate(-50%, -50%)',
+			width : '3em',
+			height : '3em',
+			opacity : '0.20'
+		});
+		openTypeNegative.appendChild(negativeMark);
+		cell.appendChild(openTypeNegative);
+	}
+	// axis
+	const axisStyleCommon = {
 		position : 'absolute',
-		width : '3em',
-		height : '3em',
-		opacity : '0.30',
-		left : '50%',
-		top : '50%',
-		transform : 'translate(-50%, -50%)'
-	});
-	positiveMark.innerHTML = [
-		'<circle',
-		'cx="' + mark.circle.cx + '"',
-		'cy="' + mark.circle.cy + '"',
-		'r="' + mark.circle.r + '"',
-		'fill="none"',
-		'stroke="' + info.COLOR + '"',
-		'stroke-width="' + mark.circle.width + '"',
-		'stroke-linecap="round"',
-		'/>'
-	].join(' ');
-	positive.appendChild(positiveMark);
-	root.appendChild(positive);
-	// DiSC
-	const disc = document.createElement('div');
-	disc.textContent = rank1;
-	Object.assign(disc.style, {
-		fontSize : '3.5em',
-		fontWeight : '1000',
-		color : info.COLOR,
-		textShadow : '-2px -2px 0 #ffffff, 2px -2px 0 #ffffff, -2px  2px 0 #ffffff, 2px  2px 0 #ffffff'
-	});
-	root.appendChild(disc);
-	// NEGATIVE
-	const negative = document.createElement('div');
-	Object.assign(negative.style, {
-		position : 'relative',
-		fontSize : '1em',
-		color : 'black',
-		textAlign : 'center'
-	});
-	negative.textContent = info.NEGATIVE;
-	const negativeMark = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-	negativeMark.setAttribute('viewBox', '0 0 100 100');
-	Object.assign(negativeMark.style, {
-		position : 'absolute',
-		width : '3em',
-		height : '3em',
-		opacity : '0.30',
-		left : '50%',
-		top : '50%',
-		transform : 'translate(-50%, -50%)'
-	});
-	negativeMark.innerHTML = [
-		'<line',
-		'x1="' + mark.cross.x11 + '"',
-		'y1="' + mark.cross.y11 + '"',
-		'x2="' + mark.cross.x12 + '"',
-		'y2="' + mark.cross.y12 + '"',
-		'stroke="' + info.COLOR + '"',
-		'stroke-width="' + mark.cross.width + '"',
-		'/>',
-		'<line',
-		'x1="' + mark.cross.x21 + '"',
-		'y1="' + mark.cross.y21 + '"',
-		'x2="' + mark.cross.x22 + '"',
-		'y2="' + mark.cross.y22 + '"',
-		'stroke="' + info.COLOR + '"',
-		'stroke-width="' + mark.cross.width + '"',
-		'/>'
-	].join(' ');
-	negative.appendChild(negativeMark);
-	root.appendChild(negative);
+		background : '#fff',
+		border : '1px solid #ccc',
+		borderRadius : '100px',
+		padding : '0.2em 0.8em',
+		fontSize : '0.8em',
+		color : '#ccc',
+		whiteSpace : 'nowrap'
+	};
+	const axisStyleSpecific = {
+		[MATRIX.FOCUS.PEOPLE] : {
+			right : '0%',
+			top : '50%',
+			transform : 'translate(50%, -50%) rotate(270deg)',
+			transformOrigin: 'center'
+		},
+		[MATRIX.FOCUS.TASK] : {
+			left : '0%',
+			top : '50%',
+			transform : 'translate(-50%, -50%) rotate(270deg)',
+			transformOrigin : 'center',
+		},
+		[MATRIX.EXTRAVERSION.HIGH] : {
+			top : '0%',
+			left : '50%',
+			transform : 'translate(-50%, -50%)'
+		},
+		[MATRIX.EXTRAVERSION.LOW] : {
+			bottom : '0%',
+			left : '50%',
+			transform : 'translate(-50%, 50%)'
+		}
+	};
+	for (const [text, style] of Object.entries(axisStyleSpecific)) {
+		const el = document.createElement('div');
+		Object.assign(el.style, axisStyleCommon, style);
+		el.textContent = text;
+		root.appendChild(el);
+	}
 	return wrapping(root);
 }
 
@@ -2341,17 +2529,22 @@ function createUiTrait(in_trait, in_resp) {
 		in_section.style.marginBottom = '1em';
 	};
 	const secArr = [];
-	for (let i = 0; i < 3; i++) {
+	for (let i = 0; i < 4; i++) {
 		secArr[i] = document.createElement('section');
 		root.appendChild(secArr[i]);
 	}
 	if (in_resp) {
-		addDesc(secArr[0], HEADERS[0], in_resp.adviceForRespondent)
+		addDesc(secArr[0], HEADERS[0], in_resp.adviceForRespondent);
 		addTrait(secArr[1]);
-		addDesc(secArr[2], HEADERS[1], in_resp.idealRightHandType)
+		addDesc(secArr[2], HEADERS[1], in_resp.compatibleDiscTypes);
+		secArr[3].textContent = ABOUT;
+		secArr[3].className = 'cCheck';
 	} else {
 		addTrait(secArr[0]);
-		secArr[1].textContent = APIERROR;
+		secArr[1].textContent = ABOUT;
+		secArr[1].className = 'cCheck';
+		secArr[1].style.marginBottom = '1em';
+		secArr[2].textContent = APIERROR;
 	}
 	return wrapping(root);
 }

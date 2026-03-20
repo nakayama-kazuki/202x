@@ -1731,8 +1731,8 @@ function createUiMatrix(in_score) {
 		}
 		const cell = cells[info.MATRIX.POSITION];
 		Object.assign(cell.style, {background : colors.bgQuadrant});
-		const capsLabel = document.createElement('div');
-		Object.assign(capsLabel.style, {
+		const openTypeLabel = document.createElement('div');
+		Object.assign(openTypeLabel.style, {
 			background :  colors.bgLabel,
 			color : '#fff',
 			fontSize : '1em',
@@ -1741,17 +1741,17 @@ function createUiMatrix(in_score) {
 			borderRadius : '100px',
 			marginBottom : '0.7em'
 		});
-		capsLabel.textContent = openType;
-		const capsTitle = document.createElement('div');
-		Object.assign(capsTitle.style, {
+		openTypeLabel.textContent = openType;
+		const openTypeTitle = document.createElement('div');
+		Object.assign(openTypeTitle.style, {
 			color : colors.fgTitle,
 			fontSize : '0.8em',
 			lineHeight : '1.3em',
 			maxWidth : '90%'
 		});
-		capsTitle.textContent = info.TITLE;
-		cell.appendChild(capsLabel);
-		cell.appendChild(capsTitle);
+		openTypeTitle.textContent = info.TITLE;
+		cell.appendChild(openTypeLabel);
+		cell.appendChild(openTypeTitle);
 	}
 	// axis
 	const axisStyleCommon = {
