@@ -615,6 +615,7 @@ suites.forEach(in_suite => {
 })(false);
 
 class cReversi {
+	static maximizedRecMap = new Map();
 	static #maximize(in_evaluator, in_player, in_candArr) {
 		const evaluated = new Map();
 		in_candArr.forEach(in_ix => evaluated.set(in_ix, (in_evaluator)(in_player, in_ix)));
@@ -633,8 +634,11 @@ class cReversi {
 			}
 		}
 		if (max.indexes.length === 0) {
-			console.log(evaluated);
-			throw new Error();
+			throw new Error('not found from : ' + in_candArr.join(','));
+		}
+		const rec = cReversi.maximizedRecMap.get(in_player) ?? 0;
+		if (rec < max.value) {
+			cReversi.maximizedRecMap.set(in_player, max.value);
 		}
 		return max.indexes;
 	}
@@ -892,6 +896,7 @@ class cReversi {
 			this.#npcArgoPriority.push((argoArr.slice(0, i + 1))[arrRand]());
 		}
 		this.#updateOptionsAll();
+		cReversi.maximizedRecMap.clear();
 		// console.log(this.#conf.tagIndexes);
 	}
 	#initTagIndexesRadiating() {
