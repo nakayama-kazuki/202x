@@ -1,0 +1,187 @@
+@python -c "exec(''.join(open(r'%~f0', encoding='utf-8').readlines()[1:]))" %* || pause & goto:eof
+
+# how to use :
+#
+# a. drag & drop "xxx.csv" and "yyy.xlsx" onto kintai.bat at the same time.
+#
+# b. command line
+# b.1. $ kintai.bat --csv xxx.csv --xlsx yyy.xlsx
+# b.2. $ kintai.bat --csv xxx.csv --xlsx yyy.xlsx > output.txt
+# b.3. $ kintai.bat --csv xxx.csv --xlsx yyy.xlsx --user login-name
+# b.4. $ kintai.bat --csv xxx.csv --xlsx yyy.xlsx --user login-name > output.txt
+#
+# output format :
+#
+# key (= computer-name), YYYY-MM-DD, 1st hh:mm:ss, 2nd hh:mm:ss, 3rd hh:mm:ss, 4th hh:mm:ss, diff
+#
+# 1. 1st hh:mm:ss : duration from the first login to the last logoff
+# 2. 2nd hh:mm:ss : net working time (sum of login sessions)
+# 3. 3rd hh:mm:ss : total time spent logged off between sessions (1st hh:mm:ss - 2nd hh:mm:ss)
+# 4. 4th hh:mm:ss : total working hours recorded in the Excel file
+# 5. diff : difference between Excel hours and 3rd hh:mm:ss (unit: decimal hours)
+
+import sys
+import csv
+import datetime
+import collections
+import pathlib
+
+try:
+    import openpyxl
+except ImportError:
+    print('error : exec "pip install openpyxl" at first.')
+    sys.exit(1)
+
+CSV_FILE = None
+XLS_FILE = None
+TARGET_USER = None
+
+if any(a.startswith('--') for a in sys.argv):
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--csv', required=True)
+    parser.add_argument('--xlsx', required=True)
+    parser.add_argument('--user')
+    parsed = parser.parse_args()
+    CSV_FILE = pathlib.Path(parsed.csv)
+    XLS_FILE = pathlib.Path(parsed.xlsx)
+    TARGET_USER = parsed.user
+else:
+    if len(sys.argv) != 3:
+        print('error : drag & drop 2 files')
+        sys.exit(1)
+    files = [pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2])]
+    for f in files:
+        s = f.suffix.lower()
+        if s == '.csv':
+            CSV_FILE = f
+        elif s == '.xlsx':
+            XLS_FILE = f
+
+if not (CSV_FILE and XLS_FILE):
+    print('error : both csv and xlsx are required')
+    sys.exit(1)
+
+ENCODING = 'cp932'
+
+CSV_COL_LOGIN = 'ログイン名'
+CSV_COL_OPERATION = '操作種別'
+CSV_COL_OPERATION_S = '操作開始'
+CSV_COL_OPERATION_E = '操作終了'
+CSV_COL_KEY = 'コンピューター名'
+CSV_COL_TIME = '日時'
+
+XLS_COL_TIME = '日付'
+XLS_COL_KEY = '資産管理番号'
+XLS_COL_ACTUAL = '総労働時間'
+
+# Workday starts at this hour (e.g., 5 means 05:00 to next day 04:59:59)
+START_HOUR = 5
+
+# login -> list of (datetime, op)
+logs = collections.defaultdict(list)
+
+with open(CSV_FILE, encoding=ENCODING, newline='') as f:
+    reader = csv.DictReader(f)
+    for row in reader:
+        op = row[CSV_COL_OPERATION]
+        if op not in (CSV_COL_OPERATION_S, CSV_COL_OPERATION_E):
+            continue
+        match_key = row[CSV_COL_KEY]
+        if TARGET_USER and match_key != TARGET_USER:
+            continue
+        dt = datetime.datetime.strptime(row[CSV_COL_TIME], '%Y/%m/%d %H:%M:%S')
+        logs[(row[CSV_COL_LOGIN], match_key)].append((dt, op))
+
+actual_map = collections.defaultdict(lambda: collections.defaultdict(datetime.timedelta))
+wb = openpyxl.load_workbook(XLS_FILE, read_only=True)
+ws = wb.active
+header = None
+for row in ws.iter_rows(values_only=True):
+    if not header:
+        header = list(row)
+        continue
+    data = dict(zip(header, row))
+    match_key = data.get(XLS_COL_KEY)
+    dt = data.get(XLS_COL_TIME)
+    actual_val = data.get(XLS_COL_ACTUAL)
+    if match_key is None or dt is None or actual_val is None:
+        continue
+    if isinstance(dt, datetime.date) and not isinstance(dt, datetime.datetime):
+        dt = datetime.datetime.combine(dt, datetime.time(0, 0, 0))
+    elif not isinstance(dt, datetime.datetime):
+        continue
+    if isinstance(actual_val, datetime.time):
+        actual_val = datetime.timedelta(
+            hours=actual_val.hour,
+            minutes=actual_val.minute,
+            seconds=actual_val.second
+        )
+    else:
+        raise TypeError(f'unexpected type for actual_val: {type(actual_val)}')
+    if dt.hour < START_HOUR:
+        work_day = (dt - datetime.timedelta(days=1)).date()
+    else:
+        work_day = dt.date()
+    actual_map[match_key][work_day] += actual_val
+
+
+def hours(td):
+    return td.total_seconds() / 3600
+
+for (login, match_key), entries in logs.items():
+    entries.sort()
+    days = collections.defaultdict(list)
+    for dt, op in entries:
+        if dt.hour < START_HOUR:
+            work_day = (dt - datetime.timedelta(days=1)).date()
+        else:
+            work_day = dt.date()
+        days[work_day].append((dt, op))
+
+    for day, day_logs in sorted(days.items()):
+        day_start = datetime.datetime.combine(
+            day, datetime.time(START_HOUR, 0, 0)
+        )
+        day_end = day_start + datetime.timedelta(days=1) - datetime.timedelta(seconds=1)
+        start_time = None
+        end_time = None
+        # each entry is a (start, end) pair
+        sessions = []
+        current_start = None
+        for dt, op in day_logs:
+            if dt < day_start or dt > day_end:
+                continue
+            if op == CSV_COL_OPERATION_S:
+                if start_time is None:
+                    start_time = dt
+                current_start = dt
+            elif op == CSV_COL_OPERATION_E:
+                end_time = dt
+                if current_start:
+                    sessions.append((current_start, dt))
+                    current_start = None
+        if start_time is None:
+            continue
+        if end_time is None:
+            end_time = day_end
+        total_span = end_time - start_time
+        actual = datetime.timedelta()
+        for s, e in sessions:
+            if e < s:
+                continue
+            actual += (e - s)
+        diff = total_span - actual
+        if diff < datetime.timedelta():
+            diff = datetime.timedelta()
+        excel_actual = actual_map.get(match_key, {}).get(day)
+        if excel_actual is not None:
+            excel_diff_val = excel_actual - diff
+            res_excel_actual = str(excel_actual)
+            res_diff = f"{hours(excel_diff_val):.2f}"
+        else:
+            res_excel_actual = "NO_EXCEL_DATA"
+            res_diff = "-"
+        print(f'{login} ({match_key}), {day}, {total_span}, {actual}, {diff}, {res_excel_actual}, {res_diff}')
+
+input('[Hit Enter Key]')
