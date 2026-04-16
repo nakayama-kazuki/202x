@@ -1,0 +1,66 @@
+@python -c "exec(''.join(open(r'%~f0', encoding='utf-8').readlines()[1:]))" %* || pause & goto:eof
+
+# how to use :
+#
+# a. drag & drop xxx.csv file onto this script
+#
+# b. command line
+# b.1. $ check-usage-py.bat
+# b.2. $ check-usage-py.bat xxx.csv
+# b.3. $ check-usage-py.bat xxx.csv > output.txt
+#
+# output format :
+#
+# YYYY-MM-DD, total_count, unique_computer_count
+#
+# 1. YYYY-MM-DD : date extracted from the "column_index_datetime"
+# 2. total_count : number of log entries where URL contains "chatgpt.com"
+# 3. unique_computer_count : number of unique "column_index_computer" accessing "chatgpt.com" on that day
+
+import sys
+import os
+import csv
+import re
+from collections import defaultdict
+from datetime import datetime
+
+if len(sys.argv) > 1:
+    input_files = sys.argv[1:]
+else:
+    input_files = [f for f in os.listdir('.') if f.endswith('.csv')]
+
+output_file = 'chatgpt_daily.txt'
+
+column_index_computer = 1
+column_index_url = 11
+column_index_datetime = 6
+
+target_domain = 'chatgpt.com'
+
+daily_count = defaultdict(int)
+daily_computers = defaultdict(set)
+
+for file in input_files:
+    with open(file, encoding='cp932', errors='ignore') as f:
+        reader = csv.reader(f)
+        next(reader, None)
+        for row in reader:
+            if len(row) <= max(column_index_url, column_index_computer, column_index_datetime):
+                continue
+            url = row[column_index_url]
+            if target_domain not in url:
+                continue
+            dt_str = row[column_index_datetime]
+            try:
+                dt = datetime.strptime(dt_str, '%Y/%m/%d %H:%M')
+            except:
+                continue
+            day = dt.date()
+            daily_count[day] += 1
+            daily_computers[day].add(row[column_index_computer])
+
+with open(output_file, 'w', encoding='utf-8') as f:
+    for day in sorted(daily_count.keys()):
+        count = daily_count[day]
+        unique_pc = len(daily_computers[day])
+        f.write(f'{day},{count},{unique_pc}\n')
