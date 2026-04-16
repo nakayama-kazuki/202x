@@ -13,9 +13,9 @@
 #
 # YYYY-MM-DD, total_count, unique_computer_count
 #
-# 1. YYYY-MM-DD : date extracted from the "column_index_datetime"
+# 1. YYYY-MM-DD : date extracted from the datetime column (index: 6)
 # 2. total_count : number of log entries where URL contains "chatgpt.com"
-# 3. unique_computer_count : number of unique "column_index_computer" accessing "chatgpt.com" on that day
+# 3. unique_computer_count : number of unique computer names (column index: 1)
 
 import sys
 import os
@@ -29,13 +29,13 @@ if len(sys.argv) > 1:
 else:
     input_files = [f for f in os.listdir('.') if f.endswith('.csv')]
 
-output_file = 'chatgpt_daily.txt'
-
 column_index_computer = 1
 column_index_url = 11
 column_index_datetime = 6
 
 target_domain = 'chatgpt.com'
+
+output_file = target_domain + '.txt'
 
 daily_count = defaultdict(int)
 daily_computers = defaultdict(set)
