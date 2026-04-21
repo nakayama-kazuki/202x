@@ -7,8 +7,8 @@
 # b. command line
 # b.1. $ kintai.bat --csv xxx.csv --xlsx yyy.xlsx
 # b.2. $ kintai.bat --csv xxx.csv --xlsx yyy.xlsx > output.txt
-# b.3. $ kintai.bat --csv xxx.csv --xlsx yyy.xlsx --user login-name
-# b.4. $ kintai.bat --csv xxx.csv --xlsx yyy.xlsx --user login-name > output.txt
+# b.3. $ kintai.bat --csv xxx.csv --xlsx yyy.xlsx --computer computer-name
+# b.4. $ kintai.bat --csv xxx.csv --xlsx yyy.xlsx --computer computer-name > output.txt
 #
 # output format :
 #
@@ -34,18 +34,18 @@ except ImportError:
 
 CSV_FILE = None
 XLS_FILE = None
-TARGET_USER = None
+TARGET_COMPUTER = None
 
 if any(a.startswith('--') for a in sys.argv):
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--csv', required=True)
     parser.add_argument('--xlsx', required=True)
-    parser.add_argument('--user')
+    parser.add_argument('--computer')
     parsed = parser.parse_args()
     CSV_FILE = pathlib.Path(parsed.csv)
     XLS_FILE = pathlib.Path(parsed.xlsx)
-    TARGET_USER = parsed.user
+    TARGET_COMPUTER = parsed.computer
 else:
     if len(sys.argv) != 3:
         print('error : drag & drop 2 files')
@@ -78,7 +78,15 @@ XLS_COL_ACTUAL = '総労働時間'
 # Workday starts at this hour (e.g., 5 means 05:00 to next day 04:59:59)
 START_HOUR = 5
 
-# login -> list of (datetime, op)
+def string_to_date(x):
+    if isinstance(x, datetime.datetime):
+        return x.date()
+    if isinstance(x, datetime.date):
+        return x
+    if isinstance(x, str):
+        return datetime.datetime.strptime(x, '%Y/%m/%d').date()
+    raise TypeError(f'unexpected date type: {type(x)}')
+
 logs = collections.defaultdict(list)
 
 with open(CSV_FILE, encoding=ENCODING, newline='') as f:
@@ -88,14 +96,16 @@ with open(CSV_FILE, encoding=ENCODING, newline='') as f:
         if op not in (CSV_COL_OPERATION_S, CSV_COL_OPERATION_E):
             continue
         match_key = row[CSV_COL_KEY]
-        if TARGET_USER and match_key != TARGET_USER:
+        if TARGET_COMPUTER and match_key != TARGET_COMPUTER:
             continue
         dt = datetime.datetime.strptime(row[CSV_COL_TIME], '%Y/%m/%d %H:%M:%S')
-        logs[(row[CSV_COL_LOGIN], match_key)].append((dt, op))
+        work_day = (dt - datetime.timedelta(days=1)).date() if dt.hour < START_HOUR else dt.date()
+        logs[(row[CSV_COL_LOGIN], match_key)].append((dt, op, work_day))
 
 actual_map = collections.defaultdict(lambda: collections.defaultdict(datetime.timedelta))
 wb = openpyxl.load_workbook(XLS_FILE, read_only=True)
 ws = wb.active
+
 header = None
 for row in ws.iter_rows(values_only=True):
     if not header:
@@ -103,13 +113,13 @@ for row in ws.iter_rows(values_only=True):
         continue
     data = dict(zip(header, row))
     match_key = data.get(XLS_COL_KEY)
-    dt = data.get(XLS_COL_TIME)
+    dt_raw = data.get(XLS_COL_TIME)
     actual_val = data.get(XLS_COL_ACTUAL)
-    if match_key is None or dt is None or actual_val is None:
+    if match_key is None or dt_raw is None or actual_val is None:
         continue
-    if isinstance(dt, datetime.date) and not isinstance(dt, datetime.datetime):
-        dt = datetime.datetime.combine(dt, datetime.time(0, 0, 0))
-    elif not isinstance(dt, datetime.datetime):
+    try:
+        work_day = string_to_date(dt_raw)
+    except Exception:
         continue
     if isinstance(actual_val, datetime.time):
         actual_val = datetime.timedelta(
@@ -119,12 +129,8 @@ for row in ws.iter_rows(values_only=True):
         )
     else:
         raise TypeError(f'unexpected type for actual_val: {type(actual_val)}')
-    if dt.hour < START_HOUR:
-        work_day = (dt - datetime.timedelta(days=1)).date()
-    else:
-        work_day = dt.date()
-    actual_map[match_key][work_day] += actual_val
 
+    actual_map[match_key][work_day] += actual_val
 
 def hours(td):
     return td.total_seconds() / 3600
@@ -132,21 +138,13 @@ def hours(td):
 for (login, match_key), entries in logs.items():
     entries.sort()
     days = collections.defaultdict(list)
-    for dt, op in entries:
-        if dt.hour < START_HOUR:
-            work_day = (dt - datetime.timedelta(days=1)).date()
-        else:
-            work_day = dt.date()
+    for dt, op, work_day in entries:
         days[work_day].append((dt, op))
-
     for day, day_logs in sorted(days.items()):
-        day_start = datetime.datetime.combine(
-            day, datetime.time(START_HOUR, 0, 0)
-        )
+        day_start = datetime.datetime.combine(day, datetime.time(START_HOUR, 0, 0))
         day_end = day_start + datetime.timedelta(days=1) - datetime.timedelta(seconds=1)
         start_time = None
         end_time = None
-        # each entry is a (start, end) pair
         sessions = []
         current_start = None
         for dt, op in day_logs:
