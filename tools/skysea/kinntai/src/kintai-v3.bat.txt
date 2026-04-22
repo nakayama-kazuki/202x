@@ -98,7 +98,7 @@ with open(CSV_FILE, encoding=ENCODING, newline='') as f:
         match_key = row[CSV_COL_KEY]
         if TARGET_COMPUTER and match_key != TARGET_COMPUTER:
             continue
-        dt = datetime.datetime.strptime(row[CSV_COL_TIME], '%Y/%m/%d %H:%M:%S')
+        dt = datetime.datetime.strptime(row[CSV_COL_TIME], '%Y/%m/%d %H:%M')
         work_day = (dt - datetime.timedelta(days=1)).date() if dt.hour < START_HOUR else dt.date()
         logs[(row[CSV_COL_LOGIN], match_key)].append((dt, op, work_day))
 
@@ -129,8 +129,7 @@ for row in ws.iter_rows(values_only=True):
         )
     else:
         raise TypeError(f'unexpected type for actual_val: {type(actual_val)}')
-
-    actual_map[match_key][work_day] += actual_val
+    actual_map[match_key][work_day] = actual_val
 
 def hours(td):
     return td.total_seconds() / 3600
@@ -174,7 +173,7 @@ for (login, match_key), entries in logs.items():
             diff = datetime.timedelta()
         excel_actual = actual_map.get(match_key, {}).get(day)
         if excel_actual is not None:
-            excel_diff_val = excel_actual - diff
+            excel_diff_val = excel_actual - actual 
             res_excel_actual = str(excel_actual)
             res_diff = f"{hours(excel_diff_val):.2f}"
         else:
