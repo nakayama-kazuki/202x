@@ -58,6 +58,10 @@ jobs:
           --region "${REGION_IS_FIXED}" \
           --query "WebACLs[?Name=='${NAME}'].Id | [0]" \
           --output text)
+        if [[ "${WEB_ACL_ID}" == "None" ]]; then
+          echo "::warning:: As WAF '${NAME}' does not exist, checking was skipped."
+          exit 0
+        fi
         aws wafv2 get-web-acl \
           --name "${NAME}" \
           --id "${WEB_ACL_ID}" \
@@ -134,11 +138,20 @@ jobs:
         set -euo pipefail
         git fetch --depth=2
         echo "CURR_SHA=${{ github.sha }}" >> $GITHUB_ENV
-        echo "PREV_SHA=$(git rev-parse ${{ github.sha }}^)" >> $GITHUB_ENV
+        if git rev-parse "${{ github.sha }}^" >/dev/null 2>&1; then
+          PREV_SHA=$(git rev-parse "${{ github.sha }}^")
+        else
+          PREV_SHA="no-prev"
+        fi
+        echo "PREV_SHA=${PREV_SHA}" >> $GITHUB_ENV
     - name: check modified
       run: |
         set -euo pipefail
-        MODIFIEDLIST=$(git diff --name-only "${PREV_SHA}" "${CURR_SHA}" | tr '\n' ' ')
+        if [[ "${PREV_SHA}" == "no-prev" ]]; then
+          MODIFIEDLIST=$(git ls-tree -r --name-only "${CURR_SHA}" | tr '\n' ' ')
+        else
+          MODIFIEDLIST=$(git diff --name-only "${PREV_SHA}" "${CURR_SHA}" | tr '\n' ' ')
+        fi
         echo "MODIFIEDLIST=${MODIFIEDLIST}" >> $GITHUB_ENV
     - name: copy-files
       run: |
