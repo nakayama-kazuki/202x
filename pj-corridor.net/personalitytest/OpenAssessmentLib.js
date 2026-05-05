@@ -392,6 +392,8 @@ export class cLLM {
 		if (!cLLM.#entry) {
 			throw new Error('not activated');
 		}
+		const jsonText = JSON.stringify(in_payload);
+		const jsonTextHash = await _sha256hex(jsonText);
 		for (let trial = 0; trial < in_retry; trial++) {
 			const ctrl = new AbortController();
 			const waitTime = (5 + trial) * 1000
@@ -399,9 +401,12 @@ export class cLLM {
 			try {
 				const response = await fetch(cLLM.#entry + 'generate', {
 					method : 'POST',
-					headers : {'Content-Type' : 'application/json'},
+					headers : {
+						'Content-Type' : 'application/json',
+						'x-amz-content-sha256' : jsonTextHash
+					},
 					credentials : 'include',
-					body : JSON.stringify(in_payload),
+					body : jsonText,
 					signal : ctrl.signal
 				});
 				clearTimeout(timer);
