@@ -71,18 +71,19 @@ iam user ( github-actions )
 - Lambda のハンドラ設定で `ファイルのベース名 + "." + 関数名` を指定
   - [llm.py](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/personalitytest/lambda/llm.py) の場合 `llm.handler` となる
 - Lambda → 関数 → XXXXX → 設定 → 関数 URL の生成
-  - 関数 URL を [プライベート化](https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/spot-private-lambda.yml) する場合は API Gateway が必要
-  - 疑似的な方法として CloudFront のカスタムヘッダと Lambda の環境変数に秘密情報を保持し、アプリで突合する
+  - 関数 URL を [プライベート化](https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/spot-private-lambda.yml) する場合は CloudFront OAC が必要
+    - しかし GET では動作確認できたものの `x-amz-content-sha256` を使う POST ではうまく動作せず採用見送り
+    - 疑似的な方法として CloudFront のカスタムヘッダと Lambda の環境変数に秘密情報を保持し、アプリで突合する
 
 ## 6. WAF
 
-WCU 観点でコスト対効果を考慮した [WAFPolicyCorridor.json](https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/WAFPolicyCorridor.json) を適用。
+WCU 観点でコスト対効果を考慮した [WAFPolicyApiCorridor.json](https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/WAFPolicyApiCorridor.json) を適用。
 
 |ルールの名称|ルールの目的|
 |---|---|
 |GeoRule|攻撃が多い国の IP 遮断|
-|GlobalRateBasedRule|リクエスの上限|
-|RateBasedRulePOST|POAT / PUT / DELETE の上限|
+|GlobalRateBasedRule|リクエストの上限|
+|RateBasedRulePOST|POST / PUT / DELETE の上限|
 |AWS-AWSManagedRulesAmazonIpReputationList|AWS 認定攻撃 IP 遮断|
 |AWS-AWSManagedRulesAnonymousIpList|トンネリング等身元隠蔽 IP 遮断|
 
