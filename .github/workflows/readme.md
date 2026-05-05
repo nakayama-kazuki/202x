@@ -73,7 +73,7 @@ iam user ( github-actions )
 - Lambda → 関数 → XXXXX → 設定 → 関数 URL の生成
   - 関数 URL を [プライベート化](https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/spot-private-lambda.yml) する場合は CloudFront OAC が必要
     - しかし GET では動作確認できたものの `x-amz-content-sha256` を使う POST ではうまく動作せず採用見送り
-    - 疑似的な方法として CloudFront のカスタムヘッダと Lambda の環境変数に秘密情報を保持し、アプリで突合する
+    - CloudFront のカスタムヘッダと Lambda の環境変数の双方に同じ秘密情報を保持しアプリで突合する代替案もあり
 
 ## 6. WAF
 
