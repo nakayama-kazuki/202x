@@ -131,7 +131,7 @@ const GREETING = i18n.text({
 
 のような I/F 設計としました。
 
-★（スクリーンキャプチャ）★
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/pj-corridor.net/personalitytest/blog/arch.png' width='600' />
 
 また、状態管理や UI 部品および Lambda やテスト環境との I/F の実装を DiSC と CAPS で共通化し、将来 MBTI などの診断アプリを開発する際にも同じフレームワークを活用できるようにしました。
 
