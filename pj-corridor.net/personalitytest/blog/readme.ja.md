@@ -33,8 +33,8 @@ WAF については AWS 標準の保護パックを参考にしつつ
 
 を採用し、診断アプリに必要のないルールは削除しました。ただ、懸念点として Lambda 関数 URL を公開エンドポイントとして利用する場合、CloudFront を経由しないリクエストが WAF をバイパスできてしまいます。CloudFront 経由（= WAF 経由）であることを担保する方法もありますが、
 
-- Lambda 関数 URL の `AuthType` を `AWS_IAM` に変更し CloudFront OAC を利用<br />⚠ この場合、POST リクエスト時の `x-amz-content-sha256` サポートが必要になる
-- CloudFront で拡張ヘッダに秘密情報を付与し、それを Lambda 側で検証<br />⚠ この場合、複数の環境変数の管理や突合処理が必要になる
+- Lambda 関数 URL の `AuthType` を `AWS_IAM` に変更し CloudFront OAC を利用<br />👉 この場合、POST リクエスト時の `x-amz-content-sha256` サポートが必要になる
+- CloudFront で拡張ヘッダに秘密情報を付与し、それを Lambda 側で検証<br />👉 この場合、複数の環境変数の管理や突合処理が必要になる
 
 のように環境に依存した実装が必要になります。悪意ある第三者が Lambda 関数 URL を知り WAF を迂回するリスクを勘案し、今回の対応は見送りとしました。
 
@@ -60,7 +60,7 @@ WAF については AWS 標準の保護パックを参考にしつつ
 
 のような実装に加え、以下の対策も併用しました。
 
-- `SameSite=Strict` として別ドメインからの POST クエリを遮断（参考 : <a href='https://blog.techscore.com/entry/2023/10/06/110100'>図解 SameSite@Set-Cookie</a>）
+- `SameSite=Strict` として別ドメインからの POST クエリを遮断（<a href='https://blog.techscore.com/entry/2023/10/06/110100'>図解 SameSite@Set-Cookie</a> もご参考）
 - 許可リストにあるオリジンのみを `Access-Control-Allow-Origin` に指定しブラウザ経由のレスポンス参照を制限
 
 ボットを高度化すればこれらの対策は迂回可能ですが、基本方針にもとづき初手としてはここまでの対策とします。アクセス状況をモニタリングしつつ、必要に応じて追加の対策を検討することにします。
@@ -78,7 +78,7 @@ WAF については AWS 標準の保護パックを参考にしつつ
 
 試行錯誤といえば、AWS コンソールから Lambda 関数の作成を繰り返すと、その都度新しい IAM Role が自動生成されます。IAM Role に限らず、不要なリソースを放置するといずれ技術負債になるので、忘れないうちに削除しておきましょう。
 
-ここでアプリケーション開発に進みたい気持ちをぐっとこらえ、後で楽をするための仕組を作ります。Lambda 環境とテスト環境を透過的に扱うための
+ここでアプリケーション開発に進みたい気持ちをぐっとこらえ、後で楽をするために Lambda 環境とテスト環境を透過的に扱うための仕組
 
 - <a href='https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/template.py'>環境共通 Python テンプレート</a>
 - <a href='https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/restart-python.bat'>テスト環境ランチャー</a>
@@ -98,7 +98,7 @@ WAF については AWS 標準の保護パックを参考にしつつ
 |ルーティング|Lambda 内で完結するルーティング|
 |スロットリング|WAF が対応（今後変更予定）|
 
-のような状況から、現段階では API Gateway の導入はコストがメリットを上回ると判断しました。
+のような状況から、現段階では API Gateway へのオフロードはコストがメリットを上回ると判断しました。
 
 ## 3. アプリケーション開発編
 
@@ -129,9 +129,6 @@ const GREETING = i18n.text({
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/pj-corridor.net/personalitytest/blog/arch.png' width='600' />
 
 また、状態管理や UI 部品および Lambda やテスト環境との I/F の実装は DiSC と CAPS で <a href='https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/personalitytest/OpenAssessmentLib.js'>共通化</a> し、将来 MBTI などの診断アプリを開発する際にも同じフレームワークを活用できるようにします。
-
-さて、アプリケーション開発もいよいよ大詰めです。最後に生成 AI の出力品質の向上と安定化、具体的にはプロンプトチューニングにに取り掛かりましょう。ここは焦らず「急がば回れ」のとおり、まずは試行錯誤の基盤作りが最善策です。技術選定編でご紹介した足場に加えて
-
 
 さて、アプリケーション開発もいよいよ大詰めです。最後に生成 AI の出力品質の向上と安定化、具体的にはプロンプトチューニングにに取り掛かりましょう。ここは焦らず「急がば回れ」で、まずは試行錯誤のための基盤を整えます。技術選定編でご紹介した足場に加えて
 
