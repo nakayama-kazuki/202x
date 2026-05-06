@@ -4,8 +4,8 @@
 
 最初に開発したパーソナリティ診断アプリをお試しください。煩わしい広告（笑）はウインドウ幅を調整すれば消せます。
 
-- <a href='https://pj-corridor.net/personalitytest/OpenCAPS.html'>CAPS（= Controller, Analyzer, Promoter, Supporter）診断</a>
-- <a href='https://pj-corridor.net/personalitytest/OpenDiSC.html'>DiSC（= Drive, Influence, Steadiness, Compliance）診断</a>
+- <a target='_blank' href='https://pj-corridor.net/personalitytest/OpenCAPS.html'>CAPS（= Controller, Analyzer, Promoter, Supporter）診断</a>
+- <a target='_blank' href='https://pj-corridor.net/personalitytest/OpenDiSC.html'>DiSC（= Drive, Influence, Steadiness, Compliance）診断</a>
 
 CAPS や DiSC は巷で流行の MBTI と同様、いわゆる疑似科学的なパーソナリティ診断です。意思決定の根拠にはできませんが、例えばワークショップ参加者が診断結果を共有することで、自己紹介セッションを盛り上げて場の雰囲気を温めることができます。そのような機会があれば是非診断アプリをお試しください。
 
@@ -19,7 +19,7 @@ CAPS や DiSC は巷で流行の MBTI と同様、いわゆる疑似科学的な
 
 ## 1. アビューズ対策編
 
-診断アプリは匿名でアクセスできますが、バックエンドには課金の発生する生成 AI（Amazon Bedrock）を利用しています。そのため、ボットによるアビューズで爆死、というのは想定しうる事態です。とはいえ、攻撃側のインセンティブも考慮し「高度なアビューズは受容し、それ以外は遮断」を基本方針として、次に述べるアビューズ対策を実装しました。
+診断アプリは匿名でアクセスできますが、バックエンドには課金の発生する生成 AI（Amazon Bedrock）を利用しています。そのため、ボットによるアビューズで爆死、というのは想定しうるシナリオです。とはいえ、攻撃側のインセンティブも考慮し「高度なアビューズは受容し、それ以外は遮断」を基本方針として、次に述べるアビューズ対策を実装しました。
 
 ### 1.1. WAF による一般的な攻撃トラフィックの遮断
 
@@ -33,7 +33,7 @@ WAF については AWS 標準の保護パックを参考にしつつ
 
 を採用し、診断アプリに必要のないルールは削除しました。ただ、懸念点として Lambda 関数 URL を公開エンドポイントとして利用する場合、CloudFront を経由しないリクエストが WAF をバイパスできてしまいます。CloudFront 経由（= WAF 経由）であることを担保する方法もありますが、
 
-- <a href='https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/spot-private-lambda.yml'>Lambda 関数 URL を private 化</a> し CloudFront OAC を利用
+- Lambda 関数 URL の `AuthType` を `AWS_IAM` に変更し CloudFront OAC を利用
 	- この場合、POST リクエスト時の `x-amz-content-sha256` サポートが必要になる
 - CloudFront で拡張ヘッダに秘密情報を付与し、それを Lambda 側で検証
 	- この場合、複数の環境変数の管理や突合処理が必要になる
@@ -44,12 +44,12 @@ WAF については AWS 標準の保護パックを参考にしつつ
 
 例えば WAF の保護パックの場合 …
 
-1. 保護パックの <a href='https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/WAFPolicyApiCorridor.json'>JSON</a> を Source of Truth としてリポジトリで管理
+1. 保護パックの <a target='_blank' href='https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/WAFPolicyApiCorridor.json'>JSON</a> を Source of Truth としてリポジトリで管理
 2. 保護パックの変更は常に以下の手順で実施
 	1. 最初に Source of Truth を変更
 	2. AWS コンソールの設定画面に Source of Truth をペースト
 	3. JSON エラーが発生したら 1. に戻る
-3. CI で Source of Truth と WAF 適用中の保護パックの <a href='https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/deploy-corridor.yml#L49'>整合性チェック</a>
+3. CI で Source of Truth と WAF 適用中の保護パックの <a target='_blank' href='https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/deploy-corridor.yml#L49'>整合性チェック</a>
 
 のような管理が考えられます。
 
@@ -63,12 +63,12 @@ WAF については AWS 標準の保護パックを参考にしつつ
 
 のように実装し、あわせて別レイヤーの対策も併用しました。
 
-- `SameSite=Strict` として別ドメインからの POST クエリを遮断（参考 : <a href='https://blog.techscore.com/entry/2023/10/06/110100'>図解 SameSite@Set-Cookie</a>）
+- `SameSite=Strict` として別ドメインからの POST クエリを遮断（参考 : <a target='_blank' href='https://blog.techscore.com/entry/2023/10/06/110100'>図解 SameSite@Set-Cookie</a>）
 - 許可リストにあるオリジンのみを `Access-Control-Allow-Origin` に指定しブラウザ経由のレスポンス参照を制限
 
 ボットを高度化すればこれらの対策を迂回することは可能ですが、基本方針にもとづきまずはここまでの対策で運用を開始します。アクセス状況をモニタリングしつつ、必要に応じて追加の対策を検討することにします。
 
-蛇足ですが、アビューズ対策については後日談があります。運用してわかったことですが、コストの観点では WAF が Bedrock を大きく上回ってしまいました。その結果を受け、次のステップとして WAF の利用を中止し、POST 回数の制限やキャッシュを DynamoDB で実装することを検討しています。マネージドサービスが常に最適解、というわけでもなさそうですね。
+蛇足ですが、アビューズ対策については後日談があります。運用してわかったことですが、私の公開サイト規模のトラフィックでは WAF の固定費が Bedrock の従量課金額を上回ってしまいました。これを受け、サイトの成長に応じたマネージドサービスの選択、例えば WAF の利用を一時中断し、POST 回数の制限やキャッシュを DynamoDB で実装することなどを検討しています。
 
 ## 2. 技術選定編
 
@@ -81,12 +81,12 @@ WAF については AWS 標準の保護パックを参考にしつつ
 
 については、当初 1. が魅力的な選択肢でした。もともとローカルに PHP のテスト環境を構築済みだったので、アジャイルに開発～テストを進められるイメージを持てたからです。しかし Lambda との親和性や CI の複雑化の懸念もふまえ、結果として 2. を採用することにしました。振り返ってみれば、設計やコーディングにかかった時間よりも AWS 環境の試行錯誤に費やした時間の方が長かったため、的を射た選択だったかと思います。
 
-余談ですが AWS 環境の試行錯誤で Lambda 関数 を繰り返し作成していると、その都度新しい IAM Role が自動生成されます。不要になった IAM Role は放置すると技術負債になるので、忘れないうちに削除しておきましょう。
+余談ですが AWS 環境の試行錯誤でコンソールから Lambda 関数の作成を繰り返すと、その都度新しい IAM Role が自動生成されます。不要になった IAM Role は放置すると技術負債になるので、忘れないうちに削除しておきましょう。
 
 加えて、Lambda とテスト環境の環境依存ロジックを分離した上で、後で楽をするための仕組として
 
-- <a href='https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/template.py'>テスト環境 / Lambda 環境共通テンプレート</a>
-- <a href='https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/restart-python.bat'>テスト環境 Python ランチャー</a>
+- <a target='_blank' href='https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/template.py'>テスト環境 / Lambda 環境共通テンプレート</a>
+- <a target='_blank' href='https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/restart-python.bat'>テスト環境 Python ランチャー</a>
 
 を用意し、後述するプロンプトチューニングの足場としました。
 
@@ -107,7 +107,7 @@ WAF については AWS 標準の保護パックを参考にしつつ
 
 ## 3. アプリケーション開発編
 
-アビューズ対策が定まり、技術選定も終えたのでいよいよアプリケーション開発です。完成したら世界中のユーザーに試してもらえるように Reddit に投稿したいですね。そうなると、ユーザーの母国語で UI を提供したくなります。そんなモチベーションから <a href='https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/personalitytest/OpenAssessmentLib.js#L18'>簡易 i18n 対応</a> を実装し 9 カ国語をサポートすることにしました。
+アビューズ対策が定まり、技術選定も終えたのでいよいよアプリケーション開発です。完成したら世界中のユーザーに試してもらえるように Reddit に投稿したいですね。そうなると、ユーザーの母国語で UI を提供したくなります。そんなモチベーションから <a target='_blank' href='https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/personalitytest/OpenAssessmentLib.js#L18'>簡易 i18n 対応</a> を実装し 9 カ国語をサポートすることにしました。
 
 ```
 const GREETING = i18n.text({
@@ -139,7 +139,7 @@ const GREETING = i18n.text({
 
 1. 予めプロンプト生成のためのショートカット機能を用意しておく
 	- 診断アプリの場合「ランダムな回答 + 診断クエリ実行」の自動化
-	- これがアビューズリスクを生まないようにショートカット起動の秘密情報は <a href='https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/personalitytest/OpenCAPS.html#L2054'>ハッシュで検証</a>
+	- これがアビューズリスクを生まないようにショートカット起動の秘密情報は <a target='_blank' href='https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/personalitytest/OpenCAPS.html#L2054'>ハッシュで検証</a>
 2. テスト環境（生成 AI 接続なし）でのチューニング
 	1. ショートカット機能を実行
 	2. テスト環境ではプロンプト（= テンプレートに質問回答を合成した結果）をコンソール出力
