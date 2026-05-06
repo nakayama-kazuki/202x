@@ -60,7 +60,7 @@ WAF については AWS 標準の保護パックを参考にしつつ
 
 のような実装に加え、以下の対策も併用しました。
 
-- `SameSite=Strict` として別ドメインからの POST クエリを遮断（<a href='https://blog.techscore.com/entry/2023/10/06/110100'>図解 SameSite@Set-Cookie</a> もご参考）
+- `SameSite=Strict` として別ドメインからの POST 時の Cookie を遮断（<a href='https://blog.techscore.com/entry/2023/10/06/110100'>図解 SameSite@Set-Cookie</a> もご参考）
 - 許可リストにあるオリジンのみを `Access-Control-Allow-Origin` に指定しブラウザ経由のレスポンス参照を制限
 
 ボットを高度化すればこれらの対策は迂回可能ですが、基本方針にもとづき初手としてはここまでの対策とします。アクセス状況をモニタリングしつつ、必要に応じて追加の対策を検討することにします。
