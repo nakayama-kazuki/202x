@@ -118,7 +118,7 @@ const GREETING = i18n.text({
 })
 ```
 
-さらに生成 AI の出力を安定させるために、ユーザーとの I/F は母国語としつつ生成 AI への入力は英語に固定しました。
+さらに生成 AI の出力品質を安定させるために、ユーザーとの I/F は母国語としつつ生成 AI への入力は英語に固定しました。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/pj-corridor.net/personalitytest/blog/arch.png' width='600' />
 
