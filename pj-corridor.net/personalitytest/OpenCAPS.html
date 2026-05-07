@@ -137,6 +137,12 @@ const SKYBLUE = '#5588FF';
 const GREEN = '#118811';
 const ORANGE = '#FFAA00';
 
+(in_lang => {
+	if (in_lang) {
+		i18n.browserLanguage = in_lang;
+	}
+})((new URLSearchParams(location.search)).get('lang'));
+
 const MATRIX = Object.freeze({
 	STATEMENT : {
 		S : i18n.text({
@@ -2063,10 +2069,6 @@ const uiStage1st = (() => {
 const TESTHASH = '487b91042c7cf27a19e23ea8699f5f354b1a0c3af9e418138dc6150d830f970d';
 
 (async () => {
-	const lang = (new URLSearchParams(location.search)).get('lang');
-	if (lang) {
-		i18n.browserLanguage = lang;
-	}
 	cLLM.refreshChallenge();
 	if (await queryHashIs('mode', TESTHASH)) {
 		uiStage1st(false);
