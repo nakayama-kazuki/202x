@@ -1446,6 +1446,18 @@ const HEADERS = [
 	})
 ];
 
+const RESPONDENT = i18n.text({
+	en : 'Respondent',
+	ja : '回答者',
+	fr : 'Répondant',
+	de : 'Befragter',
+	es : 'Encuestado',
+	pt : 'Respondente',
+	hi : 'उत्तरदाता',
+	ko : '응답자',
+	zh : '受访者'
+});
+
 const APIERROR = i18n.text({
 	en : '( Now LLM is not available )',
 	ja : '（現在 LLM は利用できません）',
@@ -1846,7 +1858,8 @@ function createUiTrait(in_trait, in_resp) {
 	if (in_resp) {
 		addDesc(secArr[0], HEADERS[0], in_resp.adviceForRespondent)
 		addTrait(secArr[1]);
-		addDesc(secArr[2], HEADERS[1], in_resp.adviceForColleagues)
+		const advice = in_resp.adviceForColleagues.replaceAll('_RESPONDENT_', RESPONDENT);
+		addDesc(secArr[2], HEADERS[1], advice)
 	} else {
 		addTrait(secArr[0]);
 		secArr[1].textContent = APIERROR;
