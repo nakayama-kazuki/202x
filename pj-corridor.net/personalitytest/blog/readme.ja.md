@@ -11,7 +11,7 @@ CAPS や DiSC は巷で流行の MBTI と同様、いわゆる疑似科学的な
 
 ちなみにこちらは私の CAPS 診断結果です。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/pj-corridor.net/personalitytest/blog/sample.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/pj-corridor.net/personalitytest/blog/sample.ja.png' />
 
 アドバイスと取り扱い説明書は、設問回答を使った生成 AI による出力ですが「Respondent」という単語に違和感を覚えますね。このように生成 AI 連携アプリは高い表現力を得る一方で品質面のリスクが生じます。とはいえ、品質担保にかけるコストは趣味プログラミングの範囲に抑えたいところです。そこで、ルールベースの採点ロジックは deterministic に保ち、生成 AI の出力は補足的な文章に留めることでハルシネーションの影響範囲をコントロールしました。
 
@@ -130,7 +130,7 @@ const GREETING = i18n.text({
 
 また、状態管理や UI 部品および Lambda やテスト環境との I/F の実装は DiSC と CAPS で <a href='https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/personalitytest/OpenAssessmentLib.js'>共通化</a> し、将来 MBTI などの診断アプリを開発する際にも同じフレームワークを活用できるようにします。
 
-さて、アプリケーション開発もいよいよ大詰めです。最後に生成 AI の出力品質の向上と安定化、具体的にはプロンプトチューニングにに取り掛かりましょう。ここは焦らず「急がば回れ」で、まずは試行錯誤のための基盤を整えます。技術選定編でご紹介した足場に加えて
+さて、アプリケーション開発もいよいよ大詰めです。最後に生成 AI の出力品質の向上と安定化、具体的にはプロンプトチューニングに取り掛かりましょう。ここは焦らず「急がば回れ」で、まずは試行錯誤のための基盤を整えます。技術選定編でご紹介した足場に加えて
 
 1. 予めプロンプト生成のためのショートカット機能を用意しておく
 	- 診断アプリの場合「ランダムな回答 + 診断クエリ実行」の自動化
@@ -146,6 +146,38 @@ const GREETING = i18n.text({
 	2. 診断アプリを通しで実行し、出力内容の違和感などを最終チェック
 
 のようにチューニングを進めました。なお、Gemini や ChatGPT のアドバイスは、プロンプトを肥大化させる傾向があります。適宜指示の統廃合や、文書構造のリファクタリングにも取り組むことをお勧めします。
+
+最後に冒頭の「Respondent」の伏線を回収します。ここは同僚や友人向けの文章なので、文法上の主語を「回答者」と表現することが期待動作でした。しかし
+
+```
+The second response must be written for the Respondent's colleagues or friends.
+The grammatical subject must be the colleagues or friends, and when referring to the Respondent,
+consistently use the {{lang}} term for "Respondent".
+```
+
+と指示した場合「あなた」となってしまいます。そこで代名詞の利用禁止を指示すると、今度は「Respondent」となってしまいます。これは生成 AI がより自然な表現を優先したためです。チューニングを繰り返したものの「回答者」で安定させることは難しく（これはこれで学び）、最終的には
+
+```
+The second response must be written for the Respondent's colleagues or friends.
+The grammatical subject must be the colleagues or friends, and when referring to the Respondent,
+always use the exact keyword "_RESPONDENT_" without modification.
+```
+
+の形で `_RESPONDENT_` に固定した上でクライアント側で置換、という力技に落ち着きました 😅
+
+```
+const RESPONDENT = i18n.text({
+    en : 'Respondent',
+    ja : '回答者',
+    fr : 'Répondant',
+    de : 'Befragter',
+    es : 'Encuestado',
+    pt : 'Respondente',
+    hi : 'उत्तरदाता',
+    ko : '응답자',
+    zh : '受访者'
+});
+```
 
 ## おわりに
 
