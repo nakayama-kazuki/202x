@@ -215,6 +215,9 @@ def input_to_dict(in_req) -> dict:
     except Exception:
         return {}
 
+OUTPUT_WORDS = 300
+MAX_WORDS_TO_TOKEN = 4
+
 def invoke_model(in_prompt: str) -> str:
     if 'AWS_LAMBDA_FUNCTION_NAME' not in os.environ:
         return json.dumps({
@@ -239,7 +242,7 @@ def invoke_model(in_prompt: str) -> str:
         inferenceConfig={
             'temperature' : 0.1,
             'topP' : 0.9,
-            'maxTokens' : 500,
+            'maxTokens' : OUTPUT_WORDS * MAX_WORDS_TO_TOKEN,
             'stopSequences' : []
         }
     )
@@ -292,7 +295,7 @@ def generate_fetch(in_req, in_rfc7231):
     prompt = prompt.replace('{{summary}}', summary_text)
     prompt = prompt.replace('{{qa}}', qa_text)
     prompt = prompt.replace('{{lang}}', payload.get('lang', 'English'))
-    prompt = prompt.replace('{{words}}', str(300))
+    prompt = prompt.replace('{{words}}', str(OUTPUT_WORDS))
     body = invoke_model(prompt)
     if body is not None:
         return {
