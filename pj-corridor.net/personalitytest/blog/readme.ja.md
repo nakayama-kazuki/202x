@@ -74,7 +74,7 @@ WAF については AWS 標準の保護パックを参考にしつつ
 1. Lambda 独自コンテナ方式（PHP 利用）
 2. Lambda zip 方式（Python / Node 利用）
 
-については、当初 1 が魅力的な選択肢でした。もともとローカルに PHP のテスト環境を構築済みだったので、アジャイルに開発～テストを進められるイメージを持てたからです。しかし Lambda との親和性や CI の複雑化の懸念もふまえ、結果として 2 を採用することにしました。振り返ってみれば、AWS 環境での試行錯誤やブラックボックスを紐解く時間の方が相対的に長かったため、的を射た選択だったかと思います。
+については、当初 1 が魅力的な選択肢でした。もともとローカルに PHP のテスト環境を構築済みだったので、アジャイルに開発～テストを進められるイメージを持てたからです。しかし Lambda との親和性や CI の複雑化の懸念もふまえ、結果として 2 を採用することにしました。振り返ってみれば、AWS 環境での試行錯誤やブラックボックスを紐解くための時間の方が相対的に長かったため、的を射た選択だったかと思います。
 
 試行錯誤といえば、AWS コンソールから Lambda 関数の作成を繰り返すと、その都度新しい IAM Role が自動生成されます。IAM Role に限らず、不要なリソースを放置するといずれ技術負債になるので、忘れないうちに削除しておきましょう。
 
@@ -147,7 +147,7 @@ const GREETING = i18n.text({
 
 のようにチューニングを進めました。なお、Gemini や ChatGPT のアドバイスは、プロンプトを肥大化させる傾向があります。適宜指示の統廃合や、文書構造のリファクタリングにも取り組むことをお勧めします。
 
-最後に冒頭の「Respondent」の伏線を回収します。ここは同僚や友人向けの文章なので、文法上の主語を「回答者」と表現することが期待動作でした。しかし
+最後に冒頭で触れた「Respondent」の伏線回収です。ここは同僚や友人向けの文章なので、文法上の主語を「回答者」と表現する必要がありました。しかし
 
 ```
 The second response must be written for the Respondent's colleagues or friends.
@@ -155,15 +155,15 @@ The grammatical subject must be the colleagues or friends, and when referring to
 consistently use the {{lang}} term for "Respondent".
 ```
 
-と指示した場合「あなた」となってしまいます。そこで代名詞の利用禁止を指示すると、今度は「Respondent」となってしまいます。これは生成 AI がより自然な表現を優先したためです。チューニングを繰り返したものの「回答者」で安定させることは難しく（これはこれで学び）、最終的には
+と指示した場合、文法上の主語が「あなた」になってしまいます。そこで代名詞の利用禁止の指示を与えると、今度は「Respondent」になってしまいます。これは生成 AI がより自然な表現を優先するためで、指示のチューニングで安定的に「回答者」と出力させることは難しく（これはこれで学び）、最終的には
 
 ```
 The second response must be written for the Respondent's colleagues or friends.
 The grammatical subject must be the colleagues or friends, and when referring to the Respondent,
-always use the exact keyword "_RESPONDENT_" without modification.
+always use the fixed keyword "_RESPONDENT_" without any modification, translation, or suffixes.
 ```
 
-の形で `_RESPONDENT_` に固定した上でクライアント側で置換、という力技に落ち着きました 😅
+の形で `_RESPONDENT_` に固定した上でクライアント側で置換、という力技 😅 に落ち着きました。
 
 ```
 const RESPONDENT = i18n.text({
