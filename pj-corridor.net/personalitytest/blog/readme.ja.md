@@ -7,13 +7,13 @@
 - <a href='https://pj-corridor.net/personalitytest/OpenCAPS.html'>CAPS（= Controller, Analyzer, Promoter, Supporter）診断</a>
 - <a href='https://pj-corridor.net/personalitytest/OpenDiSC.html'>DiSC（= Drive, Influence, Steadiness, Compliance）診断</a>
 
-CAPS や DiSC は巷で流行の MBTI と同様、いわゆる疑似科学的なパーソナリティ診断です。意思決定の根拠にはできませんが、例えばワークショップ参加者が診断結果を共有することで、自己紹介セッションを盛り上げて場の雰囲気を温めることができます。そのような機会があれば是非診断アプリをお試しください。
+CAPS や DiSC は巷で流行の MBTI と同様、いわゆる疑似科学的なパーソナリティ診断です。意思決定の根拠にはできませんが、例えばワークショップ参加者が診断結果を共有することで、自己紹介セッションを盛り上げて場の雰囲気を温めることができます。そのような機会があれば診断アプリをお試しください。
 
 ちなみにこちらは私の CAPS 診断結果です。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/pj-corridor.net/personalitytest/blog/sample.png' />
 
-アドバイスと取り扱い説明書は、設問回答を使った生成 AI による出力ですが、日本語の文章に現れる「Respondent」という単語に唐突感がありますね。このように生成 AI 連携アプリは高い表現力を得る一方で品質面のリスクが生じます。とはいえ、品質担保にかけるコストは趣味プログラミングの範囲に抑えたいところです。そこで、ルールベースの採点ロジックは deterministic に保ち、生成 AI の出力は補足的な文章に留めることでハルシネーションの影響範囲をコントロールしました。
+アドバイスと取り扱い説明書は、設問回答を使った生成 AI による出力ですが、日本語の文章中に現れる「Respondent」という主語に唐突感がありますね。このように生成 AI 連携アプリは高い表現力を得る一方で品質面のリスクが生じます。とはいえ、品質担保にかけるコストは趣味プログラミングの範囲に抑えたいところです。そこで、ルールベースの採点ロジックは deterministic に保ち、生成 AI の出力は補足的な文章に留めることでハルシネーションの影響範囲をコントロールしました。
 
 それでは、ここから具体的な試行錯誤やトレードオフへの向き合い方について 3 つの章に分けてご紹介します。
 
@@ -48,7 +48,7 @@ WAF については AWS 標準の保護パックを参考にしつつ
 
 のような管理が考えられます。
 
-ところで WAF には後日談がありまして、診断アプリのトラフィック規模ですと、WAF の固定費が Bedrock の従量課金額を上回ってしまいました。見積もりをしないとこうなります 😅 という身を挺した教訓です。今後については、トラフィックが伸びるまでは WAF の利用を中断し、コストに影響する POST 回数の制限を DynamoDB で実装することも検討しています。
+ところで WAF には後日談がありまして、診断アプリのトラフィック規模ですと、WAF の固定費が Bedrock の従量課金額を上回ってしまいました。見積もりをしないとこうなります 😅 という身を挺した教訓ですね。今後については、トラフィックが伸びるまでは WAF の利用を中断し、コストに影響する POST 回数の制限を DynamoDB で実装することも検討しています。
 
 ### 1.2. 雑なボットや診断フローを経由しないブラウザのアクセス制御
 
@@ -60,10 +60,10 @@ WAF については AWS 標準の保護パックを参考にしつつ
 
 のような実装に加え、以下の対策も併用しました。
 
-- `SameSite=Strict` として別ドメインからの POST 時の Cookie を遮断（<a href='https://blog.techscore.com/entry/2023/10/06/110100'>図解 SameSite@Set-Cookie</a> もご参考）
+- `SameSite=Strict` として別ドメインからの POST 時の Cookie を遮断（<a href='https://blog.techscore.com/entry/2023/10/06/110100'>図解 SameSite@Set-Cookie</a> もご参考まで）
 - 許可リストにあるオリジンのみを `Access-Control-Allow-Origin` に指定しブラウザ経由のレスポンス参照を制限
 
-ボットを高度化すればこれらの対策は迂回可能ですが、基本方針にもとづき初手としてはここまでの対策とします。アクセス状況をモニタリングしつつ、必要に応じて追加の対策を検討することにします。
+ボットを高度化すればこれらの対策は迂回可能ですが、初手としては基本方針にもとづいた対策に留めます。アクセス状況をモニタリングしつつ、必要に応じて追加の対策を検討することにします。
 
 ## 2. 技術選定編
 
@@ -118,13 +118,7 @@ const GREETING = i18n.text({
 })
 ```
 
-さらに生成 AI の出力を安定させるために、
-
-- ユーザーに向けた設問と回答は母国語
-- 診断クエリとして生成 AI に送信するテキストは英語
-- 生成 AI の出力は母国語
-
-のような I/F 設計としました。
+さらに生成 AI の出力を安定させるために、ユーザーとの I/F は母国語としつつ生成 AI への入力は英語に固定しました。
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/pj-corridor.net/personalitytest/blog/arch.png' width='600' />
 
@@ -134,7 +128,7 @@ const GREETING = i18n.text({
 
 1. 予めプロンプト生成のためのショートカット機能を用意しておく
 	- 診断アプリの場合「ランダムな回答 + 診断クエリ実行」の自動化
-		- ショートカット起動の秘密情報は <a href='https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/personalitytest/OpenCAPS.html#L2054'>ハッシュで検証</a> する形でアビューズ対策
+		- ショートカット起動の秘密情報は <a href='https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/personalitytest/OpenCAPS.html#L2069'>ハッシュで検証</a> する形でアビューズ対策
 2. テスト環境（生成 AI 接続なし）でのチューニング
 	1. ショートカット機能を実行
 	2. テスト環境ではプロンプト（= テンプレートに設問回答を合成した結果）をコンソール出力
@@ -147,7 +141,7 @@ const GREETING = i18n.text({
 
 のようにチューニングを進めました。なお、Gemini や ChatGPT のアドバイスは、プロンプトを肥大化させる傾向があります。適宜指示の統廃合や、文書構造のリファクタリングにも取り組むことをお勧めします。
 
-最後に冒頭で触れた「Respondent」の伏線回収です。ここは同僚や友人向けの文章なので、文法上の主語を「回答者」と表現する必要がありました。しかし
+最後に冒頭の「Respondent」に関する伏線回収です。ここは同僚や友人向けの文章なので、文法上の主語を「回答者」と表現する必要がありました。しかし
 
 ```
 The second response must be written for the Respondent's colleagues or friends.
@@ -155,7 +149,7 @@ The grammatical subject must be the colleagues or friends, and when referring to
 consistently use the {{lang}} term for "Respondent".
 ```
 
-と指示した場合、文法上の主語が「あなた」になってしまいます。そこで代名詞の利用禁止の指示を与えると、今度は「Respondent」になってしまいます。これは生成 AI がより自然な表現を優先するためで、指示のチューニングで安定的に「回答者」と出力させることは難しく（これはこれで学びですが）、最終的には
+と指示した場合、文法上の主語が「あなた」になってしまいます。そこで代名詞の利用禁止の指示を加えると、今度は「Respondent」になってしまいます。これは生成 AI がより自然な表現を優先するためで、指示のチューニングによって安定的に「回答者」と出力させることは難しく（これはこれで学びですが）、最終的には
 
 ```
 The second response must be written for the Respondent's colleagues or friends.
@@ -163,7 +157,7 @@ The grammatical subject must be the colleagues or friends, and when referring to
 always use the fixed keyword "_RESPONDENT_" without any modification, translation, or suffixes.
 ```
 
-の形で `_RESPONDENT_` に固定した上でクライアント側で置換、という力技 😅 に落ち着きました。
+のように `_RESPONDENT_` と固定した上でクライアント側で置換、という力技 😅 に落ち着きました。
 
 ```
 const RESPONDENT = i18n.text({
