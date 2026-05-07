@@ -38,8 +38,17 @@ export class i18n {
 				break;
 			}
 		}
-		// const testCode = 'en';
-		// i18n.#browserCode = testCode;
+		// const testLanguage = 'English';
+		// i18n.browserLanguage = testLanguage;
+	}
+	static set browserLanguage(in_language) {
+		for (const code of Object.keys(i18n.#supportCode)) {
+			if (in_language === i18n.#supportCode[code]) {
+				i18n.#browserCode = code;
+				return;
+			}
+		}
+		throw new Error(in_language + ' is not supported');
 	}
 	static get browserLanguage() {
 		return i18n.#supportCode[i18n.#browserCode];
