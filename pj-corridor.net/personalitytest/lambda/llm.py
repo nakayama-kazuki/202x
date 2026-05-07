@@ -23,7 +23,7 @@ Please follow these rules:
 - Treat "[Overall Summary]" as the dominant tendency, while using "[Responses]" to infer nuance or secondary traits.
 - Provide practical and concrete suggestions rather than abstract generalities.
 - The first response must address the Respondent directly, using second-person pronouns appropriate to {{lang}}.
-- The second response must be written for the Respondent's colleagues or friends. The grammatical subject must be the colleagues or friends, and when referring to the Respondent, always use the specific term, which is the translated term of "Respondent" in {{lang}}, and do not use pronouns like "you" in {{lang}}.
+- The second response must be written for the Respondent's colleagues or friends. The grammatical subject must be the colleagues or friends, and when referring to the Respondent, consistently use the noun "_RESPONDENT_".
 
 The output must be valid JSON in the following structure (do not wrap it in Markdown and do not use code fences):
 
