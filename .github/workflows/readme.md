@@ -75,7 +75,12 @@ iam user ( github-actions )
     - しかし GET では動作確認できたものの `x-amz-content-sha256` を使う POST ではうまく動作せず採用見送り
     - CloudFront のカスタムヘッダと Lambda の環境変数の双方に同じ秘密情報を保持しアプリで突合する代替案もあり
 
-## 6. WAF
+## 6. CloudWatch
+
+- /aws/lambda/personalitytest についてアクションから保持期間の編集をするか CLI 実行
+  - `aws logs put-retention-policy --log-group-name "/aws/lambda/personalitytest" --retention-in-days 30`
+
+## 7. WAF
 
 WCU 観点でコスト対効果を考慮した [WAFPolicyApiCorridor.json](https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/WAFPolicyApiCorridor.json) を適用。
 
@@ -87,7 +92,7 @@ WCU 観点でコスト対効果を考慮した [WAFPolicyApiCorridor.json](https
 |AWS-AWSManagedRulesAmazonIpReputationList|AWS 認定攻撃 IP 遮断|
 |AWS-AWSManagedRulesAnonymousIpList|トンネリング等身元隠蔽 IP 遮断|
 
-## 7. CloudFront
+## 8. CloudFront
 
 - 静的コンテンツ用ディストリビューション作成
   - オリジンに S3 指定
@@ -96,12 +101,12 @@ WCU 観点でコスト対効果を考慮した [WAFPolicyApiCorridor.json](https
   - WAF をアタッチ
 - 認証や API のバージョニングを考慮する場合は API Gateway の利用も検討
 
-## 8. Route 53
+## 9. Route 53
 
 - 静的コンテンツ（S3）用ディストリビューション（CloudFront URL）向け A レコード追加
 - 動的コンテンツ（Lambda）用ディストリビューション（CloudFront URL）向け A レコード追加
 
-## 9. GitHub
+## 10. GitHub
 
 Repository Settings → Secrets and variables → Actions から以下を設定
 
@@ -109,7 +114,7 @@ Repository Settings → Secrets and variables → Actions から以下を設定
 - `AWS_SECRET_ACCESS_KEY` ( from 2 )
 - `AWS_CLOUDFRONT_DISTRIBUTION` ( from 5 )
 
-## 10. CI
+## 11. CI
 
 [deploy-corridor.yml](https://github.com/nakayama-kazuki/202x/blob/main/.github/workflows/deploy-corridor.yml) にて以下を実行。
 
