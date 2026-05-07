@@ -11,7 +11,7 @@ CAPS や DiSC は巷で流行の MBTI と同様、いわゆる疑似科学的な
 
 ちなみにこちらは私の CAPS 診断結果です。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/pj-corridor.net/personalitytest/blog/sample.ja.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/pj-corridor.net/personalitytest/blog/sample.png' />
 
 アドバイスと取り扱い説明書は、設問回答を使った生成 AI による出力ですが「Respondent」という単語に違和感を覚えますね。このように生成 AI 連携アプリは高い表現力を得る一方で品質面のリスクが生じます。とはいえ、品質担保にかけるコストは趣味プログラミングの範囲に抑えたいところです。そこで、ルールベースの採点ロジックは deterministic に保ち、生成 AI の出力は補足的な文章に留めることでハルシネーションの影響範囲をコントロールしました。
 
