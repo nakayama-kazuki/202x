@@ -13,7 +13,7 @@ CAPS や DiSC は巷で流行の MBTI と同様、いわゆる疑似科学的な
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/pj-corridor.net/personalitytest/blog/sample.png' />
 
-アドバイスと取り扱い説明書は、設問回答を使った生成 AI による出力ですが「Respondent」という単語に違和感を覚えますね。このように生成 AI 連携アプリは高い表現力を得る一方で品質面のリスクが生じます。とはいえ、品質担保にかけるコストは趣味プログラミングの範囲に抑えたいところです。そこで、ルールベースの採点ロジックは deterministic に保ち、生成 AI の出力は補足的な文章に留めることでハルシネーションの影響範囲をコントロールしました。
+アドバイスと取り扱い説明書は、設問回答を使った生成 AI による出力ですが、日本語の文章に現れる「Respondent」という単語に唐突感がありますね。このように生成 AI 連携アプリは高い表現力を得る一方で品質面のリスクが生じます。とはいえ、品質担保にかけるコストは趣味プログラミングの範囲に抑えたいところです。そこで、ルールベースの採点ロジックは deterministic に保ち、生成 AI の出力は補足的な文章に留めることでハルシネーションの影響範囲をコントロールしました。
 
 それでは、ここから具体的な試行錯誤やトレードオフへの向き合い方について 3 つの章に分けてご紹介します。
 
@@ -155,7 +155,7 @@ The grammatical subject must be the colleagues or friends, and when referring to
 consistently use the {{lang}} term for "Respondent".
 ```
 
-と指示した場合、文法上の主語が「あなた」になってしまいます。そこで代名詞の利用禁止の指示を与えると、今度は「Respondent」になってしまいます。これは生成 AI がより自然な表現を優先するためで、指示のチューニングで安定的に「回答者」と出力させることは難しく（これはこれで学び）、最終的には
+と指示した場合、文法上の主語が「あなた」になってしまいます。そこで代名詞の利用禁止の指示を与えると、今度は「Respondent」になってしまいます。これは生成 AI がより自然な表現を優先するためで、指示のチューニングで安定的に「回答者」と出力させることは難しく（これはこれで学びですが）、最終的には
 
 ```
 The second response must be written for the Respondent's colleagues or friends.
