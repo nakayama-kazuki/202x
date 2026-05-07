@@ -252,6 +252,7 @@ def invoke_model(in_prompt: str) -> str:
         }
         return json.dumps(parsed, ensure_ascii=False)
     except Exception:
+        print("JSON ERROR:", raw)
         return None
 
 def generate_fetch(in_req, in_rfc7231):
