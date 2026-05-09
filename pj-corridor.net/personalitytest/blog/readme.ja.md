@@ -138,7 +138,7 @@ const GREETING = i18n.text({
 
 入力についても、Gemini や ChatGPT のアドバイスは保険的な指示の追加でプロンプトを肥大化させる傾向があるので、適宜指示の統廃合や、構造のリファクタリングに取り組むことをお勧めします。
 
-最後に冒頭の「Respondent」に関する伏線回収です。ここは同僚や友人向けの文章なので、文法上の主語を「回答者」と表現する必要がありました。しかし
+最後に冒頭の「Respondent」に関する伏線回収です。ここは文法上の主語を同僚や友人としつつ、取り扱い説明書の対象を「回答者」に固定する必要がありました。しかし
 
 ```
 The second response must be written for the Respondent's colleagues or friends.
@@ -146,7 +146,7 @@ The grammatical subject must be the colleagues or friends, and when referring to
 consistently use the {{lang}} term for "Respondent".
 ```
 
-と指示した場合、文法上の主語が「あなた」になってしまいます。そこで代名詞の利用禁止の指示を加えると、今度は「Respondent」になってしまいます 🤔。これは、学習データに基づいた自然な表現が優先されることと、主語や参照語に関する指示が競合していることが原因であり、最終的に出力を安定させるために
+と指示した場合、文法上の主語が「あなた」になってしまいます。そこで代名詞の利用禁止の指示を加えると、今度は「Respondent」になってしまいます 🤔。これは、学習データに基づく自然な表現の生成と、主語や参照語に関する指示が競合していることが原因で、最終的に出力を安定させるために
 
 ```
 The second response must be written for the Respondent's colleagues or friends.
