@@ -160,7 +160,7 @@ The grammatical subject must be the colleagues or friends, and when referring to
 always use the fixed keyword "_RESPONDENT_" without any modification, translation, or suffixes.
 ```
 
-와 같이 `_RESPONDENT_`로 고정한 뒤 클라이언트에서 치환하는 방식으로 해결했습니다。즉, **완전히 이상적인 방법은 아니지만 실용적인 해결책 😅** 입니다。
+와 같이 `_RESPONDENT_`로 고정한 뒤 클라이언트에서 치환하는 방식으로 해결했습니다。즉, 완전히 이상적인 방법은 아니지만 실용적인 해결책 😅 입니다。
 
 ```
 const RESPONDENT = i18n.text({
