@@ -7,8 +7,8 @@
 <script type='importmap'>
 {
 	"imports" : {
-		"three" : "https://cdn.jsdelivr.net/npm/three@0.182.0/build/three.module.min.js",
-		"utils" : "https://cdn.jsdelivr.net/npm/three@0.182.0/examples/jsm/utils/BufferGeometryUtils.js",
+		"three" : "https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.module.min.js",
+		"utils" : "https://cdn.jsdelivr.net/npm/three@0.184.0/examples/jsm/utils/BufferGeometryUtils.js",
 		"basic" : "./basic-functions.js",
 		"rubik" : "./rubiks-cube.js",
 		"sound" : "./sound-effect.js"
@@ -594,7 +594,8 @@ function nextLevel(in_sound = true) {
 		Object.assign(button.style, {
 			margin : '1.5px 1.5px 1.5px 1.5px',
 			borderRadius : '3px',
-			border : '1px solid gray'
+			border : '1px solid gray',
+			cursor : 'pointer'
 		});
 		container.appendChild(button);
 	});
