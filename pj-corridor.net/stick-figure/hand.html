@@ -7,8 +7,8 @@
 <script type='importmap'>
 {
 	"imports" : {
-		"three" : "https://cdn.jsdelivr.net/npm/three@0.182.0/build/three.module.min.js",
-		"utils" : "https://cdn.jsdelivr.net/npm/three@0.182.0/examples/jsm/utils/BufferGeometryUtils.js",
+		"three" : "https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.module.min.js",
+		"utils" : "https://cdn.jsdelivr.net/npm/three@0.184.0/examples/jsm/utils/BufferGeometryUtils.js",
 		"modif" : "https://cdn.jsdelivr.net/npm/three-subdivide@1.1.5/build/index.module.min.js",
 		"basic" : "./basic-functions.js",
 		"sound" : "./sound-effect.js"
@@ -1497,7 +1497,8 @@ function uiRights() {
 		Object.assign(button.style, {
 			margin : '1.5px 1.5px 1.5px 1.5px',
 			borderRadius : '3px',
-			border : '1px solid gray'
+			border : '1px solid gray',
+			cursor : 'pointer'
 		});
 		container.appendChild(button);
 	});
