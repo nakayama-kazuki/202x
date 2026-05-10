@@ -1,6 +1,6 @@
 # そんな時どうする生成 AI 連携アプリ開発
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/pj-corridor.net/personalitytest/blog/title.png' />
+<div align='center'><img width='750' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/pj-corridor.net/personalitytest/blog/title.png' /></div>
 
 こんにちは、エンジニアの中山です。この記事では生成 AI 連携アプリの開発を通じて直面した課題、例えばアビューズ対策やプロンプトチューニングにおける試行錯誤とトレードオフへの向き合い方についてご紹介します。なお、以前シナジーマーケティングでご一緒させて頂いたこともあり、TECHSCORE BLOG への記事掲載についてご快諾いただきました 😊 どうもありがとうございます。
 
