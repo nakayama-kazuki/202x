@@ -1,6 +1,6 @@
 # How to Handle Challenges in Three.js App Development
 
-<img width='100%' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/title.gif' />
+<img width='100%' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/title.png' />
 
 [<a href='https://github.com/nakayama-kazuki/202x/tree/main/threejs'>Japanese article</a>]
 

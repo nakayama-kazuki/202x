@@ -1,6 +1,6 @@
 # 이런 상황에서 어떻게 할까: Three.js 애플리케이션 개발
 
-<img width='100%' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/title.gif' />
+<img width='100%' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/title.png' />
 
 안녕하세요, 저는 일본인 엔지니어 pj-corridor입니다. 이 글에서는 취미로 진행한 Three.js 애플리케이션 개발을 통해 얻은 기술적인 지식, 예를 들어 Three.js 초보자가 직면하기 쉬운 문제나 브라우저 간 호환성에 기인한 문제, 그리고 그에 대한 회피 방법을 설명합니다.
 

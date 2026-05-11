@@ -1,6 +1,6 @@
 # そんな時どうする Three.js アプリ開発
 
-<img width='100%' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/title.gif' />
+<img width='100%' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/title.png' />
 
 [<a href='https://github.com/nakayama-kazuki/202x/tree/main/threejs/en'>English article</a>]
 
