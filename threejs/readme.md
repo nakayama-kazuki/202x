@@ -12,10 +12,10 @@
 
 リバーシに Three.js 必要？と突っ込まれそうですが、シリンダ状にループする 3D 盤面で従来にはなかった戦略を楽しめます。加えて DMZ 概念の導入や NPC の選択肢にも幅があり（1～3）、ループ盤面の場合は回転戦術も選択できます。ルールベース（2025 年 6 月現在）の NPC 実装は一対一で戦う場合は物足りなさを感じるかもしれませんが、カオスな 4 人対決（NPC x3 + 人間）だと経験者でも苦戦すること請け合いです。よかったら電車の待ち時間に遊んでください。
 
-- <a href='https://pj-corridor.net/side-six/side-six-reversi.html?type=2-non-loop'>2 人プレー（NPC x1 + 人間）通常盤面リバーシ</a>
-- <a href='https://pj-corridor.net/side-six/side-six-reversi.html?type=2-loop'>2 人プレー（NPC x1 + 人間）ループ盤面リバーシ</a>
-- <a href='https://pj-corridor.net/side-six/side-six-reversi.html?type=4-non-loop'>4 人プレー（NPC x3 + 人間）通常盤面リバーシ</a>
-- <a href='https://pj-corridor.net/side-six/side-six-reversi.html?type=4-loop'>4 人プレー（NPC x3 + 人間）ループ盤面リバーシ</a>
+- <a href='https://pj-corridor.net/side-six/side-six-reversi.html?type=traditional'>通常盤面リバーシ</a>
+- <a href='https://pj-corridor.net/side-six/side-six-reversi.html?type=hexmap&level=3'>ヘックス盤面リバーシ</a>
+- <a href='https://pj-corridor.net/side-six/side-six-reversi.html?type=variety&level=2'>複雑盤面リバーシ</a>
+- <a href='https://pj-corridor.net/side-six/side-six-reversi.html?type=loop&level=5'>ループ盤面リバーシ</a>
 
 ### 多様なパズル
 

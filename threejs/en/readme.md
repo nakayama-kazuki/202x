@@ -12,10 +12,10 @@ Let\'s start by introducing some of my Three.js applications.
 
 You might wonder, Is Three.js necessary for Reversi ? But with a 3D board that loops in a cylindrical shape, you can enjoy strategies that were not possible before. Additionally, the introduction of the DMZ area and a variety of NPC options (1 to 3) are available. In the case of the loop board, you can also opt for rotation tactics. The rule-based NPC implementation (as of June 2025) might feel lacking in one-on-one battles, but even experienced players will find the chaotic four-player matches (NPC x3 + human) challenging. Feel free to try it while waiting for the train.
 
-- <a href='https://pj-corridor.net/side-six/side-six-reversi.html?type=2-non-loop'>2-Player (NPC x1 + Human) Standard Board Reversi</a>
-- <a href='https://pj-corridor.net/side-six/side-six-reversi.html?type=2-loop'>2-Player (NPC x1 + Human) Loop Board Reversi</a>
-- <a href='https://pj-corridor.net/side-six/side-six-reversi.html?type=4-non-loop'>4-Player (NPC x3 + Human) Standard Board Reversi</a>
-- <a href='https://pj-corridor.net/side-six/side-six-reversi.html?type=4-loop'>4-Player (NPC x3 + Human) Loop Board Reversi</a>
+- <a href='https://pj-corridor.net/side-six/side-six-reversi.html?type=traditional'>Standard Board Reversi</a>
+- <a href='https://pj-corridor.net/side-six/side-six-reversi.html?type=hexmap&level=3'>Hex Board Reversi</a>
+- <a href='https://pj-corridor.net/side-six/side-six-reversi.html?type=variety&level=2'>Variety Board Reversi</a>
+- <a href='https://pj-corridor.net/side-six/side-six-reversi.html?type=loop&level=5'>Loop Board Reversi</a>
 
 ### Diverse Puzzles
 
