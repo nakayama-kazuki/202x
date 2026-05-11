@@ -1,5 +1,7 @@
 # そんな時どうする Three.js アプリ開発
 
+<img width='100%' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/title.gif' />
+
 [<a href='https://github.com/nakayama-kazuki/202x/tree/main/threejs/en'>English article</a>]
 
 こんにちは、以前は広告エンジニア、現在はデータプラットフォームエンジニアの中山です。この記事では趣味の Three.js アプリ開発を通じて得た気付き、例えば Three.js 初心者が陥りそうなトラブルやブラウザ互換問題、それらの解決方法についてご紹介させていただきます。なお、以前シナジーマーケティングでご一緒させて頂いたこともあり、TECHSCORE BLOG への記事掲載についてご快諾いただきました ^^ どうもありがとうございます。
@@ -54,7 +56,7 @@
 
 ## 描画バッファはもぬけの殻
 
-<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/screenshot.gif' />
+<img width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/screenshot.gif' />
 
 <a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> や <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間</a> や <a href='https://pj-corridor.net/stick-figure/hand.html'>手</a> では決定したポーズの画像をクリップボードにコピーする screenshot 機能を実装しています。この機能で `WebGLRenderer.domElement`（<a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.domElement'>仕様</a>）の `toDataURL()` を使っていますが、当初描画した画像を取得できずに悩んでいました。
 

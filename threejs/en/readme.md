@@ -1,5 +1,7 @@
 # How to Handle Challenges in Three.js App Development
 
+<img width='100%' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/title.gif' />
+
 [<a href='https://github.com/nakayama-kazuki/202x/tree/main/threejs'>Japanese article</a>]
 
 Hello, my name is pj-corridor, previously an advertising engineer and currently a data platform engineer. In this article, I will share insights gained through my hobby of developing Three.js applications, such as common beginner pitfalls, browser-compatibility issues, and their solutions. BTW, I would like to express my gratitude to TECHSCORE BLOG for kindly allowing me to publish this article, as we have collaborated before at SynergyMarketing. Thank you very much !
