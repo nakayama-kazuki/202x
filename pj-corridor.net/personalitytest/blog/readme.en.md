@@ -182,4 +182,4 @@ Kazuki Nakayama
 Feel free to reach out for data utilization solutions.  
 Formerly at Synergy Marketing, currently at LY Corporation.
 
-Synergy Marketing Inc. is hiring!
+<a href='https://synergist.jp/forengineer/'>Synergy Marketing Inc. is hiring!</a>
