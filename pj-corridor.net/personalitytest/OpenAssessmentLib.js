@@ -1,20 +1,4 @@
 
-async function _sha256hex(in_text) {
-	const encoded = new TextEncoder().encode(in_text);
-	const buff = await crypto.subtle.digest('SHA-256', encoded);
-	return Array.from(new Uint8Array(buff)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-export async function queryHashIs(in_param, in_hash) {
-	const params = new URLSearchParams(location.search);
-	const raw = params.get(in_param);
-	if (!raw) {
-		return false;
-	}
-	const hashed = await _sha256hex(raw);
-	return (hashed === in_hash);
-}
-
 export class i18n {
 	static #defaultCode = 'en';
 	static #supportCode = {

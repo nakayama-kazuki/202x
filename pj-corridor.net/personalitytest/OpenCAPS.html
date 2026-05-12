@@ -119,8 +119,7 @@ import {
 	cControl,
 	cCard,
 	cState,
-	cLLM,
-	queryHashIs
+	cLLM
 } from './OpenAssessmentLib.js';
 
 const APP = 'opencaps';
@@ -1885,9 +1884,8 @@ function createUiRetry() {
 	});
 	button.textContent = 'Retry';
 	button.addEventListener('click', in_ev => {
-		cLLM.refreshChallenge();
 		gState.transition(cState.BACK);
-		(uiStage1st)(false)
+		uiStage1st(false)
 	});
 	return wrapping(button);
 }
@@ -2013,7 +2011,8 @@ const uiStage1st = (() => {
 					app : APP,
 					summary : result.llmSummary,
 					qa : result.llmQaArr,
-					lang : i18n.browserLanguage
+					lang : i18n.browserLanguage,
+					testcode : ''
 				});
 				localStorage.setItem(closure.lsKey, JSON.stringify({result, resp}));
 				gState.transition(cState.DONE);
@@ -2045,6 +2044,8 @@ const uiStage1st = (() => {
 			gState.transition(cState.SKIP);
 			uiStage2nd(result, resp);
 		} else {
+			// refresh the token for verification
+			cLLM.refreshChallenge();
 			// shuffle
 			QUESTIONS.sort(() => Math.random() - 0.5);
 			// reset contents
@@ -2066,11 +2067,9 @@ const uiStage1st = (() => {
 	};
 })();
 
-const TESTHASH = '487b91042c7cf27a19e23ea8699f5f354b1a0c3af9e418138dc6150d830f970d';
-
 (async () => {
-	cLLM.refreshChallenge();
-	if (await queryHashIs('mode', TESTHASH)) {
+	const code = (new URLSearchParams(location.search)).get('code');
+	if (code) {
 		uiStage1st(false);
 		gState.transition(cState.DONE);
 		const result = composeResult(() => Math.floor(Math.random() * OPTIONS.length));
@@ -2078,7 +2077,8 @@ const TESTHASH = '487b91042c7cf27a19e23ea8699f5f354b1a0c3af9e418138dc6150d830f97
 			app : APP,
 			summary : result.llmSummary,
 			qa : result.llmQaArr,
-			lang : i18n.browserLanguage
+			lang : i18n.browserLanguage,
+			testcode : code
 		});
 		gState.transition(cState.DONE);
 		uiStage2nd(result, resp);

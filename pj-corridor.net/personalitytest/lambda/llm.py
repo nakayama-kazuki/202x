@@ -151,14 +151,15 @@ def decode_payload(in_encoded: str) -> str:
     padding = '=' * (-len(in_encoded) % 4)
     return base64.urlsafe_b64decode((in_encoded + padding).encode('ascii')).decode('utf-8')
 
-THRESHOLD_MINUTES = 15
+def total_minutes() -> int:
+    now = datetime.datetime.now(datetime.UTC)
+    return now.hour * 60 + now.minute 
 
 def challenge_pixel(in_req, in_rfc7231):
-    minute = f'{datetime.datetime.now(datetime.UTC).minute:02d}'
     random = secrets.token_hex(16)
-    token = make_token(minute, random)
+    token = make_token(f'{total_minutes():04d}', random)
     encoded = encode_payload(f'token={token}&random={random}')
-    second = THRESHOLD_MINUTES * 60
+    second = 24 * 60 * 60
     cookie_field_arr = [
         f'challenge={encoded}',
         f'Max-Age={second}',
@@ -189,11 +190,12 @@ def parse_cookie(in_cookie_field: str) -> dict:
             parsed[k.strip()] = v.strip()
     return parsed
 
-def verify_token(in_token: str, in_random: str) -> bool:
-    minute = datetime.datetime.now(datetime.UTC).minute
-    for diff in range(0, THRESHOLD_MINUTES + 1):
-        past = (minute - diff) % 60
-        if make_token(f'{past:02d}', in_random) == in_token:
+def verify_token(in_token: str, in_random: str, in_min_minutes: int, in_max_minutes: int) -> bool:
+    current = total_minutes()
+    # Accept tokens generated between in_min_minutes and in_max_minutes ago
+    for diff in range(in_min_minutes, in_max_minutes + 1):
+        past = (current - diff) % (24 * 60)
+        if make_token(f'{past:04d}', in_random) == in_token:
             return True
     return False
 
@@ -258,8 +260,12 @@ def invoke_model(in_prompt: str) -> str:
         print("JSON ERROR:", raw)
         return None
 
+THRESHOLD_MIN_MINUTES = 1
+THRESHOLD_MAX_MINUTES = 30
+
+TESTCODE_HASH = 'b4a18b9f2bc4797546135b9a85d70d087f2654f7e84927798fcf377c3598cb50'
+
 def generate_fetch(in_req, in_rfc7231):
-    # cookies = parse_cookie(in_req['headers'].get('cookie', ''))
     cookies = {}
     raw_cookies = in_req.get('cookies')
     if isinstance(raw_cookies, list):
@@ -278,9 +284,14 @@ def generate_fetch(in_req, in_rfc7231):
         random = params.get('random', [None])[0]
     except Exception:
         return response_text(401, in_rfc7231, 'invalid challenge')
-    if not verify_token(token, random):
-        return response_text(403, in_rfc7231, 'expired ( ' + token + ', ' + random + ' )')
     payload = input_to_dict(in_req)
+    testcode = payload.get('testcode', '').encode('utf-8')
+    min_minutes = THRESHOLD_MIN_MINUTES
+    max_minutes = THRESHOLD_MAX_MINUTES
+    if hashlib.sha256(testcode).hexdigest() == TESTCODE_HASH:
+        min_minutes = 0
+    if not verify_token(token, random, min_minutes, max_minutes):
+        return response_text(403, in_rfc7231, 'expired ( ' + token + ', ' + random + ' )')
     summary_text = '\n'.join(payload.get('summary', []))
     qa_text = '\n'.join(
         f"- {item.get('q', '')}: {item.get('a', '')}"
