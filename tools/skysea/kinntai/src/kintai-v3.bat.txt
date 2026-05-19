@@ -24,15 +24,21 @@ SPECS = {
     'file' : [
         {
             'type' : 'csv',
-            'required' : True
+            'required' : True,
+            'encoding': 'cp932',
+            'newline': ''
         },
         {
             'type' : 'xlsx',
-            'required' : True
+            'required' : True,
+            'encoding': None,
+            'newline': None
         },
         {
             'type' : 'map',
-            'required' : True
+            'required' : True,
+            'encoding': 'utf-8',
+            'newline': None
         }
     ],
     'data' : [
@@ -49,14 +55,34 @@ import datetime
 import collections
 import pathlib
 
+def message(in_prefix, in_exit, *in_args):
+    for arg in in_args:
+        print(f'{in_prefix} : {arg}')
+    if in_exit:
+        sys.exit(1)
+
+def error(*in_args):
+    message('error', True, *in_args)
+
+def warn(*in_args):
+    message('warn', False, *in_args)
+
+def required_value(in_dict, in_source, in_key):
+    value = in_dict.get(in_key)
+    if value is None:
+        error(f'"{in_key}" is not found in {in_source}.')
+    return value
+
+def required_column(in_dict, in_column):
+    return required_value(in_dict, 'csv/excel', in_column)
+
 try:
     import openpyxl
 except ImportError:
-    print('error : exec "pip install openpyxl" at first.')
-    sys.exit(1)
+    error('exec "pip install openpyxl" at first.')
 
 INPUT_FILE = {}
-INPUT_DATA = {}
+INPUT_PARM = {}
 
 def generate_readme(in_specs):
     import string
@@ -108,12 +134,11 @@ if any(a.startswith('--') for a in sys.argv):
     for spec in SPECS['file']:
         INPUT_FILE[spec['type']] = pathlib.Path(getattr(parsed, spec['type']))
     for spec in SPECS['data']:
-        INPUT_DATA[spec['name']] = getattr(parsed, spec['name'])
+        INPUT_PARM[spec['name']] = getattr(parsed, spec['name'])
 else:
     required_cnt = sum(1 for spec in SPECS['file'] if spec['required'])
     if len(sys.argv) != required_cnt + 1:
-        print(f"error : drag & drop {required_cnt} files")
-        sys.exit(1)
+        error(f'drag & drop {required_cnt} files')
     filenames = [pathlib.Path(a) for a in sys.argv[1:]]
     for spec in SPECS['file']:
         found = None
@@ -124,10 +149,17 @@ else:
         if found:
             INPUT_FILE[spec['type']] = found
         elif spec['required']:
-            print(f"error : required file not found: .{spec['type']}")
-            sys.exit(1)
+            error(f"required type ({spec['type']}) is not found.")
 
-ENCODING = 'cp932'
+def open_file(in_filename):
+    for spec in SPECS['file']:
+        filename = INPUT_FILE.get(spec['type'])
+        if filename == in_filename:
+            try:
+                return open(in_filename, encoding=spec.get('encoding'), newline=spec.get('newline'))
+            except Exception as err:
+                error(f'failed to open {in_filename}', str(err))
+    error(f'input file is not registered : {in_filename}')
 
 CSV_COL_KEY = 'コンピューター名'
 CSV_COL_LOGIN = 'ログイン名'
@@ -145,31 +177,41 @@ START_HOUR = 4
 
 def extract_csv(in_filename, in_target):
     result = collections.defaultdict(list)
-    with open(in_filename, encoding=ENCODING, newline='') as fh:
+    with open_file(in_filename) as fh:
         reader = csv.DictReader(fh)
+        fmt = '%Y/%m/%d %H:%M'
         for row in reader:
-            op = row[CSV_COL_OPERATION]
+            op = required_column(row, CSV_COL_OPERATION)
             if op not in (CSV_COL_OPERATION_S, CSV_COL_OPERATION_E):
                 continue
-            if in_target and row[CSV_COL_KEY] != in_target:
+            if in_target and required_column(row, CSV_COL_KEY) != in_target:
                 continue
-            dt = datetime.datetime.strptime(row[CSV_COL_TIME], '%Y/%m/%d %H:%M')
+            # dt = datetime.datetime.strptime(required_column(row, CSV_COL_TIME), fmt)
+            try:
+                dt = datetime.datetime.strptime(required_column(row, CSV_COL_TIME), fmt)
+            except ValueError:
+                error(f'{required_column(row, CSV_COL_TIME)} is not {fmt}.')
             if dt.hour < START_HOUR:
                 work_day = (dt - datetime.timedelta(days=1)).date()
             else:
                 work_day = dt.date()
-            result[(row[CSV_COL_LOGIN], row[CSV_COL_KEY])].append((dt, op, work_day))
+            result[(
+                required_column(row, CSV_COL_LOGIN),
+                required_column(row, CSV_COL_KEY)
+            )].append((dt, op, work_day))
     return result
 
-CSV_ARR = extract_csv(INPUT_FILE['csv'], INPUT_DATA.get('computer'))
+CSV_ARR = extract_csv(INPUT_FILE['csv'], INPUT_PARM.get('computer'))
 
-def load_mapping(filename):
+def load_mapping(in_filename):
     result = {}
-    with open(filename, encoding='utf-8') as fh:
+    with open_file(in_filename) as fh:
         for line in fh:
             line = line.strip()
             if not line or line.startswith('#'):
                 continue
+            if ':' not in line:
+                error(f'keys should be separated using ":" in {in_filename} ({line})')
             left, right = line.split(':', 1)
             result[left] = right
     return result
@@ -186,22 +228,29 @@ def create_xlsx_map(in_filename):
             return datetime.datetime.strptime(in_str, '%Y/%m/%d').date()
         raise TypeError(f'unexpected date type: {type(in_str)}')
     result = collections.defaultdict(lambda: collections.defaultdict(datetime.timedelta))
-    book = openpyxl.load_workbook(in_filename, read_only=True)  
+    try:
+        book = openpyxl.load_workbook(in_filename, read_only=True)
+    except Exception as err:
+        error(f'failed to open xlsx : {in_filename}', str(err))
     sheet = book.active
     header = None
+    key_matched = 0
     for row in sheet.iter_rows(values_only=True):
         if not header:
             header = list(row)
             continue
         data = dict(zip(header, row))
-        join_key = KEY_MAP.get(str(data.get(XLS_COL_KEY)), 'no-match')
-        dt_raw = data.get(XLS_COL_TIME)
-        actual_val = data.get(XLS_COL_ACTUAL)
-        if join_key is None or dt_raw is None or actual_val is None:
+        join_key = KEY_MAP.get(str(required_column(data, XLS_COL_KEY)))
+        if join_key is None:
             continue
+        else:
+            key_matched += 1
+        dt_raw = required_column(data, XLS_COL_TIME)
+        actual_val = required_column(data, XLS_COL_ACTUAL)
         try:
             work_day = string_to_date(dt_raw)
-        except Exception:
+        except Exception as err:
+            warn(f'failed to parse date of {join_key}', str(err))
             continue
         if isinstance(actual_val, datetime.time):
             actual_val = datetime.timedelta(
@@ -210,8 +259,10 @@ def create_xlsx_map(in_filename):
                 seconds=actual_val.second
             )
         else:
-            raise TypeError(f'unexpected type for actual_val: {type(actual_val)}')
+            error(f'unexpected type for actual_val : {type(actual_val)}')
         result[join_key][work_day] = actual_val
+    if key_matched == 0:
+        warn(f'0 matched. mapping file may be wrong')
     book.close() 
     return result
 
@@ -267,4 +318,4 @@ for (login, match_key), entries in CSV_ARR.items():
             res_diff = "-"
         print(f'{login} ({match_key}), {day}, {total_span}, {actual}, {diff}, {res_excel_actual}, {res_diff}')
 
-input('[Hit Enter Key]')
+input('[ Hit Enter to close window ]')
