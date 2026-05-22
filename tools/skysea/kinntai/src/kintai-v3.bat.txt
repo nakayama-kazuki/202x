@@ -1,4 +1,4 @@
-@python -c "import sys; sys.argv[0]=r'%~nx0'; exec(''.join(open(r'%~f0', encoding='utf-8').readlines()[1:]))" %* || pause & goto:eof
+@python -c "import sys; sys.argv[0]=r'%~nx0'; exec(''.join(open(r'%~f0', encoding='utf-8').readlines()[1:]))" %* > "%~nx0-result.txt" || pause & goto:eof
 
 # how to use :
 #
@@ -6,11 +6,9 @@
 #
 # b. command line
 # b.1. $ kintai-v3.bat --csv aaa.csv --xlsx bbb.xlsx --map ccc.map
-# b.2. $ kintai-v3.bat --csv aaa.csv --xlsx bbb.xlsx --map ccc.map > output.txt
-# b.3. $ kintai-v3.bat --csv aaa.csv --xlsx bbb.xlsx --map ccc.map --computer ddd
-# b.4. $ kintai-v3.bat --csv aaa.csv --xlsx bbb.xlsx --map ccc.map --computer ddd > output.txt
+# b.2. $ kintai-v3.bat --csv aaa.csv --xlsx bbb.xlsx --map ccc.map --computer ddd
 #
-# output format :
+# output (result.txt) format :
 #
 # key (= computer-name), YYYY-MM-DD, 1st hh:mm:ss, 2nd hh:mm:ss, 3rd hh:mm:ss, 4th hh:mm:ss, diff
 #
@@ -318,4 +316,4 @@ for (login, match_key), entries in CSV_ARR.items():
             res_diff = "-"
         print(f'{login} ({match_key}), {day}, {total_span}, {actual}, {diff}, {res_excel_actual}, {res_diff}')
 
-input('[ Hit Enter to close window ]')
+#input('[ Hit Enter to close window ]')
