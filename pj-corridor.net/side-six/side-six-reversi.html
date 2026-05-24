@@ -923,7 +923,7 @@ class cReversi {
 		this.#area.initialItems = [...this.#area.items];
 		this.#initTagIndexes();
 		this.#initScore();
-		const argoArr = ['safety', 'spiteful', 'balance', 'greedy', 'learner', 'classic', 'beginner', 'monkey'];
+		const argoArr = ['safety', 'spiteful', 'balance', 'greedy', 'careful', 'learner', 'classic', 'beginner', 'monkey'];
 		for (let i = 0; i < argoArr.length; i++) {
 			this.#npcArgoPriority.push((argoArr.slice(0, i + 1))[arrRand]());
 		}
@@ -1301,15 +1301,75 @@ class cReversi {
 		};
 	}
 	static #evaluateStats = {};
-	#evaluate(in_player, in_ix) {
-		const registerStats = in_key => {
-			if (cReversi.#evaluateStats[in_key]) {
-				cReversi.#evaluateStats[in_key]++;
-			} else {
-				cReversi.#evaluateStats[in_key] = 1;
+	static #registerStats(in_key) {
+		if (cReversi.#evaluateStats[in_key]) {
+			cReversi.#evaluateStats[in_key]++;
+		} else {
+			cReversi.#evaluateStats[in_key] = 1;
+		}
+	}
+	#evaluateByScale(in_curr, in_next, in_xInside, in_scale) {
+		const priorityArr = [
+			{format : 'eCriticalToMe', positive : false},
+			{format : 'ePreRiskToMe', positive : false},
+			{format : 'xInside', positive : false},
+			{format : 'ePressureByMe', positive : true},
+			{format : 'ePressureToMe', positive : false},
+			{format : 'ePrePressureToMe', positive : false},
+			{format : 'bFulfilledWith', positive : true},
+			{format : 'bPressureByMe', positive : true},
+			{format : 'bPressureToMe', positive : false},
+			{format : 'bPrePressureToMe', positive : false},
+			{format : 'bInnerByMe', positive : true},
+			{format : 'bPreOuterByMe', positive : false},
+			{format : 'safetyScore', positive : true},
+			{format : 'bOuterByMe', positive : true}
+		];
+		for (let i = 0; i < priorityArr.length; i++) {
+			const {format, positive} = priorityArr[i];
+			let score = ((priorityArr.length - i - 1) * in_scale + 1) * (positive ? +1 : -1);
+			if (format === 'xInside') {
+				// 1. special case (xInside)
+				if (in_xInside) {
+					cReversi.#registerStats(format);
+					return score;
+				} else {
+					continue;
+				}
 			}
-		};
-		registerStats('total');
+			if (in_curr[format] === in_next[format]) {
+				// 2. special case (bOuterByMe)
+				if ((format === 'bOuterByMe') && (in_next[format])) {
+					cReversi.#registerStats(format);
+					return score;
+				} else {
+					continue;
+				}
+			} else {
+				// 3. generic cases
+				if (typeof in_next[format] === 'number') {
+					const delta = in_next[format] - in_curr[format];
+					cReversi.#registerStats(format);
+					return (delta > 0) ? score * +1 : score * -1;
+				} else {
+					let statsKey;
+					if (in_next[format]) {
+						statsKey = format + '-false-to-true';
+						score *= +1;
+					} else {
+						statsKey = format + '-true-to-false';
+						score *= -1;
+					}
+					cReversi.#registerStats(statsKey);
+					return score;
+				}
+			}
+		}
+		cReversi.#registerStats('can not evaluate');
+		return 0;
+	}
+	#evaluateXEdge(in_player, in_ix) {
+		cReversi.#registerStats('total');
 		const loop = !this.#conf.row.edge || !this.#conf.col.edge;
 		/*
 			1. e (= edge) : check if area of edge is safe
@@ -1332,7 +1392,7 @@ class cReversi {
 		};
 		const tagIndexes = this.#conf.tagIndexes;
 		if (tagIndexes.cornerSet.has(in_ix)) {
-			registerStats('corner');
+			cReversi.#registerStats('corner');
 			return +999;
 		}
 		const ixInEdge = tagIndexes.edgeSetArr.some(in_edgeSet => {
@@ -1345,7 +1405,7 @@ class cReversi {
 		});
 		if (loop) {
 			if (!ixInEdge) {
-				registerStats('inside & loop = without xInside');
+				cReversi.#registerStats('inside & loop = without xInside');
 				return 0;
 			}
 		} else {
@@ -1380,65 +1440,47 @@ class cReversi {
 			check.x.increased = !check.x.nextItems.every((in_item, in_ix) => in_item === check.x.currItems[in_ix]);
 		}
 		(rollback)();
-		const priorityArr = [
-			{format : 'eCriticalToMe', positive : false},
-			{format : 'ePreRiskToMe', positive : false},
-			{format : 'xInside', positive : false},
-			{format : 'ePressureByMe', positive : true},
-			{format : 'ePressureToMe', positive : false},
-			{format : 'ePrePressureToMe', positive : false},
-			{format : 'bFulfilledWith', positive : true},
-			{format : 'bPressureByMe', positive : true},
-			{format : 'bPressureToMe', positive : false},
-			{format : 'bPrePressureToMe', positive : false},
-			{format : 'bInnerByMe', positive : true},
-			{format : 'bPreOuterByMe', positive : false},
-			{format : 'safetyScore', positive : true},
-			{format : 'bOuterByMe', positive : true}
-		];
+		// scaled scoreing > npc scoreing
 		const scale = 10;
-		for (let i = 0; i < priorityArr.length; i++) {
-			const {format, positive} = priorityArr[i];
-			let score = ((priorityArr.length - i - 1) * scale + 1) * (positive ? +1 : -1);
-			if (format === 'xInside') {
-				// 1. special case (xInside)
-				if (check.x.increased) {
-					registerStats(format);
-					return score;
-				} else {
-					continue;
-				}
+		return this.#evaluateByScale(check.e.currParsed, check.e.nextParsed, check.x.increased, scale);
+	}
+	#evaluateInterior(in_player, in_ix) {
+		const loop = !this.#conf.row.edge || !this.#conf.col.edge;
+		const radiating = this.#conf.tagIndexes.radiating[in_ix];
+		const pairs = Array.from(this.#conf.dirStyle.pair.values());
+		const radiatingLines = () => {
+			return pairs.map(([in_neg, in_pos]) => {
+				const n = radiating[in_neg].map(in_r_ix => this.#getItemByIndex(in_r_ix)).toReversed();
+				const p = radiating[in_pos].map(in_r_ix => this.#getItemByIndex(in_r_ix));
+				return [...n, this.#getItemByIndex(in_ix), ...p];
+			});
+		};
+		const currRadiatingLines = radiatingLines();
+		const rollback = this.#createRollback();
+		this.#flip(in_player, in_ix);
+		const nextRadiatingLines = radiatingLines();
+		(rollback)();
+		let total = 0;
+		const xInside = false;
+		// npc scoreing > scaled scoreing (for tie-break delta)
+		const scale = 0.01;
+		for (let i = 0; i < currRadiatingLines.length; i++) {
+			const currParsed = cLineParser.parse(currRadiatingLines[i], in_player, loop);
+			const nextParsed = cLineParser.parse(nextRadiatingLines[i], in_player, loop);
+			const evaluated = this.#evaluateByScale(currParsed, nextParsed, xInside, scale);
+			if (evaluated < 0) {
+				return 0;
 			}
-			if (check.e.currParsed[format] === check.e.nextParsed[format]) {
-				// 2. special case (bOuterByMe)
-				if ((format === 'bOuterByMe') && (check.e.nextParsed[format])) {
-					registerStats(format);
-					return score;
-				} else {
-					continue;
-				}
-			} else {
-				// 3. generic cases
-				if (typeof check.e.nextParsed[format] === 'number') {
-					const delta = check.e.nextParsed[format] - check.e.currParsed[format];
-					registerStats(format);
-					return (delta > 0) ? score * +1 : score * -1;
-				} else {
-					let statsKey;
-					if (check.e.nextParsed[format]) {
-						statsKey = format + '-false-to-true';
-						score *= +1;
-					} else {
-						statsKey = format + '-true-to-false';
-						score *= -1;
-					}
-					registerStats(statsKey);
-					return score;
-				}
-			}
+			total += evaluated;
 		}
-		registerStats('can not evaluate');
-		return 0;
+		return total;
+	}
+	#evaluate(in_player, in_ix) {
+		const baseline = this.#evaluateXEdge(in_player, in_ix);
+		if (baseline !== 0) {
+			return baseline;
+		}
+		return this.#evaluateInterior(in_player, in_ix);
 	}
 	#scoringByFlip(in_player, in_ix, in_callback) {
 		const rollback = this.#createRollback();
@@ -1513,7 +1555,7 @@ class cReversi {
 			return this.#evaluate(in_player, in_ix) + score * -1;
 		};
 		const narrowedArr = cReversi.#maximize(evaluator, in_player, in_candArr);
-		return this.#npc_score_spot(in_player, narrowedArr);
+		return this.#npc_random(in_player, narrowedArr);
 	}
 	#npc_max_option(in_player, in_candArr) {
 		if (this.#history.length < cReversi.#randomizeCnt) {
@@ -1524,7 +1566,7 @@ class cReversi {
 			return this.#evaluate(in_player, in_ix) + score;
 		};
 		const narrowedArr = cReversi.#maximize(evaluator, in_player, in_candArr);
-		return this.#npc_score_spot(in_player, narrowedArr);
+		return this.#npc_random(in_player, narrowedArr);
 	}
 	#npc_max_owned_safe_area(in_player, in_candArr) {
 		if (this.#history.length < cReversi.#randomizeCnt) {
@@ -1535,7 +1577,7 @@ class cReversi {
 			return this.#evaluate(in_player, in_ix) + score;
 		};
 		const narrowedArr = cReversi.#maximize(evaluator, in_player, in_candArr);
-		return this.#npc_score_spot(in_player, narrowedArr);
+		return this.#npc_random(in_player, narrowedArr);
 	}
 	#npc_max_owned_area(in_player, in_candArr) {
 		if (this.#history.length < cReversi.#randomizeCnt) {
@@ -1546,7 +1588,14 @@ class cReversi {
 			return this.#evaluate(in_player, in_ix) + score;
 		};
 		const narrowedArr = cReversi.#maximize(evaluator, in_player, in_candArr);
-		return this.#npc_score_spot(in_player, narrowedArr);
+		return this.#npc_random(in_player, narrowedArr);
+	}
+	#npc_only_evaluate(in_player, in_candArr) {
+		const evaluator = (in_player, in_ix) => {
+			return this.#evaluate(in_player, in_ix);
+		};
+		const narrowedArr = cReversi.#maximize(evaluator, in_player, in_candArr);
+		return this.#npc_random(in_player, narrowedArr);
 	}
 	#npc_score_smart(in_player, in_candArr) {
 		if (this.#history.length < cReversi.#randomizeCnt) {
@@ -1574,6 +1623,7 @@ class cReversi {
 		const narrowedArr = cReversi.#maximize(evaluator, in_player, in_candArr);
 		return this.#npc_random(in_player, narrowedArr);
 	}
+
 	#npc_random(in_player, in_candArr) {
 		return in_candArr[arrRand]();
 	}
@@ -1582,6 +1632,7 @@ class cReversi {
 		spiteful : this.#npc_min_enemy_option,
 		balance : this.#npc_max_option,
 		greedy : this.#npc_max_owned_area,
+		careful : this.#npc_only_evaluate,
 		learner : this.#npc_score_smart,
 		classic : this.#npc_score_total,
 		beginner : this.#npc_score_spot,
@@ -1593,14 +1644,14 @@ class cReversi {
 			return Math.floor(in_value * order) / order;
 		};
 		const test = (in_argoArr) => {
-			let cnt = 100;
+			let infiniteGuardCnt = 100;
 			while (true) {
 				const resultArr = [];
 				for (let i = 0; i < in_argoArr.length; i++) {
 					resultArr[i] = this.playAutomatically(i, in_argoArr[i]);
 				}
 				if (resultArr.some(in_result => in_result)) {
-					if (cnt-- === 0) {
+					if (infiniteGuardCnt-- === 0) {
 						break;
 					}
 				} else {
