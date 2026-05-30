@@ -650,29 +650,30 @@ class cReversi {
 	static maximizedRecMap = new Map();
 	static #maximize(in_evaluator, in_player, in_candArr) {
 		const evaluated = new Map();
-		in_candArr.forEach(in_ix => evaluated.set(in_ix, (in_evaluator)(in_player, in_ix)));
+		in_candArr.forEach(in_cand => evaluated.set(in_cand, (in_evaluator)(in_player, in_cand)));
 		const max = {
-			value : -Infinity,
-			indexes : []
+			current : -Infinity,
+			candArr : []
 		};
-		for (const [index, value] of evaluated.entries()) {
-			if (value > max.value) {
-				max.value = value;
-				max.indexes = [index];
+		for (const [cand, score] of evaluated.entries()) {
+			if (score > max.current) {
+				max.current = score;
+				max.candArr = [cand];
 			} else {
-				if (value === max.value) {
-					max.indexes.push(index);
+				if (score === max.current) {
+					// tie-break
+					max.candArr.push(cand);
 				}
 			}
 		}
-		if (max.indexes.length === 0) {
-			throw new Error('not found from : ' + in_candArr.join(','));
+		if (max.candArr.length === 0) {
+			throw new Error('can not maximize');
 		}
 		const rec = cReversi.maximizedRecMap.get(in_player) ?? 0;
-		if (rec < max.value) {
-			cReversi.maximizedRecMap.set(in_player, max.value);
+		if (rec < max.current) {
+			cReversi.maximizedRecMap.set(in_player, max.current);
 		}
-		return max.indexes;
+		return max.candArr;
 	}
 	static #rotateArray(in_array, in_shiftCnt, in_shiftRight = true) {
 		const len = in_array.length;
@@ -923,7 +924,7 @@ class cReversi {
 		this.#area.initialItems = [...this.#area.items];
 		this.#initTagIndexes();
 		this.#initScore();
-		const argoArr = ['safety', 'spiteful', 'balance', 'greedy', 'careful', 'learner', 'classic', 'beginner', 'monkey'];
+		const argoArr = ['safety', 'spiteful', 'balance', 'greedy', 'rational', 'classic', 'monkey'];
 		for (let i = 0; i < argoArr.length; i++) {
 			this.#npcArgoPriority.push((argoArr.slice(0, i + 1))[arrRand]());
 		}
@@ -1175,7 +1176,7 @@ class cReversi {
 	#emptyCnt() {
 		return this.#count(cReversi.#empty);
 	}
-	#searchCandidates(in_player) {
+	#flipCandidates(in_player) {
 		const candidates = [];
 		const asDryRun = true;
 		this.#area.options.forEach(in_empty_ix => {
@@ -1368,7 +1369,7 @@ class cReversi {
 		cReversi.#registerStats('can not evaluate');
 		return 0;
 	}
-	#evaluateXEdge(in_player, in_ix) {
+	#scoringHeuristicPriority(in_player, in_ix) {
 		cReversi.#registerStats('total');
 		const loop = !this.#conf.row.edge || !this.#conf.col.edge;
 		/*
@@ -1444,7 +1445,7 @@ class cReversi {
 		const scale = 10;
 		return this.#evaluateByScale(check.e.currParsed, check.e.nextParsed, check.x.increased, scale);
 	}
-	#evaluateInterior(in_player, in_ix) {
+	#scoringHeuristicTiebreak(in_player, in_ix) {
 		const loop = !this.#conf.row.edge || !this.#conf.col.edge;
 		const radiating = this.#conf.tagIndexes.radiating[in_ix];
 		const pairs = Array.from(this.#conf.dirStyle.pair.values());
@@ -1475,26 +1476,31 @@ class cReversi {
 		}
 		return total;
 	}
-	#evaluate(in_player, in_ix) {
-		const baseline = this.#evaluateXEdge(in_player, in_ix);
-		if (baseline !== 0) {
-			return baseline;
+	#scoringHeuristic(in_player, in_cand) {
+		if (in_cand.type === 'flip') {
+			const score = this.#scoringHeuristicPriority(in_player, in_cand.ix);
+			if (score === 0) {
+				return this.#scoringHeuristicTiebreak(in_player, in_cand.ix);
+			} else {
+				return score;
+			}
+		} else {
+			return 0;
 		}
-		return this.#evaluateInterior(in_player, in_ix);
 	}
-	#scoringByFlip(in_player, in_ix, in_callback) {
+	#scoringRuleDriven(in_player, in_cand, in_callback) {
 		const rollback = this.#createRollback();
-		this.#flip(in_player, in_ix);
+		(in_cand.apply)();
 		const score = in_callback.call(this, in_player); 
 		(rollback)();
 		return score;
 	}
 	#countNextEnemyOption(in_player) {
 		const player = (in_player + 1 + cReversi.#maxPlayers) % cReversi.#maxPlayers;
-		return this.#searchCandidates(player).length;
+		return this.#flipCandidates(player).length;
 	}
 	#countNextOption(in_player) {
-		return this.#searchCandidates(in_player).length;
+		return this.#flipCandidates(in_player).length;
 	}
 	#countNextOwnedSafeArea(in_player) {
 		let count = 0;
@@ -1550,9 +1556,9 @@ class cReversi {
 		if (this.#history.length < cReversi.#randomizeCnt) {
 			return this.#npc_random(in_player, in_candArr);
 		}
-		const evaluator = (in_player, in_ix) => {
-			const score = this.#scoringByFlip(in_player, in_ix, this.#countNextEnemyOption);
-			return this.#evaluate(in_player, in_ix) + score * -1;
+		const evaluator = (in_player, in_cand) => {
+			const score = this.#scoringRuleDriven(in_player, in_cand, this.#countNextEnemyOption);
+			return this.#scoringHeuristic(in_player, in_cand) + score * -1;
 		};
 		const narrowedArr = cReversi.#maximize(evaluator, in_player, in_candArr);
 		return this.#npc_random(in_player, narrowedArr);
@@ -1561,9 +1567,9 @@ class cReversi {
 		if (this.#history.length < cReversi.#randomizeCnt) {
 			return this.#npc_random(in_player, in_candArr);
 		}
-		const evaluator = (in_player, in_ix) => {
-			const score = this.#scoringByFlip(in_player, in_ix, this.#countNextOption);
-			return this.#evaluate(in_player, in_ix) + score;
+		const evaluator = (in_player, in_cand) => {
+			const score = this.#scoringRuleDriven(in_player, in_cand, this.#countNextOption);
+			return this.#scoringHeuristic(in_player, in_cand) + score;
 		};
 		const narrowedArr = cReversi.#maximize(evaluator, in_player, in_candArr);
 		return this.#npc_random(in_player, narrowedArr);
@@ -1572,9 +1578,9 @@ class cReversi {
 		if (this.#history.length < cReversi.#randomizeCnt) {
 			return this.#npc_random(in_player, in_candArr);
 		}
-		const evaluator = (in_player, in_ix) => {
-			const score = this.#scoringByFlip(in_player, in_ix, this.#countNextOwnedSafeArea);
-			return this.#evaluate(in_player, in_ix) + score;
+		const evaluator = (in_player, in_cand) => {
+			const score = this.#scoringRuleDriven(in_player, in_cand, this.#countNextOwnedSafeArea);
+			return this.#scoringHeuristic(in_player, in_cand) + score;
 		};
 		const narrowedArr = cReversi.#maximize(evaluator, in_player, in_candArr);
 		return this.#npc_random(in_player, narrowedArr);
@@ -1583,47 +1589,28 @@ class cReversi {
 		if (this.#history.length < cReversi.#randomizeCnt) {
 			return this.#npc_random(in_player, in_candArr);
 		}
-		const evaluator = (in_player, in_ix) => {
-			const score = this.#scoringByFlip(in_player, in_ix, this.#countNextOwnedArea);
-			return this.#evaluate(in_player, in_ix) + score;
+		const evaluator = (in_player, in_cand) => {
+			const score = this.#scoringRuleDriven(in_player, in_cand, this.#countNextOwnedArea);
+			return this.#scoringHeuristic(in_player, in_cand) + score;
 		};
 		const narrowedArr = cReversi.#maximize(evaluator, in_player, in_candArr);
 		return this.#npc_random(in_player, narrowedArr);
 	}
 	#npc_only_evaluate(in_player, in_candArr) {
-		const evaluator = (in_player, in_ix) => {
-			return this.#evaluate(in_player, in_ix);
-		};
-		const narrowedArr = cReversi.#maximize(evaluator, in_player, in_candArr);
-		return this.#npc_random(in_player, narrowedArr);
-	}
-	#npc_score_smart(in_player, in_candArr) {
-		if (this.#history.length < cReversi.#randomizeCnt) {
-			return this.#npc_random(in_player, in_candArr);
-		}
-		const evaluator = (in_player, in_ix) => {
-			const score = this.#getAreaScore(in_player, in_ix);
-			return this.#evaluate(in_player, in_ix) + score;
+		const evaluator = (in_player, in_cand) => {
+			return this.#scoringHeuristic(in_player, in_cand);
 		};
 		const narrowedArr = cReversi.#maximize(evaluator, in_player, in_candArr);
 		return this.#npc_random(in_player, narrowedArr);
 	}
 	#npc_score_total(in_player, in_candArr) {
-		const evaluator = (in_player, in_ix) => {
-			const score = this.#scoringByFlip(in_player, in_ix, this.#calculateNextScore);
+		const evaluator = (in_player, in_cand) => {
+			const score = this.#scoringRuleDriven(in_player, in_cand, this.#calculateNextScore);
 			return score;
 		};
 		const narrowedArr = cReversi.#maximize(evaluator, in_player, in_candArr);
 		return this.#npc_random(in_player, narrowedArr);
 	}
-	#npc_score_spot(in_player, in_candArr) {
-		const evaluator = (in_player, in_ix) => {
-			return this.#getAreaScore(in_player, in_ix);
-		};
-		const narrowedArr = cReversi.#maximize(evaluator, in_player, in_candArr);
-		return this.#npc_random(in_player, narrowedArr);
-	}
-
 	#npc_random(in_player, in_candArr) {
 		return in_candArr[arrRand]();
 	}
@@ -1632,10 +1619,8 @@ class cReversi {
 		spiteful : this.#npc_min_enemy_option,
 		balance : this.#npc_max_option,
 		greedy : this.#npc_max_owned_area,
-		careful : this.#npc_only_evaluate,
-		learner : this.#npc_score_smart,
+		rational : this.#npc_only_evaluate,
 		classic : this.#npc_score_total,
-		beginner : this.#npc_score_spot,
 		monkey : this.#npc_random
 	}
 	_simulation(in_repeat = 17) {
@@ -1929,11 +1914,15 @@ class cReversi {
 			npcArgo = this.#npcArgoPriority[in_player];
 		}
 		// console.log(in_player, npcAlive, playerCnt, npcArgo);
-		const candidates = this.#searchCandidates(in_player);
+		let candidates = this.#flipCandidates(in_player).map(in_ix => ({
+			type : 'flip',
+			ix : in_ix,
+			apply : () => this.#flip(in_player, in_ix)
+		}));
 		if (candidates.length > 0) {
-			const ix = this.#npcSet[npcArgo].call(this, in_player, candidates); 
-			this.#flip(in_player, ix);
-			this.#commit(in_player, 'choose-item', ix, -1, -1, -1);
+			const action = this.#npcSet[npcArgo].call(this, in_player, candidates); 
+			(action.apply)();
+			this.#commit(in_player, 'choose-item', action.ix, -1, -1, -1);
 			return true;
 		} else {
 			let action, result;
@@ -1999,7 +1988,7 @@ class cReversi {
 		return table;
 	}
 	flippable(in_player) {
-		return ((this.#searchCandidates(in_player)).length > 0);
+		return ((this.#flipCandidates(in_player)).length > 0);
 	}
 	getCurrentCondition() {
 		const condition = {
@@ -2246,7 +2235,7 @@ const gColoredArgo = new Map([
 	[YELLOW, 'spiteful'],
 	[GREEN, 'greedy'],
 	[ORANGE, 'balance'],
-	[SKYBLUE, 'learner'],
+	[SKYBLUE, 'rational'],
 	[LIME, 'classic']
 ]);
 
