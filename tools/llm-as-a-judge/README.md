@@ -37,7 +37,7 @@ python -c "import deepeval; print('OK')"
 ```text
 llm-as-a-judge/
 |
-+- readme.md
++- README.md
 |
 +- prompt/
 |   |
@@ -88,7 +88,7 @@ The following columns are required:
 
 | original | generated |
 |-----------|-----------|
-| Original Text (ex. Full news article text ) | Generated Text (ex. Generated briefing text) |
+| Original Text (ex. Full news article text) | Generated Text (ex. Generated briefing text) |
 
 ## Example Rubrics
 
@@ -112,12 +112,12 @@ Evaluates whether the generated text accurately represents facts contained in th
 
 Checks include:
 
-ex. Named entities
-ex. Numbers and dates
-ex. Hallucinations
-ex. Fact preservation
-ex. Causality
-ex. Speculation presented as facts
+- Named entities
+- Numbers and dates
+- Hallucinations
+- Fact preservation
+- Causality
+- Speculation presented as facts
 
 ### clarity.json
 
@@ -125,11 +125,11 @@ Evaluates readability and comprehensibility.
 
 Checks include:
 
-ex. Natural sentence structure
-ex. Clear wording
-ex. Logical organization
-ex. Appropriate information ordering
-ex. Avoidance of ambiguity
+- Natural sentence structure
+- Clear wording
+- Logical organization
+- Appropriate information ordering
+- Avoidance of ambiguity
 
 ### relevance.json
 
@@ -137,10 +137,10 @@ Evaluates whether important information from the original article is preserved.
 
 Checks include:
 
-ex. Preservation of key facts
-ex. Preservation of major conclusions
-ex. Appropriate information prioritization
-ex. Consistency between main topic and generated text
+- Preservation of key facts
+- Preservation of major conclusions
+- Appropriate information prioritization
+- Consistency between main topic and generated text
 
 ### sensitivity.json
 
@@ -148,10 +148,10 @@ Evaluates whether sensitive topics are handled appropriately.
 
 Checks include:
 
-ex. Appropriate handling of deaths, accidents, disasters, crime, and illness
-ex. Avoidance of sensational expressions
-ex. Consideration for victims and stakeholders
-ex. Avoidance of discriminatory or harmful language
+- Appropriate handling of deaths, accidents, disasters, crime, and illness
+- Avoidance of sensational expressions
+- Consideration for victims and stakeholders
+- Avoidance of discriminatory or harmful language
 
 ## Configuration
 
@@ -165,11 +165,9 @@ Typical configuration:
 
 ```yaml
 provider: debug
-dataset: dataset/gold/sample.xlsx
+dstype: gold
 compare:
 threshold: 1.0
-prompt: sample.txt
-rubrics: rubric/*
 ```
 
 ## Usage
@@ -180,10 +178,14 @@ Run with configuration defaults:
 python src/judge.py
 ```
 
-Specify dataset:
+Specify dataset type:
 
 ```bash
-python src/judge.py --dataset dataset/gold/news.xlsx
+python src/judge.py --dstype gold
+```
+
+```bash
+python src/judge.py --dstype test
 ```
 
 Specify provider:
@@ -225,35 +227,6 @@ Provider backed by OpenAI models.
 
 Provider backed by Amazon Bedrock models.
 
-## Results
-
-Results are written to:
-
-```text
-dataset/gold/results/yyyymmdd-seq.json
-```
-
-Each result file contains:
-
-- Evaluation scores
-- Evaluation reasons
-- Overall average score
-- Per-dimension average scores
-- Comparison results (if enabled)
-- Threshold exceedances
-- Prompt revision information
-- Rubric revision information
-- Dataset revision information
-- Provider information
-
 ## Regression Testing
 
-The tool supports regression testing by comparing a new evaluation run against a previous result file.
-
-Comparison includes:
-
-- Overall score differences
-- Per-dimension score differences
-- Individual test cases whose score differences exceed a configured threshold
-
-This enables prompt, rubric, and model changes to be evaluated systematically over time.
+Planned feature.
