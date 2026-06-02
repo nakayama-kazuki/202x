@@ -1,6 +1,4 @@
 provider: debug
-dataset: dataset/gold/sample.xlsx
+dstype: gold
 compare:
 threshold: 1.0
-prompt: sample.txt
-rubrics: rubric/*
