@@ -91,9 +91,9 @@ def load_files(in_dir):
 
 def load_prompt():
     files = load_files(DIR_PROMPT)
-    if len(files) == 0:
-        return None
-    return files[0]
+    if len(files) == 1:
+        return files[0]
+    return None
 
 def load_rubrics():
     files = load_files(DIR_RUBRIC)
@@ -159,6 +159,17 @@ def main():
     if dataset is None:
         print('ERROR : can not read xlsx.')
         sys.exit(1)
+
+
+    for testcase in dataset['data']:
+        generated = provider.evaluate(
+            built_prompt,
+            testcase['original'],
+        )
+
+        print('=== GENERATED ===')
+        print(generated)
+        break
 
     #
     # TODO:
