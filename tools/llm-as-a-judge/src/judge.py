@@ -51,13 +51,13 @@ def resolve_options(in_config, in_args):
             options[key] = in_config.get(key)
     return options
 
-def load_provider(in_provider_name):
+def load_llm(in_provider_name):
     target = DIR_PROVIDERS / in_provider_name / f'{in_provider_name}.py'
     try:
         spec = importlib.util.spec_from_file_location(in_provider_name, target)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        return module
+        return module.create()
     except Exception:
         return None
 
@@ -103,12 +103,17 @@ def load_rubrics():
         file['data'] = json.loads(file['data'])
     return files
 
-def build_prompt(in_prompt, in_rubrics):
+def build_prompt(in_prompt, in_rubrics, in_original, in_generated):
     linespace = chr(10) + chr(10)
-    built = in_prompt['data'] + linespace + 'Rubrics:' +linespace
+    built = in_prompt['data']
+    built += linespace + '[Rubrics]' + linespace
     for rubric in in_rubrics:
         built += json.dumps(rubric['data'], ensure_ascii=False, indent=2)
         built += linespace
+    built += '[Original Text]' + linespace
+    built += in_original + linespace
+    built += '[Generated Text]' + linespace
+    built += in_generated + linespace
     return built
 
 def load_dataset(in_dstype):
@@ -132,20 +137,19 @@ def load_dataset(in_dstype):
         return None
 
 def main():
-    config = load_config()
-    if config is None:
-        print('ERROR : can not read config.')
+    # 1. configuration
+    conf_yaml = load_config()
+    if conf_yaml is None:
+        print('ERROR : can not read conf_yaml.')
         sys.exit(1)
-    args = parse_args()
-    options = resolve_options(config, args)
+    conf_args = parse_args()
+    options = resolve_options(conf_yaml, conf_args)
     if options['compare'] is not None:
         if not pathlib.Path(options['compare']).exists():
             print('ERROR : can not read compare.')
             sys.exit(1)
-    provider = load_provider(options['provider'])
-    if provider is None:
-        print('ERROR : can not read provider.')
-        sys.exit(1)
+
+    # 2. prompt for judge
     prompt = load_prompt()
     if prompt is None:
         print('ERROR : can not read prompt.')
@@ -154,35 +158,33 @@ def main():
     if rubrics is None:
         print('ERROR : can not read rubrics.')
         sys.exit(1)
-    built = build_prompt(prompt, rubrics)
+
+    # 3. prepare llm using provider
+    llm = load_llm(options['provider'])
+    if llm is None:
+        print('ERROR : can not read llm (provider).')
+        sys.exit(1)
+
+    # 4. invoke llm x N
     dataset = load_dataset(options['dstype'])
     if dataset is None:
         print('ERROR : can not read xlsx.')
         sys.exit(1)
-
-
     for testcase in dataset['data']:
-        generated = provider.evaluate(
-            built_prompt,
+        built = build_prompt(
+            prompt,
+            rubrics,
             testcase['original'],
+            testcase['generated']
         )
+        response = llm.generate(built)
+        print(response)
 
-        print('=== GENERATED ===')
-        print(generated)
-        break
+    # 5. report
 
-    #
-    # TODO:
-    #
-    # for testcase in dataset:
-    #     deepeval evaluate
-    #
     # aggregate result
-    #
     # compare
-    #
     # save json
-    #
 
     print('READY')
 
