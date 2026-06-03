@@ -20,16 +20,18 @@ Typical use cases include:
 - Python 3.13+
 - DeepEval
 
-Install DeepEval:
+Install DeepEval + PyYAML:
 
 ```bash
 python -m pip install deepeval
+python -m pip install pyyaml
 ```
 
 Verify installation:
 
 ```bash
 python -c "import deepeval; print('OK')"
+python -c "import yaml; print('OK')"
 ```
 
 ## Directory Layout
