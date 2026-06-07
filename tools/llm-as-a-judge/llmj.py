@@ -37,9 +37,9 @@ for path in [DIR_SOURCE, DIR_RUBRIC]:
 
 DIR_WORK.mkdir(exist_ok=True)
 
-SUFFIX_PROMPT = '.prompt.txt'
-SUFFIX_GENERATED = '.generated.xlsx'
-SUFFIX_JUDGED = '.judged.xlsx'
+SUFFIX_PROMPT = '.01-prompt.txt'
+SUFFIX_GENERATED = '.02-generated.xlsx'
+SUFFIX_JUDGED = '.03-judged.xlsx'
 FILE_REPORT = 'report.html'
 
 INITIAL_VERSION_NAME = 'ver-001'
