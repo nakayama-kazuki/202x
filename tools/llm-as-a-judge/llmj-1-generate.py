@@ -16,7 +16,7 @@ def process_prompt(in_runtime, in_path):
             template = f.read()
     except Exception:
         print(f'ERROR : can not read "{in_path.name}"')
-        sys.exit(1)
+        llmj.abort()
     filename = in_path.name.removesuffix(llmj.SUFFIX_PROMPT) + llmj.SUFFIX_GENERATED
     dst_path = in_path.with_name(filename)
     workbook = openpyxl.Workbook()
@@ -33,7 +33,7 @@ def process_prompt(in_runtime, in_path):
                 texts['ORIGINAL'] = f.read()
         except Exception:
             print(f'ERROR : can not read "{src_path.name}"')
-            sys.exit(1)
+            llmj.abort()
         prompt = template.replace(llmj.ORIGINAL_PLACEHOLDER, texts['ORIGINAL'])
         texts['GENERATED'] = llmj.invoke_llm(in_runtime, llmj.LLM_MODEL, prompt)
         for key in keys:

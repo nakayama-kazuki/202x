@@ -271,7 +271,7 @@ def main():
         versions.append(load_version(path))
     if len(versions) == 0:
         print('ERROR : no judged files')
-        sys.exit(1)
+        llmj.abort()
     html = build_html(
         {
             'versions': versions

@@ -3,6 +3,7 @@
 import os
 import sys
 import json
+import time
 
 import llmj
 
@@ -69,7 +70,7 @@ def create_judge(in_rubrics):
         scores = []
         reasons = []
         for metric in metrics:
-            metric.measure(testcase)
+            llmj.invoke(lambda: metric.measure(testcase))
             scores.append(metric.score)
             reasons.append({
                 'rubric' : metric.name,
@@ -106,7 +107,7 @@ def main():
     rubricArr = load_rubrics()
     if rubricArr is None:
         print('ERROR : can not read some json')
-        sys.exit(1)
+        llmj.abort()
     pathArr = llmj.find_target_files(llmj.SUFFIX_GENERATED, llmj.SUFFIX_JUDGED)
     callback = create_judge(rubricArr)
     for path in pathArr:

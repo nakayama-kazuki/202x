@@ -19,7 +19,7 @@ def main():
         path = DIR_ROOT / name
         if not path.exists():
             print(f'ERROR : can not find "{name}"')
-            sys.exit(1)
+            llmj.abort()
         print()
         print('=' * 80)
         print(name)

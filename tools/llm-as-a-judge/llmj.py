@@ -11,11 +11,11 @@ dotenv.load_dotenv()
 for required in ['ACCESS_KEY_ID', 'SECRET_ACCESS_KEY', 'SESSION_TOKEN', 'GATEWAY_URL']:
     if os.getenv(required) is None:
         print(f'ERROR : {required} is not defined in ".env".')
-        sys.exit(1)
+        abort()
 
 def abort_missing_package(in_package):
     print(f'ERROR : exec "python -m pip install {in_package}" at first.')
-    sys.exit(1)
+    abort()
 
 try:
     import boto3
@@ -33,7 +33,7 @@ DIR_RUBRIC = DIR_ROOT / 'rubric'
 for path in [DIR_SOURCE, DIR_RUBRIC]:
     if not path.is_dir():
         print(f'ERROR : can not find "{path.name}" directory.')
-        sys.exit(1)
+        abort()
 
 DIR_WORK.mkdir(exist_ok=True)
 
@@ -63,6 +63,12 @@ def finalize():
     for name in ['__pycache__', '.deepeval' ]:
         shutil.rmtree(DIR_ROOT / name, ignore_errors=True)
 
+def abort(in_message=None):
+    if in_message:
+        print(in_message)
+    finalize()
+    sys.exit(1)
+
 def _column(in_sheet, in_name):
     for col in range(1, in_sheet.max_column + 1):
         value = in_sheet.cell(row=1, column=col).value
@@ -75,7 +81,7 @@ def find_column(in_sheet, in_name):
     if col is not None:
         return col
     print(f'ERROR : can not find column "{in_name}"')
-    sys.exit(1)
+    abort()
 
 def find_append_column(in_sheet, in_name):
     col = _column(in_sheet, in_name)
@@ -106,30 +112,35 @@ def create_bedrock_runtime():
         endpoint_url=os.getenv('GATEWAY_URL')
     )
 
-def invoke_llm(in_runtime, in_model, in_prompt):
+def invoke(in_callback):
     for retry in range(LLM_RETRY_COUNT):
         try:
-            response = in_runtime.converse_stream(
-                modelId=in_model,
-                messages=[{
-                    'role' : 'user',
-                    'content' : [{'text' : in_prompt}]
-                }],
-                inferenceConfig={'maxTokens' : LLM_MAX_TOKENS, 'temperature' : LLM_TEMPERATURE}
-            )
-            chunks = []
-            for event in response['stream']:
-                if 'contentBlockDelta' not in event:
-                    continue
-                delta = event['contentBlockDelta']['delta']
-                if 'text' not in delta:
-                    continue
-                chunks.append(delta['text'])
-            return ''.join(chunks)
+            return in_callback()
         except Exception as err:
-            if retry + 1 < LLM_RETRY_COUNT:
-                time.sleep(LLM_RETRY_INTERVAL_SEC)
+            if retry + 1 >= LLM_RETRY_COUNT:
+                print(f'ERROR : invoke failed : {err}')
+                abort()
+            print(f'WARN : retrying because : {err}')
+            time.sleep(LLM_RETRY_INTERVAL_SEC * (retry + 1))
+
+def invoke_llm(in_runtime, in_model, in_prompt):
+    def callback():
+        response = in_runtime.converse_stream(
+            modelId=in_model,
+            messages=[{
+                'role' : 'user',
+                'content' : [{'text' : in_prompt}]
+            }],
+            inferenceConfig={'maxTokens' : LLM_MAX_TOKENS, 'temperature' : LLM_TEMPERATURE}
+        )
+        chunks = []
+        for event in response['stream']:
+            if 'contentBlockDelta' not in event:
                 continue
-            print(f'ERROR : can not invoke llm : {err}')
-            sys.exit(1)
+            delta = event['contentBlockDelta']['delta']
+            if 'text' not in delta:
+                continue
+            chunks.append(delta['text'])
+        return ''.join(chunks)
+    return invoke(callback)
 
