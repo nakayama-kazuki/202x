@@ -277,7 +277,7 @@ def main():
             'versions': versions
         }
     )
-    out_path = llmj.DIR_WORK / 'report.html'
+    out_path = llmj.DIR_WORK / llmj.FILE_REPORT
     with open(out_path, 'w', encoding='utf-8') as f:
         f.write(html)
     print(f'completed : {out_path.name}')
