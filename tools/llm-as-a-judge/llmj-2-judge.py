@@ -46,11 +46,11 @@ class GatewayLLM(DeepEvalBaseLLM):
         return self.generate(in_prompt)
 
 def create_judge(in_rubrics):
-    pat = os.getenv('PAT')
-    if not pat:
-        print('ERROR : PAT is not set')
+    token = os.getenv('ACCESS_TOKEN')
+    if not token:
+        print('ERROR : ACCESS_TOKEN is not set')
         sys.exit(1)
-    runtime = llmj.create_bedrock_runtime(pat)
+    runtime = llmj.create_bedrock_runtime(token)
     llm = GatewayLLM(runtime, llmj.LLM_MODEL)
     metrics = []
     for rubric in in_rubrics:
