@@ -30,6 +30,13 @@ DIR_SOURCE = DIR_ROOT / 'source'
 DIR_WORK = DIR_ROOT / 'work'
 DIR_RUBRIC = DIR_ROOT / 'rubric'
 
+for path in [DIR_SOURCE, DIR_RUBRIC]:
+    if not path.is_dir():
+        print(f'ERROR : can not find "{path.name}" directory.')
+        sys.exit(1)
+
+DIR_WORK.mkdir(exist_ok=True)
+
 SUFFIX_PROMPT = '.prompt.txt'
 SUFFIX_GENERATED = '.generated.xlsx'
 SUFFIX_JUDGED = '.judged.xlsx'
