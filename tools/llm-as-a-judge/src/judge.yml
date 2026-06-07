@@ -1,4 +1,0 @@
-provider: debug
-dstype: gold
-compare:
-threshold: 1.0
