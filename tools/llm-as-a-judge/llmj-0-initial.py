@@ -35,11 +35,7 @@ Do not explain your reasoning.
 '''.strip()
 
 def main():
-    token = os.getenv('ACCESS_TOKEN')
-    if not token:
-        print('ERROR : ACCESS_TOKEN is not set')
-        sys.exit(1)
-    runtime = llmj.create_bedrock_runtime(token)
+    runtime = llmj.create_bedrock_runtime()
     generated = llmj.invoke_llm(runtime, llmj.LLM_MODEL, build_prompt(load_rubrics()))
     target = llmj.DIR_WORK / f'{llmj.INITIAL_VERSION_NAME}{llmj.SUFFIX_PROMPT}'
     with open(target, 'w', encoding='utf-8') as f:

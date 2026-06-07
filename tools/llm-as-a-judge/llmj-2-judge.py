@@ -46,11 +46,7 @@ class GatewayLLM(DeepEvalBaseLLM):
         return self.generate(in_prompt)
 
 def create_judge(in_rubrics):
-    token = os.getenv('ACCESS_TOKEN')
-    if not token:
-        print('ERROR : ACCESS_TOKEN is not set')
-        sys.exit(1)
-    runtime = llmj.create_bedrock_runtime(token)
+    runtime = llmj.create_bedrock_runtime()
     llm = GatewayLLM(runtime, llmj.LLM_MODEL)
     metrics = []
     for rubric in in_rubrics:

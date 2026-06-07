@@ -8,7 +8,7 @@ import pathlib
 import dotenv
 
 dotenv.load_dotenv()
-for required in ['ACCESS_TOKEN', 'GATEWAY_URL']:
+for required in ['ACCESS_KEY_ID', 'SECRET_ACCESS_KEY', 'SESSION_TOKEN', 'GATEWAY_URL']:
     if os.getenv(required) is None:
         print(f'ERROR : {required} is not defined in ".env".')
         sys.exit(1)
@@ -94,11 +94,11 @@ def find_target_files(in_src_suffix, in_dst_suffix):
         pathArr.append(path)
     return pathArr
 
-def create_bedrock_runtime(in_token):
+def create_bedrock_runtime():
     session = boto3.Session(
-        aws_access_key_id='dummy',
-        aws_secret_access_key='dummy',
-        aws_session_token=in_token
+        aws_access_key_id=os.getenv('ACCESS_KEY_ID'),
+        aws_secret_access_key=os.getenv('SECRET_ACCESS_KEY'),
+        aws_session_token=os.getenv('SESSION_TOKEN')
     )
     return session.client(
         'bedrock-runtime',
