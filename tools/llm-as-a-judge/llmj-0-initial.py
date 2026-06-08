@@ -16,13 +16,26 @@ def load_rubrics():
 def build_prompt(in_rubrics, in_lang=llmj.OUTOUT_LANG):
     return f'''
 You are an expert prompt engineer.
-This prompt will be used to transform the "original" text into the "generated" text within {llmj.OUTOUT_LENGTH} characters.
-Generate the prompt in {in_lang} so that it maximizes compliance with the following rubrics.
-Use {llmj.ORIGINAL_PLACEHOLDER} as a placeholder, since the original text will be embedded into the prompt during post-processing.
 
-Assume that the generated prompt will be maintained by humans after generation.
-Therefore, produce a well-structured, easy-to-maintain prompt with clear organization and high readability.
-The generated prompt must include 
+Please generate a GENERATED-PROMPT that transforms the ORIGINAL-TEXT into a GENERATED-TEXT.
+The GENERATED-PROMPT must be written in {in_lang}.
+The GENERATED-TEXT must be within {llmj.OUTOUT_LENGTH} characters, satisfy the evaluation criteria defined in the following [Rubrics], and contain neither single quotation marks (') nor double quotation marks (").
+
+[Relationship]
+
+  ORIGINAL-TEXT
+      |
+      v
+  GENERATED-PROMPT (this is what you must generate in {in_lang})
+      |
+      v
+  GENERATED-TEXT (within {llmj.OUTOUT_LENGTH} characters, compliant with the following [Rubrics], and containing no quotation marks)
+
+Use {llmj.ORIGINAL_PLACEHOLDER} as a placeholder in the GENERATED-PROMPT,
+since the ORIGINAL-TEXT will be embedded into the GENERATED-PROMPT during post-processing.
+
+Assume that the GENERATED-PROMPT will be maintained by humans after generation.
+Therefore, produce a well-structured, easy-to-maintain GENERATED-PROMPT with clear organization and high readability.
 
 [Rubrics]
 
@@ -30,7 +43,7 @@ The generated prompt must include
 
 [Note]
 
-Return only the generated prompt.
+Return only the GENERATED-PROMPT.
 Do not explain your reasoning.
 '''.strip()
 
