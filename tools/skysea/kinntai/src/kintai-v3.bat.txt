@@ -114,9 +114,8 @@ def generate_readme(in_specs):
     lines.append(f"#")
     lines.append(f"# b. command line")
     lines.append(f"# b.1. $ {command} {' '.join(parm_required)}")
-    lines.append(f"# b.2. $ {command} {' '.join(parm_required)} > output.txt")
-    lines.append(f"# b.3. $ {command} {' '.join(parm_required)} {' '.join(parm_optional)}")
-    lines.append(f"# b.4. $ {command} {' '.join(parm_required)} {' '.join(parm_optional)} > output.txt")
+    if parm_optional:
+        lines.append(f"# b.2. $ {command} {' '.join(parm_required)} {' '.join(parm_optional)}")
     return "\n".join(lines)
 
 # print(generate_readme(SPECS))
