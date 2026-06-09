@@ -7,13 +7,13 @@ import json
 import llmj
 
 def load_rubrics():
-    rubrics = []
+    rubricArr = []
     for path in sorted(llmj.DIR_RUBRIC.glob('*.json')):
         with open(path, encoding='utf-8') as f:
-            rubrics.append(json.load(f))
-    return rubrics
+            rubricArr.append(json.load(f))
+    return rubricArr
 
-def build_prompt(in_rubrics, in_lang=llmj.OUTOUT_LANG):
+def build_prompt(in_rubricArr, in_lang=llmj.OUTOUT_LANG):
     return f'''
 You are an expert prompt engineer.
 
@@ -39,7 +39,7 @@ Therefore, produce a well-structured, easy-to-maintain GENERATED-PROMPT with cle
 
 [Rubrics]
 
-{json.dumps(in_rubrics, ensure_ascii=False, indent=2)}
+{json.dumps(in_rubricArr, ensure_ascii=False, indent=2)}
 
 [Note]
 

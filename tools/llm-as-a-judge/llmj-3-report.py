@@ -13,41 +13,39 @@ except ImportError:
 def load_version(in_path):
     workbook = openpyxl.load_workbook(in_path, data_only=True)
     sheet = workbook.active
-    cols = {}
+    colDict = {}
     for key in llmj.TERM:
-        cols[key] = llmj.find_column(sheet, llmj.TERM[key])
-    rows = []
+        colDict[key] = llmj.find_column(sheet, llmj.TERM[key])
+    rowArr = []
     for row in range(2, sheet.max_row + 1):
-        original = sheet.cell(row, cols['ORIGINAL']).value
-        generated = sheet.cell(row, cols['GENERATED']).value
-        score = sheet.cell(row, cols['SCORE']).value
-        reason = sheet.cell(row, cols['REASON']).value
+        original = sheet.cell(row, colDict['ORIGINAL']).value
+        generated = sheet.cell(row, colDict['GENERATED']).value
+        score = sheet.cell(row, colDict['SCORE']).value
+        reason = sheet.cell(row, colDict['REASON']).value
         try:
-            rubrics = json.loads(reason or '[]')
+            rubricArr = json.loads(reason or '[]')
         except Exception:
-            rubrics = []
-        rows.append(
-            {
-                'original': original,
-                'generated': generated,
-                'score': score,
-                'rubrics': rubrics,
-            }
-        )
-    scores = [
-        row['score']
-        for row in rows
-        if isinstance(row['score'], (int, float))
-    ]
-    avg_score = (
-        sum(scores) / len(scores)
-        if len(scores) > 0
-        else 0
-    )
+            rubricArr = []
+        rowArr.append({
+            'original': original,
+            'generated': generated,
+            'score': score,
+            'rubrics': rubricArr,
+        })
+    scoreArr = []
+    for row in rowArr:
+        score = row['score']
+        if not isinstance(score, (int, float)):
+            continue
+        scoreArr.append(score)
+    if len(scoreArr) == 0:
+        avg_score = 0
+    else:
+        avg_score = sum(scoreArr) / len(scoreArr)
     return {
-        'name': in_path.name.removesuffix(llmj.SUFFIX_JUDGED),
-        'avgScore': avg_score,
-        'rows': rows,
+        'name' : in_path.name.removesuffix(llmj.SUFFIX_JUDGED),
+        'avgScore' : avg_score,
+        'rows' : rowArr,
     }
 
 def build_html(in_data):
@@ -115,9 +113,9 @@ function escapeHtml(text) {{
 function sortTable(tableId, col) {{
     const table = document.getElementById(tableId);
     const tbody = table.querySelector('tbody');
-    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const rowArr = Array.from(tbody.querySelectorAll('tr'));
     const asc = table.dataset.sortCol != col || table.dataset.sortDir !== 'asc';
-    rows.sort((a, b) => {{
+    rowArr.sort((a, b) => {{
         let av = a.children[col].dataset.sort ?? a.children[col].textContent;
         let bv = b.children[col].dataset.sort ?? b.children[col].textContent;
         const an = Number(av);
@@ -130,19 +128,19 @@ function sortTable(tableId, col) {{
         if (av > bv) return asc ? 1 : -1;
         return 0;
     }});
-    rows.forEach(row => tbody.appendChild(row));
+    rowArr.forEach(row => tbody.appendChild(row));
     table.dataset.sortCol = col;
     table.dataset.sortDir = asc ? 'asc' : 'desc';
 }}
 
 (function() {{
     const app = document.getElementById('app');
-    const rubricNames = [];
+    const rubricNameArr = [];
     DATA.versions.forEach(v => {{
         v.rows.forEach(r => {{
             r.rubrics.forEach(x => {{
-                if (!rubricNames.includes(x.rubric)) {{
-                    rubricNames.push(x.rubric);
+                if (!rubricNameArr.includes(x.rubric)) {{
+                    rubricNameArr.push(x.rubric);
                 }}
             }});
         }});
@@ -184,7 +182,7 @@ function sortTable(tableId, col) {{
     html += '<tr>';
     html += '<th class="sortable" onclick="sortTable(\\'rubricTable\\',0)">Version</th>';
     let rubricCol = 1;
-    rubricNames.forEach(name => {{
+    rubricNameArr.forEach(name => {{
         html += `<th class="sortable" onclick="sortTable('rubricTable',${{rubricCol++}})">Avg ${{name}}</th>`;
         html += `<th class="sortable" onclick="sortTable('rubricTable',${{rubricCol++}})">Min ${{name}}</th>`;
     }});
@@ -194,15 +192,15 @@ function sortTable(tableId, col) {{
     DATA.versions.forEach(v => {{
         html += '<tr>';
         html += `<td>${{escapeHtml(v.name)}}</td>`;
-        rubricNames.forEach(name => {{
-            const scores = [];
+        rubricNameArr.forEach(name => {{
+            const scoreArr = [];
             let minScore = null;
             let minIndex = null;
             v.rows.forEach((r, index) => {{
                 r.rubrics.forEach(x => {{
                     if (x.rubric === name) {{
                         const score = Number(x.score);
-                        scores.push(score);
+                        scoreArr.push(score);
                         if (minScore === null || score < minScore) {{
                             minScore = score;
                             minIndex = index;
@@ -211,9 +209,9 @@ function sortTable(tableId, col) {{
                 }});
             }});
             const avg =
-                scores.length === 0
+                scoreArr.length === 0
                     ? null
-                    : scores.reduce((a,b)=>a+b,0) / scores.length;
+                    : scoreArr.reduce((a,b)=>a+b,0) / scoreArr.length;
             if (avg === null) {{
                 html += '<td>-</td>';
                 html += '<td>-</td>';
@@ -244,12 +242,18 @@ function sortTable(tableId, col) {{
             html += '<th>Rubric</th>';
             html += '<th>Score</th>';
             html += '<th>Reason</th>';
+            html += '<th>Translate</th>';
             html += '</tr>';
             r.rubrics.forEach(x => {{
+                const translateUrl =
+                    'https://translate.google.com/?sl=en&tl=ja&text=' +
+                    encodeURIComponent(x.reason || '') +
+                    '&op=translate';
                 html += '<tr>';
                 html += `<td>${{escapeHtml(x.rubric)}}</td>`;
                 html += `<td>${{x.score}}</td>`;
                 html += `<td><pre>${{escapeHtml(x.reason)}}</pre></td>`;
+                html += `<td><a href="${{translateUrl}}" target="_blank">Translate</a></td>`; 
                 html += '</tr>';
             }});
             html += '</table>';
@@ -266,15 +270,15 @@ function sortTable(tableId, col) {{
 '''
 
 def main():
-    versions = []
+    versionArr = []
     for path in sorted(llmj.DIR_WORK.glob('*' + llmj.SUFFIX_JUDGED)):
-        versions.append(load_version(path))
-    if len(versions) == 0:
+        versionArr.append(load_version(path))
+    if len(versionArr) == 0:
         print('ERROR : no judged files')
         llmj.abort()
     html = build_html(
         {
-            'versions': versions
+            'versions': versionArr
         }
     )
     out_path = llmj.DIR_WORK / llmj.FILE_REPORT

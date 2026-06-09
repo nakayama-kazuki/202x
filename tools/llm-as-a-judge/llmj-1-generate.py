@@ -21,23 +21,23 @@ def process_prompt(in_runtime, in_path):
     dst_path = in_path.with_name(filename)
     workbook = openpyxl.Workbook()
     sheet = workbook.active
-    keys = ['ORIGINAL', 'GENERATED']
-    cols = {}
-    for key in keys:
-        cols[key] = llmj.find_append_column(sheet, llmj.TERM[key])
+    keyArr = ['ORIGINAL', 'GENERATED']
+    colDict = {}
+    for key in keyArr:
+        colDict[key] = llmj.find_append_column(sheet, llmj.TERM[key])
     sourceArr = sorted(llmj.DIR_SOURCE.glob('*.txt'))
     for row, src_path in enumerate(sourceArr, start=2):
-        texts = {}
+        textDict = {}
         try:
             with open(src_path, encoding='utf-8') as f:
-                texts['ORIGINAL'] = f.read()
+                textDict['ORIGINAL'] = f.read()
         except Exception:
             print(f'ERROR : can not read "{src_path.name}"')
             llmj.abort()
-        prompt = template.replace(llmj.ORIGINAL_PLACEHOLDER, texts['ORIGINAL'])
-        texts['GENERATED'] = llmj.invoke_llm(in_runtime, llmj.LLM_MODEL, prompt)
-        for key in keys:
-            sheet.cell(row, cols[key]).value = texts[key]
+        prompt = template.replace(llmj.ORIGINAL_PLACEHOLDER, textDict['ORIGINAL'])
+        textDict['GENERATED'] = llmj.invoke_llm(in_runtime, llmj.LLM_MODEL, prompt)
+        for key in keyArr:
+            sheet.cell(row, colDict[key]).value = textDict[key]
         workbook.save(dst_path)
         print(f'progress : {row - 1} / {len(sourceArr)}')
     print(f'completed : {dst_path.name}')

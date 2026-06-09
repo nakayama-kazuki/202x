@@ -37,9 +37,9 @@ for path in [DIR_SOURCE, DIR_RUBRIC]:
 
 DIR_WORK.mkdir(exist_ok=True)
 
-SUFFIX_PROMPT = '.01-prompt.txt'
-SUFFIX_GENERATED = '.02-generated.xlsx'
-SUFFIX_JUDGED = '.03-judged.xlsx'
+SUFFIX_PROMPT = '.0-prompt.txt'
+SUFFIX_GENERATED = '.1-generated.xlsx'
+SUFFIX_JUDGED = '.2-judged.xlsx'
 FILE_REPORT = 'report.html'
 
 INITIAL_VERSION_NAME = 'ver-001'
@@ -47,7 +47,7 @@ INITIAL_VERSION_NAME = 'ver-001'
 ORIGINAL_PLACEHOLDER = '{{original}}'
 
 LLM_MODEL = 'us.anthropic.claude-sonnet-4-6'
-LLM_MAX_TOKENS = 1024
+LLM_MAX_TOKENS = 4096
 LLM_TEMPERATURE = 0
 LLM_RETRY_COUNT = 3
 LLM_RETRY_INTERVAL_SEC = 5
@@ -133,14 +133,14 @@ def invoke_llm(in_runtime, in_model, in_prompt):
             }],
             inferenceConfig={'maxTokens' : LLM_MAX_TOKENS, 'temperature' : LLM_TEMPERATURE}
         )
-        chunks = []
+        chunkArr = []
         for event in response['stream']:
             if 'contentBlockDelta' not in event:
                 continue
             delta = event['contentBlockDelta']['delta']
             if 'text' not in delta:
                 continue
-            chunks.append(delta['text'])
-        return ''.join(chunks)
+            chunkArr.append(delta['text'])
+        return ''.join(chunkArr)
     return invoke(callback)
 

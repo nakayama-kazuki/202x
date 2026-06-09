@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 
 import os
+import io
 import sys
 import json
 import time
+import contextlib
+import concurrent.futures
 
 import llmj
 
@@ -33,6 +36,56 @@ def load_rubrics():
         return None
     return rubricArr
 
+def compile_rubric(in_rubricArr):
+    promptToCompile = f'''
+
+You are an expert evaluator designer for DeepEval GEval.
+Convert the criteria into evaluation_steps optimized for GEval.
+
+[Requirements]
+
+- Produce explicit evaluation procedures, not evaluation rules.
+- Write steps in the order they should be executed.
+- Avoid redundant or overlapping checks.
+- Prefer fact extraction --> comparison --> scoring workflow.
+- Include all important constraints from the criteria.
+- The steps must be reusable across many test cases.
+- Return only JSON.
+  - Preserve all existing fields.
+  - Add an evaluation_steps field to each rubric.
+- Do not use markdown.
+- Do not wrap the response in code fences.
+
+[Expected]
+
+[
+    {{
+        "name": "...",
+        "criteria": "...",
+        "evaluation_steps": [...]
+    }},
+    {{
+        "name": "...",
+        "criteria": "...",
+        "evaluation_steps": [...]
+    }},
+    ...
+]
+
+[Input]
+
+{json.dumps(in_rubricArr, ensure_ascii=False, indent=2)}
+
+'''.strip()
+
+    runtime = llmj.create_bedrock_runtime()
+    generated = llmj.invoke_llm(runtime, llmj.LLM_MODEL, promptToCompile)
+    try:
+        return json.loads(generated)
+    except Exception:
+        print('ERROR : failed to compile rubric')
+        llmj.abort()
+
 class GatewayLLM(DeepEvalBaseLLM):
     def __init__(self, in_runtime, in_model):
         self.runtime = in_runtime
@@ -46,40 +99,40 @@ class GatewayLLM(DeepEvalBaseLLM):
     async def a_generate(self, in_prompt):
         return self.generate(in_prompt)
 
-def create_judge(in_rubrics):
+def create_judge(in_rubricArr):
     runtime = llmj.create_bedrock_runtime()
-    llm = GatewayLLM(runtime, llmj.LLM_MODEL)
-    metrics = []
-    for rubric in in_rubrics:
-        metrics.append(
-            GEval(
-                name=rubric['name'],
-                criteria=rubric['criteria'],
-                evaluation_params=[
-                    SingleTurnParams.INPUT,
-                    SingleTurnParams.ACTUAL_OUTPUT
-                ],
-                model=llm
-            )
+    def evaluate(in_rubric, in_testcase):
+        metric = GEval(
+            name=in_rubric['name'],
+            # criteria=in_rubric['criteria'],
+            evaluation_steps=in_rubric['evaluation_steps'],
+            evaluation_params=[
+                SingleTurnParams.INPUT,
+                SingleTurnParams.ACTUAL_OUTPUT
+            ],
+            async_mode=False,
+            model=GatewayLLM(runtime, llmj.LLM_MODEL)
         )
+        llmj.invoke(lambda: metric.measure(in_testcase))
+        return {
+            'rubric' : metric.name,
+            'score' : metric.score,
+            'reason' : metric.reason
+        }
     def judge(in_original, in_generated):
         testcase = LLMTestCase(
             input=in_original,
             actual_output=in_generated
         )
-        scores = []
-        reasons = []
-        for metric in metrics:
-            llmj.invoke(lambda: metric.measure(testcase))
-            scores.append(metric.score)
-            reasons.append({
-                'rubric' : metric.name,
-                'score' : metric.score,
-                'reason' : metric.reason
-            })
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(in_rubricArr)) as executor:
+            callback = lambda in_rubric: evaluate(in_rubric, testcase)
+            reasonArr = list(executor.map(callback, in_rubricArr))
+        scoreArr = []
+        for reason in reasonArr:
+            scoreArr.append(reason['score'])
         return {
-            'score' : sum(scores) / len(scores),
-            'reason' : json.dumps(reasons, ensure_ascii=False)
+            'score' : sum(scoreArr) / len(scoreArr),
+            'reason' : json.dumps(reasonArr, ensure_ascii=False)
         }
     return judge
 
@@ -89,16 +142,16 @@ def process_xlsx(in_path, in_callback):
     workbook.save(out_path)
     workbook = openpyxl.load_workbook(out_path)
     sheet = workbook.active
-    cols = {}
+    colDict = {}
     for key in llmj.TERM:
-        cols[key] = llmj.find_append_column(sheet, llmj.TERM[key])
+        colDict[key] = llmj.find_append_column(sheet, llmj.TERM[key])
     for row in range(2, sheet.max_row + 1):
         result = in_callback(
-            sheet.cell(row, cols['ORIGINAL']).value,
-            sheet.cell(row, cols['GENERATED']).value
+            sheet.cell(row, colDict['ORIGINAL']).value,
+            sheet.cell(row, colDict['GENERATED']).value
         )
         for key in ['SCORE', 'REASON']:
-            sheet.cell(row, cols[key]).value = result[llmj.TERM[key]]
+            sheet.cell(row, colDict[key]).value = result[llmj.TERM[key]]
         print(f'progress : {row - 1} / {sheet.max_row - 1}')
         workbook.save(out_path)
     print(f'completed : {out_path.name}')
@@ -108,6 +161,7 @@ def main():
     if rubricArr is None:
         print('ERROR : can not read some json')
         llmj.abort()
+    rubricArr = compile_rubric(rubricArr)
     pathArr = llmj.find_target_files(llmj.SUFFIX_GENERATED, llmj.SUFFIX_JUDGED)
     callback = create_judge(rubricArr)
     for path in pathArr:
