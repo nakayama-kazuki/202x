@@ -154,7 +154,7 @@ def process_xlsx(in_path, in_callback):
             sheet.cell(row, colDict[key]).value = result[llmj.TERM[key]]
         print(f'progress : {row - 1} / {sheet.max_row - 1}')
         workbook.save(out_path)
-    print(f'completed : {out_path.name}')
+    print(f'judged : {out_path.name}')
 
 def main():
     rubricArr = load_rubrics()

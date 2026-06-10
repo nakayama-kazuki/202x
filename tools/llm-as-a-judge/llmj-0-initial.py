@@ -19,7 +19,7 @@ You are an expert prompt engineer.
 
 Please generate a GENERATED-PROMPT that transforms the ORIGINAL-TEXT into a GENERATED-TEXT.
 The GENERATED-PROMPT must be written in {in_lang}.
-The GENERATED-TEXT must be within {llmj.OUTOUT_LENGTH} characters, satisfy the evaluation criteria defined in the following [Rubrics], and contain neither single quotation marks (') nor double quotation marks (").
+The GENERATED-TEXT must satisfy the evaluation criteria defined in the following [Rubrics].
 
 [Relationship]
 
@@ -29,7 +29,7 @@ The GENERATED-TEXT must be within {llmj.OUTOUT_LENGTH} characters, satisfy the e
   GENERATED-PROMPT (this is what you must generate in {in_lang})
       |
       v
-  GENERATED-TEXT (within {llmj.OUTOUT_LENGTH} characters, compliant with the following [Rubrics], and containing no quotation marks)
+  GENERATED-TEXT (compliant with the following [Rubrics])
 
 Use {llmj.ORIGINAL_PLACEHOLDER} as a placeholder in the GENERATED-PROMPT,
 since the ORIGINAL-TEXT will be embedded into the GENERATED-PROMPT during post-processing.

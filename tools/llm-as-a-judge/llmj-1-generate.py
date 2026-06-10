@@ -40,13 +40,10 @@ def process_prompt(in_runtime, in_path):
             sheet.cell(row, colDict[key]).value = textDict[key]
         workbook.save(dst_path)
         print(f'progress : {row - 1} / {len(sourceArr)}')
-    print(f'completed : {dst_path.name}')
+    print(f'generated : {dst_path.name}')
 
 def main():
     pathArr = llmj.find_target_files(llmj.SUFFIX_PROMPT, llmj.SUFFIX_GENERATED)
-    if len(pathArr) == 0:
-        print('completed : nothing to do')
-        return
     runtime = llmj.create_bedrock_runtime()
     for path in pathArr:
         process_prompt(runtime, path)

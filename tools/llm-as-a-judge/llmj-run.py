@@ -34,7 +34,6 @@ def main():
             print(f'ERROR : "{name}" failed')
             sys.exit(result.returncode)
     print()
-    print('completed')
     llmj.finalize()
 
 if __name__ == '__main__':

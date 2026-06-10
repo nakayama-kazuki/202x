@@ -23,7 +23,6 @@ except ImportError:
     abort_missing_package('boto3')
 
 OUTOUT_LANG = 'Japanese'
-OUTOUT_LENGTH = 50
 
 DIR_ROOT = pathlib.Path(__file__).resolve().parent
 DIR_SOURCE = DIR_ROOT / 'source'
@@ -59,9 +58,16 @@ TERM = {
     'REASON': 'reason'
 }
 
-def finalize():
-    for name in ['__pycache__', '.deepeval' ]:
-        shutil.rmtree(DIR_ROOT / name, ignore_errors=True)
+def _create_finalize():
+    start_time = time.time()
+    def _finalize():
+        for name in ['__pycache__', '.deepeval']:
+            shutil.rmtree(DIR_ROOT / name, ignore_errors=True)
+        elapsed = time.time() - start_time
+        print(f'completed {pathlib.Path(sys.argv[0]).name} ( elapsed : {elapsed:.1f} sec )')
+    return _finalize
+
+finalize = _create_finalize()
 
 def abort(in_message=None):
     if in_message:

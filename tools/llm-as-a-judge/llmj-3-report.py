@@ -273,18 +273,16 @@ def main():
     versionArr = []
     for path in sorted(llmj.DIR_WORK.glob('*' + llmj.SUFFIX_JUDGED)):
         versionArr.append(load_version(path))
-    if len(versionArr) == 0:
-        print('ERROR : no judged files')
-        llmj.abort()
-    html = build_html(
-        {
-            'versions': versionArr
-        }
-    )
-    out_path = llmj.DIR_WORK / llmj.FILE_REPORT
-    with open(out_path, 'w', encoding='utf-8') as f:
-        f.write(html)
-    print(f'completed : {out_path.name}')
+    if len(versionArr) > 0:
+        html = build_html(
+            {
+                'versions': versionArr
+            }
+        )
+        out_path = llmj.DIR_WORK / llmj.FILE_REPORT
+        with open(out_path, 'w', encoding='utf-8') as f:
+            f.write(html)
+        print(f'reported : {out_path.name}')
     llmj.finalize()
 
 if __name__ == '__main__':
