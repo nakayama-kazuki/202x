@@ -17,16 +17,21 @@ def process_prompt(in_runtime, in_path):
     except Exception:
         print(f'ERROR : can not read "{in_path.name}"')
         llmj.abort()
-    filename = in_path.name.removesuffix(llmj.SUFFIX_PROMPT) + llmj.SUFFIX_GENERATED
+    filename = in_path.name.removesuffix(llmj.SUFFIX_PRO) + llmj.SUFFIX_GEN
     dst_path = in_path.with_name(filename)
-    workbook = openpyxl.Workbook()
+    if dst_path.exists():
+        workbook = openpyxl.load_workbook(dst_path)
+    else:
+        workbook = openpyxl.Workbook()
     sheet = workbook.active
-    keyArr = ['ORIGINAL', 'GENERATED']
     colDict = {}
-    for key in keyArr:
-        colDict[key] = llmj.find_append_column(sheet, llmj.TERM[key])
+    for key in llmj.TERM_GEN:
+        colDict[key] = llmj.find_append_column(sheet, llmj.TERM_GEN[key])
     sourceArr = sorted(llmj.DIR_SOURCE.glob('*.txt'))
     for row, src_path in enumerate(sourceArr, start=2):
+        print(f'processing  : {row - 1} / {len(sourceArr)}')
+        if sheet.cell(row, colDict['GENERATED']).value:
+            continue
         textDict = {}
         try:
             with open(src_path, encoding='utf-8') as f:
@@ -36,16 +41,14 @@ def process_prompt(in_runtime, in_path):
             llmj.abort()
         prompt = template.replace(llmj.ORIGINAL_PLACEHOLDER, textDict['ORIGINAL'])
         textDict['GENERATED'] = llmj.invoke_llm(in_runtime, llmj.LLM_MODEL, prompt)
-        for key in keyArr:
+        for key in llmj.TERM_GEN:
             sheet.cell(row, colDict[key]).value = textDict[key]
         workbook.save(dst_path)
-        print(f'progress : {row - 1} / {len(sourceArr)}')
     print(f'generated : {dst_path.name}')
 
 def main():
-    pathArr = llmj.find_target_files(llmj.SUFFIX_PROMPT, llmj.SUFFIX_GENERATED)
     runtime = llmj.create_bedrock_runtime()
-    for path in pathArr:
+    for path in sorted(llmj.DIR_WORK.glob('*' + llmj.SUFFIX_PRO)):
         process_prompt(runtime, path)
     llmj.finalize()
 

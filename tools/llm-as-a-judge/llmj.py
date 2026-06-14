@@ -7,6 +7,12 @@ import shutil
 import pathlib
 import dotenv
 
+def abort(in_message=None):
+    if in_message:
+        print(in_message)
+    finalize()
+    sys.exit(1)
+
 dotenv.load_dotenv()
 for required in ['ACCESS_KEY_ID', 'SECRET_ACCESS_KEY', 'SESSION_TOKEN', 'GATEWAY_URL']:
     if os.getenv(required) is None:
@@ -22,7 +28,7 @@ try:
 except ImportError:
     abort_missing_package('boto3')
 
-OUTOUT_LANG = 'Japanese'
+OUTPUT_LANG = 'Japanese'
 
 DIR_ROOT = pathlib.Path(__file__).resolve().parent
 DIR_SOURCE = DIR_ROOT / 'source'
@@ -36,14 +42,15 @@ for path in [DIR_SOURCE, DIR_RUBRIC]:
 
 DIR_WORK.mkdir(exist_ok=True)
 
-SUFFIX_PROMPT = '.0-prompt.txt'
-SUFFIX_GENERATED = '.1-generated.xlsx'
-SUFFIX_JUDGED = '.2-judged.xlsx'
-FILE_REPORT = 'report.html'
+QUOTATION = {
+    'ASCII' : chr(0x22),
+    'FULLW' : chr(0xFF02)
+}
 
-INITIAL_VERSION_NAME = 'ver-001'
-
-ORIGINAL_PLACEHOLDER = '{{original}}'
+APOSTROPHE = {
+    'ASCII' : chr(0x27),
+    'FULLW' : chr(0xFF07)
+}
 
 LLM_MODEL = 'us.anthropic.claude-sonnet-4-6'
 LLM_MAX_TOKENS = 4096
@@ -51,12 +58,29 @@ LLM_TEMPERATURE = 0
 LLM_RETRY_COUNT = 3
 LLM_RETRY_INTERVAL_SEC = 5
 
-TERM = {
-    'ORIGINAL': 'original',
-    'GENERATED': 'generated',
-    'SCORE': 'score',
-    'REASON': 'reason'
+TERM_GEN = {
+    'ORIGINAL' : 'original',
+    'GENERATED' : 'generated',
 }
+
+TERM_JUD = {
+    'AVERAGE' : 'average',
+    'RESULTS' : 'results'
+}
+
+TERM_ALL = TERM_GEN | TERM_JUD
+
+# prompt
+SUFFIX_PRO = '.p0-pro.txt'
+# generated
+SUFFIX_GEN = '.p1-gen.xlsx'
+# judged
+SUFFIX_JUD = '.p2-jud.xlsx'
+FILE_REPORT = 'report.html'
+
+INITIAL_VERSION_NAME = 'init'
+
+ORIGINAL_PLACEHOLDER = '{{' + TERM_ALL['ORIGINAL'] + '}}'
 
 def _create_finalize():
     start_time = time.time()
@@ -68,12 +92,6 @@ def _create_finalize():
     return _finalize
 
 finalize = _create_finalize()
-
-def abort(in_message=None):
-    if in_message:
-        print(in_message)
-    finalize()
-    sys.exit(1)
 
 def _column(in_sheet, in_name):
     for col in range(1, in_sheet.max_column + 1):
@@ -96,15 +114,6 @@ def find_append_column(in_sheet, in_name):
     col = in_sheet.max_column + 1
     in_sheet.cell(row=1, column=col).value = in_name
     return col
-
-def find_target_files(in_src_suffix, in_dst_suffix):
-    pathArr = []
-    for path in sorted(DIR_WORK.glob('*' + in_src_suffix)):
-        target = path.with_name(path.name.removesuffix(in_src_suffix) + in_dst_suffix)
-        if target.exists():
-            continue
-        pathArr.append(path)
-    return pathArr
 
 def create_bedrock_runtime():
     session = boto3.Session(

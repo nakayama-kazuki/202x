@@ -114,11 +114,10 @@ def create_judge(in_rubricArr):
             model=GatewayLLM(runtime, llmj.LLM_MODEL)
         )
         llmj.invoke(lambda: metric.measure(in_testcase))
-        return {
-            'rubric' : metric.name,
-            'score' : metric.score,
-            'reason' : metric.reason
-        }
+        resDict = {}
+        for key in ['name', 'score', 'reason']:
+            resDict[key] = getattr(metric, key)
+        return resDict
     def judge(in_original, in_generated):
         testcase = LLMTestCase(
             input=in_original,
@@ -126,33 +125,42 @@ def create_judge(in_rubricArr):
         )
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(in_rubricArr)) as executor:
             callback = lambda in_rubric: evaluate(in_rubric, testcase)
-            reasonArr = list(executor.map(callback, in_rubricArr))
+            resultArr = list(executor.map(callback, in_rubricArr))
         scoreArr = []
-        for reason in reasonArr:
-            scoreArr.append(reason['score'])
+        for result in resultArr:
+            scoreArr.append(result['score'])
         return {
-            'score' : sum(scoreArr) / len(scoreArr),
-            'reason' : json.dumps(reasonArr, ensure_ascii=False)
+            llmj.TERM_ALL['AVERAGE'] : sum(scoreArr) / len(scoreArr),
+            llmj.TERM_ALL['RESULTS'] : json.dumps(resultArr, ensure_ascii=False)
         }
     return judge
 
 def process_xlsx(in_path, in_callback):
-    out_path = in_path.with_name(in_path.name.removesuffix(llmj.SUFFIX_GENERATED) + llmj.SUFFIX_JUDGED)
-    workbook = openpyxl.load_workbook(in_path)
-    workbook.save(out_path)
+    out_path = in_path.with_name(in_path.name.removesuffix(llmj.SUFFIX_GEN) + llmj.SUFFIX_JUD)
+    if not out_path.exists():
+        workbook = openpyxl.load_workbook(in_path)
+        workbook.save(out_path)
     workbook = openpyxl.load_workbook(out_path)
     sheet = workbook.active
     colDict = {}
-    for key in llmj.TERM:
-        colDict[key] = llmj.find_append_column(sheet, llmj.TERM[key])
+    for key in llmj.TERM_ALL:
+        colDict[key] = llmj.find_append_column(sheet, llmj.TERM_ALL[key])
     for row in range(2, sheet.max_row + 1):
-        result = in_callback(
-            sheet.cell(row, colDict['ORIGINAL']).value,
-            sheet.cell(row, colDict['GENERATED']).value
-        )
-        for key in ['SCORE', 'REASON']:
-            sheet.cell(row, colDict[key]).value = result[llmj.TERM[key]]
-        print(f'progress : {row - 1} / {sheet.max_row - 1}')
+        print(f'processing : {row - 1} / {sheet.max_row - 1}')
+        skip = True
+        for key in llmj.TERM_JUD:
+            skip = skip and sheet.cell(row, colDict[key]).value is not None
+        if skip:
+            continue
+        # replace characters that DeepEval cannot handle
+        safeText = {}
+        for key in llmj.TERM_GEN:
+            safeText[key] = sheet.cell(row, colDict[key]).value
+            for repDict in [llmj.QUOTATION, llmj.APOSTROPHE]:
+                safeText[key] = safeText[key].replace(repDict['ASCII'], repDict['FULLW'])
+        result = in_callback(safeText['ORIGINAL'], safeText['GENERATED'])
+        for key in llmj.TERM_JUD:
+            sheet.cell(row, colDict[key]).value = result[llmj.TERM_ALL[key]]
         workbook.save(out_path)
     print(f'judged : {out_path.name}')
 
@@ -161,10 +169,8 @@ def main():
     if rubricArr is None:
         print('ERROR : can not read some json')
         llmj.abort()
-    rubricArr = compile_rubric(rubricArr)
-    pathArr = llmj.find_target_files(llmj.SUFFIX_GENERATED, llmj.SUFFIX_JUDGED)
-    callback = create_judge(rubricArr)
-    for path in pathArr:
+    callback = create_judge(compile_rubric(rubricArr))
+    for path in sorted(llmj.DIR_WORK.glob('*' + llmj.SUFFIX_GEN)):
         process_xlsx(path, callback)
     llmj.finalize()
 

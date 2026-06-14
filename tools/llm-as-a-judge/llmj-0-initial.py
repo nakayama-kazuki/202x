@@ -13,7 +13,7 @@ def load_rubrics():
             rubricArr.append(json.load(f))
     return rubricArr
 
-def build_prompt(in_rubricArr, in_lang=llmj.OUTOUT_LANG):
+def build_prompt(in_rubricArr, in_lang=llmj.OUTPUT_LANG):
     return f'''
 You are an expert prompt engineer.
 
@@ -45,12 +45,13 @@ Therefore, produce a well-structured, easy-to-maintain GENERATED-PROMPT with cle
 
 Return only the GENERATED-PROMPT.
 Do not explain your reasoning.
+Do not wrap the response in code fences.
 '''.strip()
 
 def main():
     runtime = llmj.create_bedrock_runtime()
     generated = llmj.invoke_llm(runtime, llmj.LLM_MODEL, build_prompt(load_rubrics()))
-    target = llmj.DIR_WORK / f'{llmj.INITIAL_VERSION_NAME}{llmj.SUFFIX_PROMPT}'
+    target = llmj.DIR_WORK / f'{llmj.INITIAL_VERSION_NAME}{llmj.SUFFIX_PRO}'
     with open(target, 'w', encoding='utf-8') as f:
         f.write(generated)
     print(f'OK : generated "{target.name}"')
