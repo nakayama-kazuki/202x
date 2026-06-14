@@ -39,7 +39,9 @@ th, td {
 #rubricAvgTable td,
 #rubricAvgTable th,
 #rubricMinTable td,
-#rubricMinTable th {
+#rubricMinTable th,
+#rubricThresholdTable td,
+#rubricThresholdTable th {
     width: 100px;
 }
 
@@ -72,6 +74,10 @@ pre {
     vertical-align: middle;
 }
 
+#thresholdSelect {
+	vertical-align: middle;
+}
+
 </style>
 </head>
 <body>
@@ -91,6 +97,7 @@ pre {
 
 const gJudgedArr = __JSON__;
 const gRubricNameArr = gJudgedArr[0].articleArr[0].results.map(in_r => in_r.name);
+const DEFAULT_THRESHOLD = 0.3;
 
 /*
 
@@ -161,9 +168,8 @@ function sortableTH(in_tblId, in_col, in_title) {
 	return '<th class="sortable" data-table="' + in_tblId + '" data-col="' + in_col + '">' + escapeHtml(in_title) + '</th>';
 }
 
-function buildRubricTable(in_tblId, in_title, in_callback) {
+function buildRubricTable(in_tblId, in_callback) {
 	let fragment = '';
-	fragment += '<h2>' + escapeHtml(in_title) + '</h2>';
 	fragment += '<table id="' + in_tblId + '">';
 	fragment += '<thead>';
 	fragment += '<tr>';
@@ -230,23 +236,40 @@ function buildRubricTable(in_tblId, in_title, in_callback) {
 	});
 	fragment += '</tbody>';
 	fragment += '</table>';
-	const articleCnt = gJudgedArr[0].articleArr.length;
+	fragment += '<h2>Rubric Avg for ' + gJudgedArr[0].articleArr.length + ' Articles</h2>';
 	fragment += buildRubricTable(
 		'rubricAvgTable',
-		'Rubric Avg for ' + articleCnt + ' Articles',
 		({scores}) => {
 			const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
 			return '<td data-sort="' + avg + '">' + avg.toFixed(2) + '</td>';
 		}
 	);
+	fragment += '<h2>Rubric Min for ' + gJudgedArr[0].articleArr.length + ' Articles</h2>';
 	fragment += buildRubricTable(
 		'rubricMinTable',
-	    'Rubric Min for ' + articleCnt + ' Articles',
 		({version, minScore, minIndex}) => {
 			return '<td data-sort="' + minScore + '">' +
 					'<a href="#article-' + version.name + '-' + minIndex + '">' + minScore.toFixed(2) + '</a></td>';
 		}
 	);
+	fragment += '<h2>Rubric Less Than ';
+	fragment += '<select id="thresholdSelect">';
+	for (let score = 1; score <= 10; score++) {
+		const value = score / 10;
+		const selected = value === DEFAULT_THRESHOLD ? ' selected' : '';
+		fragment += '<option value="' + value + '"' + selected + '>' + value + '</option>';
+	}
+	fragment += '</select>';
+	fragment += ' for ' + gJudgedArr[0].articleArr.length + ' Articles</h2>';
+	fragment += '<div id="thresholdContainer">';
+	fragment += buildRubricTable(
+		'rubricThresholdTable',
+		({scores}) => {
+			const count = scores.filter(score => score < DEFAULT_THRESHOLD).length;
+			return '<td data-sort="' + count + '">' + count + '</td>';
+		}
+	);
+	fragment += '</div>';
 	fragment += '<h2>Details</h2>';
 	gJudgedArr.forEach(in_ver => {
 		fragment += '<div class="version">';
@@ -290,6 +313,21 @@ function buildRubricTable(in_tblId, in_title, in_callback) {
 	document.getElementById('report').innerHTML = fragment;
 	document.querySelectorAll('th.sortable').forEach(th => {
 		th.addEventListener('click', () => sortTable(th.dataset.table, Number(th.dataset.col)));
+	});
+	document.getElementById('thresholdSelect').addEventListener('change', ev => {
+		const threshold = Number(ev.target.value);
+		document.getElementById('thresholdContainer').innerHTML = buildRubricTable(
+			'rubricThresholdTable',
+			({scores}) => {
+				const count = scores.filter(score => score < threshold).length;
+				return '<td data-sort="' + count + '">' + count + '</td>';
+			}
+		);
+		document.querySelectorAll('#thresholdContainer th.sortable').forEach(th => {
+			th.addEventListener('click', () =>
+				sortTable(th.dataset.table, Number(th.dataset.col))
+			);
+		});
 	});
 })();
 
