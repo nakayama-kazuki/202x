@@ -64,8 +64,8 @@ pre {
 }
 
 .reason-link {
-    display: inline-block;
-    margin-top: 4px;
+    margin-left: 4px;
+    white-space: nowrap;
 }
 
 .reason-link svg {
@@ -233,7 +233,7 @@ function buildRubricTable(in_tblId, in_title, in_callback) {
 	const articleCnt = gJudgedArr[0].articleArr.length;
 	fragment += buildRubricTable(
 		'rubricAvgTable',
-		'Rubric Avg for ' + articleCnt + 'Articles',
+		'Rubric Avg for ' + articleCnt + ' Articles',
 		({scores}) => {
 			const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
 			return '<td data-sort="' + avg + '">' + avg.toFixed(2) + '</td>';
@@ -241,7 +241,7 @@ function buildRubricTable(in_tblId, in_title, in_callback) {
 	);
 	fragment += buildRubricTable(
 		'rubricMinTable',
-	    'Rubric Min for ' + articleCnt + 'Articles',
+	    'Rubric Min for ' + articleCnt + ' Articles',
 		({version, minScore, minIndex}) => {
 			return '<td data-sort="' + minScore + '">' +
 					'<a href="#article-' + version.name + '-' + minIndex + '">' + minScore.toFixed(2) + '</a></td>';
@@ -271,13 +271,14 @@ function buildRubricTable(in_tblId, in_title, in_callback) {
 					encodeURIComponent(in_res.reason || '') +
 					'&op=translate';
 				fragment += '<tr>';
-				fragment += '<td>' + escapeHtml(in_res.name) + '</td>';
-				fragment += '<td>' + in_res.score + '</td>';
-				fragment += '<td>';
-				fragment += '<pre>' + escapeHtml(in_res.reason) + '</pre>';
+				fragment += '<td>' + escapeHtml(in_res.name);
 				fragment += '<a class="reason-link" href="' + translateUrl + '" target="_blank" title="Translate">';
 				fragment += document.getElementById('translateSvg').innerHTML;
 				fragment += '</a>';
+				fragment += '</td>';
+				fragment += '<td>' + in_res.score + '</td>';
+				fragment += '<td>';
+				fragment += '<pre>' + escapeHtml(in_res.reason) + '</pre>';
 				fragment += '</td>';
 				fragment += '</tr>';
 			});
@@ -313,9 +314,9 @@ def build_judged_dataset(in_path):
         colDict[jsKey] = json.loads(colDict[jsKey] or '[]')
         jsRowArr.append(colDict)
     return {
-        'name': in_path.name.removesuffix(llmj.SUFFIX_JUD),
-        'totalAvg': sum(row['average'] for row in jsRowArr) / len(jsRowArr),
-        'articleArr': jsRowArr
+        'name' : in_path.name.removesuffix(llmj.SUFFIX_JUD),
+        'totalAvg' : sum(row['average'] for row in jsRowArr) / len(jsRowArr),
+        'articleArr' : jsRowArr
     }
 
 def build_html(in_judgedArr):
