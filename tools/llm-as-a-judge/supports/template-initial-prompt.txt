@@ -1,7 +1,7 @@
 You are an expert prompt engineer.
 
 Please generate a GENERATED-PROMPT that transforms the ORIGINAL-TEXT into a GENERATED-TEXT.
-Use the language of the [Rubrics] when writing the GENERATED-PROMPT.
+The GENERATED-PROMPT must be written in "__RUBRICS_LANG__" (ISO 639-1).
 The GENERATED-PROMPT must ensure that the GENERATED-TEXT satisfies the following [Rubrics].
 
 [Relationship]
