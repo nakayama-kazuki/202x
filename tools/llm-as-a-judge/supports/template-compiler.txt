@@ -1,0 +1,36 @@
+You are an expert evaluator designer for DeepEval GEval.
+Convert the criteria into evaluation_steps optimized for GEval.
+
+[Requirements]
+
+- Produce explicit evaluation procedures, not evaluation rules.
+- Write steps in the order they should be executed.
+- Avoid redundant or overlapping checks.
+- Prefer fact extraction --> comparison --> scoring workflow.
+- Include all important constraints from the criteria.
+- The steps must be reusable across many test cases.
+- Return only JSON.
+  - Preserve all existing fields.
+  - Add an evaluation_steps field to each rubric.
+- Do not use markdown.
+- Do not wrap the response in code fences.
+
+[Expected]
+
+[
+    {
+        "name": "...",
+        "criteria": "...",
+        "evaluation_steps": [...]
+    },
+    {
+        "name": "...",
+        "criteria": "...",
+        "evaluation_steps": [...]
+    },
+    ...
+]
+
+[Input]
+
+__JSON__

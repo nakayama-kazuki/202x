@@ -28,14 +28,13 @@ try:
 except ImportError:
     abort_missing_package('boto3')
 
-OUTPUT_LANG = 'Japanese'
-
 DIR_ROOT = pathlib.Path(__file__).resolve().parent
-DIR_SOURCE = DIR_ROOT / 'source'
 DIR_WORK = DIR_ROOT / 'work'
+DIR_SOURCE = DIR_ROOT / 'source'
 DIR_RUBRIC = DIR_ROOT / 'rubric'
+DIR_SUPPORTS = DIR_ROOT / 'supports'
 
-for path in [DIR_SOURCE, DIR_RUBRIC]:
+for path in [DIR_SOURCE, DIR_RUBRIC, DIR_SUPPORTS]:
     if not path.is_dir():
         print(f'ERROR : can not find "{path.name}" directory.')
         abort()
@@ -71,14 +70,12 @@ TERM_JUD = {
 TERM_ALL = TERM_GEN | TERM_JUD
 
 # prompt
-SUFFIX_PRO = '.p0-pro.txt'
-# generated
-SUFFIX_GEN = '.p1-gen.xlsx'
-# judged
-SUFFIX_JUD = '.p2-jud.xlsx'
+SUFFIX_TXT = '.txt'
+# generated / judged
+SUFFIX_XLS = '.xlsx'
 FILE_REPORT = 'report.html'
 
-INITIAL_VERSION_NAME = 'init'
+INITIAL_VERSION_NAME = 'initial-prompt'
 
 ORIGINAL_PLACEHOLDER = '{{' + TERM_ALL['ORIGINAL'] + '}}'
 

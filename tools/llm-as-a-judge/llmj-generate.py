@@ -17,7 +17,7 @@ def process_prompt(in_runtime, in_path):
     except Exception:
         print(f'ERROR : can not read "{in_path.name}"')
         llmj.abort()
-    filename = in_path.name.removesuffix(llmj.SUFFIX_PRO) + llmj.SUFFIX_GEN
+    filename = in_path.name.removesuffix(llmj.SUFFIX_TXT) + llmj.SUFFIX_XLS
     dst_path = in_path.with_name(filename)
     if dst_path.exists():
         workbook = openpyxl.load_workbook(dst_path)
@@ -48,7 +48,7 @@ def process_prompt(in_runtime, in_path):
 
 def main():
     runtime = llmj.create_bedrock_runtime()
-    for path in sorted(llmj.DIR_WORK.glob('*' + llmj.SUFFIX_PRO)):
+    for path in sorted(llmj.DIR_WORK.glob('*' + llmj.SUFFIX_TXT)):
         process_prompt(runtime, path)
     llmj.finalize()
 

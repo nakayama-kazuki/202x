@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
 
 import os
-import io
-import sys
 import json
-import time
-import contextlib
 import concurrent.futures
 
 import llmj
@@ -14,6 +10,11 @@ try:
     import openpyxl
 except ImportError:
     llmj.abort_missing_package('openpyxl')
+
+try:
+    import langdetect
+except ImportError:
+    llmj.abort_missing_package('langdetect')
 
 try:
     from deepeval.metrics import GEval
@@ -37,47 +38,9 @@ def load_rubrics():
     return rubricArr
 
 def compile_rubric(in_rubricArr):
-    promptToCompile = f'''
-
-You are an expert evaluator designer for DeepEval GEval.
-Convert the criteria into evaluation_steps optimized for GEval.
-
-[Requirements]
-
-- Produce explicit evaluation procedures, not evaluation rules.
-- Write steps in the order they should be executed.
-- Avoid redundant or overlapping checks.
-- Prefer fact extraction --> comparison --> scoring workflow.
-- Include all important constraints from the criteria.
-- The steps must be reusable across many test cases.
-- Return only JSON.
-  - Preserve all existing fields.
-  - Add an evaluation_steps field to each rubric.
-- Do not use markdown.
-- Do not wrap the response in code fences.
-
-[Expected]
-
-[
-    {{
-        "name": "...",
-        "criteria": "...",
-        "evaluation_steps": [...]
-    }},
-    {{
-        "name": "...",
-        "criteria": "...",
-        "evaluation_steps": [...]
-    }},
-    ...
-]
-
-[Input]
-
-{json.dumps(in_rubricArr, ensure_ascii=False, indent=2)}
-
-'''.strip()
-
+    with open(llmj.DIR_SUPPORTS / 'template-compiler.txt', encoding='utf-8') as f:
+        promptToCompile = f.read()
+    promptToCompile = promptToCompile.replace('__JSON__', json.dumps(in_rubricArr, ensure_ascii=False, indent=2))
     runtime = llmj.create_bedrock_runtime()
     generated = llmj.invoke_llm(runtime, llmj.LLM_MODEL, promptToCompile)
     try:
@@ -136,11 +99,7 @@ def create_judge(in_rubricArr):
     return judge
 
 def process_xlsx(in_path, in_callback):
-    out_path = in_path.with_name(in_path.name.removesuffix(llmj.SUFFIX_GEN) + llmj.SUFFIX_JUD)
-    if not out_path.exists():
-        workbook = openpyxl.load_workbook(in_path)
-        workbook.save(out_path)
-    workbook = openpyxl.load_workbook(out_path)
+    workbook = openpyxl.load_workbook(in_path)
     sheet = workbook.active
     colDict = {}
     for key in llmj.TERM_ALL:
@@ -161,8 +120,38 @@ def process_xlsx(in_path, in_callback):
         result = in_callback(safeText['ORIGINAL'], safeText['GENERATED'])
         for key in llmj.TERM_JUD:
             sheet.cell(row, colDict[key]).value = result[llmj.TERM_ALL[key]]
-        workbook.save(out_path)
-    print(f'judged : {out_path.name}')
+        workbook.save(in_path)
+    print(f'judged : {in_path.name}')
+
+def build_judged_dataset(in_path):
+    workbook = openpyxl.load_workbook(in_path, data_only=True)
+    sheet = workbook.active
+    headDict = {}
+    for key in llmj.TERM_ALL:
+        headDict[key] = llmj.find_column(sheet, llmj.TERM_ALL[key])
+    jsRowArr = []
+    for row in range(2, sheet.max_row + 1):
+        colDict = {}
+        for key in llmj.TERM_ALL:
+            jsKey = llmj.TERM_ALL[key]
+            colDict[jsKey] = sheet.cell(row, headDict[key]).value
+        try:
+            colDict['lang'] = langdetect.detect(colDict[llmj.TERM_ALL['ORIGINAL']])
+        except Exception:
+            colDict['lang'] = 'en'
+        jsKey = llmj.TERM_ALL['RESULTS']
+        colDict[jsKey] = json.loads(colDict[jsKey] or '[]')
+        jsRowArr.append(colDict)
+    return {
+        'name' : in_path.name.removesuffix(llmj.SUFFIX_XLS),
+        'totalAvg' : sum(row['average'] for row in jsRowArr) / len(jsRowArr),
+        'articleArr' : jsRowArr
+    }
+
+def build_html(in_judgedArr):
+    with open(llmj.DIR_SUPPORTS / 'template-report.html', encoding='utf-8') as f:
+        html = f.read()
+    return html.replace('__JSON__', json.dumps(in_judgedArr, ensure_ascii=False))
 
 def main():
     rubricArr = load_rubrics()
@@ -170,8 +159,15 @@ def main():
         print('ERROR : can not read some json')
         llmj.abort()
     callback = create_judge(compile_rubric(rubricArr))
-    for path in sorted(llmj.DIR_WORK.glob('*' + llmj.SUFFIX_GEN)):
+    judgedArr = []
+    for path in sorted(llmj.DIR_WORK.glob('*' + llmj.SUFFIX_XLS)):
         process_xlsx(path, callback)
+        judgedArr.append(build_judged_dataset(path))
+    if len(judgedArr) > 0:
+        out_path = llmj.DIR_WORK / llmj.FILE_REPORT
+        print(f'processing : {out_path.name}')
+        with open(out_path, 'w', encoding='utf-8') as f:
+            f.write(build_html(judgedArr))
     llmj.finalize()
 
 if __name__ == '__main__':

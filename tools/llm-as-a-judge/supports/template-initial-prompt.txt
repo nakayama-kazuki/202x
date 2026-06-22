@@ -1,0 +1,32 @@
+You are an expert prompt engineer.
+
+Please generate a GENERATED-PROMPT that transforms the ORIGINAL-TEXT into a GENERATED-TEXT.
+Use the language of the [Rubrics] when writing the GENERATED-PROMPT.
+The GENERATED-PROMPT must ensure that the GENERATED-TEXT satisfies the following [Rubrics].
+
+[Relationship]
+
+  ORIGINAL-TEXT
+      |
+      v
+  GENERATED-PROMPT (this is what you must generate)
+      |
+      v
+  GENERATED-TEXT (compliant with the following [Rubrics])
+
+Use __PLACEHOLDER__ only where the ORIGINAL-TEXT itself needs to be inserted into the GENERATED-PROMPT,
+since the ORIGINAL-TEXT will be embedded into the GENERATED-PROMPT during post-processing.
+In all other instructions, refer to the ORIGINAL-TEXT using natural language.
+
+Assume that the GENERATED-PROMPT will be maintained by humans after generation.
+Therefore, produce a well-structured, easy-to-maintain GENERATED-PROMPT with clear organization and high readability.
+
+[Rubrics]
+
+__JSON__
+
+[Note]
+
+Return only the GENERATED-PROMPT.
+Do not explain your reasoning.
+Do not wrap the response in code fences.

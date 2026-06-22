@@ -1,16 +1,3 @@
-#!/usr/bin/env python3
-
-import sys
-import json
-
-import llmj
-
-try:
-    import openpyxl
-except ImportError:
-    llmj.abort_missing_package('openpyxl')
-
-REPORT_HTML = r'''
 <html>
 <head>
 <meta charset='utf-8'>
@@ -154,9 +141,10 @@ function sortTable(in_tblId, in_col) {
 	const tbody = table.querySelector('tbody');
 	const rowArr = Array.from(tbody.querySelectorAll('tr'));
 	const isAsc = table.dataset.sortCol != in_col || table.dataset.sortDir !== 'ascending';
-	const extract = in_text => Number(in_text.match(/\d+/)?.[0] ?? 0);
 	rowArr.sort((a, b) => {
-		const diff = extract(a.children[in_col].textContent) - extract(b.children[in_col].textContent);
+		const aVal = Number(a.children[in_col].dataset.sort ?? a.children[in_col].textContent);
+		const bVal = Number(b.children[in_col].dataset.sort ?? b.children[in_col].textContent);
+		const diff = aVal - bVal;
 		return isAsc ? diff : diff * -1;
 	});
 	rowArr.forEach(row => tbody.appendChild(row));
@@ -252,9 +240,9 @@ function buildRubricTable(in_tblId, in_callback) {
 					'<a href="#article-' + version.name + '-' + minIndex + '">' + minScore.toFixed(2) + '</a></td>';
 		}
 	);
-	fragment += '<h2>Rubric Less Than ';
+	fragment += '<h2>Rubric &lt;= ';
 	fragment += '<select id="thresholdSelect">';
-	for (let score = 1; score <= 10; score++) {
+	for (let score = 0; score <= 10; score++) {
 		const value = score / 10;
 		const selected = value === DEFAULT_THRESHOLD ? ' selected' : '';
 		fragment += '<option value="' + value + '"' + selected + '>' + value + '</option>';
@@ -265,7 +253,7 @@ function buildRubricTable(in_tblId, in_callback) {
 	fragment += buildRubricTable(
 		'rubricThresholdTable',
 		({scores}) => {
-			const count = scores.filter(score => score < DEFAULT_THRESHOLD).length;
+			const count = scores.filter(in_score => in_score <= DEFAULT_THRESHOLD).length;
 			return '<td data-sort="' + count + '">' + count + '</td>';
 		}
 	);
@@ -289,10 +277,13 @@ function buildRubricTable(in_tblId, in_callback) {
 			fragment += '<th>Reason</th>';
 			fragment += '</tr>';
 			in_art.results.forEach(in_res => {
-				const translateUrl =
-					'https://translate.google.com/?sl=en&tl=ja&text=' +
-					encodeURIComponent(in_res.reason || '') +
-					'&op=translate';
+				const params = {
+					sl : 'auto',
+					tl : in_art.lang,
+					text : in_res.reason || '',
+					op : 'translate'
+				};
+				const translateUrl = 'https://translate.google.com/?' + new URLSearchParams(params).toString();
 				fragment += '<tr>';
 				fragment += '<td>' + escapeHtml(in_res.name);
 				fragment += '<a class="reason-link" href="' + translateUrl + '" target="_blank" title="Translate">';
@@ -319,7 +310,7 @@ function buildRubricTable(in_tblId, in_callback) {
 		document.getElementById('thresholdContainer').innerHTML = buildRubricTable(
 			'rubricThresholdTable',
 			({scores}) => {
-				const count = scores.filter(score => score < threshold).length;
+				const count = scores.filter(in_score => in_score <= threshold).length;
 				return '<td data-sort="' + count + '">' + count + '</td>';
 			}
 		);
@@ -334,42 +325,3 @@ function buildRubricTable(in_tblId, in_callback) {
 </script>
 </body>
 </html>
-'''
-
-def build_judged_dataset(in_path):
-    workbook = openpyxl.load_workbook(in_path, data_only=True)
-    sheet = workbook.active
-    headDict = {}
-    for key in llmj.TERM_ALL:
-        headDict[key] = llmj.find_column(sheet, llmj.TERM_ALL[key])
-    jsRowArr = []
-    for row in range(2, sheet.max_row + 1):
-        colDict = {}
-        for key in llmj.TERM_ALL:
-            jsKey = llmj.TERM_ALL[key]
-            colDict[jsKey] = sheet.cell(row, headDict[key]).value
-        jsKey = llmj.TERM_ALL['RESULTS']
-        colDict[jsKey] = json.loads(colDict[jsKey] or '[]')
-        jsRowArr.append(colDict)
-    return {
-        'name' : in_path.name.removesuffix(llmj.SUFFIX_JUD),
-        'totalAvg' : sum(row['average'] for row in jsRowArr) / len(jsRowArr),
-        'articleArr' : jsRowArr
-    }
-
-def build_html(in_judgedArr):
-    return REPORT_HTML.replace('__JSON__', json.dumps(in_judgedArr, ensure_ascii=False))
-
-def main():
-    judgedArr = []
-    for path in sorted(llmj.DIR_WORK.glob('*' + llmj.SUFFIX_JUD)):
-        judgedArr.append(build_judged_dataset(path))
-    if len(judgedArr) > 0:
-        out_path = llmj.DIR_WORK / llmj.FILE_REPORT
-        print(f'processing : {out_path.name}')
-        with open(out_path, 'w', encoding='utf-8') as f:
-            f.write(build_html(judgedArr))
-    llmj.finalize()
-
-if __name__ == '__main__':
-    main()
