@@ -3,9 +3,11 @@
 import os
 import sys
 import time
+import json
+import dotenv
 import shutil
 import pathlib
-import dotenv
+import concurrent.futures
 
 def abort(in_message=None):
     if in_message:
@@ -28,6 +30,25 @@ try:
 except ImportError:
     abort_missing_package('boto3')
 
+try:
+    import openpyxl
+except ImportError:
+    abort_missing_package('openpyxl')
+
+try:
+    import langdetect
+except ImportError:
+    abort_missing_package('langdetect')
+
+try:
+    from deepeval.metrics import GEval
+    from deepeval.test_case import LLMTestCase
+    from deepeval.test_case import SingleTurnParams
+    from deepeval.models import DeepEvalBaseLLM
+    os.environ['DEEPEVAL_TELEMETRY_OPT_OUT'] = 'YES'
+except ImportError:
+    abort_missing_package('deepeval')
+
 DIR_ROOT = pathlib.Path(__file__).resolve().parent
 DIR_WORK = DIR_ROOT / 'work'
 DIR_SOURCE = DIR_ROOT / 'source'
@@ -41,21 +62,21 @@ for path in [DIR_SOURCE, DIR_RUBRIC, DIR_SUPPORTS]:
 
 DIR_WORK.mkdir(exist_ok=True)
 
-QUOTATION = {
+_QUOTATION = {
     'ASCII' : chr(0x22),
     'FULLW' : chr(0xFF02)
 }
 
-APOSTROPHE = {
+_APOSTROPHE = {
     'ASCII' : chr(0x27),
     'FULLW' : chr(0xFF07)
 }
 
-LLM_MODEL = 'us.anthropic.claude-sonnet-4-6'
-LLM_MAX_TOKENS = 4096
-LLM_TEMPERATURE = 0
-LLM_RETRY_COUNT = 3
-LLM_RETRY_INTERVAL_SEC = 5
+_LLM_MODEL = 'us.anthropic.claude-sonnet-4-6'
+_LLM_MAX_TOKENS = 4096
+_LLM_TEMPERATURE = 0
+_LLM_RETRY_COUNT = 3
+_LLM_RETRY_INTERVAL_SEC = 5
 
 TERM_GEN = {
     'ORIGINAL' : 'original',
@@ -73,7 +94,6 @@ TERM_ALL = TERM_GEN | TERM_JUD
 SUFFIX_TXT = '.txt'
 # generated / judged
 SUFFIX_XLS = '.xlsx'
-FILE_REPORT = 'report.html'
 
 INITIAL_VERSION_NAME = 'initial-prompt'
 
@@ -82,30 +102,23 @@ ORIGINAL_PLACEHOLDER = '{{' + TERM_ALL['ORIGINAL'] + '}}'
 def _create_finalize():
     start_time = time.time()
     def _finalize():
-        for name in ['__pycache__', '.deepeval']:
-            shutil.rmtree(DIR_ROOT / name, ignore_errors=True)
+        for name in ['.deepeval']:
+            shutil.rmtree(pathlib.Path.cwd() / name, ignore_errors=True)
         elapsed = time.time() - start_time
         print(f'completed {pathlib.Path(sys.argv[0]).name} ( elapsed : {elapsed:.1f} sec )')
     return _finalize
 
 finalize = _create_finalize()
 
-def _column(in_sheet, in_name):
+def _find_column(in_sheet, in_name):
     for col in range(1, in_sheet.max_column + 1):
         value = in_sheet.cell(row=1, column=col).value
         if value == in_name:
             return col
     return None
 
-def find_column(in_sheet, in_name):
-    col = _column(in_sheet, in_name)
-    if col is not None:
-        return col
-    print(f'ERROR : can not find column "{in_name}"')
-    abort()
-
 def find_append_column(in_sheet, in_name):
-    col = _column(in_sheet, in_name)
+    col = _find_column(in_sheet, in_name)
     if col is not None:
         return col
     col = in_sheet.max_column + 1
@@ -124,26 +137,26 @@ def create_bedrock_runtime():
         endpoint_url=os.getenv('GATEWAY_URL')
     )
 
-def invoke(in_callback):
-    for retry in range(LLM_RETRY_COUNT):
+def _invoke(in_callback):
+    for retry in range(_LLM_RETRY_COUNT):
         try:
             return in_callback()
         except Exception as err:
-            if retry + 1 >= LLM_RETRY_COUNT:
-                print(f'ERROR : invoke failed : {err}')
+            if retry + 1 >= _LLM_RETRY_COUNT:
+                print(f'ERROR : _invoke failed : {err}')
                 abort()
             print(f'WARN : retrying because : {err}')
-            time.sleep(LLM_RETRY_INTERVAL_SEC * (retry + 1))
+            time.sleep(_LLM_RETRY_INTERVAL_SEC * (retry + 1))
 
-def invoke_llm(in_runtime, in_model, in_prompt):
+def invoke_llm(in_runtime, in_prompt):
     def callback():
         response = in_runtime.converse_stream(
-            modelId=in_model,
+            modelId=_LLM_MODEL,
             messages=[{
                 'role' : 'user',
                 'content' : [{'text' : in_prompt}]
             }],
-            inferenceConfig={'maxTokens' : LLM_MAX_TOKENS, 'temperature' : LLM_TEMPERATURE}
+            inferenceConfig={'maxTokens' : _LLM_MAX_TOKENS, 'temperature' : _LLM_TEMPERATURE}
         )
         chunkArr = []
         for event in response['stream']:
@@ -154,5 +167,162 @@ def invoke_llm(in_runtime, in_model, in_prompt):
                 continue
             chunkArr.append(delta['text'])
         return ''.join(chunkArr)
-    return invoke(callback)
+    return _invoke(callback)
 
+def json_from_template(in_template, in_object):
+    with open(DIR_SUPPORTS / in_template, encoding='utf-8') as f:
+        prompt = f.read()
+    prompt = prompt.replace('__JSON__', json.dumps(in_object, ensure_ascii=False, indent=2))
+    runtime = create_bedrock_runtime()
+    generated = invoke_llm(runtime, prompt)
+    try:
+        return json.loads(generated)
+    except Exception:
+        print('ERROR : failed to parse response')
+        abort()
+
+def load_rubrics():
+    rubricArr = []
+    for path in sorted(DIR_RUBRIC.glob('*.json')):
+        try:
+            with open(path, encoding='utf-8') as f:
+                rubricArr.append(json.load(f))
+        except Exception:
+            return None
+    if len(rubricArr) == 0:
+        return None
+    return rubricArr
+
+class _GatewayLLM(DeepEvalBaseLLM):
+    def __init__(self, in_runtime):
+        self.runtime = in_runtime
+    def get_model_name(self):
+        return _LLM_MODEL
+    def load_model(self):
+        return self
+    def generate(self, in_prompt):
+        return invoke_llm(self.runtime, in_prompt)
+    async def a_generate(self, in_prompt):
+        return self.generate(in_prompt)
+
+def _create_judge(in_rubricArr):
+    runtime = create_bedrock_runtime()
+    def evaluate(in_rubric, in_testcase):
+        metric = GEval(
+            name=in_rubric['name'],
+            # criteria=in_rubric['criteria'],
+            evaluation_steps=in_rubric['evaluation_steps'],
+            evaluation_params=[
+                SingleTurnParams.INPUT,
+                SingleTurnParams.ACTUAL_OUTPUT
+            ],
+            async_mode=False,
+            model=_GatewayLLM(runtime)
+        )
+        _invoke(lambda: metric.measure(in_testcase))
+        resDict = {}
+        for key in ['name', 'score', 'reason']:
+            resDict[key] = getattr(metric, key)
+        return resDict
+    def judge(in_original, in_generated):
+        testcase = LLMTestCase(
+            input=in_original,
+            actual_output=in_generated
+        )
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(in_rubricArr)) as executor:
+            callback = lambda in_rubric: evaluate(in_rubric, testcase)
+            resultArr = list(executor.map(callback, in_rubricArr))
+        scoreArr = []
+        for result in resultArr:
+            scoreArr.append(result['score'])
+        return {
+            TERM_ALL['AVERAGE'] : sum(scoreArr) / len(scoreArr),
+            TERM_ALL['RESULTS'] : json.dumps(resultArr, ensure_ascii=False)
+        }
+    return judge
+
+def _is_judged_row(in_sheet, in_row, in_colDict):
+    for key in TERM_JUD:
+        if in_sheet.cell(in_row, in_colDict[key]).value is None:
+            return False
+    return True
+
+def _is_judged_xlsx(in_path):
+    workbook = openpyxl.load_workbook(in_path, read_only=True, data_only=True)
+    sheet = workbook.active
+    colDict = {}
+    for key in TERM_JUD:
+        col = _find_column(sheet, TERM_ALL[key])
+        if col is None:
+            # judge columns do not exist yet ( before the first judge )
+            return False
+        colDict[key] = col
+    for row in range(2, sheet.max_row + 1):
+        if not _is_judged_row(sheet, row, colDict):
+            # some rows are still unjudged
+            return False
+    return True
+
+def _process_xlsx(in_path, in_callback):
+    workbook = openpyxl.load_workbook(in_path)
+    sheet = workbook.active
+    colDict = {}
+    for key in TERM_ALL:
+        colDict[key] = find_append_column(sheet, TERM_ALL[key])
+    for row in range(2, sheet.max_row + 1):
+        print(f'processing : {row - 1} / {sheet.max_row - 1}')
+        if _is_judged_row(sheet, row, colDict):
+            continue
+        # replace characters that DeepEval cannot handle
+        safeText = {}
+        for key in TERM_GEN:
+            safeText[key] = sheet.cell(row, colDict[key]).value
+            for repDict in [_QUOTATION, _APOSTROPHE]:
+                safeText[key] = safeText[key].replace(repDict['ASCII'], repDict['FULLW'])
+        result = in_callback(safeText['ORIGINAL'], safeText['GENERATED'])
+        for key in TERM_JUD:
+            sheet.cell(row, colDict[key]).value = result[TERM_ALL[key]]
+        workbook.save(in_path)
+    print(f'judged : {in_path.name}')
+
+def _build_judged_dataset(in_path):
+    workbook = openpyxl.load_workbook(in_path, data_only=True)
+    sheet = workbook.active
+    headDict = {}
+    for key in TERM_ALL:
+        headDict[key] = _find_column(sheet, TERM_ALL[key])
+    jsRowArr = []
+    for row in range(2, sheet.max_row + 1):
+        colDict = {}
+        for key in TERM_ALL:
+            jsKey = TERM_ALL[key]
+            colDict[jsKey] = sheet.cell(row, headDict[key]).value
+        try:
+            colDict['lang'] = langdetect.detect(colDict[TERM_ALL['ORIGINAL']])
+        except Exception:
+            colDict['lang'] = 'en'
+        jsKey = TERM_ALL['RESULTS']
+        colDict[jsKey] = json.loads(colDict[jsKey] or '[]')
+        jsRowArr.append(colDict)
+    return {
+        'name' : in_path.name.removesuffix(SUFFIX_XLS),
+        'totalAvg' : sum(row['average'] for row in jsRowArr) / len(jsRowArr),
+        'articleArr' : jsRowArr
+    }
+
+def build_judged_dataset_array():
+    rubricArr = load_rubrics()
+    if rubricArr is None:
+        print('ERROR : can not read some json')
+        abort()
+    judgeCallback = None
+    judgedArr = []
+    for path in sorted(DIR_WORK.glob('*' + SUFFIX_XLS)):
+        if not _is_judged_xlsx(path):
+            if judgeCallback is None:
+                print(f'compiling {len(rubricArr)} rubrics')
+                compiledArr = json_from_template('template-compiler.txt', rubricArr)
+                judgeCallback = _create_judge(compiledArr)
+            _process_xlsx(path, judgeCallback)
+        judgedArr.append(_build_judged_dataset(path))
+    return judgedArr

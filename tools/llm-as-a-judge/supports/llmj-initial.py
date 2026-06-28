@@ -9,9 +9,8 @@ try:
 except ImportError:
     llmj.abort_missing_package('langdetect')
 
-# to import llmj
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
-
+sys.dont_write_bytecode = True
 import llmj
 
 def load_rubrics():
@@ -36,7 +35,7 @@ def build_prompt(in_rubricArr):
 
 def main():
     runtime = llmj.create_bedrock_runtime()
-    generated = llmj.invoke_llm(runtime, llmj.LLM_MODEL, build_prompt(load_rubrics()))
+    generated = llmj.invoke_llm(runtime, build_prompt(load_rubrics()))
     target = llmj.DIR_WORK / f'{llmj.INITIAL_VERSION_NAME}{llmj.SUFFIX_TXT}'
     with open(target, 'w', encoding='utf-8') as f:
         f.write(generated)

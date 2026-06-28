@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-import os
 import sys
 
+sys.dont_write_bytecode = True
 import llmj
 
 try:
@@ -40,7 +40,7 @@ def process_prompt(in_runtime, in_path):
             print(f'ERROR : can not read "{src_path.name}"')
             llmj.abort()
         prompt = template.replace(llmj.ORIGINAL_PLACEHOLDER, textDict['ORIGINAL'])
-        textDict['GENERATED'] = llmj.invoke_llm(in_runtime, llmj.LLM_MODEL, prompt)
+        textDict['GENERATED'] = llmj.invoke_llm(in_runtime, prompt)
         for key in llmj.TERM_GEN:
             sheet.cell(row, colDict[key]).value = textDict[key]
         workbook.save(dst_path)

@@ -1,0 +1,49 @@
+You are reviewing the consistency between a gold dataset and an LLM evaluation rubric.
+
+The input contains evaluation scores produced by applying the rubric to a gold dataset.
+Because the dataset is considered the gold standard, every article is expected to receive high scores for every rubric.
+When this expectation is not met, determine which rubrics and gold examples should be investigated further.
+The original texts, generated texts, evaluation reasons, and rubric definitions are intentionally omitted.
+Your task is NOT to propose any modifications yet.
+Instead, identify only the items that deserve detailed investigation in the next step.
+
+Pay attention to patterns including, but not limited to:
+
+- consistently low average scores across many articles,
+- isolated extremely low scores,
+- large score variance,
+- differences between rubrics on the same article,
+- recurring low scores on the same articles across multiple rubrics.
+
+[Requirements]
+
+- Do not use fixed thresholds.
+- Use your own judgment based on the overall score distributions.
+- Prefer selecting too few investigation targets rather than too many.
+- Only choose items that are likely to improve the consistency between the rubric and the gold dataset.
+- Return only JSON.
+- Do not use markdown.
+- Do not wrap the response in code fences.
+
+[Expected]
+
+{
+    "rubrics" : [
+        {
+            "name" : "<rubric name>",
+            "reason" : "<short reason>"
+        },
+        ...
+    ],
+    "gold" : [
+        {
+            "index" : <article index>,
+            "reason" : "<short reason>"
+        },
+        ...
+    ]
+}
+
+[Input]
+
+__JSON__
