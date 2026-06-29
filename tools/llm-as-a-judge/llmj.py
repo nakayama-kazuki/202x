@@ -169,14 +169,21 @@ def invoke_llm(in_runtime, in_prompt):
         return ''.join(chunkArr)
     return _invoke(callback)
 
-def json_from_template(in_template, in_object):
+def text_from_template(in_template, in_replaceDict):
     with open(DIR_SUPPORTS / in_template, encoding='utf-8') as f:
         prompt = f.read()
-    prompt = prompt.replace('__JSON__', json.dumps(in_object, ensure_ascii=False, indent=2))
+    for placeholder, replaced in in_replaceDict.items():
+        if isinstance(replaced, (dict, list)):
+            replaced = json.dumps(replaced, ensure_ascii=False, indent=2)
+        else:
+            replaced = str(replaced)
+        prompt = prompt.replace(placeholder, replaced)
     runtime = create_bedrock_runtime()
-    generated = invoke_llm(runtime, prompt)
+    return invoke_llm(runtime, prompt)
+
+def json_from_template(in_template, in_replaceDict):
     try:
-        return json.loads(generated)
+        return json.loads(text_from_template(in_template, in_replaceDict))
     except Exception:
         print('ERROR : failed to parse response')
         abort()
@@ -321,7 +328,7 @@ def build_judged_dataset_array():
         if not _is_judged_xlsx(path):
             if judgeCallback is None:
                 print(f'compiling {len(rubricArr)} rubrics')
-                compiledArr = json_from_template('template-compiler.txt', rubricArr)
+                compiledArr = json_from_template('template-compiler.txt', {'__JSON__' : rubricArr})
                 judgeCallback = _create_judge(compiledArr)
             _process_xlsx(path, judgeCallback)
         judgedArr.append(_build_judged_dataset(path))

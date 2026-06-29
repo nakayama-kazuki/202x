@@ -1,0 +1,55 @@
+You are reviewing an LLM evaluation pipeline.
+
+## Current rubric definitions
+
+__RUBRICS__
+
+## Analysis result
+
+__FEEDBACK__
+
+## Gold dataset examples
+
+__GOLDDATA__
+
+The analysis above identified possible weaknesses in the current evaluation.
+Your task is to determine whether each issue is primarily caused by:
+
+- the evaluation rubric,
+- the gold dataset,
+- both,
+- or neither.
+
+Only propose changes when there is sufficient evidence.
+
+[Requirements]
+
+- Base every suggestion on the evidence provided.
+- Do not suggest changes unless there is sufficient evidence.
+- If multiple improvements are possible, prioritize the most impactful ones.
+- Be specific. Explain exactly what should be changed and why.
+- Write all output text (except JSON property names) in the same language as the rubric definitions.
+- Return only JSON.
+- Do not use markdown.
+- Do not wrap the response in code fences.
+
+[Expected]
+
+{
+    "rubrics" : [
+        {
+            "name" : "<rubric name>",
+            "reason" : "<why this rubric should be changed>",
+            "proposal" : "<concrete modification>"
+        },
+        ...
+    ],
+    "gold" : [
+        {
+            "index" : <article index>,
+            "reason" : "<why this gold example should be reviewed>>",
+            "proposal" : "<how it should be revised>"
+        },
+        ...
+    ]
+}

@@ -21,17 +21,18 @@ def load_rubrics():
     return rubricArr
 
 def build_prompt(in_rubricArr):
-    with open(llmj.DIR_SUPPORTS / 'template-initial-prompt.txt', encoding='utf-8') as f:
-        initialPprompt = f.read()
-    rubricJson = json.dumps(in_rubricArr, ensure_ascii=False, indent=2)
     try:
-        rubricLang = langdetect.detect(rubricJson)
+        rubricLang = langdetect.detect(json.dumps(in_rubricArr, ensure_ascii=False))
     except Exception:
         rubricLang = 'en'
-    initialPprompt = initialPprompt.replace('__JSON__', rubricJson)
-    initialPprompt = initialPprompt.replace('__PLACEHOLDER__', llmj.ORIGINAL_PLACEHOLDER)
-    initialPprompt = initialPprompt.replace('__RUBRICS_LANG__', rubricLang)
-    return initialPprompt
+    return llmj.text_from_template(
+        'template-initial-prompt.txt',
+        {
+            '__JSON__' : in_rubricArr,
+            '__PLACEHOLDER__' : llmj.ORIGINAL_PLACEHOLDER,
+            '__RUBRICS_LANG__' : rubricLang
+        }
+    )
 
 def main():
     runtime = llmj.create_bedrock_runtime()
