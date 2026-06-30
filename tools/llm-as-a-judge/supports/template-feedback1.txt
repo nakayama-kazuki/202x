@@ -24,6 +24,7 @@ Pay attention to patterns including, but not limited to:
 - Return only JSON.
 - Do not use markdown.
 - Do not wrap the response in code fences.
+- Preserve the "articleIndex" field from the input.
 
 [Expected]
 
@@ -37,7 +38,7 @@ Pay attention to patterns including, but not limited to:
     ],
     "gold" : [
         {
-            "index" : <article index>,
+            "articleIndex" : <article index>,
             "reason" : "<short reason>"
         },
         ...

@@ -46,7 +46,7 @@ Only propose changes when there is sufficient evidence.
     ],
     "gold" : [
         {
-            "index" : <article index>,
+            "articleIndex" : <article index>,
             "reason" : "<why this gold example should be reviewed>>",
             "proposal" : "<how it should be revised>"
         },

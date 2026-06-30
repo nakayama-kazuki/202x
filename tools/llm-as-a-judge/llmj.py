@@ -105,7 +105,7 @@ def _create_finalize():
         for name in ['.deepeval']:
             shutil.rmtree(pathlib.Path.cwd() / name, ignore_errors=True)
         elapsed = time.time() - start_time
-        print(f'completed {pathlib.Path(sys.argv[0]).name} ( elapsed : {elapsed:.1f} sec )')
+        print(f'INFO : completed {pathlib.Path(sys.argv[0]).name} ( elapsed : {elapsed:.1f} sec )')
     return _finalize
 
 finalize = _create_finalize()
@@ -169,21 +169,25 @@ def invoke_llm(in_runtime, in_prompt):
         return ''.join(chunkArr)
     return _invoke(callback)
 
-def text_from_template(in_template, in_replaceDict):
-    with open(DIR_SUPPORTS / in_template, encoding='utf-8') as f:
-        prompt = f.read()
+def text_from_template(in_path, in_replaceDict):
+    with open(in_path, encoding='utf-8') as f:
+        text = f.read()
     for placeholder, replaced in in_replaceDict.items():
         if isinstance(replaced, (dict, list)):
             replaced = json.dumps(replaced, ensure_ascii=False, indent=2)
         else:
             replaced = str(replaced)
-        prompt = prompt.replace(placeholder, replaced)
+        text = text.replace(placeholder, replaced)
+    return text
+
+def llm_processed_text(in_path, in_replaceDict):
+    prompt = text_from_template(in_path, in_replaceDict)
     runtime = create_bedrock_runtime()
     return invoke_llm(runtime, prompt)
 
-def json_from_template(in_template, in_replaceDict):
+def llm_processed_json(in_path, in_replaceDict):
     try:
-        return json.loads(text_from_template(in_template, in_replaceDict))
+        return json.loads(llm_processed_text(in_path, in_replaceDict))
     except Exception:
         print('ERROR : failed to parse response')
         abort()
@@ -277,7 +281,7 @@ def _process_xlsx(in_path, in_callback):
     for key in TERM_ALL:
         colDict[key] = find_append_column(sheet, TERM_ALL[key])
     for row in range(2, sheet.max_row + 1):
-        print(f'processing : {row - 1} / {sheet.max_row - 1}')
+        print(f'INFO : processing {row - 1} / {sheet.max_row - 1}')
         if _is_judged_row(sheet, row, colDict):
             continue
         # replace characters that DeepEval cannot handle
@@ -290,7 +294,7 @@ def _process_xlsx(in_path, in_callback):
         for key in TERM_JUD:
             sheet.cell(row, colDict[key]).value = result[TERM_ALL[key]]
         workbook.save(in_path)
-    print(f'judged : {in_path.name}')
+    print(f'INFO : judged {in_path.name}')
 
 def _build_judged_dataset(in_path):
     workbook = openpyxl.load_workbook(in_path, data_only=True)
@@ -301,6 +305,7 @@ def _build_judged_dataset(in_path):
     jsRowArr = []
     for row in range(2, sheet.max_row + 1):
         colDict = {}
+        colDict['articleIndex'] = row - 2
         for key in TERM_ALL:
             jsKey = TERM_ALL[key]
             colDict[jsKey] = sheet.cell(row, headDict[key]).value
@@ -327,8 +332,8 @@ def build_judged_dataset_array():
     for path in sorted(DIR_WORK.glob('*' + SUFFIX_XLS)):
         if not _is_judged_xlsx(path):
             if judgeCallback is None:
-                print(f'compiling {len(rubricArr)} rubrics')
-                compiledArr = json_from_template('template-compiler.txt', {'__JSON__' : rubricArr})
+                print(f'INFO : compiling {len(rubricArr)} rubrics')
+                compiledArr = llm_processed_json(DIR_SUPPORTS / 'template-compiler.txt', {'__JSON__' : rubricArr})
                 judgeCallback = _create_judge(compiledArr)
             _process_xlsx(path, judgeCallback)
         judgedArr.append(_build_judged_dataset(path))

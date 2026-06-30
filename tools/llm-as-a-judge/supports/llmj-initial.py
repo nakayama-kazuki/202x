@@ -26,7 +26,7 @@ def build_prompt(in_rubricArr):
     except Exception:
         rubricLang = 'en'
     return llmj.text_from_template(
-        'template-initial-prompt.txt',
+        llmj.DIR_SUPPORTS / 'template-initial-prompt.txt',
         {
             '__JSON__' : in_rubricArr,
             '__PLACEHOLDER__' : llmj.ORIGINAL_PLACEHOLDER,
@@ -40,7 +40,7 @@ def main():
     target = llmj.DIR_WORK / f'{llmj.INITIAL_VERSION_NAME}{llmj.SUFFIX_TXT}'
     with open(target, 'w', encoding='utf-8') as f:
         f.write(generated)
-    print(f'OK : generated "{target.name}"')
+    print(f'INFO : generated "{target.name}"')
     llmj.finalize()
 
 if __name__ == '__main__':
