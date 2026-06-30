@@ -1,122 +1,178 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8">
+<meta charset='utf-8'>
 <title>LLMJ Feedback</title>
-
 <style>
 
 body {
-    font-family: sans-serif;
-    margin: 20px;
+	font-family: sans-serif;
+	margin: 20px;
 }
 
 h1 {
-    margin-bottom: 30px;
+	margin-bottom: 30px;
 }
 
 h2 {
-    border-bottom: 2px solid #888;
-    padding-bottom: 4px;
-    margin-top: 40px;
+	border-bottom: 2px solid #888;
+	padding-bottom: 4px;
+	margin-top: 40px;
 }
 
 table {
-    border-collapse: collapse;
-    width: 100%;
-    margin-top: 10px;
+	border-collapse: collapse;
+	width: 100%;
+	margin-top: 10px;
+	table-layout: fixed;
 }
 
 th,
 td {
-    border: 1px solid #ccc;
-    padding: 10px;
-    vertical-align: top;
+	border: 1px solid #ccc;
+	padding: 10px;
+	vertical-align: top;
 }
 
 th {
-    background: #eee;
-    text-align: left;
+	background: #eee;
+	text-align: left;
 }
 
 .reason,
 .proposal {
-    white-space: pre-wrap;
-    line-height: 1.5;
+	white-space: pre-wrap;
+	line-height: 1.5;
+}
+
+.score-table {
+    width: auto;
+    margin-top: 6px;
+    table-layout: auto;
+}
+
+.score-table th,
+.score-table td {
+    white-space: nowrap;
 }
 
 </style>
-
 </head>
 <body>
-
 <h1>LLMJ Feedback Report</h1>
-
-<div id="rubrics"></div>
-
-<div id="gold"></div>
-
+<div id='i1st'></div>
+<div id='i2nd'></div>
 <script>
 
-const DATA = __JSON__;
+const JUDGED = __JUDGED__;
 
-function escapeHtml(text) {
-    return String(text)
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;');
+const FEEDBACK = __FEEDBACK__;
+
+function escapeHtml(in_text) {
+	const replaceArr = [
+		{
+			src : '&',
+			dst : '&amp;'
+		},
+		{
+			src : '<',
+			dst : '&lt;'
+		},
+		{
+			src : '>',
+			dst : '&gt;'
+		}
+	];
+	let replaced = String(in_text);
+	replaceArr.forEach(in_replace => {
+		replaced = replaced.replaceAll(in_replace.src, in_replace.dst);
+	});
+	return replaced;
 }
 
-function buildSection(title, headers, rows) {
-    let html = '<h2>' + title + '</h2>';
-
-    if (rows.length === 0) {
-        html += '<p>No suggestions.</p>';
-        return html;
-    }
-
-    html += '<table>';
-
-    html += '<tr>';
-    for (const header of headers) {
-        html += '<th>' + header + '</th>';
-    }
-    html += '</tr>';
-
-    for (const row of rows) {
-        html += '<tr>';
-        for (const cell of row) {
-            html += '<td>' + cell + '</td>';
-        }
-        html += '</tr>';
-    }
-
-    html += '</table>';
-
-    return html;
+function buildScoreTable(in_headerArr, in_rowArr) {
+	let fragment = '<table class="score-table">';
+	fragment += '<tr>';
+	for (const header of in_headerArr) {
+		fragment += '<th>' + escapeHtml(header) + '</th>';
+	}
+	fragment += '</tr>';
+	for (const row of in_rowArr) {
+		fragment += '<tr>';
+		for (const cell of row) {
+			fragment += '<td>' + escapeHtml(cell) + '</td>';
+		}
+		fragment += '</tr>';
+	}
+	fragment += '</table>';
+	return fragment;
 }
 
-document.getElementById('rubrics').innerHTML = buildSection(
-    'Rubric Suggestions',
-    ['Rubric', 'Reason', 'Proposal'],
-    DATA.rubrics.map(rubric => [
-        escapeHtml(rubric.name),
-        '<div class="reason">' + escapeHtml(rubric.reason) + '</div>',
-        '<div class="proposal">' + escapeHtml(rubric.proposal) + '</div>'
-    ])
+function buildSection(in_title, in_headerArr, in_rowArr) {
+	let fragment = '<h2>' + in_title + '</h2>';
+	if (in_rowArr.length === 0) {
+		fragment += '<p>No suggestions.</p>';
+		return fragment;
+	}
+	fragment += '<table>';
+	fragment += '<tr>';
+	in_headerArr.forEach((in_header, in_ix) => {
+	    const width = ['15%', '35%', '35%'][in_ix];
+	    fragment += '<th style="width:' + width + '">' + in_header + '</th>';
+	});
+	fragment += '</tr>';
+	for (const row of in_rowArr) {
+		fragment += '<tr>';
+		for (const cell of row) {
+			fragment += '<td>' + cell + '</td>';
+		}
+		fragment += '</tr>';
+	}
+	fragment += '</table>';
+	return fragment;
+}
+
+document.getElementById('i1st').innerHTML = buildSection(
+	'Rubric Suggestions',
+	['Rubric', 'Reason', 'Proposal'],
+	FEEDBACK.rubrics.map(in_rubric => [
+		'<div>'
+			+ escapeHtml(in_rubric.name)
+			+ buildScoreTable(
+				['Article', 'Score'],
+				JUDGED[0].articleArr.map((article, articleIndex) => {
+					const result = article.results.find(result => result.name === in_rubric.name);
+					return [
+						'#' + articleIndex,
+						result.score
+					];
+				})
+			)
+			+ '</div>',
+		'<div class="reason">' + escapeHtml(in_rubric.reason) + '</div>',
+		'<div class="proposal">' + escapeHtml(in_rubric.proposal) + '</div>'
+	])
 );
 
-document.getElementById('gold').innerHTML = buildSection(
-    'Gold Dataset Suggestions',
-    ['Article', 'Reason', 'Proposal'],
-    DATA.gold.map(gold => [
-        '#' + gold.articleIndex,
-        '<div class="reason">' + escapeHtml(gold.reason) + '</div>',
-        '<div class="proposal">' + escapeHtml(gold.proposal) + '</div>'
-    ])
+document.getElementById('i2nd').innerHTML = buildSection(
+	'Gold Dataset Suggestions',
+	['Article', 'Reason', 'Proposal'],
+	FEEDBACK.gold.map(in_gold => [
+		'<div>'
+			+ '#' + in_gold.articleIndex
+			+ buildScoreTable(
+				['Rubric', 'Score'],
+				JUDGED[0].articleArr[in_gold.articleIndex].results.map(result => [
+					result.name,
+					result.score
+				])
+			)
+			+ '</div>',
+		'<div class="reason">' + escapeHtml(in_gold.reason) + '</div>',
+		'<div class="proposal">' + escapeHtml(in_gold.proposal) + '</div>'
+	])
 );
 
 </script>
-
 </body>
 </html>
