@@ -72,12 +72,6 @@ _APOSTROPHE = {
     'FULLW' : chr(0xFF07)
 }
 
-_LLM_MODEL = 'us.anthropic.claude-sonnet-4-6'
-_LLM_MAX_TOKENS = 4096
-_LLM_TEMPERATURE = 0
-_LLM_RETRY_COUNT = 3
-_LLM_RETRY_INTERVAL_SEC = 5
-
 TERM_GEN = {
     'ORIGINAL' : 'original',
     'GENERATED' : 'generated',
@@ -125,49 +119,96 @@ def find_append_column(in_sheet, in_name):
     in_sheet.cell(row=1, column=col).value = in_name
     return col
 
-def create_bedrock_runtime():
-    session = boto3.Session(
-        aws_access_key_id=os.getenv('ACCESS_KEY_ID'),
-        aws_secret_access_key=os.getenv('SECRET_ACCESS_KEY'),
-        aws_session_token=os.getenv('SESSION_TOKEN')
-    )
-    return session.client(
-        'bedrock-runtime',
-        region_name='us-east-1',
-        endpoint_url=os.getenv('GATEWAY_URL')
-    )
-
-def _invoke(in_callback):
-    for retry in range(_LLM_RETRY_COUNT):
-        try:
-            return in_callback()
-        except Exception as err:
-            if retry + 1 >= _LLM_RETRY_COUNT:
-                print(f'ERROR : _invoke failed : {err}')
-                abort()
-            print(f'WARN : retrying because : {err}')
-            time.sleep(_LLM_RETRY_INTERVAL_SEC * (retry + 1))
-
-def invoke_llm(in_runtime, in_prompt):
-    def callback():
-        response = in_runtime.converse_stream(
-            modelId=_LLM_MODEL,
-            messages=[{
-                'role' : 'user',
-                'content' : [{'text' : in_prompt}]
-            }],
-            inferenceConfig={'maxTokens' : _LLM_MAX_TOKENS, 'temperature' : _LLM_TEMPERATURE}
+class cLLMRunner:
+    def __init__(
+        self,
+        in_model='us.anthropic.claude-sonnet-4-6',
+        in_region='us-east-1',
+        in_maxTokens=4096,
+        in_temperature=0,
+        in_retryCount=3,
+        in_retryInterval=5
+    ):
+        self._model = in_model
+        self._region = in_region
+        self._maxTokens = in_maxTokens
+        self._temperature = in_temperature
+        self._retryCount = in_retryCount
+        self._retryInterval = in_retryInterval
+        self._runtime = self._create_runtime()
+    @property
+    def model(self):
+        return self._model
+    def _create_runtime(self):
+        dotenv.load_dotenv()
+        for required in [
+            'ACCESS_KEY_ID',
+            'SECRET_ACCESS_KEY',
+            'SESSION_TOKEN',
+            'GATEWAY_URL'
+        ]:
+            if os.getenv(required) is None:
+                abort(f'ERROR : {required} is not defined in ".env".')
+        session = boto3.Session(
+            aws_access_key_id=os.getenv('ACCESS_KEY_ID'),
+            aws_secret_access_key=os.getenv('SECRET_ACCESS_KEY'),
+            aws_session_token=os.getenv('SESSION_TOKEN')
         )
-        chunkArr = []
-        for event in response['stream']:
-            if 'contentBlockDelta' not in event:
-                continue
-            delta = event['contentBlockDelta']['delta']
-            if 'text' not in delta:
-                continue
-            chunkArr.append(delta['text'])
-        return ''.join(chunkArr)
-    return _invoke(callback)
+        return session.client(
+            'bedrock-runtime',
+            region_name=self._region,
+            endpoint_url=os.getenv('GATEWAY_URL')
+        )
+    def _retry(self, in_callback):
+        for retry in range(self._retryCount):
+            try:
+                return in_callback()
+            except Exception as err:
+                if retry + 1 >= self._retryCount:
+                    abort(f'ERROR : invoke failed : {err}')
+                print(f'WARN : retrying because : {err}')
+                time.sleep(self._retryInterval * (retry + 1))
+    def _invoke(self, in_prompt, in_maxTokens, in_temperature):
+        if in_maxTokens is None:
+            in_maxTokens = self._maxTokens
+        if in_temperature is None:
+            in_temperature = self._temperature
+        def callback():
+            response = self._runtime.converse_stream(
+                modelId=self._model,
+                messages=[{
+                    'role' : 'user',
+                    'content' : [{'text' : in_prompt}]
+                }],
+                inferenceConfig={'maxTokens' : in_maxTokens, 'temperature' : in_temperature}
+            )
+            chunkArr = []
+            for event in response['stream']:
+                if 'contentBlockDelta' not in event:
+                    continue
+                delta = event['contentBlockDelta']['delta']
+                if 'text' not in delta:
+                    continue
+                chunkArr.append(delta['text'])
+            return ''.join(chunkArr)
+        return self._retry(callback)
+    def toText(self,
+        in_prompt,
+        in_maxTokens=None,
+        in_temperature=None
+    ):
+        return self._invoke(in_prompt, in_maxTokens, in_temperature)
+    def toJson(self,
+        in_prompt,
+        in_maxTokens=None,
+        in_temperature=None
+    ):
+        try:
+            return json.loads(self._invoke(in_prompt, in_maxTokens, in_temperature))
+        except Exception as err:
+            abort(f'ERROR : invalid json : {err}')
+
+RUNNER = cLLMRunner()
 
 def text_from_template(in_path, in_replaceDict):
     with open(in_path, encoding='utf-8') as f:
@@ -181,16 +222,10 @@ def text_from_template(in_path, in_replaceDict):
     return text
 
 def llm_processed_text(in_path, in_replaceDict):
-    prompt = text_from_template(in_path, in_replaceDict)
-    runtime = create_bedrock_runtime()
-    return invoke_llm(runtime, prompt)
+    return RUNNER.toText(text_from_template(in_path, in_replaceDict))
 
 def llm_processed_json(in_path, in_replaceDict):
-    try:
-        return json.loads(llm_processed_text(in_path, in_replaceDict))
-    except Exception:
-        print('ERROR : failed to parse response')
-        abort()
+    return RUNNER.toJson(text_from_template(in_path, in_replaceDict))
 
 def load_rubrics():
     rubricArr = []
@@ -205,19 +240,20 @@ def load_rubrics():
     return rubricArr
 
 class _GatewayLLM(DeepEvalBaseLLM):
-    def __init__(self, in_runtime):
-        self.runtime = in_runtime
+    def __init__(self, in_runner):
+        self.runner = in_runner
     def get_model_name(self):
-        return _LLM_MODEL
+        return self.runner.model
     def load_model(self):
         return self
     def generate(self, in_prompt):
-        return invoke_llm(self.runtime, in_prompt)
+        return self.runner.toText(in_prompt)
     async def a_generate(self, in_prompt):
         return self.generate(in_prompt)
 
+#invoke_llm
+
 def _create_judge(in_rubricArr):
-    runtime = create_bedrock_runtime()
     def evaluate(in_rubric, in_testcase):
         metric = GEval(
             name=in_rubric['name'],
@@ -228,9 +264,9 @@ def _create_judge(in_rubricArr):
                 SingleTurnParams.ACTUAL_OUTPUT
             ],
             async_mode=False,
-            model=_GatewayLLM(runtime)
+            model=_GatewayLLM(RUNNER)
         )
-        _invoke(lambda: metric.measure(in_testcase))
+        metric.measure(in_testcase)
         resDict = {}
         for key in ['name', 'score', 'reason']:
             resDict[key] = getattr(metric, key)

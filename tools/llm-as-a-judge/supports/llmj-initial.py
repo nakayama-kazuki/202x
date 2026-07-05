@@ -26,8 +26,8 @@ def build_prompt(in_rubricArr):
     })
 
 def main():
-    runtime = llmj.create_bedrock_runtime()
-    generated = llmj.invoke_llm(runtime, build_prompt(llmj.load_rubrics()))
+    prompt = build_prompt(llmj.load_rubrics())
+    generated = llmj.RUNNER.toText(prompt)
     target = llmj.DIR_WORK / f'{llmj.INITIAL_VERSION_NAME}{llmj.SUFFIX_TXT}'
     with open(target, 'w', encoding='utf-8') as f:
         f.write(generated)

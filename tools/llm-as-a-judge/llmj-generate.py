@@ -10,7 +10,7 @@ try:
 except ImportError:
     llmj.abort_missing_package('openpyxl')
 
-def process_prompt(in_runtime, in_path):
+def process_prompt(in_path):
     filename = in_path.name.removesuffix(llmj.SUFFIX_TXT) + llmj.SUFFIX_XLS
     dst_path = in_path.with_name(filename)
     if dst_path.exists():
@@ -34,16 +34,15 @@ def process_prompt(in_runtime, in_path):
             print(f'ERROR : can not read "{src_path.name}"')
             llmj.abort()
         prompt = llmj.text_from_template(in_path, {llmj.ORIGINAL_PLACEHOLDER : textDict['ORIGINAL']})
-        textDict['GENERATED'] = llmj.invoke_llm(in_runtime, prompt)
+        textDict['GENERATED'] = llmj.RUNNER.toText(prompt)
         for key in llmj.TERM_GEN:
             sheet.cell(row, colDict[key]).value = textDict[key]
         workbook.save(dst_path)
     print(f'INFO : generated {dst_path.name}')
 
 def main():
-    runtime = llmj.create_bedrock_runtime()
     for path in sorted(llmj.DIR_WORK.glob('*' + llmj.SUFFIX_TXT)):
-        process_prompt(runtime, path)
+        process_prompt(path)
     llmj.finalize()
 
 if __name__ == '__main__':
