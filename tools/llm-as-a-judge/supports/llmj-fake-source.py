@@ -12,12 +12,16 @@ import llmj
 
 FAKE_TEXT_CNT = 30
 
-PROMPT_TEMPLATE = 'Generate a fictional article of approximately __LENGTH__ characters written in __LANG__ about __GENRE__. The content does not need to describe real events. Use a __FORMALITY__ tone and a __STYLE__ writing style.'
+PROMPT_TEMPLATE = 'Generate a __ARTICLE__ of approximately __LENGTH__ characters written in __LANG__ about __GENRE__. The content does not need to describe real events. Use a __FORMALITY__ tone and a __STYLE__ writing style.'
 
 def fake_text():
     spec = {
         'lang' : 'Japanese',
-        'length' : random.randint(300, 1000),
+        'length' : random.randint(300, 3000),
+        'article' : random.choice([
+            'fact-based article ( must be based on real facts )',
+            'fictional article ( write it as if it were a real news article; the events do not need to be real )'
+        ]),
         'formality' : random.choice([
             'Formal',
             'Neutral',
@@ -440,6 +444,7 @@ def fake_text():
     prompt = llmj.text_from_template_text(PROMPT_TEMPLATE, {
         '__LANG__' : spec['lang'],
         '__LENGTH__' : spec['length'],
+        '__ARTICLE__' : spec['article'],
         '__FORMALITY__' : spec['formality'],
         '__STYLE__' : spec['style'],
         '__GENRE__' : spec['genre']
@@ -450,9 +455,9 @@ def fake_text():
 completed = 0
 lock = threading.Lock()
 
-def generate(in_index, in_digits):
+def generate(in_counter, in_digits):
     global completed
-    path = llmj.DIR_SOURCE / (str(in_index).zfill(in_digits) + '.txt')
+    path = llmj.DIR_SOURCE / (str(in_counter).zfill(in_digits) + '.txt')
     with open(path, 'w', encoding='utf-8') as f:
         f.write(fake_text())
     with lock:
@@ -461,11 +466,17 @@ def generate(in_index, in_digits):
         print(f'INFO : {progress:.1f}% ({completed}/{FAKE_TEXT_CNT})')
 
 def main():
-    digits = len(str(FAKE_TEXT_CNT - 1))
+    digits = 3
+    maxCounter = -1
+    for path in llmj.DIR_SOURCE.glob('*.txt'):
+        try:
+            maxCounter = max(maxCounter, int(path.stem))
+        except ValueError:
+            pass
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
         futures = []
         for i in range(FAKE_TEXT_CNT):
-            futures.append(executor.submit(generate, i, digits))
+            futures.append(executor.submit(generate, maxCounter + 1 + i, digits))
         for future in concurrent.futures.as_completed(futures):
             future.result()
     llmj.finalize()
