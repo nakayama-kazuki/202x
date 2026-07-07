@@ -33,7 +33,7 @@ def process_prompt(in_path):
         except Exception:
             print(f'ERROR : can not read "{src_path.name}"')
             llmj.abort()
-        prompt = llmj.text_from_template(in_path, {llmj.ORIGINAL_PLACEHOLDER : textDict['ORIGINAL']})
+        prompt = llmj.text_from_template_path(in_path, {llmj.ORIGINAL_PLACEHOLDER : textDict['ORIGINAL']})
         textDict['GENERATED'] = llmj.RUNNER.toText(prompt)
         for key in llmj.TERM_GEN:
             sheet.cell(row, colDict[key]).value = textDict[key]

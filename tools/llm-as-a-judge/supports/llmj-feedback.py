@@ -47,7 +47,7 @@ def main():
         print(f'INFO : generated {out_path.name}')
         template = llmj.DIR_SUPPORTS / 'template-feedback.html'
         with open(out_path, 'w', encoding='utf-8') as f:
-            f.write(llmj.text_from_template(template, {
+            f.write(llmj.text_from_template_path(template, {
                 '__JUDGED__' : judgedArr,
                 '__FEEDBACK__' : feedback2Arr
             }))

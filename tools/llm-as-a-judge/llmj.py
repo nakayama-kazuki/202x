@@ -210,9 +210,8 @@ class cLLMRunner:
 
 RUNNER = cLLMRunner()
 
-def text_from_template(in_path, in_replaceDict):
-    with open(in_path, encoding='utf-8') as f:
-        text = f.read()
+def text_from_template_text(in_text, in_replaceDict):
+    text = in_text
     for placeholder, replaced in in_replaceDict.items():
         if isinstance(replaced, (dict, list)):
             replaced = json.dumps(replaced, ensure_ascii=False, indent=2)
@@ -221,11 +220,16 @@ def text_from_template(in_path, in_replaceDict):
         text = text.replace(placeholder, replaced)
     return text
 
+def text_from_template_path(in_path, in_replaceDict):
+    with open(in_path, encoding='utf-8') as f:
+        text = f.read()
+    return text_from_template_text(text, in_replaceDict)
+
 def llm_processed_text(in_path, in_replaceDict):
-    return RUNNER.toText(text_from_template(in_path, in_replaceDict))
+    return RUNNER.toText(text_from_template_path(in_path, in_replaceDict))
 
 def llm_processed_json(in_path, in_replaceDict):
-    return RUNNER.toJson(text_from_template(in_path, in_replaceDict))
+    return RUNNER.toJson(text_from_template_path(in_path, in_replaceDict))
 
 def load_rubrics():
     rubricArr = []

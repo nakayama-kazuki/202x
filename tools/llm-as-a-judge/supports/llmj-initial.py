@@ -19,7 +19,7 @@ def build_prompt(in_rubricArr):
     except Exception:
         rubricLang = 'en'
     template = llmj.DIR_SUPPORTS / 'template-initial-prompt.txt'
-    return llmj.text_from_template(template, {
+    return llmj.text_from_template_path(template, {
         '__JSON__' : in_rubricArr,
         '__PLACEHOLDER__' : llmj.ORIGINAL_PLACEHOLDER,
         '__RUBRICS_LANG__' : rubricLang

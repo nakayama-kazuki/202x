@@ -225,12 +225,16 @@ function buildRubricTable(in_tblId, in_callback) {
 	});
 	fragment += '</tbody>';
 	fragment += '</table>';
-	fragment += '<h2>Rubric Avg for ' + gJudgedArr[0].articleArr.length + ' Articles</h2>';
+	fragment += '<h2>Rubric Avg (Var) for ' + gJudgedArr[0].articleArr.length + ' Articles</h2>';
 	fragment += buildRubricTable(
 		'rubricAvgTable',
 		({scores}) => {
 			const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
-			return '<td data-sort="' + avg + '">' + avg.toFixed(2) + '</td>';
+			const variance = scores.reduce((a, b) => a + (b - avg) ** 2, 0) / scores.length;
+			return '<td data-sort="' + avg + '">' +
+				avg.toFixed(2) +
+				'<br><span style="color:#999">(' + variance.toFixed(3) + ')</span>' +
+				'</td>';
 		}
 	);
 	fragment += '<h2>Rubric Min for ' + gJudgedArr[0].articleArr.length + ' Articles</h2>';
