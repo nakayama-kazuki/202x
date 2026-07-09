@@ -52,6 +52,10 @@ pre {
 	margin-bottom: 16px;
 }
 
+.article.inactive {
+	display: none;
+}
+
 .reason-link {
 	margin-left: 4px;
 	white-space: nowrap;
@@ -67,6 +71,7 @@ pre {
 }
 
 </style>
+<style id='thresholdStyle'></style>
 </head>
 <body>
 <h1>LLMJ Report</h1>
@@ -81,9 +86,18 @@ pre {
 		<path d='M14 18h6' />
 	</svg>
 </template>
-<script>
+<script type='module'>
 
-const gJudgedArr = __JSON__;
+const gJudgedArr = await (async in_encoded => {
+	const compressed = Uint8Array.from(
+		atob(in_encoded),
+		in_char => in_char.charCodeAt(0)
+	);
+	const stream = new Blob([compressed]).stream().pipeThrough(new DecompressionStream('gzip'));
+	const json = await new Response(stream).text();
+	return JSON.parse(json);
+})('__ENCODED__');
+
 const gRubricNameArr = gJudgedArr[0].articleArr[0].results.map(in_r => in_r.name);
 const DEFAULT_THRESHOLD = 0.3;
 
@@ -153,6 +167,21 @@ function sortTable(in_tblId, in_col) {
 	table.dataset.sortDir = isAsc ? 'ascending' : 'descending';
 }
 
+function updateArticleHighlight(in_threshold) {
+	document.querySelectorAll('.article').forEach(in_article => {
+		in_article.classList.add('inactive');
+	});
+	gJudgedArr.forEach(in_ver => {
+		in_ver.articleArr.forEach((in_art, in_ix) => {
+			const hit = in_art.results.some(in_res => Number(in_res.score) <= in_threshold);
+			if (hit) {
+				const selector = '.article[data-version="' + CSS.escape(in_ver.name) + '"][data-article="' + in_ix + '"]';
+				document.querySelector(selector).classList.remove('inactive');
+			}
+		});
+	});
+}
+
 function sortableTH(in_tblId, in_col, in_title) {
 	return '<th class="sortable" data-table="' + in_tblId + '" data-col="' + in_col + '">' + escapeHtml(in_title) + '</th>';
 }
@@ -204,6 +233,23 @@ function buildRubricTable(in_tblId, in_callback) {
 	return fragment;
 }
 
+function scoreToClass(in_score) {
+	return 'cls_st_' + Math.round(Number(in_score) * 10).toString().padStart(2, '0');
+}
+
+function updateThresholdStyle(in_threshold) {
+	const threshold = Math.round(Number(in_threshold) * 10);
+	let css = '';
+	for (let score = 0; score <= 10; score++) {
+		css += '.' + scoreToClass(score / 10) + ' {';
+		if (score <= threshold) {
+			css += 'background:#fff3a0;';
+		}
+		css += '}\n';
+	}
+	document.getElementById('thresholdStyle').textContent = css;
+}
+
 (function() {
 	let fragment = '';
 	fragment += '<h2>Summary</h2>';
@@ -245,7 +291,7 @@ function buildRubricTable(in_tblId, in_callback) {
 					'<a href="#article-' + version.name + '-' + minIndex + '">' + minScore.toFixed(2) + '</a></td>';
 		}
 	);
-	fragment += '<h2>Rubric &lt;= ';
+	fragment += '<h2>Details ( Rubric &lt;= ';
 	fragment += '<select id="thresholdSelect">';
 	for (let score = 0; score <= 10; score++) {
 		const value = score / 10;
@@ -253,7 +299,7 @@ function buildRubricTable(in_tblId, in_callback) {
 		fragment += '<option value="' + value + '"' + selected + '>' + value + '</option>';
 	}
 	fragment += '</select>';
-	fragment += ' for ' + gJudgedArr[0].articleArr.length + ' Articles</h2>';
+	fragment += ' )</h2>';
 	fragment += '<div id="thresholdContainer">';
 	fragment += buildRubricTable(
 		'rubricThresholdTable',
@@ -263,12 +309,14 @@ function buildRubricTable(in_tblId, in_callback) {
 		}
 	);
 	fragment += '</div>';
-	fragment += '<h2>Details</h2>';
 	gJudgedArr.forEach(in_ver => {
 		fragment += '<div class="version">';
 		fragment += `<h3>${escapeHtml(in_ver.name)}</h3>`;
 		in_ver.articleArr.forEach((in_art, in_ix) => {
-			fragment += '<div class="article" id="article-' + in_ver.name + '-' + in_ix + '">';
+			fragment += '<div class="article"';
+			fragment += ' id="article-' + in_ver.name + '-' + in_ix + '"';
+			fragment += ' data-version="' + escapeHtml(in_ver.name) + '"';
+			fragment += ' data-article="' + in_ix + '">';
 			fragment += '<h4>#' + (in_ix + 1) + ' : average=' + in_art.average + '</h4>';
 			fragment += '<h5>Original</h5>';
 			fragment += '<pre>' + escapeHtml(in_art.original || '') + '</pre>';
@@ -295,7 +343,7 @@ function buildRubricTable(in_tblId, in_callback) {
 				fragment += document.getElementById('translateSvg').innerHTML;
 				fragment += '</a>';
 				fragment += '</td>';
-				fragment += '<td>' + in_res.score + '</td>';
+				fragment += '<td class="' + scoreToClass(in_res.score) + '">' + in_res.score + '</td>';
 				fragment += '<td>';
 				fragment += '<pre>' + escapeHtml(in_res.reason) + '</pre>';
 				fragment += '</td>';
@@ -310,6 +358,8 @@ function buildRubricTable(in_tblId, in_callback) {
 	document.querySelectorAll('th.sortable').forEach(th => {
 		th.addEventListener('click', () => sortTable(th.dataset.table, Number(th.dataset.col)));
 	});
+	updateArticleHighlight(DEFAULT_THRESHOLD);
+	updateThresholdStyle(DEFAULT_THRESHOLD);
 	document.getElementById('thresholdSelect').addEventListener('change', ev => {
 		const threshold = Number(ev.target.value);
 		document.getElementById('thresholdContainer').innerHTML = buildRubricTable(
@@ -324,6 +374,8 @@ function buildRubricTable(in_tblId, in_callback) {
 				sortTable(th.dataset.table, Number(th.dataset.col))
 			);
 		});
+		updateArticleHighlight(threshold);
+		updateThresholdStyle(threshold);
 	});
 })();
 
