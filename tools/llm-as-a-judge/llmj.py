@@ -119,6 +119,16 @@ def find_append_column(in_sheet, in_name):
     in_sheet.cell(row=1, column=col).value = in_name
     return col
 
+def _retry(in_callback, in_retry_count, in_retry_interval):
+    for retry in range(in_retry_count):
+        try:
+            return in_callback()
+        except Exception as err:
+            if retry + 1 >= in_retry_count:
+                abort(f'ERROR : invoke failed : {err}')
+            print(f'WARN : retrying because : {err}')
+            time.sleep(in_retry_interval * (retry + 1))
+
 class cLLMRunner:
     def __init__(
         self,
@@ -159,15 +169,6 @@ class cLLMRunner:
             region_name=self._region,
             endpoint_url=os.getenv('GATEWAY_URL')
         )
-    def _retry(self, in_callback):
-        for retry in range(self._retryCount):
-            try:
-                return in_callback()
-            except Exception as err:
-                if retry + 1 >= self._retryCount:
-                    abort(f'ERROR : invoke failed : {err}')
-                print(f'WARN : retrying because : {err}')
-                time.sleep(self._retryInterval * (retry + 1))
     def _invoke(self, in_prompt, in_maxTokens, in_temperature):
         if in_maxTokens is None:
             in_maxTokens = self._maxTokens
@@ -191,7 +192,7 @@ class cLLMRunner:
                     continue
                 chunkArr.append(delta['text'])
             return ''.join(chunkArr)
-        return self._retry(callback)
+        return _retry(callback, self._retryCount, self._retryInterval)
     def toText(self,
         in_prompt,
         in_maxTokens=None,
@@ -255,8 +256,6 @@ class _GatewayLLM(DeepEvalBaseLLM):
     async def a_generate(self, in_prompt):
         return self.generate(in_prompt)
 
-#invoke_llm
-
 def _create_judge(in_rubricArr):
     def evaluate(in_rubric, in_testcase):
         metric = GEval(
@@ -270,7 +269,9 @@ def _create_judge(in_rubricArr):
             async_mode=False,
             model=_GatewayLLM(RUNNER)
         )
-        metric.measure(in_testcase)
+        retryCount = 3
+        retryInterval = 5
+        _retry(lambda: metric.measure(in_testcase), retryCount, retryInterval)
         resDict = {}
         for key in ['name', 'score', 'reason']:
             resDict[key] = getattr(metric, key)
