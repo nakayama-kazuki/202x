@@ -12,7 +12,7 @@ import llmj
 
 FAKE_TEXT_CNT = 30
 
-PROMPT_TEMPLATE = 'Generate a __ARTICLE__ of approximately __LENGTH__ characters written in __LANG__ about __GENRE__. The content does not need to describe real events. Use a __FORMALITY__ tone and a __STYLE__ writing style.'
+PROMPT_TEMPLATE = 'Generate a __ARTICLE__ of approximately __LENGTH__ characters written in __LANG__ about __GENRE__. The content does not need to describe real events. Generate articles that are realistic and moderately challenging for text understanding tasks. Prefer articles that contain realistic ambiguity, multiple related facts, quotations, temporal information, or similar characteristics requiring careful reading while remaining internally consistent. Use a __FORMALITY__ tone and a __STYLE__ writing style.'
 
 def fake_text():
     spec = {
