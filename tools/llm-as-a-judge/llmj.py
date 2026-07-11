@@ -129,6 +129,26 @@ def _retry(in_callback, in_retry_count, in_retry_interval):
             print(f'WARN : retrying because : {err}')
             time.sleep(in_retry_interval * (retry + 1))
 
+def get_args(in_defaultDict, in_convDict={}, in_prefix='--'):
+    parmDict = {}
+    if any(arg.startswith(in_prefix) for arg in sys.argv):
+        import argparse
+        parser = argparse.ArgumentParser()
+        nameSet = set()
+        for arg in sys.argv[1:]:
+            if arg.startswith(in_prefix):
+                name = arg[len(in_prefix):].split('=')[0]
+                if name not in nameSet:
+                    parser.add_argument(f'{in_prefix}{name}')
+                    nameSet.add(name)
+        parmDict = vars(parser.parse_args())
+    for name, stringValue in in_defaultDict.items():
+        if parmDict.get(name) is None:
+            parmDict[name] = stringValue
+    for name, callback in in_convDict.items():
+        parmDict[name] = callback(parmDict[name])
+    return parmDict
+
 class cLLMRunner:
     def __init__(
         self,
@@ -363,14 +383,14 @@ def _build_judged_dataset(in_path):
         'articleArr' : jsRowArr
     }
 
-def build_judged_dataset_array():
+def build_judged_dataset_array(in_path):
     rubricArr = load_rubrics()
     if rubricArr is None:
         print('ERROR : can not read some json')
         abort()
     judgeCallback = None
     judgedArr = []
-    for path in sorted(DIR_WORK.glob('*' + SUFFIX_XLS)):
+    for path in sorted(in_path.glob('*' + SUFFIX_XLS)):
         if not _is_judged_xlsx(path):
             if judgeCallback is None:
                 print(f'INFO : compiling {len(rubricArr)} rubrics')

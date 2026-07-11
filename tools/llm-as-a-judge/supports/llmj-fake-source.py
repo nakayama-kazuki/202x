@@ -10,11 +10,21 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 sys.dont_write_bytecode = True
 import llmj
 
-FAKE_TEXT_CNT = 30
-
 PROMPT_TEMPLATE = 'Generate a __ARTICLE__ of approximately __LENGTH__ characters written in __LANG__ about __GENRE__. The content does not need to describe real events. Generate articles that are realistic and moderately challenging for text understanding tasks. Prefer articles that contain realistic ambiguity, multiple related facts, quotations, temporal information, or similar characteristics requiring careful reading while remaining internally consistent. Use a __FORMALITY__ tone and a __STYLE__ writing style.'
 
-def fake_text():
+ARGS = llmj.get_args(
+    {
+        'textCnt' : '10',
+        'genreMode' : 'random',
+        'source' : str(llmj.DIR_SOURCE)
+    },
+    {
+        'textCnt' : lambda in_cnt: int(in_cnt),
+        'source' : lambda in_src: pathlib.Path(in_src)
+    }
+)
+
+def fake_text(in_genre):
     spec = {
         'lang' : 'Japanese',
         'length' : random.randint(300, 3000),
@@ -33,58 +43,7 @@ def fake_text():
             'Explanatory',
             'Narrative'
         ]),
-        'genre' : random.choice([
-            'Accidents & Traffic Incidents',
-            'Crime & Criminal Cases',
-            'Courts & Justice',
-            'Disasters & Disaster Prevention',
-            'Weather & Climate',
-            'Government & Local Administration',
-            'Politics & Public Policy',
-            'Elections',
-            'International Affairs',
-            'Economy & Markets',
-            'Business & Corporate News',
-            'Corporate Earnings & Financial Results',
-            'New Products & Services',
-            'Product Recalls',
-            'System Outages & Service Disruptions',
-            'Healthcare & Medicine',
-            'Infectious Diseases',
-            'Science & Research',
-            'Environment & Climate Change',
-            'Artificial Intelligence & Technology',
-            'Cybersecurity',
-            'Education',
-            'Parenting',
-            'Senior Care & Aging',
-            'Careers & Workplace',
-            'Personal Finance',
-            'Law & Legal Systems',
-            'Lifestyle & Daily Living',
-            'Food & Cooking',
-            'Travel & Tourism',
-            'Housing & Real Estate',
-            'DIY & Gardening',
-            'Pets & Animals',
-            'Sports',
-            'Entertainment',
-            'Movies & TV Dramas',
-            'Music',
-            'Video Games',
-            'Anime & Manga',
-            'Books & Publishing',
-            'Social Media & Online Trends',
-            'Interviews',
-            'Surveys & Rankings',
-            'Opinion & Analysis',
-            'Reviews & Personal Experiences',
-            'Events & Exhibitions',
-            'Local News',
-            'Obituaries & Memorials',
-            'Volunteer & Community Activities',
-            'History & Culture'
-        ])
+        'genre' : in_genre
     }
     prompt = llmj.text_from_template_text(PROMPT_TEMPLATE, {
         '__LANG__' : spec['lang'],
@@ -97,30 +56,89 @@ def fake_text():
     # print(prompt)
     return llmj.RUNNER.toText(prompt)
 
+genreArr = [
+    'Accidents & Traffic Incidents',
+    'Crime & Criminal Cases',
+    'Courts & Justice',
+    'Disasters & Disaster Prevention',
+    'Weather & Climate',
+    'Government & Local Administration',
+    'Politics & Public Policy',
+    'Elections',
+    'International Affairs',
+    'Economy & Markets',
+    'Business & Corporate News',
+    'Corporate Earnings & Financial Results',
+    'New Products & Services',
+    'Product Recalls',
+    'System Outages & Service Disruptions',
+    'Healthcare & Medicine',
+    'Infectious Diseases',
+    'Science & Research',
+    'Environment & Climate Change',
+    'Artificial Intelligence & Technology',
+    'Cybersecurity',
+    'Education',
+    'Parenting',
+    'Senior Care & Aging',
+    'Careers & Workplace',
+    'Personal Finance',
+    'Law & Legal Systems',
+    'Lifestyle & Daily Living',
+    'Food & Cooking',
+    'Travel & Tourism',
+    'Housing & Real Estate',
+    'DIY & Gardening',
+    'Pets & Animals',
+    'Sports',
+    'Entertainment',
+    'Movies & TV Dramas',
+    'Music',
+    'Video Games',
+    'Anime & Manga',
+    'Books & Publishing',
+    'Social Media & Online Trends',
+    'Interviews',
+    'Surveys & Rankings',
+    'Opinion & Analysis',
+    'Reviews & Personal Experiences',
+    'Events & Exhibitions',
+    'Local News',
+    'Obituaries & Memorials',
+    'Volunteer & Community Activities',
+    'History & Culture'
+]
+
+random.shuffle(genreArr)
+
 completed = 0
 lock = threading.Lock()
 
 def generate(in_counter, in_digits):
     global completed
-    path = llmj.DIR_SOURCE / (str(in_counter).zfill(in_digits) + '.txt')
+    path = ARGS['source'] / (str(in_counter).zfill(in_digits) + '.txt')
+    if ARGS['genreMode'] == 'random':
+        genre = random.choice(genreArr)
+    else:
+        genre = genreArr[in_counter % len(genreArr)]
     with open(path, 'w', encoding='utf-8') as f:
-        f.write(fake_text())
+        f.write(fake_text(genre))
     with lock:
         completed += 1
-        progress = completed * 100 / FAKE_TEXT_CNT
-        print(f'INFO : {progress:.1f}% ({completed}/{FAKE_TEXT_CNT})')
+        progress = completed * 100 / ARGS['textCnt']
+        print(f'INFO : {progress:.1f}% ({completed}/{ARGS['textCnt']})')
 
 def main():
     digits = 3
     maxCounter = -1
-    for path in llmj.DIR_SOURCE.glob('*.txt'):
+    for path in ARGS['source'].glob('*.txt'):
         try:
             maxCounter = max(maxCounter, int(path.stem))
         except ValueError:
             pass
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
         futures = []
-        for i in range(FAKE_TEXT_CNT):
+        for i in range(ARGS['textCnt']):
             futures.append(executor.submit(generate, maxCounter + 1 + i, digits))
         for future in concurrent.futures.as_completed(futures):
             future.result()

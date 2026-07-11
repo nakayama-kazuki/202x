@@ -8,6 +8,15 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 sys.dont_write_bytecode = True
 import llmj
 
+ARGS = llmj.get_args(
+    {
+        'work' : str(llmj.DIR_WORK)
+    },
+    {
+        'work' : lambda in_src: pathlib.Path(in_src)
+    }
+)
+
 def filter_score(in_articleArr):
     filteredArr = copy.deepcopy(in_articleArr)
     for article in filteredArr:
@@ -19,7 +28,7 @@ def filter_score(in_articleArr):
     return filteredArr
 
 def main():
-    judgedArr = llmj.build_judged_dataset_array()
+    judgedArr = llmj.build_judged_dataset_array(ARGS['work'])
     goldDatasetIx = 0
     if len(judgedArr) > 1:
         print(f'WARN : {len(judgedArr)} judged datasets found. Using {judgedArr[goldDatasetIx]["name"]} as the gold dataset.')
@@ -43,7 +52,7 @@ def main():
             '__GOLDDATA__': goldArr
         })
         # print(feedback2Arr)
-        out_path = llmj.DIR_WORK / 'feedback.html'
+        out_path = ARGS['work'] / 'feedback.html'
         print(f'INFO : generated {out_path.name}')
         template = llmj.DIR_SUPPORTS / 'template-feedback.html'
         with open(out_path, 'w', encoding='utf-8') as f:

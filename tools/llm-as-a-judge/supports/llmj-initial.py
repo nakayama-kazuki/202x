@@ -13,6 +13,15 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 sys.dont_write_bytecode = True
 import llmj
 
+ARGS = llmj.get_args(
+    {
+        'work' : str(llmj.DIR_WORK)
+    },
+    {
+        'work' : lambda in_src: pathlib.Path(in_src)
+    }
+)
+
 def build_prompt(in_rubricArr):
     try:
         rubricLang = langdetect.detect(json.dumps(in_rubricArr, ensure_ascii=False))
@@ -28,7 +37,7 @@ def build_prompt(in_rubricArr):
 def main():
     prompt = build_prompt(llmj.load_rubrics())
     generated = llmj.RUNNER.toText(prompt)
-    target = llmj.DIR_WORK / f'{llmj.INITIAL_VERSION_NAME}{llmj.SUFFIX_TXT}'
+    target = ARGS[ 'work'] / f'{llmj.INITIAL_VERSION_NAME}{llmj.SUFFIX_TXT}'
     with open(target, 'w', encoding='utf-8') as f:
         f.write(generated)
     print(f'INFO : generated "{target.name}"')
