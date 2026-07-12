@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
+import json
 import shutil
 import pathlib
 import subprocess
@@ -12,8 +13,8 @@ import llmj
 
 ARGS = llmj.get_args(
     {
-        'variation': '10',
-        'iteration': '5'
+        'variation': '25',
+        'iteration': '4'
     },
     {
         'variation': lambda in_cnt: int(in_cnt),
@@ -21,16 +22,16 @@ ARGS = llmj.get_args(
     }
 )
 
-DIR_TEMP = llmj.DIR_ROOT / '__aa__'
+DIR_TEMP = llmj.DIR_ROOT / '.temp-for-configure'
 DIR_TEMP_SOURCE = DIR_TEMP / 'source'
 DIR_TEMP_WORK = DIR_TEMP / 'work'
 
 def run(in_script, *in_args):
     subprocess.run([sys.executable, str(in_script), *map(str, in_args)], check=True)
 
-def copy_initial_prompt():
+def setup_aa_testing(in_iteration):
     src = DIR_TEMP_WORK / f'{llmj.INITIAL_VERSION_NAME}{llmj.SUFFIX_TXT}'
-    for i in range(ARGS['iteration']):
+    for i in range(in_iteration):
         dst = DIR_TEMP_WORK / f'aa-{i:03d}{llmj.SUFFIX_TXT}'
         shutil.copy2(src, dst)
     src.unlink()
@@ -43,33 +44,26 @@ def collect_statistics():
             for result in article['results']:
                 scoreDict.setdefault(result['name'], [])
                 scoreDict[result['name']].append(result['score'])
-    threshold = 0.9
     rubricArr = []
     for name in sorted(scoreDict):
         scores = scoreDict[name]
-        below = 0
-        for score in scores:
-            if score < threshold:
-                below += 1
         rubricArr.append({
             'name': name,
             'count': len(scores),
             'average': statistics.mean(scores),
             'min': min(scores),
             'max': max(scores),
-            'stddev': statistics.pstdev(scores),
-            'belowThreshold': below
+            'stddev': statistics.pstdev(scores)
         })
-    statisticsDict = {
+    statsDict = {
         'model': llmj.RUNNER.model,
         'articles': ARGS['variation'],
         'iterations': ARGS['iteration'],
-        'threshold': threshold,
         'rubrics': rubricArr
     }
-    path = llmj.DIR_RUBRIC / 'statistics.json'
+    path = llmj.DIR_WORK / llmj.STATS_FILE_NAME
     with open(path, 'w', encoding='utf-8') as f:
-        json.dump(statisticsDict, f, ensure_ascii=False, indent=2)
+        json.dump(statsDict, f, ensure_ascii=False, indent=2)
     print(f'INFO : generated "{path.name}"')
 
 def main():
@@ -79,7 +73,7 @@ def main():
     try:
         run(llmj.DIR_SUPPORTS / 'llmj-fake-source.py', '--source', DIR_TEMP_SOURCE, '--textCnt', ARGS['variation'])
         run(llmj.DIR_SUPPORTS / 'llmj-initial.py', '--work', DIR_TEMP_WORK)
-        copy_initial_prompt()
+        setup_aa_testing(ARGS['iteration'])
         run(llmj.DIR_ROOT / 'llmj-generate.py', '--work', DIR_TEMP_WORK, '--source', DIR_TEMP_SOURCE)
         run(llmj.DIR_ROOT / 'llmj-judge.py', '--work', DIR_TEMP_WORK)
         collect_statistics()

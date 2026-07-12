@@ -10,7 +10,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 sys.dont_write_bytecode = True
 import llmj
 
-PROMPT_TEMPLATE = 'Generate a __ARTICLE__ of approximately __LENGTH__ characters written in __LANG__ about __GENRE__. The content does not need to describe real events. Generate articles that are realistic and moderately challenging for text understanding tasks. Prefer articles that contain realistic ambiguity, multiple related facts, quotations, temporal information, or similar characteristics requiring careful reading while remaining internally consistent. Use a __FORMALITY__ tone and a __STYLE__ writing style.'
+PROMPT_TEMPLATE = 'Generate a __QUALITY__ __ARTICLE__ of approximately __LENGTH__ characters written in __LANG__ about __GENRE__. The content does not need to describe real events. Generate articles that are realistic and moderately challenging for text understanding tasks. Prefer articles that contain realistic ambiguity, multiple related facts, quotations, temporal information, or similar characteristics requiring careful reading while remaining internally consistent. Use a __FORMALITY__ tone and a __STYLE__ writing style.'
 
 ARGS = llmj.get_args(
     {
@@ -28,6 +28,10 @@ def fake_text(in_genre):
     spec = {
         'lang' : 'Japanese',
         'length' : random.randint(300, 3000),
+        'quality' : random.choice([
+            'high-quality ( well-structured and coherent )',
+            'low-quality ( poorly structured, ambiguous, or inconclusive )'
+        ]),
         'article' : random.choice([
             'fact-based article ( must be based on real facts )',
             'fictional article ( write it as if it were a real news article; the events do not need to be real )'
@@ -47,6 +51,7 @@ def fake_text(in_genre):
     }
     prompt = llmj.text_from_template_text(PROMPT_TEMPLATE, {
         '__LANG__' : spec['lang'],
+        '__QUALITY__' : spec['quality'],
         '__LENGTH__' : spec['length'],
         '__ARTICLE__' : spec['article'],
         '__FORMALITY__' : spec['formality'],

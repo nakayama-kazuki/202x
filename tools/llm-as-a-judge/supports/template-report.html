@@ -88,15 +88,23 @@ pre {
 </template>
 <script type='module'>
 
-const gJudgedArr = await (async in_encoded => {
+async function decodeCompressedJson(in_encoded) {
+	if (!in_encoded) {
+		return NULL;
+	}
 	const compressed = Uint8Array.from(
 		atob(in_encoded),
 		in_char => in_char.charCodeAt(0)
 	);
-	const stream = new Blob([compressed]).stream().pipeThrough(new DecompressionStream('gzip'));
+	const stream = new Blob([compressed])
+		.stream()
+		.pipeThrough(new DecompressionStream('gzip'));
 	const json = await new Response(stream).text();
 	return JSON.parse(json);
-})('__ENCODED__');
+}
+
+const gJudgedArr = await decodeCompressedJson('__JUDGED__');
+const gAdviceObj = await decodeCompressedJson('__ADVICE__');
 
 const gRubricNameArr = gJudgedArr[0].articleArr[0].results.map(in_r => in_r.name);
 const DEFAULT_THRESHOLD = 0.3;

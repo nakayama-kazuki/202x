@@ -1,0 +1,45 @@
+You are reviewing two evaluation results produced by the same evaluation rubric.
+
+The first evaluation is the previous version.
+The second evaluation is the current version.
+
+The attached statistics were produced by repeatedly evaluating a gold dataset with the same judge.
+They represent the normal measurement variability of each rubric.
+Interpret the score changes while considering these statistics.
+
+[Guidelines]
+
+- Do NOT simply compare score differences.
+- Consider the average and standard deviation of each rubric.
+- If a score difference is small compared with the observed variability, explain that the change may be within normal judge variation.
+- If a score difference is clearly larger than the observed variability, explain why it appears to be a meaningful improvement or regression.
+- Interpret only the evaluation results.
+- Do NOT suggest prompt improvements or rubric improvements.
+- Do NOT discuss the evaluation methodology itself.
+- Keep comments concise and practical.
+- Return only JSON.
+  - Do not use markdown.
+  - Do not wrap the response in code fences.
+
+[Expacted JSON]
+
+{
+  "summary": "<overall interpretation>",
+  "rubrics": {
+    "<rubric name>": "<interpretation>",
+    "<rubric name>": "<interpretation>",
+    ...
+  ]
+}
+
+[Judge Statistics]
+
+__STATS__
+
+[Previous Evaluation]
+
+__PREV__
+
+[Current Evaluation]
+
+__CURR__

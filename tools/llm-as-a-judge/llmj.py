@@ -89,7 +89,8 @@ SUFFIX_TXT = '.txt'
 # generated / judged
 SUFFIX_XLS = '.xlsx'
 
-INITIAL_VERSION_NAME = 'initial-prompt'
+INITIAL_VERSION_NAME = 'prompt-000'
+STATS_FILE_NAME = 'rubric-stats.json'
 
 ORIGINAL_PLACEHOLDER = '{{' + TERM_ALL['ORIGINAL'] + '}}'
 
@@ -321,67 +322,76 @@ def _is_judged_row(in_sheet, in_row, in_colDict):
 
 def _is_judged_xlsx(in_path):
     workbook = openpyxl.load_workbook(in_path, read_only=True, data_only=True)
-    sheet = workbook.active
-    colDict = {}
-    for key in TERM_JUD:
-        col = _find_column(sheet, TERM_ALL[key])
-        if col is None:
-            # judge columns do not exist yet ( before the first judge )
-            return False
-        colDict[key] = col
-    for row in range(2, sheet.max_row + 1):
-        if not _is_judged_row(sheet, row, colDict):
-            # some rows are still unjudged
-            return False
-    return True
+    try:
+        sheet = workbook.active
+        colDict = {}
+        for key in TERM_JUD:
+            col = _find_column(sheet, TERM_ALL[key])
+            if col is None:
+                # judge columns do not exist yet ( before the first judge )
+                return False
+            colDict[key] = col
+        for row in range(2, sheet.max_row + 1):
+            if not _is_judged_row(sheet, row, colDict):
+                # some rows are still unjudged
+                return False
+        return True
+    finally:
+        workbook.close()
 
 def _process_xlsx(in_path, in_callback):
     workbook = openpyxl.load_workbook(in_path)
-    sheet = workbook.active
-    colDict = {}
-    for key in TERM_ALL:
-        colDict[key] = find_append_column(sheet, TERM_ALL[key])
-    for row in range(2, sheet.max_row + 1):
-        print(f'INFO : processing {row - 1} / {sheet.max_row - 1}')
-        if _is_judged_row(sheet, row, colDict):
-            continue
-        # replace characters that DeepEval cannot handle
-        safeText = {}
-        for key in TERM_GEN:
-            safeText[key] = sheet.cell(row, colDict[key]).value
-            for repDict in [_QUOTATION, _APOSTROPHE]:
-                safeText[key] = safeText[key].replace(repDict['ASCII'], repDict['FULLW'])
-        result = in_callback(safeText['ORIGINAL'], safeText['GENERATED'])
-        for key in TERM_JUD:
-            sheet.cell(row, colDict[key]).value = result[TERM_ALL[key]]
-        workbook.save(in_path)
-    print(f'INFO : judged {in_path.name}')
+    try:
+        sheet = workbook.active
+        colDict = {}
+        for key in TERM_ALL:
+            colDict[key] = find_append_column(sheet, TERM_ALL[key])
+        for row in range(2, sheet.max_row + 1):
+            print(f'INFO : processing {row - 1} / {sheet.max_row - 1}')
+            if _is_judged_row(sheet, row, colDict):
+                continue
+            # replace characters that DeepEval cannot handle
+            safeText = {}
+            for key in TERM_GEN:
+                safeText[key] = sheet.cell(row, colDict[key]).value
+                for repDict in [_QUOTATION, _APOSTROPHE]:
+                    safeText[key] = safeText[key].replace(repDict['ASCII'], repDict['FULLW'])
+            result = in_callback(safeText['ORIGINAL'], safeText['GENERATED'])
+            for key in TERM_JUD:
+                sheet.cell(row, colDict[key]).value = result[TERM_ALL[key]]
+            workbook.save(in_path)
+        print(f'INFO : judged {in_path.name}')
+    finally:
+        workbook.close()
 
 def _build_judged_dataset(in_path):
     workbook = openpyxl.load_workbook(in_path, data_only=True)
-    sheet = workbook.active
-    headDict = {}
-    for key in TERM_ALL:
-        headDict[key] = _find_column(sheet, TERM_ALL[key])
-    jsRowArr = []
-    for row in range(2, sheet.max_row + 1):
-        colDict = {}
-        colDict['articleIndex'] = row - 2
+    try:
+        sheet = workbook.active
+        headDict = {}
         for key in TERM_ALL:
-            jsKey = TERM_ALL[key]
-            colDict[jsKey] = sheet.cell(row, headDict[key]).value
-        try:
-            colDict['lang'] = langdetect.detect(colDict[TERM_ALL['ORIGINAL']])
-        except Exception:
-            colDict['lang'] = 'en'
-        jsKey = TERM_ALL['RESULTS']
-        colDict[jsKey] = json.loads(colDict[jsKey] or '[]')
-        jsRowArr.append(colDict)
-    return {
-        'name' : in_path.name.removesuffix(SUFFIX_XLS),
-        'totalAvg' : sum(row['average'] for row in jsRowArr) / len(jsRowArr),
-        'articleArr' : jsRowArr
-    }
+            headDict[key] = _find_column(sheet, TERM_ALL[key])
+        jsRowArr = []
+        for row in range(2, sheet.max_row + 1):
+            colDict = {}
+            colDict['articleIndex'] = row - 2
+            for key in TERM_ALL:
+                jsKey = TERM_ALL[key]
+                colDict[jsKey] = sheet.cell(row, headDict[key]).value
+            try:
+                colDict['lang'] = langdetect.detect(colDict[TERM_ALL['ORIGINAL']])
+            except Exception:
+                colDict['lang'] = 'en'
+            jsKey = TERM_ALL['RESULTS']
+            colDict[jsKey] = json.loads(colDict[jsKey] or '[]')
+            jsRowArr.append(colDict)
+        return {
+            'name' : in_path.name.removesuffix(SUFFIX_XLS),
+            'totalAvg' : sum(row['average'] for row in jsRowArr) / len(jsRowArr),
+            'articleArr' : jsRowArr
+        }
+    finally:
+        workbook.close()
 
 def build_judged_dataset_array(in_path):
     rubricArr = load_rubrics()
