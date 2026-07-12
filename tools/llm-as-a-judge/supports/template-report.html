@@ -87,7 +87,7 @@ pre {
 
 async function decodeCompressedJson(in_encoded) {
 	if (!in_encoded) {
-		return NULL;
+		return null;
 	}
 	const compressed = Uint8Array.from(
 		atob(in_encoded),
