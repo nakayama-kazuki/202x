@@ -15,7 +15,7 @@ PROMPT_TEMPLATE = 'Generate a __QUALITY__ __ARTICLE__ of approximately __LENGTH_
 ARGS = llmj.get_args(
     {
         'textCnt' : '10',
-        'genreMode' : 'random',
+        'genreMode' : 'balanced',
         'source' : str(llmj.DIR_SOURCE)
     },
     {
@@ -122,10 +122,12 @@ lock = threading.Lock()
 def generate(in_counter, in_digits):
     global completed
     path = ARGS['source'] / (str(in_counter).zfill(in_digits) + '.txt')
-    if ARGS['genreMode'] == 'random':
+    if ARGS['genreMode'] == 'balanced':
+        genre = genreArr[in_counter % len(genreArr)]
+    elif ARGS['genreMode'] == 'random':
         genre = random.choice(genreArr)
     else:
-        genre = genreArr[in_counter % len(genreArr)]
+        llmj.abort(f'unknown genre mode : {ARGS["genreMode"]}')
     with open(path, 'w', encoding='utf-8') as f:
         f.write(fake_text(genre))
     with lock:
