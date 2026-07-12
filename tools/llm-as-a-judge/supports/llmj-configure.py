@@ -36,7 +36,7 @@ def setup_aa_testing(in_iteration):
         shutil.copy2(src, dst)
     src.unlink()
 
-def collect_statistics():
+def collect_statistics(in_path):
     scoreDict = {}
     judgedDatasetArr = llmj.build_judged_dataset_array(DIR_TEMP_WORK)
     for dataset in judgedDatasetArr:
@@ -61,24 +61,24 @@ def collect_statistics():
         'iterations': ARGS['iteration'],
         'rubrics': rubricArr
     }
-    path = llmj.DIR_WORK / llmj.STATS_FILE_NAME
-    with open(path, 'w', encoding='utf-8') as f:
+    with open(in_path, 'w', encoding='utf-8') as f:
         json.dump(statsDict, f, ensure_ascii=False, indent=2)
-    print(f'INFO : generated "{path.name}"')
+    print(f'INFO : generated "{in_path.name}"')
 
 def main():
-    shutil.rmtree(DIR_TEMP, ignore_errors=True)
-    DIR_TEMP_SOURCE.mkdir(parents=True)
-    DIR_TEMP_WORK.mkdir(parents=True)
+    DIR_TEMP_SOURCE.mkdir(parents=True, exist_ok=True)
+    DIR_TEMP_WORK.mkdir(parents=True, exist_ok=True)
+    output_path = llmj.DIR_WORK / llmj.STATS_FILE_NAME
     try:
         run(llmj.DIR_SUPPORTS / 'llmj-fake-source.py', '--source', DIR_TEMP_SOURCE, '--textCnt', ARGS['variation'])
         run(llmj.DIR_SUPPORTS / 'llmj-initial.py', '--work', DIR_TEMP_WORK)
         run(llmj.DIR_ROOT / 'llmj-generate.py', '--work', DIR_TEMP_WORK, '--source', DIR_TEMP_SOURCE)
         setup_aa_testing(ARGS['iteration'])
         run(llmj.DIR_ROOT / 'llmj-judge.py', '--work', DIR_TEMP_WORK)
-        collect_statistics()
+        collect_statistics(output_path)
     finally:
-        shutil.rmtree(DIR_TEMP, ignore_errors=True)
+        if output_path.exists():
+            shutil.rmtree(DIR_TEMP, ignore_errors=True)
     llmj.finalize()
 
 if __name__ == '__main__':
