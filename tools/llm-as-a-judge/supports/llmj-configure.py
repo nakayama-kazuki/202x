@@ -13,8 +13,8 @@ import llmj
 
 ARGS = llmj.get_args(
     {
-        'variation': '25',
-        'iteration': '4'
+        'variation': '30',
+        'iteration': '3'
     },
     {
         'variation': lambda in_cnt: int(in_cnt),
@@ -30,9 +30,9 @@ def run(in_script, *in_args):
     subprocess.run([sys.executable, str(in_script), *map(str, in_args)], check=True)
 
 def setup_aa_testing(in_iteration):
-    src = DIR_TEMP_WORK / f'{llmj.INITIAL_VERSION_NAME}{llmj.SUFFIX_TXT}'
+    src = DIR_TEMP_WORK / f'{llmj.INITIAL_VERSION_NAME}{llmj.SUFFIX_XLS}'
     for i in range(in_iteration):
-        dst = DIR_TEMP_WORK / f'aa-{i:03d}{llmj.SUFFIX_TXT}'
+        dst = DIR_TEMP_WORK / f'aa-{i:03d}{llmj.SUFFIX_XLS}'
         shutil.copy2(src, dst)
     src.unlink()
 
@@ -73,8 +73,8 @@ def main():
     try:
         run(llmj.DIR_SUPPORTS / 'llmj-fake-source.py', '--source', DIR_TEMP_SOURCE, '--textCnt', ARGS['variation'])
         run(llmj.DIR_SUPPORTS / 'llmj-initial.py', '--work', DIR_TEMP_WORK)
-        setup_aa_testing(ARGS['iteration'])
         run(llmj.DIR_ROOT / 'llmj-generate.py', '--work', DIR_TEMP_WORK, '--source', DIR_TEMP_SOURCE)
+        setup_aa_testing(ARGS['iteration'])
         run(llmj.DIR_ROOT / 'llmj-judge.py', '--work', DIR_TEMP_WORK)
         collect_statistics()
     finally:

@@ -12,6 +12,7 @@ import llmj
 ARGS = llmj.get_args(
     {
         'work' : str(llmj.DIR_WORK),
+        'adviceLang': 'Japanese',
         'reportTarget' : None
     },
     {
@@ -38,11 +39,13 @@ def make_advice(in_judgedArr, in_reportTarget, in_statsPath):
     if currentIndex is None:
         print(f'WARN : report target "{in_reportTarget}" not found')
         return ''
+    print(f'INFO : generating advice for {in_judgedArr[currentIndex]["name"]}')
     with open(in_statsPath, encoding='utf-8') as f:
         statsDict = json.load(f)
     prompt = llmj.text_from_template_path(
         llmj.DIR_SUPPORTS / 'template-advice.txt',
         {
+            '__LANG__': ARGS['adviceLang'],
             '__STATS__': json.dumps(statsDict, ensure_ascii=False, indent=2),
             '__PREV__': json.dumps(in_judgedArr[currentIndex - 1], ensure_ascii=False, indent=2),
             '__CURR__': json.dumps(in_judgedArr[currentIndex], ensure_ascii=False, indent=2)

@@ -21,15 +21,12 @@ th, td {
 	vertical-align: top;
 }
 
-#summaryTable td,
-#summaryTable th,
-#rubricAvgTable td,
-#rubricAvgTable th,
-#rubricMinTable td,
-#rubricMinTable th,
-#rubricThresholdTable td,
-#rubricThresholdTable th {
+.cHeadlineCell {
 	width: 100px;
+}
+
+.cSentenceCell {
+	width: 700px;
 }
 
 th.sortable {
@@ -191,7 +188,7 @@ function updateArticleHighlight(in_threshold) {
 }
 
 function sortableTH(in_tblId, in_col, in_title) {
-	return '<th class="sortable" data-table="' + in_tblId + '" data-col="' + in_col + '">' + escapeHtml(in_title) + '</th>';
+	return '<th class="sortable cHeadlineCell" data-table="' + in_tblId + '" data-col="' + in_col + '">' + escapeHtml(in_title) + '</th>';
 }
 
 function buildRubricTable(in_tblId, in_callback) {
@@ -207,7 +204,7 @@ function buildRubricTable(in_tblId, in_callback) {
 	fragment += '<tbody>';
 	gJudgedArr.forEach(in_ver => {
 		fragment += '<tr>';
-		fragment += '<td>' + escapeHtml(in_ver.name) + '</td>';
+		fragment += '<td class="cHeadlineCell">' + escapeHtml(in_ver.name) + '</td>';
 		gRubricNameArr.forEach(in_name => {
 			const scoreArr = [];
 			const min = {
@@ -273,21 +270,40 @@ function updateThresholdStyle(in_threshold) {
 	gJudgedArr.forEach(in_ver => {
 		fragment += '<tr>';
 		fragment += '<td>' + escapeHtml(in_ver.name) + '</td>';
-		fragment += '<td data-sort="' + in_ver.totalAvg + '">' + in_ver.totalAvg.toFixed(2) + '</td>';
-		fragment += '<td data-sort="' + in_ver.articleArr.length + '">' + in_ver.articleArr.length + '</td>';
+		fragment += '<td class="cHeadlineCell" data-sort="' + in_ver.totalAvg + '">' + in_ver.totalAvg.toFixed(2) + '</td>';
+		fragment += '<td class="cHeadlineCell" data-sort="' + in_ver.articleArr.length + '">' + in_ver.articleArr.length + '</td>';
 		fragment += '</tr>';
 	});
 	fragment += '</tbody>';
 	fragment += '</table>';
+	if (gAdviceObj) {
+		fragment += '<h2>Advice ( ' + escapeHtml(gJudgedArr[0].name) + ' -> ' + escapeHtml(gJudgedArr[1].name) + ' )</h2>';
+		fragment += '<table>';
+		fragment += '<tr>';
+		fragment += '<th class="cHeadlineCell">Item</th>';
+		fragment += '<th class="cSentenceCell">Advice</th>';
+		fragment += '</tr>';
+		fragment += '<tr>';
+		fragment += '<td>Summary</td>';
+		fragment += '<td>' + escapeHtml(gAdviceObj.summary) + '</td>';
+		fragment += '</tr>';
+		for (const [name, advice] of Object.entries(gAdviceObj.rubrics)) {
+			fragment += '<tr>';
+			fragment += '<td class="cHeadlineCell">' + escapeHtml(name) + '</td>';
+			fragment += '<td class="cSentenceCell">' + escapeHtml(advice) + '</td>';
+			fragment += '</tr>';
+		}
+		fragment += '</table>';
+	}
 	fragment += '<h2>Rubric Avg (Var) for ' + gJudgedArr[0].articleArr.length + ' Articles</h2>';
 	fragment += buildRubricTable(
 		'rubricAvgTable',
 		({scores}) => {
 			const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
 			const variance = scores.reduce((a, b) => a + (b - avg) ** 2, 0) / scores.length;
-			return '<td data-sort="' + avg + '">' +
+			return '<td class="cHeadlineCell" data-sort="' + avg + '">' +
 				avg.toFixed(2) +
-				'<br><span style="color:#999">(' + variance.toFixed(3) + ')</span>' +
+				'<br /><span style="color:#999">(' + variance.toFixed(3) + ')</span>' +
 				'</td>';
 		}
 	);
@@ -295,7 +311,7 @@ function updateThresholdStyle(in_threshold) {
 	fragment += buildRubricTable(
 		'rubricMinTable',
 		({version, minScore, minIndex}) => {
-			return '<td data-sort="' + minScore + '">' +
+			return '<td class="cHeadlineCell" data-sort="' + minScore + '">' +
 					'<a href="#article-' + version.name + '-' + minIndex + '">' + minScore.toFixed(2) + '</a></td>';
 		}
 	);
@@ -313,7 +329,7 @@ function updateThresholdStyle(in_threshold) {
 		'rubricThresholdTable',
 		({scores}) => {
 			const count = scores.filter(in_score => in_score <= DEFAULT_THRESHOLD).length;
-			return '<td data-sort="' + count + '">' + count + '</td>';
+			return '<td class="cHeadlineCell" data-sort="' + count + '">' + count + '</td>';
 		}
 	);
 	fragment += '</div>';
@@ -333,9 +349,9 @@ function updateThresholdStyle(in_threshold) {
 			fragment += '<h5>Rubrics</h5>';
 			fragment += '<table>';
 			fragment += '<tr>';
-			fragment += '<th>Rubric</th>';
-			fragment += '<th>Score</th>';
-			fragment += '<th>Reason</th>';
+			fragment += '<th class="cHeadlineCell">Rubric</th>';
+			fragment += '<th class="cHeadlineCell">Score</th>';
+			fragment += '<th class="cSentenceCell">Reason</th>';
 			fragment += '</tr>';
 			in_art.results.forEach(in_res => {
 				const params = {
@@ -346,13 +362,13 @@ function updateThresholdStyle(in_threshold) {
 				};
 				const translateUrl = 'https://translate.google.com/?' + new URLSearchParams(params).toString();
 				fragment += '<tr>';
-				fragment += '<td>' + escapeHtml(in_res.name);
+				fragment += '<td class="cHeadlineCell">' + escapeHtml(in_res.name) + '<br />';
 				fragment += '<a class="reason-link" href="' + translateUrl + '" target="_blank" title="Translate">';
 				fragment += document.getElementById('translateSvg').innerHTML;
 				fragment += '</a>';
 				fragment += '</td>';
-				fragment += '<td class="' + scoreToClass(in_res.score) + '">' + in_res.score + '</td>';
-				fragment += '<td>';
+				fragment += '<td class="cHeadlineCell ' + scoreToClass(in_res.score) + '">' + in_res.score + '</td>';
+				fragment += '<td class="cSentenceCell">';
 				fragment += '<pre>' + escapeHtml(in_res.reason) + '</pre>';
 				fragment += '</td>';
 				fragment += '</tr>';

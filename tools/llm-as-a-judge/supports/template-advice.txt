@@ -17,6 +17,7 @@ Interpret the score changes while considering these statistics.
 - Do NOT suggest prompt improvements or rubric improvements.
 - Do NOT discuss the evaluation methodology itself.
 - Keep comments concise and practical.
+- Write all interpretation texts in __LANG__.
 - Return only JSON.
   - Do not use markdown.
   - Do not wrap the response in code fences.
