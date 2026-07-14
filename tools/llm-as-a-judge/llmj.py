@@ -128,7 +128,10 @@ def _retry(in_callback, in_retry_count, in_retry_interval):
             if retry + 1 >= in_retry_count:
                 abort(f'ERROR : invoke failed : {err}')
             print(f'WARN : retrying because : {err}')
-            time.sleep(in_retry_interval * (retry + 1))
+            if '429' in str(err):
+                time.sleep(in_retry_interval * 10)
+            else:
+                time.sleep(in_retry_interval)
 
 def get_args(in_defaultDict, in_convDict={}, in_prefix='--'):
     parmDict = {}

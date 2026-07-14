@@ -63,7 +63,7 @@ def main():
         else:
             adviceRaw = json.dumps(make_advice(judgedArr, ARGS['reportTarget'], statsPath), ensure_ascii=False)
             adviceEnc = base64.b64encode(gzip.compress(adviceRaw.encode('utf-8'))).decode('ascii')
-        out_path = ARGS['work'] / 'report.html'
+        out_path = ARGS['work'] / (pathlib.Path(judgedArr[-1]['name']).with_suffix('.html').name)
         print(f'INFO : generated {out_path.name}')
         with open(out_path, 'w', encoding='utf-8') as f:
             f.write(llmj.text_from_template_path(llmj.DIR_SUPPORTS / 'template-report.html', {
