@@ -12,54 +12,51 @@ import openpyxl
 
 MAXTOKENS = 4096
 TRANSLATE_TO = 'Japanese'
-PARAM_PREFIX = '--'
 
-SPEC = {
-    'xlsx' : {
-        'value' : None,
-        'note' : 'Target XLSX file. Required.'
-    },
-    'sheet' : {
-        'value' : None,
-        'note' : 'Target worksheet name. Defaults to the first worksheet.'
-    },
-    'range' : {
-        'value' : 'A:XFD',
-        'note' : 'Cell range to translate (for example, "F:E"). Defaults to the entire worksheet.'
-    }
-}
-
-def get_args(in_defaultDict, in_convDict={}):
+def configure(in_specDict, in_prefix='--'):
+    showHelp = 'help'
+    if f'{in_prefix}{showHelp}' in sys.argv:
+        for name, spec in in_specDict.items():
+            print(f'{in_prefix}{name} : {spec["explain"]} ( default = {spec["default"]} )')
+        sys.exit(0)
     parmDict = {}
-    if any(arg.startswith(PARAM_PREFIX) for arg in sys.argv):
+    if any(arg.startswith(in_prefix) for arg in sys.argv):
         import argparse
         parser = argparse.ArgumentParser(add_help=False)
         nameSet = set()
         for arg in sys.argv[1:]:
-            if arg.startswith(PARAM_PREFIX):
-                name = arg[len(PARAM_PREFIX):].split('=')[0]
+            if arg.startswith(in_prefix):
+                name = arg[len(in_prefix):].split('=')[0]
                 if name not in nameSet:
-                    parser.add_argument(f'{PARAM_PREFIX}{name}')
+                    parser.add_argument(f'{in_prefix}{name}')
                     nameSet.add(name)
         parmDict = vars(parser.parse_args())
-    for name, info in in_defaultDict.items():
+    for name, spec in in_specDict.items():
         if parmDict.get(name) is None:
-            parmDict[name] = info['value']
-    for name, callback in in_convDict.items():
-        parmDict[name] = callback(parmDict[name])
+            parmDict[name] = spec['default']
+        if 'convert' in spec:
+            parmDict[name] = spec['convert'](parmDict[name])
     return parmDict
 
-ARGS = get_args(SPEC, {
-    'xlsx' : lambda in_path: None if in_path is None else pathlib.Path(in_path)
+ARGS = configure({
+    'xlsx' : {
+        'default' : None,
+        'convert' : lambda in_path: None if in_path is None else pathlib.Path(in_path),
+        'explain' : 'Target XLSX file. Required.'
+    },
+    'sheet' : {
+        'default' : None,
+        'explain' : 'Target worksheet name. Defaults to the first worksheet.'
+    },
+    'range' : {
+        'default' : 'A:XFD',
+        'explain' : 'Cell range to translate (for example, "F:E"). Defaults to the entire worksheet.'
+    }
 })
 
-def abort(in_message, in_showNote=False):
+def abort(in_message):
     print(in_message)
-    if in_showNote:
-        print()
-        for name, info in SPEC.items():
-            print(f'    {PARAM_PREFIX}{name} : {info["note"]}')
-        print()
+    print('Use "--help" to check the available parameters.')
     finalize()
     sys.exit(1)
 
@@ -166,12 +163,6 @@ class cLLMRunner:
             return json.loads(self._invoke(in_prompt, in_maxTokens, in_temperature))
         except Exception as err:
             abort(f'ERROR : invalid json : {err}')
-
-dotenv.load_dotenv()
-
-for required in ['ACCESS_KEY_ID', 'SECRET_ACCESS_KEY', 'SESSION_TOKEN', 'GATEWAY_URL']:
-    if os.getenv(required) is None:
-        abort(f'ERROR : {required} is not defined in ".env".')
 
 def text_from_template_text(in_text, in_replaceDict):
     text = in_text
@@ -280,12 +271,12 @@ gRunner = cLLMRunner()
 gTranslater = cBulkTranslater(gRunner.toText, TRANSLATE_TO, MAXTOKENS)
 
 if ARGS['xlsx'] is None:
-    abort('ERROR : parameter is required.', True)
+    abort('ERROR : parameter is required.')
 else:
     try:
         workbook = openpyxl.load_workbook(ARGS['xlsx'])
     except Exception as err:
-        abort(f'ERROR : can not open xlsx ({err})', True)
+        abort(f'ERROR : can not open xlsx ({err})')
 
 try:
     if ARGS['sheet'] is None:
@@ -305,7 +296,7 @@ try:
             sheet[translated['marker']].value = translated['dst']
     workbook.save(ARGS['xlsx'])
 except Exception as err:
-    abort(f'ERROR : can not handle xlsx ({err})', True)
+    abort(f'ERROR : can not handle xlsx ({err})')
 finally:
     workbook.close()
 
