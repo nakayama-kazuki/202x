@@ -240,13 +240,24 @@ class cBulkTranslater:
             '__JSON__' : json.dumps(slicedArr, ensure_ascii=False, indent=2)
         })
         try:
-            tempArr = json.loads(self._callback(prompt))
-            for i in range(in_end_index - in_start_index + 1):
-                self._targetBufArr[in_start_index + i]['dst'] = tempArr[i]['dst']
+            response_text = self._callback(prompt)
+            tempArr = json.loads(response_text)
+            resDict = {}
+            for item in tempArr:
+                if 'marker' not in item:
+                    continue
+                resDict[item['marker']] = item.get('dst', '')
+            for i in range(in_start_index, in_end_index + 1):
+                marker = self._targetBufArr[i]['marker']
+                if marker in resDict:
+                    self._targetBufArr[i]['dst'] = resDict[marker]
+                else:
+                    print(f"WARN : Missing translation for {marker}")
+                    self._targetBufArr[i]['dst'] = self._targetBufArr[i]['src']
         except Exception as err:
-            abort(f'ERROR : invalid json : {err}')
+            abort(f'ERROR : invalid json or mapping failed : {err}')
     def append(self, in_marker, in_text):
-        text = in_text
+        text = '' if in_text is None else in_text
         for doubleQuote in [chr(0x0022), chr(0x201C), chr(0x201D)]:
             text = text.replace(doubleQuote, "'")
         self._totalChars += len(text)
@@ -286,11 +297,12 @@ try:
             if not isinstance(cell.value, str):
                 continue
             markerText = cell.value.strip()
-            if markerText == '':
+            if markerText == '' or cell.data_type == 'f':
                 continue
             gTranslater.append(cell.coordinate, markerText)
     for translated in gTranslater.translate():
-        sheet[translated['marker']].value = translated['dst']
+        if translated['dst'] is not None:
+            sheet[translated['marker']].value = translated['dst']
     workbook.save(ARGS['xlsx'])
 except Exception as err:
     abort(f'ERROR : can not handle xlsx ({err})', True)
