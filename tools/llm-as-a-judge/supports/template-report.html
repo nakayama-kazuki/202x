@@ -277,7 +277,9 @@ function updateThresholdStyle(in_threshold) {
 	fragment += '</tbody>';
 	fragment += '</table>';
 	if (gAdviceObj) {
-		fragment += '<h2>Advice ( ' + escapeHtml(gJudgedArr[0].name) + ' -> ' + escapeHtml(gJudgedArr[1].name) + ' )</h2>';
+		const prev = escapeHtml(gJudgedArr[gJudgedArr.length - 2].name);
+		const curr = escapeHtml(gJudgedArr[gJudgedArr.length - 1].name);
+		fragment += '<h2>Advice ( ' + prev + ' -> ' + curr + ' )</h2>';
 		fragment += '<table>';
 		fragment += '<tr>';
 		fragment += '<th class="cHeadlineCell">Item</th>';
