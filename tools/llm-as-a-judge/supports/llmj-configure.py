@@ -11,16 +11,18 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 sys.dont_write_bytecode = True
 import llmj
 
-ARGS = llmj.get_args(
-    {
-        'variation': '30',
-        'iteration': '3'
+ARGS = llmj.configure({
+    'variation' : {
+        'default' : '30',
+        'convert' : lambda in_cnt: int(in_cnt),
+        'explain' : 'Number of generated prompt variations.'
     },
-    {
-        'variation': lambda in_cnt: int(in_cnt),
-        'iteration': lambda in_cnt: int(in_cnt)
+    'iteration' : {
+        'default' : '3',
+        'convert' : lambda in_cnt: int(in_cnt),
+        'explain' : 'Number of evaluation iterations for each variation.'
     }
-)
+})
 
 DIR_TEMP = llmj.DIR_ROOT / '.temp-for-configure'
 DIR_TEMP_SOURCE = DIR_TEMP / 'source'

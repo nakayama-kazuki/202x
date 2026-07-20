@@ -12,17 +12,22 @@ import llmj
 
 PROMPT_TEMPLATE = 'Generate a __QUALITY__ __ARTICLE__ of approximately __LENGTH__ characters written in __LANG__ about __GENRE__. The content does not need to describe real events. Generate articles that are realistic and moderately challenging for text understanding tasks. Prefer articles that contain realistic ambiguity, multiple related facts, quotations, temporal information, or similar characteristics requiring careful reading while remaining internally consistent. Use a __FORMALITY__ tone and a __STYLE__ writing style.'
 
-ARGS = llmj.get_args(
-    {
-        'textCnt' : '10',
-        'genreMode' : 'balanced',
-        'source' : str(llmj.DIR_SOURCE)
+ARGS = llmj.configure({
+    'textCnt' : {
+        'default' : '10',
+        'convert' : lambda in_cnt: int(in_cnt),
+        'explain' : 'Number of source texts to generate.'
     },
-    {
-        'textCnt' : lambda in_cnt: int(in_cnt),
-        'source' : lambda in_src: pathlib.Path(in_src)
+    'genreMode' : {
+        'default' : 'balanced',
+        'explain' : 'Genre selection mode. "balanced" generates genres evenly; any other value selects genres randomly.'
+    },
+    'source' : {
+        'default' : str(llmj.DIR_SOURCE),
+        'convert' : lambda in_src: pathlib.Path(in_src),
+        'explain' : 'Directory where generated source text files are saved.'
     }
-)
+})
 
 def fake_text(in_genre):
     spec = {

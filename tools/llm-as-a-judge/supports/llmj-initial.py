@@ -13,14 +13,13 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 sys.dont_write_bytecode = True
 import llmj
 
-ARGS = llmj.get_args(
-    {
-        'work' : str(llmj.DIR_WORK)
-    },
-    {
-        'work' : lambda in_src: pathlib.Path(in_src)
+ARGS = llmj.configure({
+    'work' : {
+        'default' : str(llmj.DIR_WORK),
+        'convert' : lambda in_src: pathlib.Path(in_src),
+        'explain' : 'Directory containing prompt templates to configure.'
     }
-)
+})
 
 def build_prompt(in_rubricArr):
     try:

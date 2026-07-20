@@ -9,16 +9,21 @@ import pathlib
 sys.dont_write_bytecode = True
 import llmj
 
-ARGS = llmj.get_args(
-    {
-        'work' : str(llmj.DIR_WORK),
-        'adviceLang': 'Japanese',
-        'reportTarget' : None
+ARGS = llmj.configure({
+    'work' : {
+        'default' : str(llmj.DIR_WORK),
+        'convert' : lambda in_src: pathlib.Path(in_src),
+        'explain' : 'Directory containing judge result XLSX files and reports.'
     },
-    {
-        'work' : lambda in_src: pathlib.Path(in_src)
+    'adviceLang' : {
+        'default' : 'Japanese',
+        'explain' : 'Language used for generated advice.'
+    },
+    'reportTarget' : {
+        'default' : None,
+        'explain' : 'Target XLSX file to generate a report for. Defaults to the latest XLSX file.'
     }
-)
+})
 
 statsPath = ARGS['work'] / llmj.STATS_FILE_NAME
 if not statsPath.exists():

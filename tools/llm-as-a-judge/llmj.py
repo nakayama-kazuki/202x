@@ -133,11 +133,16 @@ def _retry(in_callback, in_retry_count, in_retry_interval):
             else:
                 time.sleep(in_retry_interval)
 
-def get_args(in_defaultDict, in_convDict={}, in_prefix='--'):
+def configure(in_specDict, in_prefix='--'):
+    showHelp = 'help'
+    if f'{in_prefix}{showHelp}' in sys.argv:
+        for name, spec in in_specDict.items():
+            print(f'{in_prefix}{name} : {spec["explain"]} ( default = {spec["default"]} )')
+        sys.exit(0)
     parmDict = {}
     if any(arg.startswith(in_prefix) for arg in sys.argv):
         import argparse
-        parser = argparse.ArgumentParser()
+        parser = argparse.ArgumentParser(add_help=False)
         nameSet = set()
         for arg in sys.argv[1:]:
             if arg.startswith(in_prefix):
@@ -146,11 +151,11 @@ def get_args(in_defaultDict, in_convDict={}, in_prefix='--'):
                     parser.add_argument(f'{in_prefix}{name}')
                     nameSet.add(name)
         parmDict = vars(parser.parse_args())
-    for name, stringValue in in_defaultDict.items():
+    for name, spec in in_specDict.items():
         if parmDict.get(name) is None:
-            parmDict[name] = stringValue
-    for name, callback in in_convDict.items():
-        parmDict[name] = callback(parmDict[name])
+            parmDict[name] = spec['default']
+        if 'convert' in spec:
+            parmDict[name] = spec['convert'](parmDict[name])
     return parmDict
 
 class cLLMRunner:
