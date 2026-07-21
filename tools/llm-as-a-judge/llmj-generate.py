@@ -66,11 +66,13 @@ def process_prompt(in_prompt_path):
             print(f'ERROR : can not read "{src_path.name}"')
             llmj.abort()
         prompt = llmj.text_from_template_path(in_prompt_path, {llmj.ORIGINAL_PLACEHOLDER : textDict['ORIGINAL']})
+        temperature = None
         for retry in range(ARGS['postprocRetry']):
-            generated = postproc(llmj.RUNNER.toText(prompt))
+            generated = postproc(llmj.RUNNER.toText(prompt, None, temperature))
             if generated is not None:
                 textDict['GENERATED'] = generated
                 break
+            temperature = 0.8
             print(f'WARN : retrying because postproc returned None ({retry + 1}/{ARGS["postprocRetry"]})')
         else:
             llmj.abort(f'ERROR : postproc failed after {ARGS["postprocRetry"]} retries')
