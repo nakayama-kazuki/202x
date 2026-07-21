@@ -24,7 +24,7 @@ ARGS = llmj.configure({
         'explain' : 'Directory containing prompt templates and generated XLSX files.'
     },
     'postprocRetry' : {
-        'default' : '3',
+        'default' : '10',
         'convert' : lambda in_cnt: int(in_cnt),
         'explain' : 'Maximum number of retries when postproc() requests regeneration.'
     }

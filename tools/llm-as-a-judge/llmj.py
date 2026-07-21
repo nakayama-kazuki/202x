@@ -304,6 +304,9 @@ def _create_judge(in_rubricArr):
         resDict = {}
         for key in ['name', 'score', 'reason']:
             resDict[key] = getattr(metric, key)
+        # full score needs no reaon
+        if resDict['score'] >= 1.0:
+            resDict['reason'] = ''
         return resDict
     def judge(in_original, in_generated):
         testcase = LLMTestCase(
