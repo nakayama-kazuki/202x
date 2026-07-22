@@ -121,11 +121,11 @@ def find_append_column(in_sheet, in_name):
     return col
 
 def _retry(in_callback, in_retry_count, in_retry_interval):
-    for retry in range(in_retry_count):
+    for cnt in range(in_retry_count):
         try:
-            return in_callback()
+            return in_callback(cnt + 1)
         except Exception as err:
-            if retry + 1 >= in_retry_count:
+            if cnt + 1 >= in_retry_count:
                 abort(f'ERROR : invoke failed : {err}')
             print(f'WARN : retrying because : {err}')
             if '429' in str(err):
@@ -203,14 +203,18 @@ class cLLMRunner:
             in_maxTokens = self._maxTokens
         if in_temperature is None:
             in_temperature = self._temperature
-        def callback():
+        def callback(in_cnt):
+            temperature = in_temperature
+            if in_cnt > 1 and temperature == 0:
+                temperature = 0.5
+                print(f'INFO : boosting temperature ({temperature}) for retry {in_cnt - 1}')
             response = self._runtime.converse_stream(
                 modelId=self._model,
                 messages=[{
                     'role' : 'user',
                     'content' : [{'text' : in_prompt}]
                 }],
-                inferenceConfig={'maxTokens' : in_maxTokens, 'temperature' : in_temperature}
+                inferenceConfig={'maxTokens' : in_maxTokens, 'temperature' : temperature}
             )
             chunkArr = []
             for event in response['stream']:
@@ -280,13 +284,16 @@ class _GatewayLLM(DeepEvalBaseLLM):
         return self.runner.model
     def load_model(self):
         return self
-    def generate(self, in_prompt):
-        return self.runner.toText(in_prompt)
-    async def a_generate(self, in_prompt):
-        return self.generate(in_prompt)
+    def generate(self, in_prompt, in_schema=None):
+        text = self.runner.toText(in_prompt)
+        if in_schema is None:
+            return text
+        return in_schema.model_validate_json(text)
+    async def a_generate(self, in_prompt, in_schema=None):
+        return self.generate(in_prompt, in_schema)
 
 def _create_judge(in_rubricArr):
-    def evaluate(in_rubric, in_testcase):
+    def evaluate(in_rubric, in_testcase, in_high_score=0.8):
         metric = GEval(
             name=in_rubric['name'],
             # criteria=in_rubric['criteria'],
@@ -298,14 +305,12 @@ def _create_judge(in_rubricArr):
             async_mode=False,
             model=_GatewayLLM(RUNNER)
         )
-        retryCount = 3
-        retryInterval = 5
-        _retry(lambda: metric.measure(in_testcase), retryCount, retryInterval)
+        metric.measure(in_testcase)
         resDict = {}
         for key in ['name', 'score', 'reason']:
             resDict[key] = getattr(metric, key)
-        # full score needs no reaon
-        if resDict['score'] >= 1.0:
+        # high score needs no reaon
+        if resDict['score'] >= in_high_score:
             resDict['reason'] = ''
         return resDict
     def judge(in_original, in_generated):
