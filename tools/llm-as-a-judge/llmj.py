@@ -9,6 +9,17 @@ import shutil
 import pathlib
 import concurrent.futures
 
+def _create_finalize():
+    start_time = time.time()
+    def _finalize():
+        for name in ['.deepeval']:
+            shutil.rmtree(pathlib.Path.cwd() / name, ignore_errors=True)
+        elapsed = time.time() - start_time
+        print(f'INFO : completed {pathlib.Path(sys.argv[0]).name} ( elapsed : {elapsed:.1f} sec )')
+    return _finalize
+
+finalize = _create_finalize()
+
 def abort(in_message=None):
     if in_message:
         print(in_message)
@@ -93,17 +104,6 @@ INITIAL_VERSION_NAME = 'prompt-000'
 STATS_FILE_NAME = 'rubric-stats.json'
 
 ORIGINAL_PLACEHOLDER = '{{' + TERM_ALL['ORIGINAL'] + '}}'
-
-def _create_finalize():
-    start_time = time.time()
-    def _finalize():
-        for name in ['.deepeval']:
-            shutil.rmtree(pathlib.Path.cwd() / name, ignore_errors=True)
-        elapsed = time.time() - start_time
-        print(f'INFO : completed {pathlib.Path(sys.argv[0]).name} ( elapsed : {elapsed:.1f} sec )')
-    return _finalize
-
-finalize = _create_finalize()
 
 def _find_column(in_sheet, in_name):
     for col in range(1, in_sheet.max_column + 1):
