@@ -3,6 +3,7 @@
 import sys
 import copy
 import pathlib
+import shutil
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 sys.dont_write_bytecode = True
@@ -16,6 +17,8 @@ ARGS = llmj.configure({
     }
 })
 
+DIR_TEMP = llmj.DIR_ROOT / '.temp-for-gold-review'
+
 def filter_score(in_articleArr):
     filteredArr = copy.deepcopy(in_articleArr)
     for article in filteredArr:
@@ -27,7 +30,10 @@ def filter_score(in_articleArr):
     return filteredArr
 
 def main():
-    judgedArr = llmj.build_judged_dataset_array(ARGS['work'])
+    shutil.rmtree(DIR_TEMP, ignore_errors=True)
+    shutil.copytree(ARGS['work'], DIR_TEMP)
+    judgedArr = llmj.build_judged_dataset_array(DIR_TEMP)
+    shutil.rmtree(DIR_TEMP, ignore_errors=True)
     goldDatasetIx = 0
     if len(judgedArr) > 1:
         print(f'WARN : {len(judgedArr)} judged datasets found. Using {judgedArr[goldDatasetIx]["name"]} as the gold dataset.')
