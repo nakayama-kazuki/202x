@@ -35,29 +35,29 @@ def main():
     filteredArr = filter_score(articleArr)
     if len(filteredArr) > 0:
         print(f'INFO : checking score')
-        template = llmj.DIR_SUPPORTS / 'template-feedback1.txt'
-        feedback1Arr = llmj.llm_processed_json(template, {
+        template = llmj.DIR_SUPPORTS / 'template-gold-review-1.txt'
+        goldReview1Arr = llmj.llm_processed_json(template, {
             '__JSON__' : filteredArr
         })
-        # print(feedback1Arr)
+        # print(goldReview1Arr)
         print(f'INFO : making proposal')
         goldArr = []
-        for gold in feedback1Arr['gold']:
+        for gold in goldReview1Arr['gold']:
             goldArr.append(articleArr[gold['articleIndex']])
-        template = llmj.DIR_SUPPORTS / 'template-feedback2.txt'
-        feedback2Arr = llmj.llm_processed_json(template, {
-            '__FEEDBACK__': feedback1Arr,
+        template = llmj.DIR_SUPPORTS / 'template-gold-review-2.txt'
+        goldReview2Arr = llmj.llm_processed_json(template, {
+            '__FEEDBACK__': goldReview1Arr,
             '__RUBRICS__': llmj.load_rubrics(),
             '__GOLDDATA__': goldArr
         })
-        # print(feedback2Arr)
-        out_path = ARGS['work'] / 'feedback.html'
+        # print(goldReview2Arr)
+        out_path = ARGS['work'] / 'gold-review.html'
         print(f'INFO : generated {out_path.name}')
-        template = llmj.DIR_SUPPORTS / 'template-feedback.html'
+        template = llmj.DIR_SUPPORTS / 'template-gold-review.html'
         with open(out_path, 'w', encoding='utf-8') as f:
             f.write(llmj.text_from_template_path(template, {
                 '__JUDGED__' : judgedArr,
-                '__FEEDBACK__' : feedback2Arr
+                '__FEEDBACK__' : goldReview2Arr
             }))
     llmj.finalize()
 
