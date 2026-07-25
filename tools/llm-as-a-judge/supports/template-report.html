@@ -356,6 +356,7 @@ function updateThresholdStyle(in_threshold) {
 			fragment += '<th class="cSentenceCell">Reason</th>';
 			fragment += '</tr>';
 			in_art.results.forEach(in_res => {
+				/*
 				const params = {
 					sl : 'auto',
 					tl : in_art.lang,
@@ -363,6 +364,13 @@ function updateThresholdStyle(in_threshold) {
 					op : 'translate'
 				};
 				const translateUrl = 'https://translate.google.com/?' + new URLSearchParams(params).toString();
+				*/
+				const params = {
+					from : 'auto-detect',
+					to : in_art.lang,
+					text : in_res.reason || ''
+				};
+				const translateUrl = 'https://www.bing.com/translator?' + new URLSearchParams(params).toString();
 				fragment += '<tr>';
 				fragment += '<td class="cHeadlineCell">' + escapeHtml(in_res.name) + '<br />';
 				fragment += '<a class="reason-link" href="' + translateUrl + '" target="_blank" title="Translate">';

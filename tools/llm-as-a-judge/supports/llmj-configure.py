@@ -21,6 +21,11 @@ ARGS = llmj.configure({
         'default' : '3',
         'convert' : lambda in_cnt: int(in_cnt),
         'explain' : 'Number of evaluation iterations for each variation.'
+    },
+    'source' : {
+        'default' : None,
+        'convert' : lambda in_path: None if in_path is None else pathlib.Path(in_path),
+        'explain' : 'Source article directory. If omitted, fake articles are generated.'
     }
 })
 
@@ -72,7 +77,10 @@ def main():
     DIR_TEMP_WORK.mkdir(parents=True, exist_ok=True)
     output_path = llmj.DIR_WORK / llmj.STATS_FILE_NAME
     try:
-        run(llmj.DIR_SUPPORTS / 'llmj-fake-source.py', '--source', DIR_TEMP_SOURCE, '--textCnt', ARGS['variation'])
+        if ARGS['source'] is None:
+            run(llmj.DIR_SUPPORTS / 'llmj-fake-source.py', '--source', DIR_TEMP_SOURCE, '--textCnt', ARGS['variation'])
+        else:
+            shutil.copytree(ARGS['source'], DIR_TEMP_SOURCE, dirs_exist_ok=True)
         run(llmj.DIR_SUPPORTS / 'llmj-initial.py', '--work', DIR_TEMP_WORK)
         run(llmj.DIR_ROOT / 'llmj-generate.py', '--work', DIR_TEMP_WORK, '--source', DIR_TEMP_SOURCE)
         setup_aa_testing(ARGS['iteration'])
