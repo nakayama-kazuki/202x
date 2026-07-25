@@ -44,29 +44,47 @@ def setup_aa_testing(in_iteration):
     src.unlink()
 
 def collect_statistics(in_path):
-    scoreDict = {}
+    rubricScoreDict = {}
     judgedDatasetArr = llmj.build_judged_dataset_array(DIR_TEMP_WORK)
     for dataset in judgedDatasetArr:
         for article in dataset['articleArr']:
+            articleScoreDict = {}
             for result in article['results']:
-                scoreDict.setdefault(result['name'], [])
-                scoreDict[result['name']].append(result['score'])
-    rubricArr = []
-    for name in sorted(scoreDict):
-        scores = scoreDict[name]
-        rubricArr.append({
-            'name': name,
-            'count': len(scores),
-            'average': statistics.mean(scores),
-            'min': min(scores),
-            'max': max(scores),
-            'stddev': statistics.pstdev(scores)
-        })
+                articleScoreDict[result['name']] = result['score']
+            for name, score in articleScoreDict.items():
+                rubricScoreDict.setdefault(name, [])
+                rubricScoreDict[name].append(score)
+    rubricDict = {}
+    for name in sorted(rubricScoreDict):
+        scoreArr = rubricScoreDict[name]
+        articleScoreArrArr = []
+        for index in range(0, len(scoreArr), ARGS['iteration']):
+            articleScoreArrArr.append(scoreArr[index:index + ARGS['iteration']])
+        stddevArr = []
+        avgArr = []
+        for articleScoreArr in articleScoreArrArr:
+            stddevArr.append(statistics.pstdev(articleScoreArr))
+            avgArr.append(statistics.mean(articleScoreArr))
+        rubricDict[name] = {
+            'stddevAvg' : statistics.mean(stddevArr),
+            'stddevMax' : max(stddevArr),
+            'testDataInfo' : {
+                'max' : max(avgArr),
+                'min' : min(avgArr),
+                'avg' : statistics.mean(avgArr),
+                'stddev' : statistics.pstdev(avgArr)
+            }
+        }
     statsDict = {
-        'model': llmj.RUNNER.model,
-        'articles': ARGS['variation'],
-        'iterations': ARGS['iteration'],
-        'rubrics': rubricArr
+        'model' : llmj.RUNNER.model,
+        'articles' : ARGS['variation'],
+        'iterations' : ARGS['iteration'],
+        'note' : {
+            'stddevAvg' : 'Average standard deviation of repeated evaluations for the same test data. Lower values indicate more consistent scoring.',
+            'stddevMax' : 'Maximum standard deviation among all test data. Lower values indicate the worst-case evaluation inconsistency is smaller.',
+            'testDataInfo.stddev' : 'Standard deviation of the average scores across the test data. Higher values indicate the test data covers a wider range of quality.'
+        },
+        'rubrics' : rubricDict
     }
     with open(in_path, 'w', encoding='utf-8') as f:
         json.dump(statsDict, f, ensure_ascii=False, indent=2)
