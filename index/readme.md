@@ -18,8 +18,8 @@
 	- 2017.09.01 [マーケターの危機？ ITP 時代にアドレサブル広告を活用すべき理由](https://www.synergy-marketing.co.jp/blog/itp_and_addressable-advertising)
 	- 2017.08.09 [アドレサブル広告を支える技術～CRMデータを広告に活用するためのマッチング技術とは](https://www.synergy-marketing.co.jp/blog/technology-of-addressable-advertising)
 - other
-	- [プロダクト等](https://pj-corridor.net)
-	- [プロダクト等ソースコード](https://github.com/nakayama-kazuki)
+	- [プロダクト公開サイト](https://pj-corridor.net)
+	- [リポジトリ](https://github.com/nakayama-kazuki)
 		- 最近のコード例
 			- [リアルタイム残手数計算キューブ](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/cube3d/cube3d-count-3x3x3.html)
 			- [多様な AI リバーシ](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/side-six/side-six-reversi.html)
