@@ -133,7 +133,7 @@ def _retry(in_callback, in_retry_count, in_retry_interval):
             else:
                 time.sleep(in_retry_interval)
 
-def configure(in_specDict, in_prefix='--'):
+def setupArgs(in_specDict, in_prefix='--'):
     showHelp = 'help'
     if f'{in_prefix}{showHelp}' in sys.argv:
         for name, spec in in_specDict.items():

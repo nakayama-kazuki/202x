@@ -12,7 +12,7 @@ try:
 except ImportError:
     llmj.abort_missing_package('openpyxl')
 
-ARGS = llmj.configure({
+ARGS = llmj.setupArgs({
     'source' : {
         'default' : str(llmj.DIR_SOURCE),
         'convert' : lambda in_src: pathlib.Path(in_src),

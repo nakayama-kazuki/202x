@@ -11,7 +11,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 sys.dont_write_bytecode = True
 import llmj
 
-ARGS = llmj.configure({
+ARGS = llmj.setupArgs({
     'variation' : {
         'default' : '30',
         'convert' : lambda in_cnt: int(in_cnt),

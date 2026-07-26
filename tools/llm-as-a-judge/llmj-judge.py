@@ -9,7 +9,7 @@ import pathlib
 sys.dont_write_bytecode = True
 import llmj
 
-ARGS = llmj.configure({
+ARGS = llmj.setupArgs({
     'work' : {
         'default' : str(llmj.DIR_WORK),
         'convert' : lambda in_src: pathlib.Path(in_src),
