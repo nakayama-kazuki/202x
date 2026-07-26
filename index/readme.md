@@ -20,15 +20,16 @@
 - other
 	- [プロダクト等](https://pj-corridor.net)
 	- [プロダクト等ソースコード](https://github.com/nakayama-kazuki)
-		- ex. [リアルタイム残手数計算キューブ](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/cube3d/cube3d-count-3x3x3.html)
-		- ex. [多様な AI リバーシ](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/side-six/side-six-reversi.html)
-		- ex. [棒人間](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/stick-figure/stick-figure.html)
-		- ex. [AI パーソナリティー診断](https://github.com/nakayama-kazuki/202x/tree/main/pj-corridor.net/personalitytest)
-		- ex. [生成 AI 出力評価基盤](https://github.com/nakayama-kazuki/202x/tree/main/tools/llm-as-a-judge)
-		- ex. [DNS パケット解析](https://github.com/nakayama-kazuki/202x/blob/main/DoH/doh.php)
-		- 古い時代のコード
-			- ex. [HTTP スタック自前実装](https://github.com/ichiro-hiroshi/camouflage-code/blob/master/HTTP/chttp.php)
-			- ex. [Super Cookie お試し実装](https://github.com/ichiro-hiroshi/camouflage-code/blob/master/misc/trackman.php)
-			- ex. [疑似リアルタイム通信基盤](https://github.com/ichiro-hiroshi/camouflage-code/blob/master/long-poll/ConnJS.php)
+		- 最近のコード例
+			- [リアルタイム残手数計算キューブ](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/cube3d/cube3d-count-3x3x3.html)
+			- [多様な AI リバーシ](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/side-six/side-six-reversi.html)
+			- [3D 棒人間](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/stick-figure/stick-figure.html)
+			- [AI パーソナリティー診断](https://github.com/nakayama-kazuki/202x/tree/main/pj-corridor.net/personalitytest)
+			- [生成 AI 出力評価基盤](https://github.com/nakayama-kazuki/202x/tree/main/tools/llm-as-a-judge)
+			- [DNS パケット解析](https://github.com/nakayama-kazuki/202x/blob/main/DoH/doh.php)
+		- 古い時代のコード例
+			- [HTTP スタック自前実装](https://github.com/ichiro-hiroshi/camouflage-code/blob/master/HTTP/chttp.php)
+			- [Super Cookie お試し実装](https://github.com/ichiro-hiroshi/camouflage-code/blob/master/misc/trackman.php)
+			- [疑似リアルタイム通信基盤](https://github.com/ichiro-hiroshi/camouflage-code/blob/master/long-poll/ConnJS.php)
 	- [安全確保支援士登録](https://riss.ipa.go.jp/r?r=019480)
 	- [パテント](https://patentfield.com/patents?q=%E4%B8%AD%E5%B1%B1%E4%B8%80%E7%B4%80)
