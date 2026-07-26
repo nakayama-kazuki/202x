@@ -138,6 +138,7 @@ def setupArgs(in_specDict, in_prefix='--'):
     if f'{in_prefix}{showHelp}' in sys.argv:
         for name, spec in in_specDict.items():
             print(f'{in_prefix}{name} : {spec["explain"]} ( default = {spec["default"]} )')
+        finalize() 
         sys.exit(0)
     parmDict = {}
     if any(arg.startswith(in_prefix) for arg in sys.argv):
