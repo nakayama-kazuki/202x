@@ -29,12 +29,10 @@ def abort(in_message=None):
 dotenv.load_dotenv()
 for required in ['ACCESS_KEY_ID', 'SECRET_ACCESS_KEY', 'SESSION_TOKEN', 'GATEWAY_URL']:
     if os.getenv(required) is None:
-        print(f'ERROR : {required} is not defined in ".env".')
-        abort()
+        abort(f'ERROR : {required} is not defined in ".env".')
 
 def abort_missing_package(in_package):
-    print(f'ERROR : exec "python -m pip install {in_package}" at first.')
-    abort()
+    abort(f'ERROR : exec "python -m pip install {in_package}" at first.')
 
 try:
     import boto3
@@ -68,8 +66,7 @@ DIR_SUPPORTS = DIR_ROOT / 'supports'
 
 for path in [DIR_SOURCE, DIR_RUBRIC, DIR_SUPPORTS]:
     if not path.is_dir():
-        print(f'ERROR : can not find "{path.name}" directory.')
-        abort()
+        abort(f'ERROR : can not find "{path.name}" directory.')
 
 DIR_WORK.mkdir(exist_ok=True)
 
@@ -104,6 +101,8 @@ INITIAL_VERSION_NAME = 'prompt-000'
 STATS_FILE_NAME = 'rubric-stats.json'
 
 ORIGINAL_PLACEHOLDER = '{{' + TERM_ALL['ORIGINAL'] + '}}'
+
+ERROR_RETRY_MESSAGE = 'If this error was caused by the LLM or DeepEval, please try running the command again.'
 
 def _find_column(in_sheet, in_name):
     for col in range(1, in_sheet.max_column + 1):
@@ -413,8 +412,7 @@ def _build_judged_dataset(in_path):
 def build_judged_dataset_array(in_path):
     rubricArr = load_rubrics()
     if rubricArr is None:
-        print('ERROR : can not read some json')
-        abort()
+        abort('ERROR : can not read some json')
     judgeCallback = None
     judgedArr = []
     for path in sorted(in_path.glob('*' + SUFFIX_XLS)):

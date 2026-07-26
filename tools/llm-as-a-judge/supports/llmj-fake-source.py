@@ -132,7 +132,7 @@ def generate(in_counter, in_digits):
     elif ARGS['genreMode'] == 'random':
         genre = random.choice(genreArr)
     else:
-        llmj.abort(f'unknown genre mode : {ARGS["genreMode"]}')
+        llmj.abort(f'ERROR : unknown genre mode : {ARGS["genreMode"]}')
     with open(path, 'w', encoding='utf-8') as f:
         f.write(fake_text(genre))
     with lock:
@@ -157,4 +157,7 @@ def main():
     llmj.finalize()
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as err:
+        llmj.abort(f'ERROR : {llmj.ERROR_RETRY_MESSAGE} ({err})')

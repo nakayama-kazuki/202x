@@ -63,8 +63,7 @@ def process_prompt(in_prompt_path):
             with open(src_path, encoding='utf-8') as f:
                 textDict['ORIGINAL'] = f.read()
         except Exception:
-            print(f'ERROR : can not read "{src_path.name}"')
-            llmj.abort()
+            llmj.abort(f'ERROR : can not read "{src_path.name}"')
         prompt = llmj.text_from_template_path(in_prompt_path, {llmj.ORIGINAL_PLACEHOLDER : textDict['ORIGINAL']})
         additionalOrder = ''
         for retry in range(ARGS['postprocRetry']):
@@ -94,5 +93,7 @@ def main():
     llmj.finalize()
 
 if __name__ == '__main__':
-    main()
-
+    try:
+        main()
+    except Exception as err:
+        llmj.abort(f'ERROR : {llmj.ERROR_RETRY_MESSAGE} ({err})')

@@ -80,4 +80,7 @@ def main():
     llmj.finalize()
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as err:
+        llmj.abort(f'ERROR : {llmj.ERROR_RETRY_MESSAGE} ({err})')

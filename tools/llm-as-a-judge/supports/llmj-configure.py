@@ -96,10 +96,16 @@ def main():
     output_path = llmj.DIR_WORK / llmj.STATS_FILE_NAME
     try:
         if ARGS['source'] is None:
-            run(llmj.DIR_SUPPORTS / 'llmj-fake-source.py', '--source', DIR_TEMP_SOURCE, '--textCnt', ARGS['variation'])
+            sourceArr = list(DIR_TEMP_SOURCE.glob('*.txt'))
+            if len(sourceArr) != ARGS['variation']:
+                for path in sourceArr:
+                    path.unlink()
+                run(llmj.DIR_SUPPORTS / 'llmj-fake-source.py', '--source', DIR_TEMP_SOURCE, '--textCnt', ARGS['variation'])
         else:
             shutil.copytree(ARGS['source'], DIR_TEMP_SOURCE, dirs_exist_ok=True)
-        run(llmj.DIR_SUPPORTS / 'llmj-initial.py', '--work', DIR_TEMP_WORK)
+        aaPromptPath = DIR_TEMP_WORK / f'{llmj.INITIAL_VERSION_NAME}{llmj.SUFFIX_TXT}'
+        if not aaPromptPath.exists():
+            run(llmj.DIR_SUPPORTS / 'llmj-initial.py', '--work', DIR_TEMP_WORK)
         run(llmj.DIR_ROOT / 'llmj-generate.py', '--work', DIR_TEMP_WORK, '--source', DIR_TEMP_SOURCE)
         setup_aa_testing(ARGS['iteration'])
         run(llmj.DIR_ROOT / 'llmj-judge.py', '--work', DIR_TEMP_WORK)
@@ -110,4 +116,7 @@ def main():
     llmj.finalize()
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as err:
+        llmj.abort(f'ERROR : {llmj.ERROR_RETRY_MESSAGE} ({err})')
