@@ -1,14 +1,14 @@
 - techblog（2022 年以降）
 	- LINEヤフー Tech Blog
-		- 2024.05.30 [ポンチ絵で変わるオンライン会議](https://lydesign.jp/n/n3aa55611b347)
+		- 2024.05.30 [ポンチ絵で変わるオンライン会議](https://lydesign.jp/n/n3aa55611b347)（[English](https://github.com/nakayama-kazuki/202x/tree/main/power-punch/en)）
 		- 2024.05.15 [そのデータ活用、もういちどチェック！](https://techblog.lycorp.co.jp/ja/20240515a)
 	- yahoo techblog
 		- 2023.07.18 [3rd-party JavaScript のリスク対策に CSP（Content Security Policy）を活用する](https://techblog.yahoo.co.jp/entry/2023071830429434/)
 		- 2022.12.19 [今は、もう、動かない、その User-Agent 文字列](https://techblog.yahoo.co.jp/entry/2022121930384728/)
 		- 2022.08.17 [DNS over HTTPS（DoH）の気になる Web Browser 実装を確認](https://techblog.yahoo.co.jp/entry/2022081730334612/)
 	- techscore blog
-		- 2026.05.13 [そんな時どうする生成 AI 連携アプリ開発](https://blog.techscore.com/entry/2026/05/13/080000_1)
-		- 2025.07.14 [そんな時どうする Three.js アプリ開発](https://blog.techscore.com/entry/threejs/ja)
+		- 2026.05.13 [そんな時どうする生成 AI 連携アプリ開発](https://blog.techscore.com/entry/2026/05/13/080000_1)（[English](https://blog.techscore.com/entry/2026/05/13/080000)）
+		- 2025.07.14 [そんな時どうする Three.js アプリ開発](https://blog.techscore.com/entry/threejs/ja)（[English](https://blog.techscore.com/entry/threejs/en)）
 		- 2023.10.06 [図解 SameSite@Set-Cookie](https://blog.techscore.com/entry/2023/10/06/110100)
 		- 2023.10.06 [図解 Domain@Set-Cookie](https://blog.techscore.com/entry/2023/10/06/110000)
 		- 2023.02.01 [列のテキスト選択 + コピーをしたいのだが](https://blog.techscore.com/entry/2023/02/01/080000)
@@ -20,5 +20,15 @@
 - other
 	- [プロダクト等](https://pj-corridor.net)
 	- [プロダクト等ソースコード](https://github.com/nakayama-kazuki)
+		- ex. [リアルタイム残手数計算キューブ](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/cube3d/cube3d-count-3x3x3.html)
+		- ex. [多様な AI リバーシ](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/side-six/side-six-reversi.html)
+		- ex. [棒人間](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/stick-figure/stick-figure.html)
+		- ex. [AI パーソナリティー診断](https://github.com/nakayama-kazuki/202x/tree/main/pj-corridor.net/personalitytest)
+		- ex. [生成 AI 出力評価基盤](https://github.com/nakayama-kazuki/202x/tree/main/tools/llm-as-a-judge)
+		- ex. [DNS パケット解析](https://github.com/nakayama-kazuki/202x/blob/main/DoH/doh.php)
+		- 古い時代のコード
+			- ex. [HTTP スタック自前実装](https://github.com/ichiro-hiroshi/camouflage-code/blob/master/HTTP/chttp.php)
+			- ex. [Super Cookie お試し実装](https://github.com/ichiro-hiroshi/camouflage-code/blob/master/misc/trackman.php)
+			- ex. [疑似リアルタイム通信基盤](https://github.com/ichiro-hiroshi/camouflage-code/blob/master/long-poll/ConnJS.php)
 	- [安全確保支援士登録](https://riss.ipa.go.jp/r?r=019480)
 	- [パテント](https://patentfield.com/patents?q=%E4%B8%AD%E5%B1%B1%E4%B8%80%E7%B4%80)
