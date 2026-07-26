@@ -77,7 +77,7 @@ def collect_statistics(in_path):
         }
     statsDict = {
         'model' : llmj.RUNNER.model,
-        'articles' : ARGS['variation'],
+        'articles' : len(judgedDatasetArr[0]['articleArr']),
         'iterations' : ARGS['iteration'],
         'note' : {
             'stddevAvg' : 'Average standard deviation of repeated evaluations for the same test data. Lower values indicate more consistent scoring.',
