@@ -4,11 +4,6 @@ import sys
 import json
 import pathlib
 
-try:
-    import langdetect
-except ImportError:
-    llmj.abort_missing_package('langdetect')
-
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 sys.dont_write_bytecode = True
 import llmj
@@ -23,7 +18,7 @@ ARGS = llmj.setupArgs({
 
 def build_prompt(in_rubricArr):
     try:
-        rubricLang = langdetect.detect(json.dumps(in_rubricArr, ensure_ascii=False))
+        rubricLang = llmj.langdetect.detect(json.dumps(in_rubricArr, ensure_ascii=False))
     except Exception:
         rubricLang = 'en'
     template = llmj.DIR_SUPPORTS / 'template-initial-prompt.txt'

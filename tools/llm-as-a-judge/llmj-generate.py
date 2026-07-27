@@ -7,11 +7,6 @@ import importlib.util
 sys.dont_write_bytecode = True
 import llmj
 
-try:
-    import openpyxl
-except ImportError:
-    llmj.abort_missing_package('openpyxl')
-
 ARGS = llmj.setupArgs({
     'source' : {
         'default' : str(llmj.DIR_SOURCE),
@@ -45,9 +40,9 @@ def process_prompt(in_prompt_path):
     xls = in_prompt_path.name.removesuffix(llmj.SUFFIX_TXT) + llmj.SUFFIX_XLS
     xls_path = in_prompt_path.with_name(xls)
     if xls_path.exists():
-        workbook = openpyxl.load_workbook(xls_path)
+        workbook = llmj.openpyxl.load_workbook(xls_path)
     else:
-        workbook = openpyxl.Workbook()
+        workbook = llmj.openpyxl.Workbook()
     sheet = workbook.active
     colDict = {}
     for key in llmj.TERM_GEN:

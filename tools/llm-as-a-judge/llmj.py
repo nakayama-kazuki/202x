@@ -4,10 +4,35 @@ import os
 import sys
 import time
 import json
-import dotenv
 import shutil
 import pathlib
+import importlib
 import concurrent.futures
+
+dependencies = {
+    'boto3' : {},
+    'dotenv' : {
+        'pkg' : 'python-dotenv'
+    },
+    'openpyxl' : {},
+    'langdetect' : {},
+    'GEval' : {
+        'pkg' : 'deepeval',
+        'src' : 'deepeval.metrics'
+    },
+    'LLMTestCase' : {
+        'pkg' : 'deepeval',
+        'src' : 'deepeval.test_case'
+    },
+    'SingleTurnParams' : {
+        'pkg' : 'deepeval',
+        'src' : 'deepeval.test_case'
+    },
+    'DeepEvalBaseLLM' : {
+        'pkg' : 'deepeval',
+        'src' : 'deepeval.models'
+    }
+}
 
 def _create_finalize():
     start_time = time.time()
@@ -26,37 +51,16 @@ def abort(in_message=None):
     finalize()
     sys.exit(1)
 
-dotenv.load_dotenv()
-for required in ['ACCESS_KEY_ID', 'SECRET_ACCESS_KEY', 'SESSION_TOKEN', 'GATEWAY_URL']:
-    if os.getenv(required) is None:
-        abort(f'ERROR : {required} is not defined in ".env".')
-
-def abort_missing_package(in_package):
-    abort(f'ERROR : exec "python -m pip install {in_package}" at first.')
-
-try:
-    import boto3
-except ImportError:
-    abort_missing_package('boto3')
-
-try:
-    import openpyxl
-except ImportError:
-    abort_missing_package('openpyxl')
-
-try:
-    import langdetect
-except ImportError:
-    abort_missing_package('langdetect')
-
-try:
-    from deepeval.metrics import GEval
-    from deepeval.test_case import LLMTestCase
-    from deepeval.test_case import SingleTurnParams
-    from deepeval.models import DeepEvalBaseLLM
-    os.environ['DEEPEVAL_TELEMETRY_OPT_OUT'] = 'YES'
-except ImportError:
-    abort_missing_package('deepeval')
+for dependency, info in dependencies.items():
+    try:
+        if 'src' in info:
+            module = importlib.import_module(info['src'])
+            globals()[dependency] = getattr(module, dependency)
+        else:
+            globals()[dependency] = importlib.import_module(dependency)
+    except ImportError:
+        packageName = info.get('pkg', dependency)
+        abort(f'ERROR : exec "$ python -m pip install {packageName}" at first.')
 
 DIR_ROOT = pathlib.Path(__file__).resolve().parent
 DIR_WORK = DIR_ROOT / 'work'
