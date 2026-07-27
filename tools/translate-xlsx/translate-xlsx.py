@@ -4,20 +4,44 @@ import os
 import sys
 import time
 import json
-import boto3
 import shutil
-import dotenv
 import pathlib
-import openpyxl
+import importlib
 
-MAXTOKENS = 4096
-TRANSLATE_TO = 'Japanese'
+def _create_finalize():
+    start_time = time.time()
+    def _finalize():
+        for name in []:
+            shutil.rmtree(pathlib.Path.cwd() / name, ignore_errors=True)
+        elapsed = time.time() - start_time
+        print(f'INFO : completed {pathlib.Path(sys.argv[0]).name} ( elapsed : {elapsed:.1f} sec )')
+    return _finalize
+
+finalize = _create_finalize()
+
+SHOWHELP = 'help'
+
+def abort(in_message):
+    print(in_message)
+    print(f'Use "--{SHOWHELP}" to check the available parameters.')
+    finalize()
+    sys.exit(1)
+
+for importName, packageName in [
+    ('boto3', 'boto3'),
+    ('dotenv', 'python-dotenv'),
+    ('openpyxl', 'openpyxl')
+]:
+    try:
+        globals()[importName] = importlib.import_module(importName)
+    except ImportError:
+        abort(f'ERROR : exec "$ python -m pip install {packageName}" at first.')
 
 def configure(in_specDict, in_prefix='--'):
-    showHelp = 'help'
-    if f'{in_prefix}{showHelp}' in sys.argv:
+    if f'{in_prefix}{SHOWHELP}' in sys.argv:
         for name, spec in in_specDict.items():
             print(f'{in_prefix}{name} : {spec["explain"]} ( default = {spec["default"]} )')
+        finalize()
         sys.exit(0)
     parmDict = {}
     if any(arg.startswith(in_prefix) for arg in sys.argv):
@@ -51,25 +75,17 @@ ARGS = configure({
     'range' : {
         'default' : 'A:XFD',
         'explain' : 'Cell range to translate (for example, "F:E"). Defaults to the entire worksheet.'
+    },
+    'maxtokens' : {
+        'default' : '4096',
+        'convert' : lambda in_tokens: int(in_tokens),
+        'explain' : 'Maximum number of output tokens for each translation request.'
+    },
+    'lang' : {
+        'default' : 'Japanese',
+        'explain' : 'Target language for translation.'
     }
 })
-
-def abort(in_message):
-    print(in_message)
-    print('Use "--help" to check the available parameters.')
-    finalize()
-    sys.exit(1)
-
-def _create_finalize():
-    start_time = time.time()
-    def _finalize():
-        for name in []:
-            shutil.rmtree(pathlib.Path.cwd() / name, ignore_errors=True)
-        elapsed = time.time() - start_time
-        print(f'INFO : completed {pathlib.Path(sys.argv[0]).name} ( elapsed : {elapsed:.1f} sec )')
-    return _finalize
-
-finalize = _create_finalize()
 
 def _retry(in_callback, in_retry_count, in_retry_interval):
     for retry in range(in_retry_count):
@@ -89,7 +105,7 @@ class cLLMRunner:
         self,
         in_model='us.anthropic.claude-sonnet-4-6',
         in_region='us-east-1',
-        in_maxTokens=MAXTOKENS,
+        in_maxTokens=ARGS['maxtokens'],
         in_temperature=0,
         in_retryCount=3,
         in_retryInterval=5
@@ -268,7 +284,7 @@ class cBulkTranslater:
         return self._targetBufArr
 
 gRunner = cLLMRunner()
-gTranslater = cBulkTranslater(gRunner.toText, TRANSLATE_TO, MAXTOKENS)
+gTranslater = cBulkTranslater(gRunner.toText, ARGS['lang'], ARGS['maxtokens'])
 
 if ARGS['xlsx'] is None:
     abort('ERROR : parameter is required.')
