@@ -6,7 +6,7 @@ __RUBRICS__
 
 ## Analysis result
 
-__FEEDBACK__
+__TARGETS__
 
 ## Gold dataset examples
 

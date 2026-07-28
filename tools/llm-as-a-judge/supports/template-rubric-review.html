@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset='utf-8'>
-<title>LLMJ Gold Review</title>
+<title>LLMJ Rubric Review</title>
 <style>
 
 body {
@@ -59,14 +59,17 @@ th {
 </style>
 </head>
 <body>
-<h1>LLMJ Gold Review Report</h1>
+<h1>LLMJ Rubric Review Report</h1>
 <div id='i1st'></div>
 <div id='i2nd'></div>
+<div id='i3rd'></div>
 <script>
 
 const JUDGED = __JUDGED__;
 
-const FEEDBACK = __FEEDBACK__;
+const GOLD_GAP = __GOLD_GAP__;
+
+const RUBRIC_ISSUE = __RUBRIC_ISSUE__;
 
 function escapeHtml(in_text) {
 	const replaceArr = [
@@ -135,7 +138,7 @@ function buildSection(in_title, in_headerArr, in_rowArr) {
 document.getElementById('i1st').innerHTML = buildSection(
 	'Rubric Suggestions',
 	['Rubric', 'Reason', 'Proposal'],
-	FEEDBACK.rubrics.map(in_rubric => [
+	GOLD_GAP.rubrics.map(in_rubric => [
 		'<div>'
 			+ escapeHtml(in_rubric.name)
 			+ buildScoreTable(
@@ -157,7 +160,7 @@ document.getElementById('i1st').innerHTML = buildSection(
 document.getElementById('i2nd').innerHTML = buildSection(
 	'Gold Dataset Suggestions',
 	['Article', 'Reason', 'Proposal'],
-	FEEDBACK.gold.map(in_gold => [
+	GOLD_GAP.gold.map(in_gold => [
 		'<div>'
 			+ '#' + in_gold.articleIndex
 			+ buildScoreTable(
@@ -171,6 +174,23 @@ document.getElementById('i2nd').innerHTML = buildSection(
 		'<div class="reason">' + escapeHtml(in_gold.reason) + '</div>',
 		'<div class="proposal">' + escapeHtml(in_gold.proposal) + '</div>'
 	])
+);
+
+document.getElementById('i3rd').innerHTML = buildSection(
+	'Rubric Issues',
+	['Type', 'Rubrics', 'Reason'],
+	[
+		...RUBRIC_ISSUE.conflicts.map(in_issue => [
+			'Conflict',
+			'<div class="proposal">' + escapeHtml(in_issue.rubrics.join(', ')) + '</div>',
+			'<div class="reason">' + escapeHtml(in_issue.note) + '</div>'
+		]),
+		...RUBRIC_ISSUE.overlaps.map(in_issue => [
+			'Overlap',
+			'<div class="proposal">' + escapeHtml(in_issue.rubrics.join(', ')) + '</div>',
+			'<div class="reason">' + escapeHtml(in_issue.note) + '</div>'
+		])
+	]
 );
 
 </script>

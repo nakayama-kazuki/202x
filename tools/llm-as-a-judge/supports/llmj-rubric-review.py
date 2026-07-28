@@ -17,7 +17,7 @@ ARGS = llmj.setupArgs({
     }
 })
 
-DIR_TEMP = llmj.DIR_ROOT / '.temp-for-gold-review'
+DIR_TEMP = llmj.DIR_ROOT / '.temp-for-rubric-review'
 
 def filter_score(in_articleArr):
     filteredArr = copy.deepcopy(in_articleArr)
@@ -40,30 +40,37 @@ def main():
     articleArr = judgedArr[goldDatasetIx]['articleArr']
     filteredArr = filter_score(articleArr)
     if len(filteredArr) > 0:
+        rubricArr = llmj.load_rubrics()
         print(f'INFO : checking score')
-        template = llmj.DIR_SUPPORTS / 'template-gold-review-1.txt'
+        template = llmj.DIR_SUPPORTS / 'template-rubric-review-1.txt'
         goldReview1Arr = llmj.llm_processed_json(template, {
-            '__JSON__' : filteredArr
+            '__JUDGED__' : filteredArr
         })
         # print(goldReview1Arr)
         print(f'INFO : making proposal')
         goldArr = []
         for gold in goldReview1Arr['gold']:
             goldArr.append(articleArr[gold['articleIndex']])
-        template = llmj.DIR_SUPPORTS / 'template-gold-review-2.txt'
+        template = llmj.DIR_SUPPORTS / 'template-rubric-review-2.txt'
         goldReview2Arr = llmj.llm_processed_json(template, {
-            '__FEEDBACK__': goldReview1Arr,
-            '__RUBRICS__': llmj.load_rubrics(),
+            '__TARGETS__': goldReview1Arr,
+            '__RUBRICS__': rubricArr,
             '__GOLDDATA__': goldArr
         })
         # print(goldReview2Arr)
-        out_path = ARGS['work'] / 'gold-review.html'
+        template = llmj.DIR_SUPPORTS / 'template-rubric-review-3.txt'
+        goldReview3Arr = llmj.llm_processed_json(template, {
+            '__RUBRICS__': rubricArr
+        })
+        # print(goldReview3Arr)
+        out_path = ARGS['work'] / 'rubric-review.html'
         print(f'INFO : generated {out_path.name}')
-        template = llmj.DIR_SUPPORTS / 'template-gold-review.html'
+        template = llmj.DIR_SUPPORTS / 'template-rubric-review.html'
         with open(out_path, 'w', encoding='utf-8') as f:
             f.write(llmj.text_from_template_path(template, {
                 '__JUDGED__' : judgedArr,
-                '__FEEDBACK__' : goldReview2Arr
+                '__GOLD_GAP__' : goldReview2Arr,
+                '__RUBRIC_ISSUE__' : goldReview3Arr
             }))
     llmj.finalize()
 

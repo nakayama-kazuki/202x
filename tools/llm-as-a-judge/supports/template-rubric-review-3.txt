@@ -1,0 +1,56 @@
+You are reviewing a set of evaluation rubrics for an LLM-as-a-Judge system.
+Your task is to review the input (rubrics themselves), not any generated outputs.
+
+[Requirements]
+
+- Detect the following 2 issues:
+  1. Conflict
+    - Two or more rubrics define incompatible evaluation criteria.
+    - Applying one rubric as written would likely lead to judgments that conflict with another.
+  2. Overlap
+    - Two or more rubrics evaluate substantially the same quality.
+    - One rubric is effectively a subset of another.
+    - Different names describing nearly identical evaluation criteria should also be reported.
+    - Ignore slight conceptual overlap. Report only overlaps that are likely to reduce evaluation independence.
+- Write "note"(defined in output JSON) in the same language as the rubric definitions.
+- Return only JSON.
+- Do not use markdown.
+- Do not wrap the response in code fences.
+
+[Expected]
+
+{
+    "conflicts" : [
+        {
+            "rubrics" : [
+                "<rubric name>",
+                "<rubric name>",
+                ...
+            ],
+            "note" : "Explain the conflict (which + why)."
+        },
+        ...
+    ],
+    "overlaps": [
+        {
+            "rubrics": [
+                "<rubric name>",
+                "<rubric name>",
+                ...
+            ],
+            "note": "Explain the overlap (which + why)."
+        },
+        ...
+    ]
+}
+
+If no issues are found, return empty arrays.
+
+{
+    "conflictArr" : [],
+    "overlapArr": []
+}
+
+[Input]
+
+__RUBRICS__

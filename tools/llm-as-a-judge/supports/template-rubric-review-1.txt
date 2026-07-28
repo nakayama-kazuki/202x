@@ -47,4 +47,4 @@ Pay attention to patterns including, but not limited to:
 
 [Input]
 
-__JSON__
+__JUDGED__

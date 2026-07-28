@@ -62,6 +62,8 @@ for dependency, info in dependencies.items():
         packageName = info.get('pkg', dependency)
         abort(f'ERROR : exec "$ python -m pip install {packageName}" at first.')
 
+os.environ['DEEPEVAL_TELEMETRY_OPT_OUT'] = 'YES'
+
 DIR_ROOT = pathlib.Path(__file__).resolve().parent
 DIR_WORK = DIR_ROOT / 'work'
 DIR_SOURCE = DIR_ROOT / 'source'
