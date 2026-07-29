@@ -108,7 +108,7 @@ STATS_FILE_NAME = 'rubric-stats.json'
 
 ORIGINAL_PLACEHOLDER = '{{' + TERM_ALL['ORIGINAL'] + '}}'
 
-ERROR_RETRY_MESSAGE = 'If this error was caused by the LLM or DeepEval, please try running the command again.'
+ERROR_RETRY_MESSAGE = 'If this error was caused by the LLM or DeepEval, please try running the command again. Also check whether your PAT has expired.'
 
 def _find_column(in_sheet, in_name):
     for col in range(1, in_sheet.max_column + 1):

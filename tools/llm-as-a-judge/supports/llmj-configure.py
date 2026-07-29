@@ -119,4 +119,4 @@ if __name__ == '__main__':
     try:
         main()
     except Exception as err:
-        llmj.abort(f'ERROR : {llmj.ERROR_RETRY_MESSAGE} ({err})')
+        llmj.abort(f'ERROR : {err} ({llmj.ERROR_RETRY_MESSAGE})')

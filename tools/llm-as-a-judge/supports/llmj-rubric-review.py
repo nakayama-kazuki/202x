@@ -34,48 +34,50 @@ def main():
     shutil.copytree(ARGS['work'], DIR_TEMP)
     judgedArr = llmj.build_judged_dataset_array(DIR_TEMP)
     shutil.rmtree(DIR_TEMP, ignore_errors=True)
+    gapAnalysis = {"rubrics" : [], "gold" : []}
     goldDatasetIx = 0
-    if len(judgedArr) > 1:
-        print(f'WARN : {len(judgedArr)} judged datasets found. Using {judgedArr[goldDatasetIx]["name"]} as the gold dataset.')
-    articleArr = judgedArr[goldDatasetIx]['articleArr']
-    filteredArr = filter_score(articleArr)
-    if len(filteredArr) > 0:
-        rubricArr = llmj.load_rubrics()
+    rubricArr = llmj.load_rubrics()
+    if len(judgedArr) > 0:
+        articleArr = judgedArr[goldDatasetIx]['articleArr']
+        if len(judgedArr) > 1:
+            print(f'WARN : {len(judgedArr)} judged datasets found. Using {judgedArr[goldDatasetIx]["name"]} as the gold dataset.')
+        filteredArr = filter_score(articleArr)
         print(f'INFO : checking score')
         template = llmj.DIR_SUPPORTS / 'template-rubric-review-1.txt'
-        goldReview1Arr = llmj.llm_processed_json(template, {
+        gapTargetArr = llmj.llm_processed_json(template, {
             '__JUDGED__' : filteredArr
         })
-        # print(goldReview1Arr)
+        # print(gapTargetArr)
         print(f'INFO : making proposal')
-        goldArr = []
-        for gold in goldReview1Arr['gold']:
-            goldArr.append(articleArr[gold['articleIndex']])
+        goldArticleArr = []
+        for gold in gapTargetArr['gold']:
+            goldArticleArr.append(articleArr[gold['articleIndex']])
         template = llmj.DIR_SUPPORTS / 'template-rubric-review-2.txt'
-        goldReview2Arr = llmj.llm_processed_json(template, {
-            '__TARGETS__': goldReview1Arr,
+        gapAnalysis = llmj.llm_processed_json(template, {
+            '__TARGETS__': gapTargetArr,
             '__RUBRICS__': rubricArr,
-            '__GOLDDATA__': goldArr
+            '__GOLDDATA__': goldArticleArr
         })
-        # print(goldReview2Arr)
-        template = llmj.DIR_SUPPORTS / 'template-rubric-review-3.txt'
-        goldReview3Arr = llmj.llm_processed_json(template, {
-            '__RUBRICS__': rubricArr
-        })
-        # print(goldReview3Arr)
-        out_path = ARGS['work'] / 'rubric-review.html'
-        print(f'INFO : generated {out_path.name}')
-        template = llmj.DIR_SUPPORTS / 'template-rubric-review.html'
-        with open(out_path, 'w', encoding='utf-8') as f:
-            f.write(llmj.text_from_template_path(template, {
-                '__JUDGED__' : judgedArr,
-                '__GOLD_GAP__' : goldReview2Arr,
-                '__RUBRIC_ISSUE__' : goldReview3Arr
-            }))
+        # print(gapAnalysis)
+    print(f'INFO : reviewing rubric')
+    template = llmj.DIR_SUPPORTS / 'template-rubric-review-3.txt'
+    rubricIssueArr = llmj.llm_processed_json(template, {
+        '__RUBRICS__': rubricArr
+    })
+    # print(rubricIssueArr)
+    out_path = ARGS['work'] / 'rubric-review.html'
+    print(f'INFO : generated {out_path.name}')
+    template = llmj.DIR_SUPPORTS / 'template-rubric-review.html'
+    with open(out_path, 'w', encoding='utf-8') as f:
+        f.write(llmj.text_from_template_path(template, {
+            '__JUDGED__' : judgedArr,
+            '__GOLD_GAP__' : gapAnalysis,
+            '__RUBRIC_ISSUE__' : rubricIssueArr
+        }))
     llmj.finalize()
 
 if __name__ == '__main__':
     try:
         main()
     except Exception as err:
-        llmj.abort(f'ERROR : {llmj.ERROR_RETRY_MESSAGE} ({err})')
+        llmj.abort(f'ERROR : {err} ({llmj.ERROR_RETRY_MESSAGE})')

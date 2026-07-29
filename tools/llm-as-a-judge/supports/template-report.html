@@ -337,7 +337,8 @@ function updateThresholdStyle(in_threshold) {
 	fragment += '</div>';
 	gJudgedArr.forEach(in_ver => {
 		fragment += '<div class="version">';
-		fragment += `<h3>${escapeHtml(in_ver.name)}</h3>`;
+		fragment += '<h3><label><input type="checkbox" checked class="runCheckbox">' + escapeHtml(in_ver.name) + '</label></h3>';
+		fragment += '<div class="container">';
 		in_ver.articleArr.forEach((in_art, in_ix) => {
 			fragment += '<div class="article"';
 			fragment += ' id="article-' + in_ver.name + '-' + in_ix + '"';
@@ -387,8 +388,20 @@ function updateThresholdStyle(in_threshold) {
 			fragment += '</div>';
 		});
 		fragment += '</div>';
+		fragment += '</div>';
 	});
 	document.getElementById('report').innerHTML = fragment;
+	const runCheckboxArr = document.getElementsByClassName('runCheckbox');
+	for (const checkbox of runCheckboxArr) {
+		checkbox.addEventListener('change', in_ev => {
+			const container = in_ev.target.closest('.version').querySelector('.container');
+			if (container.style.display === 'none') {
+				container.style.display = '';
+			} else {
+				container.style.display = 'none';
+			}
+		});
+	}
 	document.querySelectorAll('th.sortable').forEach(th => {
 		th.addEventListener('click', () => sortTable(th.dataset.table, Number(th.dataset.col)));
 	});
