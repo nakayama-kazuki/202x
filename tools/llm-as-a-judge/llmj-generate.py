@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import sys
+import json
+import random
 import pathlib
 import importlib.util
 
@@ -36,6 +38,18 @@ def load_postproc(in_prompt_path):
         llmj.abort(f'ERROR : "postproc" is not defined in "{path.name}"')
     return module.postproc
 
+def get_meta(in_path):
+    meta_path = in_path.with_suffix(llmj.SUFFIX_META)
+    if not meta_path.exists():
+        return llmj.WITHOUT_META_MESSAGE
+    with open(meta_path, encoding='utf-8') as f:
+        metainfo = json.load(f)
+    if isinstance(metainfo, dict):
+        for key, value in metainfo.items():
+            if isinstance(value, list):
+                metainfo[key] = random.choice(value)
+    return json.dumps(metainfo, ensure_ascii=False, indent=2)
+
 def process_prompt(in_prompt_path):
     xls = in_prompt_path.name.removesuffix(llmj.SUFFIX_TXT) + llmj.SUFFIX_XLS
     xls_path = in_prompt_path.with_name(xls)
@@ -59,7 +73,9 @@ def process_prompt(in_prompt_path):
                 textDict['ORIGINAL'] = f.read()
         except Exception:
             llmj.abort(f'ERROR : can not read "{src_path.name}"')
-        prompt = llmj.text_from_template_path(in_prompt_path, {llmj.ORIGINAL_PLACEHOLDER : textDict['ORIGINAL']})
+        prompt = llmj.text_from_template_path(in_prompt_path, {llmj.PLACEHOLDER_ORIGINAL : textDict['ORIGINAL']})
+        if llmj.PLACEHOLDER_METADATA in prompt:
+            prompt = llmj.text_from_template_text(prompt, {llmj.PLACEHOLDER_METADATA : get_meta(src_path)})
         additionalOrder = ''
         for retry in range(ARGS['postprocRetry']):
             generated = llmj.RUNNER.toText(prompt + additionalOrder)

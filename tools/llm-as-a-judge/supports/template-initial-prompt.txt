@@ -1,25 +1,45 @@
 You are an expert prompt engineer.
+Please generate a GENERATING-PROMPT that transforms the ORIGINAL-TEXT into a GENERATED-TEXT.
 
-Please generate a GENERATED-PROMPT that transforms the ORIGINAL-TEXT into a GENERATED-TEXT.
-The GENERATED-PROMPT must be written in "__RUBRICS_LANG__" (ISO 639-1).
-The GENERATED-PROMPT must ensure that the GENERATED-TEXT satisfies the following [Rubrics].
+    ORIGINAL-TEXT   METADATA
+        |               |
+        +-------+-------+
+                |
+                v
+    GENERATING-PROMPT (generate this)
+                |
+                v
+    GENERATED-TEXT (must satisfy the following [Rubrics])
 
-[Relationship]
+The GENERATING-PROMPT must be written in "__RUBRICS_LANG__" (ISO 639-1).
+The GENERATED-TEXT produced by the GENERATING-PROMPT must satisfy the following [Rubrics].
 
-  ORIGINAL-TEXT
-      |
-      v
-  GENERATED-PROMPT (this is what you must generate)
-      |
-      v
-  GENERATED-TEXT (compliant with the following [Rubrics])
+[Structure]
 
-Use __PLACEHOLDER__ only where the ORIGINAL-TEXT itself needs to be inserted into the GENERATED-PROMPT,
-since the ORIGINAL-TEXT will be embedded into the GENERATED-PROMPT during post-processing.
-In all other instructions, refer to the ORIGINAL-TEXT using natural language.
+Use the following structure for the GENERATING-PROMPT:
+Do not rename the section names in the input section.
 
-Assume that the GENERATED-PROMPT will be maintained by humans after generation.
-Therefore, produce a well-structured, easy-to-maintain GENERATED-PROMPT with clear organization and high readability.
+    > ## task
+    >
+    > Describe the task.
+    >
+    > ## requirements
+    >
+    > Requirements for satisfying the following [Rubrics].
+    >
+    > ## input
+    >
+    > ### __SECTION_ORIGINAL__
+    >
+    > __PLACEHOLDER_ORIGINAL__
+    >
+    > ### __SECTION_METADATA__
+    >
+    > __PLACEHOLDER_METADATA__
+
+Only the input section should contain placeholders.
+They will be replaced with the ORIGINAL-TEXT and its metadata during post-processing.
+Elsewhere, refer to them using natural language.
 
 [Rubrics]
 
@@ -27,6 +47,6 @@ __JSON__
 
 [Note]
 
-Return only the GENERATED-PROMPT.
+Return only the GENERATING-PROMPT.
 Do not explain your reasoning.
 Do not wrap the response in code fences.

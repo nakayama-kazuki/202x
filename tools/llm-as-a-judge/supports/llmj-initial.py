@@ -24,7 +24,10 @@ def build_prompt(in_rubricArr):
     template = llmj.DIR_SUPPORTS / 'template-initial-prompt.txt'
     return llmj.text_from_template_path(template, {
         '__JSON__' : in_rubricArr,
-        '__PLACEHOLDER__' : llmj.ORIGINAL_PLACEHOLDER,
+        '__SECTION_ORIGINAL__' : llmj.SECTION_ORIGINAL,
+        '__SECTION_METADATA__' : llmj.SECTION_METADATA,
+        '__PLACEHOLDER_ORIGINAL__' : llmj.PLACEHOLDER_ORIGINAL,
+        '__PLACEHOLDER_METADATA__' : llmj.PLACEHOLDER_METADATA,
         '__RUBRICS_LANG__' : rubricLang
     })
 

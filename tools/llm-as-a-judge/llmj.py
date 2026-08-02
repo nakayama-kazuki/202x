@@ -100,13 +100,21 @@ TERM_ALL = TERM_GEN | TERM_JUD
 
 # prompt
 SUFFIX_TXT = '.txt'
+# metadata
+SUFFIX_META = '.meta.json'
 # generated / judged
 SUFFIX_XLS = '.xlsx'
 
 INITIAL_VERSION_NAME = 'prompt-000'
 STATS_FILE_NAME = 'rubric-stats.json'
 
-ORIGINAL_PLACEHOLDER = '{{' + TERM_ALL['ORIGINAL'] + '}}'
+SECTION_ORIGINAL = TERM_ALL['ORIGINAL']
+SECTION_METADATA = 'metadata'
+
+PLACEHOLDER_ORIGINAL = '{{' + SECTION_ORIGINAL + '}}'
+PLACEHOLDER_METADATA = '{{' + SECTION_METADATA + '}}'
+
+WITHOUT_META_MESSAGE = 'No metadata is available. Please follow the requirements using only ' + SECTION_ORIGINAL + ' section.'
 
 ERROR_RETRY_MESSAGE = 'If this error was caused by the LLM or DeepEval, please try running the command again. Also check whether your PAT has expired.'
 
