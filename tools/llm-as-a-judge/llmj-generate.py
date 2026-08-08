@@ -44,10 +44,19 @@ def get_meta(in_path):
         return llmj.WITHOUT_META_MESSAGE
     with open(meta_path, encoding='utf-8') as f:
         metainfo = json.load(f)
+    def _choose(in_dict):
+        for key, value in list(in_dict.items()):
+            if key.endswith(llmj.RANDOM_IN_META):
+                try:
+                    name = key[:-len(llmj.RANDOM_IN_META)]
+                    in_dict[name] = random.choice(value)
+                    del in_dict[key]
+                except Exception:
+                    llmj.abort(f'ERROR : "{key}" in "{meta_path.name}" must be a non-empty list.')
+            elif isinstance(value, dict):
+                _choose(value)
     if isinstance(metainfo, dict):
-        for key, value in metainfo.items():
-            if isinstance(value, list):
-                metainfo[key] = random.choice(value)
+        _choose(metainfo)
     return json.dumps(metainfo, ensure_ascii=False, indent=2)
 
 def process_prompt(in_prompt_path):
@@ -59,8 +68,8 @@ def process_prompt(in_prompt_path):
         workbook = llmj.openpyxl.Workbook()
     sheet = workbook.active
     colDict = {}
-    for key in llmj.TERM_GEN:
-        colDict[key] = llmj.find_append_column(sheet, llmj.TERM_GEN[key])
+    for key in llmj.COL_GEN:
+        colDict[key] = llmj.find_append_column(sheet, llmj.COL_GEN[key])
     sourceArr = sorted(ARGS['source'].glob('*.txt'))
     postproc = load_postproc(in_prompt_path)
     for row, src_path in enumerate(sourceArr, start=2):
@@ -74,8 +83,10 @@ def process_prompt(in_prompt_path):
         except Exception:
             llmj.abort(f'ERROR : can not read "{src_path.name}"')
         prompt = llmj.text_from_template_path(in_prompt_path, {llmj.PLACEHOLDER_ORIGINAL : textDict['ORIGINAL']})
+        metadata = get_meta(src_path)
+        textDict['METADATA'] = metadata
         if llmj.PLACEHOLDER_METADATA in prompt:
-            prompt = llmj.text_from_template_text(prompt, {llmj.PLACEHOLDER_METADATA : get_meta(src_path)})
+            prompt = llmj.text_from_template_text(prompt, {llmj.PLACEHOLDER_METADATA : metadata})
         additionalOrder = ''
         for retry in range(ARGS['postprocRetry']):
             generated = llmj.RUNNER.toText(prompt + additionalOrder)
@@ -93,7 +104,7 @@ def process_prompt(in_prompt_path):
             print(f'WARN : retrying {retry + 1}/{ARGS["postprocRetry"]} because postproc returned None for "{generated}"')
         else:
             llmj.abort(f'ERROR : postproc failed after {ARGS["postprocRetry"]} retries')
-        for key in llmj.TERM_GEN:
+        for key in llmj.COL_GEN:
             sheet.cell(row, colDict[key]).value = textDict[key]
         workbook.save(xls_path)
     print(f'INFO : generated {xls_path.name}')

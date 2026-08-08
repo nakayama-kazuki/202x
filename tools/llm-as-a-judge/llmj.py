@@ -86,17 +86,18 @@ _APOSTROPHE = {
     'FULLW' : chr(0xFF07)
 }
 
-TERM_GEN = {
+COL_GEN = {
     'ORIGINAL' : 'original',
+    'METADATA' : 'metadata',
     'GENERATED' : 'generated',
 }
 
-TERM_JUD = {
+COL_JUD = {
     'AVERAGE' : 'average',
     'RESULTS' : 'results'
 }
 
-TERM_ALL = TERM_GEN | TERM_JUD
+COL_ALL = COL_GEN | COL_JUD
 
 # prompt
 SUFFIX_TXT = '.txt'
@@ -105,11 +106,13 @@ SUFFIX_META = '.meta.json'
 # generated / judged
 SUFFIX_XLS = '.xlsx'
 
+RANDOM_IN_META = "@random"
+
 INITIAL_VERSION_NAME = 'prompt-000'
 STATS_FILE_NAME = 'rubric-stats.json'
 
-SECTION_ORIGINAL = TERM_ALL['ORIGINAL']
-SECTION_METADATA = 'metadata'
+SECTION_ORIGINAL = COL_ALL['ORIGINAL']
+SECTION_METADATA = COL_ALL['METADATA']
 
 PLACEHOLDER_ORIGINAL = '{{' + SECTION_ORIGINAL + '}}'
 PLACEHOLDER_METADATA = '{{' + SECTION_METADATA + '}}'
@@ -307,15 +310,11 @@ class _GatewayLLM(DeepEvalBaseLLM):
         return self.generate(in_prompt, in_schema)
 
 def _create_judge(in_rubricArr):
-    def evaluate(in_rubric, in_testcase, in_high_score=0.8):
+    def evaluate(in_rubric, in_testcase, in_useContext, in_high_score=0.8):
         metric = GEval(
             name=in_rubric['name'],
-            # criteria=in_rubric['criteria'],
             evaluation_steps=in_rubric['evaluation_steps'],
-            evaluation_params=[
-                SingleTurnParams.INPUT,
-                SingleTurnParams.ACTUAL_OUTPUT
-            ],
+            evaluation_params=[SingleTurnParams.INPUT, SingleTurnParams.ACTUAL_OUTPUT] + ([SingleTurnParams.CONTEXT] if in_useContext else []),
             async_mode=False,
             model=_GatewayLLM(RUNNER)
         )
@@ -327,25 +326,29 @@ def _create_judge(in_rubricArr):
         if resDict['score'] >= in_high_score:
             resDict['reason'] = ''
         return resDict
-    def judge(in_original, in_generated):
+    def judge(in_original, in_generated, in_contextArr=None):
+        if in_contextArr is None:
+            # avoid mutable default arguments like  "in_contextArr=[]".
+            in_contextArr = []
         testcase = LLMTestCase(
             input=in_original,
-            actual_output=in_generated
+            actual_output=in_generated,
+            context=in_contextArr
         )
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(in_rubricArr)) as executor:
-            callback = lambda in_rubric: evaluate(in_rubric, testcase)
+            callback = lambda in_rubric: evaluate(in_rubric, testcase, (len(in_contextArr) > 0))
             resultArr = list(executor.map(callback, in_rubricArr))
         scoreArr = []
         for result in resultArr:
             scoreArr.append(result['score'])
         return {
-            TERM_ALL['AVERAGE'] : sum(scoreArr) / len(scoreArr),
-            TERM_ALL['RESULTS'] : json.dumps(resultArr, ensure_ascii=False)
+            COL_ALL['AVERAGE'] : sum(scoreArr) / len(scoreArr),
+            COL_ALL['RESULTS'] : json.dumps(resultArr, ensure_ascii=False)
         }
     return judge
 
 def _is_judged_row(in_sheet, in_row, in_colDict):
-    for key in TERM_JUD:
+    for key in COL_JUD:
         if in_sheet.cell(in_row, in_colDict[key]).value is None:
             return False
     return True
@@ -355,8 +358,8 @@ def _is_judged_xlsx(in_path):
     try:
         sheet = workbook.active
         colDict = {}
-        for key in TERM_JUD:
-            col = _find_column(sheet, TERM_ALL[key])
+        for key in COL_JUD:
+            col = _find_column(sheet, COL_ALL[key])
             if col is None:
                 # judge columns do not exist yet ( before the first judge )
                 return False
@@ -369,26 +372,66 @@ def _is_judged_xlsx(in_path):
     finally:
         workbook.close()
 
+def _build_context(in_metadata):
+    if in_metadata == WITHOUT_META_MESSAGE:
+        return []
+    metadata = json.loads(in_metadata)
+    contextArr = []
+    def _serialize(in_object):
+        return json.dumps(in_object, ensure_ascii=False).replace('"', '')
+    for key1, value1 in metadata.items():
+        if not value1:
+            continue
+        if isinstance(value1, dict):
+            for key2, value2 in value1.items():
+                if not value2:
+                    continue
+                line = _serialize(value2)
+                contextArr.append(f'{key1} ({key2} = {line})')
+        else:
+            line = _serialize(value1)
+            contextArr.append(f'{key1} ({line})')
+    return contextArr
+
+def _build_context(in_metadata):
+    if in_metadata == WITHOUT_META_MESSAGE:
+        return []
+    # print(repr(in_metadata)) 
+    metadata = json.loads(in_metadata)
+    contextArr = []
+    for key1, value1 in metadata.items():
+        if not isinstance(value1, dict):
+            continue
+        for key2, value2 in value1.items():
+            if not value2:
+                continue
+            line = json.dumps(value2, ensure_ascii=False).replace('"', '')
+            contextArr.append(f'{key1} ({key2} = {line})')
+    return contextArr
+
 def _process_xlsx(in_path, in_callback):
     workbook = openpyxl.load_workbook(in_path)
     try:
         sheet = workbook.active
         colDict = {}
-        for key in TERM_ALL:
-            colDict[key] = find_append_column(sheet, TERM_ALL[key])
+        for key in COL_ALL:
+            colDict[key] = find_append_column(sheet, COL_ALL[key])
         for row in range(2, sheet.max_row + 1):
             print(f'INFO : processing {row - 1} / {sheet.max_row - 1}')
             if _is_judged_row(sheet, row, colDict):
                 continue
             # replace characters that DeepEval cannot handle
             safeText = {}
-            for key in TERM_GEN:
+            for key in COL_GEN:
                 safeText[key] = sheet.cell(row, colDict[key]).value
+                if key == 'METADATA':
+                    continue
                 for repDict in [_QUOTATION, _APOSTROPHE]:
                     safeText[key] = safeText[key].replace(repDict['ASCII'], repDict['FULLW'])
-            result = in_callback(safeText['ORIGINAL'], safeText['GENERATED'])
-            for key in TERM_JUD:
-                sheet.cell(row, colDict[key]).value = result[TERM_ALL[key]]
+            # see judge
+            result = in_callback(safeText['ORIGINAL'], safeText['GENERATED'], _build_context(safeText['METADATA']))
+            for key in COL_JUD:
+                sheet.cell(row, colDict[key]).value = result[COL_JUD[key]]
             workbook.save(in_path)
         print(f'INFO : judged {in_path.name}')
     finally:
@@ -399,22 +442,20 @@ def _build_judged_dataset(in_path):
     try:
         sheet = workbook.active
         headDict = {}
-        for key in TERM_ALL:
-            headDict[key] = _find_column(sheet, TERM_ALL[key])
+        for key in COL_ALL:
+            headDict[key] = _find_column(sheet, COL_ALL[key])
         jsRowArr = []
         for row in range(2, sheet.max_row + 1):
-            colDict = {}
-            colDict['articleIndex'] = row - 2
-            for key in TERM_ALL:
-                jsKey = TERM_ALL[key]
-                colDict[jsKey] = sheet.cell(row, headDict[key]).value
+            jsRowDict = {}
+            jsRowDict['articleIndex'] = row - 2
+            for key in COL_ALL:
+                jsRowDict[COL_ALL[key]] = sheet.cell(row, headDict[key]).value
             try:
-                colDict['lang'] = langdetect.detect(colDict[TERM_ALL['ORIGINAL']])
+                jsRowDict['lang'] = langdetect.detect(jsRowDict[COL_ALL['ORIGINAL']])
             except Exception:
-                colDict['lang'] = 'en'
-            jsKey = TERM_ALL['RESULTS']
-            colDict[jsKey] = json.loads(colDict[jsKey] or '[]')
-            jsRowArr.append(colDict)
+                jsRowDict['lang'] = 'en'
+            jsRowDict[COL_ALL['RESULTS']] = json.loads(jsRowDict[COL_ALL['RESULTS']] or '[]')
+            jsRowArr.append(jsRowDict)
         return {
             'name' : in_path.name.removesuffix(SUFFIX_XLS),
             'totalAvg' : sum(row['average'] for row in jsRowArr) / len(jsRowArr),
