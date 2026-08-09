@@ -393,22 +393,6 @@ def _build_context(in_metadata):
             contextArr.append(f'{key1} ({line})')
     return contextArr
 
-def _build_context(in_metadata):
-    if in_metadata == WITHOUT_META_MESSAGE:
-        return []
-    # print(repr(in_metadata)) 
-    metadata = json.loads(in_metadata)
-    contextArr = []
-    for key1, value1 in metadata.items():
-        if not isinstance(value1, dict):
-            continue
-        for key2, value2 in value1.items():
-            if not value2:
-                continue
-            line = json.dumps(value2, ensure_ascii=False).replace('"', '')
-            contextArr.append(f'{key1} ({key2} = {line})')
-    return contextArr
-
 def _process_xlsx(in_path, in_callback):
     workbook = openpyxl.load_workbook(in_path)
     try:
