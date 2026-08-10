@@ -31,6 +31,11 @@ MAX_BYTES = 1000
 def utf8(in_text):
     return in_text.encode('utf-8')
 
+#
+# Return (processed_text, None) to accept the output.
+# Return (None, feedback) to retry generation with the feedback.
+#
+
 def postproc(in_text):
     #
     # Replace emojis with spaces.
@@ -43,10 +48,10 @@ def postproc(in_text):
     #
 
     if len(utf8(in_text)) > MAX_BYTES:
-        return None
+        return None, f'The output exceeds the maximum length of {MAX_BYTES} UTF-8 bytes. Please shorten the output.'
 
     #
     # Accept the generated text.
     #
 
-    return in_text
+    return in_text, None

@@ -90,16 +90,18 @@ def process_prompt(in_prompt_path):
         additionalOrder = ''
         for retry in range(ARGS['postprocRetry']):
             generated = llmj.RUNNER.toText(prompt + additionalOrder)
-            checked = postproc(generated)
+            checked, feedback = postproc(generated)
             if checked is not None:
                 textDict['GENERATED'] = checked
                 break
             additionalOrder = chr(10).join([
                 '',
                 '',
-                'Additionally, the following output is considered invalid:',
-                generated,
-                'Generate a different output that satisfies all requirements.'
+                'Additionally, your previous output is considered invalid:',
+                '',
+                ' ' * 4 + generated,
+                '',
+                feedback
             ])
             print(f'WARN : retrying {retry + 1}/{ARGS["postprocRetry"]} because postproc returned None for "{generated}"')
         else:
