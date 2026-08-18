@@ -11,6 +11,11 @@ import concurrent.futures
 
 dependencies = {
     'boto3' : {},
+    'Config' : {
+        'pkg' : 'botocore',
+        'src' : 'botocore.config'
+    },
+    'requests' : {},
     'dotenv' : {
         'pkg' : 'python-dotenv'
     },
@@ -175,46 +180,188 @@ def setupArgs(in_specDict, in_prefix='--'):
             parmDict[name] = spec['convert'](parmDict[name])
     return parmDict
 
-class cLLMRunner:
+class _cBackendBedrock:
     def __init__(
         self,
-        in_model='us.anthropic.claude-sonnet-4-6',
-        in_region='us-east-1',
-        in_maxTokens=4096,
-        in_temperature=0,
-        in_retryCount=3,
-        in_retryInterval=5
+        in_model,
+        in_timeoutConn,
+        in_timeoutRead,
+        in_region='us-east-1'
     ):
         self._model = in_model
         self._region = in_region
-        self._maxTokens = in_maxTokens
-        self._temperature = in_temperature
-        self._retryCount = in_retryCount
-        self._retryInterval = in_retryInterval
-        self._runtime = self._create_runtime()
-    @property
-    def model(self):
-        return self._model
-    def _create_runtime(self):
-        dotenv.load_dotenv()
         for required in [
-            'ACCESS_KEY_ID',
-            'SECRET_ACCESS_KEY',
-            'SESSION_TOKEN',
+            'AWS_ACCESS_KEY_ID',
+            'AWS_SECRET_ACCESS_KEY',
+            'AWS_SESSION_TOKEN',
             'GATEWAY_URL'
         ]:
             if os.getenv(required) is None:
                 abort(f'ERROR : {required} is not defined in ".env".')
         session = boto3.Session(
-            aws_access_key_id=os.getenv('ACCESS_KEY_ID'),
-            aws_secret_access_key=os.getenv('SECRET_ACCESS_KEY'),
-            aws_session_token=os.getenv('SESSION_TOKEN')
+            aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+            aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
+            aws_session_token=os.getenv('AWS_SESSION_TOKEN')
         )
-        return session.client(
+        self._runtime = session.client(
             'bedrock-runtime',
             region_name=self._region,
-            endpoint_url=os.getenv('GATEWAY_URL')
+            endpoint_url=os.getenv('GATEWAY_URL'),
+            config=Config(
+                connect_timeout=in_timeoutConn,
+                read_timeout=in_timeoutRead
+            )
         )
+    @property
+    def model(self):
+        return self._model
+    def invoke(self, in_prompt, in_maxTokens, in_temperature):
+        response = self._runtime.converse_stream(
+            modelId=self._model,
+            messages=[{
+                'role' : 'user',
+                'content' : [{'text' : in_prompt}]
+            }],
+            inferenceConfig={
+                'maxTokens' : in_maxTokens,
+                'temperature' : in_temperature
+            }
+        )
+        chunkArr = []
+        for event in response['stream']:
+            if 'contentBlockDelta' not in event:
+                continue
+            delta = event['contentBlockDelta']['delta']
+            if 'text' not in delta:
+                continue
+            chunkArr.append(delta['text'])
+        return ''.join(chunkArr)
+
+class _cBackendOpenAI:
+    def __init__(
+        self,
+        in_model,
+        in_timeoutConn,
+        in_timeoutRead
+    ):
+        self._model = in_model
+        self._timeoutConn = in_timeoutConn
+        self._timeoutRead = in_timeoutRead
+        for required in [
+            'OPENAI_API_KEY',
+            'GATEWAY_URL'
+        ]:
+            if os.getenv(required) is None:
+                abort(f'ERROR : {required} is not defined in ".env".')
+    @property
+    def model(self):
+        return self._model
+    def invoke(self, in_prompt, in_maxTokens, in_temperature):
+        response = requests.post(
+            os.getenv('GATEWAY_URL').rstrip('/') + '/v1/chat/completions',
+            headers={
+                'Content-Type' : 'application/json',
+                'Authorization' : f'Bearer {os.getenv("OPENAI_API_KEY")}'
+            },
+            json={
+                'model' : self._model,
+                'messages' : [{
+                    'role' : 'user',
+                    'content' : in_prompt
+                }],
+                'max_completion_tokens' : in_maxTokens,
+                'temperature' : in_temperature
+            },
+            timeout=(
+                self._timeoutConn,
+                self._timeoutRead
+            )
+        )
+        response.raise_for_status()
+        return response.json()['choices'][0]['message']['content']
+
+class _cBackendGemini:
+    def __init__(
+        self,
+        in_model,
+        in_timeoutConn,
+        in_timeoutRead,
+        in_region='us-east-1'
+    ):
+        self._model = in_model
+        self._timeoutConn = in_timeoutConn
+        self._timeoutRead = in_timeoutRead
+        self._region = in_region
+        for required in [
+            'GEMINI_PROJECT',
+            'GEMINI_API_KEY',
+            'GATEWAY_URL'
+        ]:
+            if os.getenv(required) is None:
+                abort(f'ERROR : {required} is not defined in ".env".')
+    @property
+    def model(self):
+        return self._model
+    def invoke(self, in_prompt, in_maxTokens, in_temperature):
+        url = (
+            os.getenv('GATEWAY_URL').rstrip('/')
+            + f'/v1/projects/{os.getenv("GEMINI_PROJECT")}'
+            + f'/locations/{self._region}'
+            + f'/publishers/google/models/{self._model}:generateContent'
+        )
+        response = requests.post(
+            url,
+            headers={
+                'Content-Type' : 'application/json',
+                'Authorization' : f'Bearer {os.getenv("GEMINI_API_KEY")}',
+                'X-Provider' : 'google'
+            },
+            json={
+                'contents' : [{
+                    'role' : 'user',
+                    'parts' : [{
+                        'text' : in_prompt
+                    }]
+                }],
+                'generationConfig' : {
+                    'maxOutputTokens' : in_maxTokens,
+                    'temperature' : in_temperature
+                }
+            },
+            timeout=(
+                self._timeoutConn,
+                self._timeoutRead
+            )
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data['candidates'][0]['content']['parts'][0]['text']
+
+class cLLMRunner:
+    def __init__(
+        self,
+        in_backendClass,
+        in_backendModel,
+        in_maxTokens=4096,
+        in_temperature=0,
+        in_timeoutConn=60,
+        in_timeoutRead=60,
+        in_retryCount=3,
+        in_retryInterval=5
+    ):
+        dotenv.load_dotenv()
+        self._backend = in_backendClass(
+            in_backendModel,
+            in_timeoutConn,
+            in_timeoutRead
+        )
+        self._maxTokens = in_maxTokens
+        self._temperature = in_temperature
+        self._retryCount = in_retryCount
+        self._retryInterval = in_retryInterval
+    @property
+    def model(self):
+        return self._backend.model
     def _invoke(self, in_prompt, in_maxTokens, in_temperature):
         if in_maxTokens is None:
             in_maxTokens = self._maxTokens
@@ -225,23 +372,11 @@ class cLLMRunner:
             if in_cnt > 1 and temperature == 0:
                 temperature = 0.5
                 print(f'INFO : boosting temperature ({temperature}) for retry {in_cnt - 1}')
-            response = self._runtime.converse_stream(
-                modelId=self._model,
-                messages=[{
-                    'role' : 'user',
-                    'content' : [{'text' : in_prompt}]
-                }],
-                inferenceConfig={'maxTokens' : in_maxTokens, 'temperature' : temperature}
+            return self._backend.invoke(
+                in_prompt,
+                in_maxTokens,
+                temperature
             )
-            chunkArr = []
-            for event in response['stream']:
-                if 'contentBlockDelta' not in event:
-                    continue
-                delta = event['contentBlockDelta']['delta']
-                if 'text' not in delta:
-                    continue
-                chunkArr.append(delta['text'])
-            return ''.join(chunkArr)
         return _retry(callback, self._retryCount, self._retryInterval)
     def toText(self,
         in_prompt,
@@ -259,7 +394,9 @@ class cLLMRunner:
         except Exception as err:
             abort(f'ERROR : invalid json : {err}')
 
-RUNNER = cLLMRunner()
+RUNNER = cLLMRunner(_cBackendBedrock, 'us.anthropic.claude-sonnet-4-6')
+#RUNNER = cLLMRunner(_cBackendOpenAI, 'gpt-5.2')
+#RUNNER = cLLMRunner(_cBackendGemini, 'gemini-2.5-flash')
 
 def text_from_template_text(in_text, in_replaceDict):
     text = in_text
