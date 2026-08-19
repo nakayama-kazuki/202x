@@ -436,41 +436,41 @@ class cLLMRunner:
     @property
     def model(self):
         return self._backend.model
-    def _invoke(self, in_prompt, in_maxTokens, in_temperature):
+    def _retry(self, in_callback):
+        lastErr = None
+        for i in range(self._retryCount):
+            try:
+                return in_callback(i)
+            except Exception as err:
+                lastErr = err
+                if i < self._retryCount - 1:
+                    time.sleep(self._retryInterval)
+        abort(f'{ERROR_RETRY_MESSAGE} ({lastErr})')
+    def _invoke(self, in_prompt, in_maxTokens, in_temperature, in_cnt):
         if in_maxTokens is None:
             in_maxTokens = self._maxTokens
         if in_temperature is None:
             in_temperature = self._temperature
-        def callback(in_cnt):
-            temperature = in_temperature
-            if in_cnt > 1 and temperature == 0:
-                temperature = 0.5
-                print(f'INFO : boosting temperature ({temperature}) for retry {in_cnt - 1}')
-            return self._backend.invoke(in_prompt, in_maxTokens, temperature)
-        return _retry(callback, self._retryCount, self._retryInterval)
-    def toText(self,
-        in_prompt,
-        in_maxTokens=None,
-        in_temperature=None
-    ):
-        text, chatCompletion = self._invoke(in_prompt, in_maxTokens, in_temperature)
-        return text
-    def toTextChatCompletion(self,
-        in_prompt,
-        in_maxTokens=None,
-        in_temperature=None
-    ):
-        return self._invoke(in_prompt, in_maxTokens, in_temperature)
-    def toJson(self,
-        in_prompt,
-        in_maxTokens=None,
-        in_temperature=None
-    ):
-        try:
-            text, chatCompletion = self._invoke(in_prompt, in_maxTokens, in_temperature)
+        if in_cnt > 0:
+            in_maxTokens *= 2
+            if in_temperature == 0:
+                in_temperature = 0.5
+            print(f'INFO : boosting parameters for retry {in_cnt}')
+        return self._backend.invoke(in_prompt, in_maxTokens, in_temperature)
+    def toText(self, in_prompt, in_maxTokens=None, in_temperature=None):
+        def _toText(in_cnt):
+            text, chatCompletion = self._invoke(in_prompt, in_maxTokens, in_temperature, in_cnt)
+            return text
+        return self._retry(_toText)
+    def toJson(self, in_prompt, in_maxTokens=None, in_temperature=None):
+        def _toJson(in_cnt):
+            text, chatCompletion = self._invoke(in_prompt, in_maxTokens, in_temperature, in_cnt)
             return json.loads(text)
-        except Exception as err:
-            abort(f'ERROR : invalid json : {err}')
+        return self._retry(_toJson)
+    def toTextLogprobs(self, in_prompt, in_maxTokens=None, in_temperature=None):
+        def _toTextLogprobs(in_cnt):
+            return self._invoke(in_prompt, in_maxTokens, in_temperature, in_cnt)
+        return self._retry(_toTextLogprobs)
 
 RUNNER = cLLMRunner(_cBackendBedrock, 'us.anthropic.claude-sonnet-4-6')
 #RUNNER = cLLMRunner(_cBackendOpenAI, 'gpt-5.2')
