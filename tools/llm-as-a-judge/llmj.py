@@ -130,6 +130,8 @@ WITHOUT_META_MESSAGE = 'No metadata is available. Please follow the requirements
 
 ERROR_RETRY_MESSAGE = 'If this error was caused by the LLM or DeepEval, please try running the command again. Also check whether your PAT has expired.'
 
+_TOP_LOGPROBS = 3
+
 def _find_column(in_sheet, in_name):
     for col in range(1, in_sheet.max_column + 1):
         value = in_sheet.cell(row=1, column=col).value
@@ -303,7 +305,7 @@ class _cBackendOpenAI:
                 'max_completion_tokens' : in_maxTokens,
                 'temperature' : in_temperature,
                 'logprobs' : True,
-                'top_logprobs' : 3
+                'top_logprobs' : _TOP_LOGPROBS
             },
             timeout=(
                 self._timeoutConn,
@@ -363,7 +365,7 @@ class _cBackendGemini:
                     'maxOutputTokens' : in_maxTokens,
                     'temperature' : in_temperature,
                     'responseLogprobs' : True,
-                    'logprobs' : 3
+                    'logprobs' : _TOP_LOGPROBS
                 }
             },
             timeout=(
