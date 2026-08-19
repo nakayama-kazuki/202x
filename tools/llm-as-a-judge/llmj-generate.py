@@ -30,7 +30,7 @@ ARGS = llmj.setupArgs({
 def load_postproc(in_prompt_path):
     path = in_prompt_path.with_suffix('.postproc.py')
     if not path.exists():
-        return lambda in_text: in_text
+        return lambda in_text: (in_text, '')
     spec = importlib.util.spec_from_file_location(path.stem, path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -117,6 +117,7 @@ def main():
     llmj.finalize()
 
 if __name__ == '__main__':
+    # main()
     try:
         main()
     except Exception as err:

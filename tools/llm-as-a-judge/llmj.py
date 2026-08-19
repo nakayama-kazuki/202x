@@ -15,6 +15,10 @@ dependencies = {
         'pkg' : 'botocore',
         'src' : 'botocore.config'
     },
+    'ChatCompletion' : {
+        'pkg' : 'openai',
+        'src' : 'openai.types.chat'
+    },
     'requests' : {},
     'dotenv' : {
         'pkg' : 'python-dotenv'
@@ -235,7 +239,34 @@ class _cBackendBedrock:
             if 'text' not in delta:
                 continue
             chunkArr.append(delta['text'])
-        return ''.join(chunkArr)
+        text = ''.join(chunkArr)
+        chatCompletion = ChatCompletion.model_validate({
+            'id' : 'bedrock',
+            'object' : 'chat.completion',
+            'created' : 0,
+            'model' : self._model,
+            'choices' : [{
+                'index' : 0,
+                'message' : {
+                    'role' : 'assistant',
+                    'content' : text
+                },
+                'finish_reason' : 'stop',
+                'logprobs' : {
+                    'content' : [{
+                        'token' : text,
+                        'logprob' : 0.0,
+                        'bytes' : None,
+                        'top_logprobs' : [{
+                            'token' : text,
+                            'logprob' : 0.0,
+                            'bytes' : None
+                        }]
+                    }]
+                }
+            }]
+        })
+        return text, chatCompletion
 
 class _cBackendOpenAI:
     def __init__(
@@ -270,7 +301,9 @@ class _cBackendOpenAI:
                     'content' : in_prompt
                 }],
                 'max_completion_tokens' : in_maxTokens,
-                'temperature' : in_temperature
+                'temperature' : in_temperature,
+                'logprobs' : True,
+                'top_logprobs' : 3
             },
             timeout=(
                 self._timeoutConn,
@@ -278,7 +311,10 @@ class _cBackendOpenAI:
             )
         )
         response.raise_for_status()
-        return response.json()['choices'][0]['message']['content']
+        data = response.json()
+        text = data['choices'][0]['message']['content']
+        chatCompletion = ChatCompletion.model_validate(data)
+        return text, chatCompletion
 
 class _cBackendGemini:
     def __init__(
@@ -325,7 +361,9 @@ class _cBackendGemini:
                 }],
                 'generationConfig' : {
                     'maxOutputTokens' : in_maxTokens,
-                    'temperature' : in_temperature
+                    'temperature' : in_temperature,
+                    'responseLogprobs' : True,
+                    'logprobs' : 3
                 }
             },
             timeout=(
@@ -335,14 +373,48 @@ class _cBackendGemini:
         )
         response.raise_for_status()
         data = response.json()
-        return data['candidates'][0]['content']['parts'][0]['text']
+        text = data['candidates'][0]['content']['parts'][0]['text']
+        contentLogprobs = []
+        logprobsResult = data['candidates'][0]['logprobsResult']
+        for index, chosen in enumerate(logprobsResult['chosenCandidates']):
+            topLogprobs = []
+            for top in logprobsResult['topCandidates'][index]['candidates']:
+                topLogprobs.append({
+                    'token' : top['token'],
+                    'logprob' : top['logProbability'],
+                    'bytes' : None
+                })
+            contentLogprobs.append({
+                'token' : chosen['token'],
+                'logprob' : chosen['logProbability'],
+                'bytes' : None,
+                'top_logprobs' : topLogprobs
+            })
+        chatCompletion = ChatCompletion.model_validate({
+            'id' : 'gemini',
+            'object' : 'chat.completion',
+            'created' : 0,
+            'model' : self._model,
+            'choices' : [{
+                'index' : 0,
+                'message' : {
+                    'role' : 'assistant',
+                    'content' : text
+                },
+                'finish_reason' : 'stop',
+                'logprobs' : {
+                    'content' : contentLogprobs
+                }
+            }]
+        })
+        return text, chatCompletion
 
 class cLLMRunner:
     def __init__(
         self,
         in_backendClass,
         in_backendModel,
-        in_maxTokens=4096,
+        in_maxTokens=8192,
         in_temperature=0,
         in_timeoutConn=60,
         in_timeoutRead=60,
@@ -372,13 +444,16 @@ class cLLMRunner:
             if in_cnt > 1 and temperature == 0:
                 temperature = 0.5
                 print(f'INFO : boosting temperature ({temperature}) for retry {in_cnt - 1}')
-            return self._backend.invoke(
-                in_prompt,
-                in_maxTokens,
-                temperature
-            )
+            return self._backend.invoke(in_prompt, in_maxTokens, temperature)
         return _retry(callback, self._retryCount, self._retryInterval)
     def toText(self,
+        in_prompt,
+        in_maxTokens=None,
+        in_temperature=None
+    ):
+        text, chatCompletion = self._invoke(in_prompt, in_maxTokens, in_temperature)
+        return text
+    def toTextChatCompletion(self,
         in_prompt,
         in_maxTokens=None,
         in_temperature=None
@@ -390,7 +465,8 @@ class cLLMRunner:
         in_temperature=None
     ):
         try:
-            return json.loads(self._invoke(in_prompt, in_maxTokens, in_temperature))
+            text, chatCompletion = self._invoke(in_prompt, in_maxTokens, in_temperature)
+            return json.loads(text)
         except Exception as err:
             abort(f'ERROR : invalid json : {err}')
 
@@ -443,8 +519,15 @@ class _GatewayLLM(DeepEvalBaseLLM):
         if in_schema is None:
             return text
         return in_schema.model_validate_json(text)
+    def generate_raw_response(self, in_prompt, **in_kwargs):
+        text, chatCompletion = self.runner.toTextChatCompletion(in_prompt)
+        # API cost is not tracked by llmj.
+        untrackedCost = 0
+        return chatCompletion, untrackedCost
     async def a_generate(self, in_prompt, in_schema=None):
         return self.generate(in_prompt, in_schema)
+    async def a_generate_raw_response(self, in_prompt, **in_kwargs):
+        return self.generate_raw_response(in_prompt, **in_kwargs)
 
 def _create_judge(in_rubricArr):
     def evaluate(in_rubric, in_testcase, in_useContext, in_high_score=0.8):
