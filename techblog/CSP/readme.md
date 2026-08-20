@@ -12,7 +12,7 @@ Web サイトにはしばしば 3rd-party JavaScript を導入することがあ
 
 まずは概念を絵にしたものがこちらです。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/img01.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/CSP/img01.png' />
 
 Web ブラウザに対して JavaScript のロードや実行に関する許可リスト（絵の CSP の部分）を指示することで、悪意のある JavaScript が意図せずに実行されてしまうリスク（絵の赤い部分）を軽減することができます。
 
@@ -50,13 +50,13 @@ Web ブラウザは ***green.example*** および ***orange.example*** からの
 
 Web ブラウザの開発者ツールを使うことで、Web サイトに導入されている 3rd-party JavaScript を確認することができます。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/img02.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/CSP/img02.png' />
 
 ご覧の通り、ヤフーでも複数の 3rd-party JavaScript をロードしていることがわかります。
 
 このとき、もし 3rd-party JavaScript を提供する事業者に悪意があったり、悪意はなくとも別な攻撃者によってホスト先の CDN やリポジトリ上の JavaScript コードが改変されていた場合、Web サイト内の情報、たとえばユーザーのアカウントに紐づく個人情報が盗まれたり、ユーザーが [フィッシングサイトに誘導](https://blog.techscore.com/entry/2022/08/24/150000) されてしまう、などのリスクが生じます。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/img03.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/CSP/img03.png' />
 
 このようなリスクに対しては、Web ブラウザの仕様である Same Origin Policy（以降 SOP）を活用した対策が有効です。
 
@@ -66,11 +66,11 @@ Web ブラウザの開発者ツールを使うことで、Web サイトに導入
 
 こうすることで、もし 3rd-party JavaScript に悪意のあるコードが含まれていたとしても、その影響範囲を iframe 内に限定することができます。なぜなら、文書「B」で実行される JavaScript は SOP によって文書「A」の DOM にアクセスすることができないためです。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/img04.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/CSP/img04.png' />
 
 ところが、Web 解析ツールや広告のビューアビリティー計測など 3rd-party JavaScript がその目的を達成するために文書「A」の DOM にアクセスする必要がある場合、SOP を活用した対策を採用することができません。そのような 3rd-party JavaScript については安全性を評価の上でリスク受容せざるをえませんが、それ以外の 3rd-party JavaScript のロードと実行が制限された状態さえ担保できればおおむねリスクは解消 … ですよね？
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/img05.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/CSP/img05.png' />
 
 いいえ、残念ながら現実はもう少し複雑です。多くの Web サイトは
 
@@ -86,13 +86,13 @@ Web ブラウザの開発者ツールを使うことで、Web サイトに導入
 
 だそうです。怖いですね ^^;
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/img06.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/CSP/img06.png' />
 
 ## Web サイトに応じた方針
 
 さて、悩ましい現実に立ち向かうべく、方針を表にまとめてみました。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/img07.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/CSP/img07.png' />
 
 まず最初に SOP を活用した対策、それが難しい場合には保険的対策 …
 
@@ -166,7 +166,7 @@ CSP や CSP-RO について、リスク対策以外への活用や運用改善�
 
 CSP-RO および Fetch ディレクティブ（script-src 以外も含め）を活用することで、Web サイト内でのサブリソースのロードに関するレポートを作成することができます。さらに、サブリソースのロード時のパラメータを確認することで、他の事業者に対して送信されている情報をチェックすることができます。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/CSP/img08.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/CSP/img08.png' />
 
 総務省は Web サイトから第三者に対して送信される情報に対する透明性を高めるルールとして [外部送信規律](https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/gaibusoushin_kiritsu.html) を定めています。このルールに対応するための事前調査に CSO-RO を、意図せぬルール違反を回避するための手段として CSP を活用することができそうです。
 

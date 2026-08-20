@@ -10,4 +10,4 @@
 2. put php files
 3. browse test-index.php
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/SameSite/test/index.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/Cookie/SameSite/test/index.png' />

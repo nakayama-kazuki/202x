@@ -11,13 +11,13 @@
 
 そこで、今回は攻撃者の立場に立って
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/0.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/phishing/img/0.png' />
 
 の 1～6 について考察を深めることで、我々自身を守るヒントとしたいと思います。彼を知り己を知れば百戦殆からず、ですね。ちなみに、以前にも [同様のタイトルの記事](https://www.techscore.com/blog/2017/12/10/phishing/) を書きましたが、今回はそのアップデート版との位置づけです。
 
 ## 1. メールや SMS からフィッシングサイトに誘導
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/1.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/phishing/img/1.png' />
 
 KnowBe4 の [フィッシング詐偽ヒット率のアセスメント](https://blog.knowbe4.com/knowbe4-2022-phishing-by-industry-benchmarking-report) によれば
 
@@ -55,7 +55,7 @@ KnowBe4 の [フィッシング詐偽ヒット率のアセスメント](https://
 
 ## 2. Web サービスからフィッシングサイトに誘導
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/2.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/phishing/img/2.png' />
 
 Web サービスからの誘導でよく使われる手段に
 
@@ -71,7 +71,7 @@ Web サービスからの誘導でよく使われる手段に
 
 ## 3. フィッシングサイトの URL を詐称
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/3.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/phishing/img/3.png' />
 
 URL の詐称には
 
@@ -102,7 +102,7 @@ URL としては Google サービスですが、表示されるのは総務省�
 
 ## 4. フィッシングサイトを信頼させる
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/4.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/phishing/img/4.png' />
 
 ここまでで、攻撃者はターゲットをフィッシングサイトに誘導できました。しかし、ターゲットもどこか違和感を感じている可能性もあります。攻撃者としてはそれを払拭するためのもう一押しが必要です。ここではフィッシングサイトを信頼させるための二種類の方法をご紹介します。
 
@@ -121,7 +121,7 @@ URL としては Google サービスですが、表示されるのは総務省�
 
 二つ目は [以前の記事](https://www.techscore.com/blog/2017/12/10/phishing/) でご紹介した方法です。UGC 等からおとりサイトに誘導し、ターゲットは自分が欲しい情報がない（おとりなので）ためヒストリバックします。しかし、ヒストリバックをトリガとした JavaScript が動作し、元のサイトではなくそれを模したフィッシングサイトに誘導されてしまいます。ターゲットに「ヒストリバックで元のサイトに戻った」と信じさせることができれば、その後再ログインを促すなどで秘密情報を盗み出すことも可能になります。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/demo/2-3.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/phishing/demo/2-3.png' />
 
 こちらに [4.2. のデモサイト](https://pj-corridor.net/phishing-demo/trust.html) を用意したので動作をご確認ください。
 
@@ -134,7 +134,7 @@ URL としては Google サービスですが、表示されるのは総務省�
 
 ## 5. その他攻撃手段
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/5.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/phishing/img/5.png' />
 
 これまで挙げたもの以外にも攻撃者は様々な手段を用います。
 
@@ -162,7 +162,7 @@ QR コードを利用してターゲットをフィッシングサイトに誘�
 
 ## 6. 攻撃を成功に導く
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/phishing/img/6.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/phishing/img/6.png' />
 
 そして、いよいよ攻撃者は目的を達成します …
 

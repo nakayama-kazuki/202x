@@ -4,7 +4,7 @@ Hello, I'm pj-corridor, a platform engineer. This article is a translated versio
 
 ## 0. Whiteboard
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/white.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/white.png' />
 
 In the past, when going to the office was the norm, discussions utilizing whiteboards were held throughout the office. In retrospect, discussions using whiteboards were effective in many respects, such as :
 
@@ -31,7 +31,7 @@ First, don\'t hesitate to increase the number of pages. However, increasing the 
 
 For example, having participants navigate back and forth between slides or transitioning to linked content to reference specific information can hinder understanding and discussion. If you want to repeatedly refer to the same slide, it should be reinserted each time. If you are concerned about maintenance errors caused by copying, you can manage slides that need to be reused as slide-master layouts.
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/slide-master-1-en.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/slide-master-1-en.png' />
 
 Now, let's increase the number of pages further. With that mindset, let me introduce :
 
@@ -43,7 +43,7 @@ Now, let's increase the number of pages further. With that mindset, let me intro
 
 Participants may feel stressed about leaving inconsistencies or unclear points unresolved, even if they don't want to interrupt the conversation with trivial questions. Therefore, insert slides that clearly indicate when the topic changes (in this case, I recommend to use slides with inverted brightness) and visualize the progress at the same time.
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-001-en.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-001-en.png' />
 
 By doing this, you can expect effects such as :
 
@@ -66,25 +66,25 @@ For example :
 
 The slide created using these steps looks like this :
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-003.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-003.gif' />
 
 By overlaying a dark color, for example, 50% transparency black, it looks like this :
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-004.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-004.gif' />
 
 You can also use radial lines or background colors. In this case, having a set of reusable parts is convenient.
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-005.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-005.gif' />
 
 ## 5. Insights from Change
 
 Things that are hard to notice only in snapshots can become apparent by demonstrating change, making it easier for participants to gain insights. This is a doodle used in discussions on real projects. With a doodle only Before & After, which omits several changes in process, participants\' thoughts cannot keep up.
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-006.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-006.gif' />
 
 By inserting doodles that express several changes in between, you can draw out more perspectives from participants, leading to the early detection and improvement of issues.
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-007.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-007.gif' />
 
 For example, you might gain insights like this at each step :
 
@@ -96,7 +96,7 @@ You can expect to draw out participants\' creativity in this way.
 
 On a side note, when someone starts using the pen tool of online meeting system, other participants tend to wait (in a state of suspended thinking) while watching the screen until it's completed. Then, the finished modern art confuses participants anew.
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/pen.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/pen.png' />
 
 The pen tool promotes interactivity through visual stimulation, but it seems more effective when used simply, such as :
 
@@ -112,59 +112,59 @@ As stimulating participants\' creativity is one goal, be mindful of preconceptio
 
 Also, when expressing connections, it\'s important to minimize misunderstandings. In the following doodle, when connecting boxes labeled with the same letter, using an elbow connector is not recommended. Instead, there is room for improvement by using straight or curved lines.
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-008.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-008.gif' />
 
 For example, how about visual separation of intersections using masks ?
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-009.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-009.gif' />
 
 Shifting the intersection itself might also work.
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-010.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-010.gif' />
 
 You can move connectors to the front or change the order of masks and connectors using "Format Shape" + "Selection Pane".
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/layer-en.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/layer-en.png' />
 
 Next, let's express the relationship of the vertices of an equilateral triangle with doodle. When positioning an equilateral triangle at the center of a slide according to PowerPoint guides, the center and centroid of the triangle do not align. Therefore, a doodle connecting each vertex from the center may give the impression that vertex A is a special entity, which is inappropriate for expressing equal relationships.
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-011.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-011.gif' />
 
 A doodle connecting each vertex from the centroid of an equilateral triangle can clearly indicate the equal relationship of each vertex.
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-012.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-012.gif' />
 
 In the case of a regular pentagon, a doodle connecting each vertex from the center of the guide reveals the source of discomfort when rotated.
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-013.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-013.gif' />
 
 A doodle connecting each vertex from the centroid maintains a beautiful regular pentagon even when rotated.
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-014.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-014.gif' />
 
 Next is a topic specific to concrete examples. A doodle often expresses API offerings or data exchanges. In this case, the direction of the HTTP request calling the API and the direction of data exchange may not only be the same but also opposite. Be careful not to cause preconceptions or misunderstandings about what the arrows in the doodle are intended to represent.
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-025.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-025.gif' />
 
 ## 7. Which Preset Storage ?
 
 A doodle often represents storage, especially for system use, but PowerPoint has two types of preset storage. Cylinder A cannot adjust the shape of the bottom, resulting in awkward perspective when elongated. Which cylinder should be used ?
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-015.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-015.gif' />
 
 Cylinder B allows for expressing data accumulation or proportions in storage by overlaying cylinders without using gradient fills. In conclusion, using cylinder B seems more flexible.
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-016.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-016.gif' />
 
 ## 8. Doodle in Tables
 
 There are times when you want to express the behavior for each use case using both tables and doodles. While separating tables and doodles into different slides makes the material tidy, you have to navigate between slides to understand what happens in each case.
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-017.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-017.gif' />
 
 How about making a doodle into a table ? Although it may look cluttered, it succinctly expresses what happens in each case. It's also possible to embed the doodle part using Slide Zoom.
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-018.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-018.png' />
 
 ## 9. You Can Draw Anything
 
@@ -176,23 +176,23 @@ For example, a diamond can be created by:
 2. Coloring each part with gradient fills
 3. Grouping them
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-019.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-019.gif' />
 
 Bags and wallets can be drawn easily. Reuse them for advertisements or EC-specific examples.
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-020.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-020.png' />
 
 For more flexible doodle preparation, prepare a shape with rounded edges by surrounding a square with curves.
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-021.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-021.gif' />
 
 The same applies to shapes other than squares.
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-022.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-022.gif' />
 
 Connect and join these to create a stick figure.
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-023.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-023.gif' />
 
 When you'd like to use stick figures more easily, please check out my <a href='https://pj-corridor.net/stick-figure/gallery/index.html'>Stick Figure Gallery</a> made by Three.js. You can find something close to your image and make slight adjustments to obtain the desired stick figure material.
 
@@ -200,7 +200,7 @@ When you'd like to use stick figures more easily, please check out my <a href='h
 
 As a side note, PNG or JPG images can also be color-adjusted or have their backgrounds removed in PowerPoint. For example, when expressing multiple characters with PNG image icons, you can handle it with color adjustments without preparing different images.
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/img-en.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/img-en.png' />
 
 ## Conclusion
 

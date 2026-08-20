@@ -1,6 +1,6 @@
 # 이런 상황에서 어떻게 할까: Three.js 애플리케이션 개발
 
-<img width='100%' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/title.png' />
+<img width='100%' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/threejs/img/title.png' />
 
 안녕하세요, 저는 일본인 엔지니어 pj-corridor입니다. 이 글에서는 취미로 진행한 Three.js 애플리케이션 개발을 통해 얻은 기술적인 지식, 예를 들어 Three.js 초보자가 직면하기 쉬운 문제나 브라우저 간 호환성에 기인한 문제, 그리고 그에 대한 회피 방법을 설명합니다.
 
@@ -54,7 +54,7 @@ Three.js 학습용으로 자주 사용되는 루빅큐브를 발전시켜 다양
 
 ## 렌더링 버퍼는 텅 비어 있다
 
-<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/screenshot.gif' />
+<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/threejs/img/screenshot.gif' />
 
 <a href='https://pj-corridor.net/stick-figure/stick-figure.html'>스틱맨</a>이나 <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>고무 인간</a>, <a href='https://pj-corridor.net/stick-figure/hand.html'>손</a>에서는 결정된 포즈의 이미지를 클립보드에 복사하는 screenshot 기능을 구현하고 있습니다. 이 기능에서 `WebGLRenderer.domElement`(<a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.domElement'>사양</a>)의 `toDataURL()`을 사용하고 있지만, 처음에는 렌더링된 이미지를 가져오지 못해 어려움을 겪었습니다.
 
@@ -144,7 +144,7 @@ Three.js 애플리케이션에서는 터치나 마우스 이벤트가 발생한 
 
 이와 같은 UX를 공통적으로 사용하고 있습니다. 하지만 디버깅 목적으로 `Scene`에 `AxesHelper`(축을 나타내는 3색 선)를 추가하면, 의도하지 않은 동작이 발생하는 경우가 있습니다.
 
-<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/AxesHelper.png' />
+<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/threejs/img/AxesHelper.png' />
 
 그 이유는 `AxesHelper` 자체도 `Raycaster.intersectObject()`(<a href='https://threejs.org/docs/#api/en/core/Raycaster.intersectObject'>사양</a>)의 대상이 되기 때문입니다. 따라서 교차 판정 시 이를 고려하거나, 사전에 `AxesHelper`의 영향을 제외해야 합니다.
 
@@ -164,7 +164,7 @@ const intersects = raycaster.intersectObjects(children);
 
 다음은 디버깅을 위해 조작용 객체에 색을 입히고 스틱맨의 손을 움직이는 모습입니다.
 
-<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/CircleGeometry.gif' />
+<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/threejs/img/CircleGeometry.gif' />
 
 공간 내 파츠의 위치에 따라 객체의 반대 방향에서 레이캐스트를 수행하는 경우가 있는데, 이때 의도하지 않은 동작이 발생합니다. 조사해 보니 `SphereGeometry`는 뒷면에서의 레이캐스트와 교차점을 가지지 않는다는 것을 알게 되었습니다. `CircleGeometry`는 항상 `PerspectiveCamera` 쪽을 향하고 있기 때문에, 반대 방향 상황을 놓치기 쉬운 함정이었습니다.
 
@@ -184,7 +184,7 @@ const circle = new THREE.Mesh(geometry, material);
 
 포럼과 `SkinnedMesh`의 <a href='https://github.com/mrdoob/three.js/blob/master/src/objects/SkinnedMesh.js'>구현</a>을 조사해 보니, 실제 정점 데이터는 변경하지 않고 본(bone)의 영향을 계산하여 렌더링하고 있다는 것을 이해할 수 있었습니다. 그래서 대략적인 대체 정점 데이터로서 `SkinnedMesh.skeleton.bones`를 사용한 `ExtrudeGeometry`(<a href='https://threejs.org/docs/#api/en/geometries/ExtrudeGeometry'>사양</a>)를 생성하고, 그것과 레이캐스트의 교차점을 드래그하는 방식으로 고무 인간의 조작을 구현할 수 있었습니다.
 
-<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/rubber-figure.gif' />
+<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/threejs/img/rubber-figure.gif' />
 
 ## AdSense에서 겪은 브라우저 호환성 문제
 
@@ -198,7 +198,7 @@ Three.js 애플리케이션은 초기화 시와 윈도우 리사이즈 시, 적�
 
 또한 <a href='https://support.google.com/adsense/answer/9190028'>AdSense 코드</a>를 설치한 사이트에서는 광고 자동 삽입 시 다른 요소의 크기가 변경될 가능성이 있기 때문에, 그 타이밍에서도 동일한 처리가 필요합니다. 예를 들어 다음과 같이 요소의 `offsetHeight`가 변경됩니다.
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/adsense.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/threejs/img/adsense.gif' />
 
 다만 `WebGLRenderer.setSize()`의 <a href='https://github.com/mrdoob/three.js/blob/master/src/renderers/WebGLRenderer.js'>구현</a>에는 `WebGLRenderer.domElement`의 `width`나 `height`에 대한 쓰기가 포함되어 있기 때문에, `ResizeObserver`의 콜백 내에서 호출하는 것은 다소 위험해 보입니다 (참고로 <a href='https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/resize_observer/resize_observer.cc'>Chromium의 구현</a>에서는 이전 관찰 시점과 비교하여 요소 크기의 변화를 확인하고 있기 때문에 무한 루프에 빠지지는 않는 것으로 보입니다).
 
@@ -301,7 +301,7 @@ autoTransition2(element, 'color 1.5s ease-out', 'blue', 'white');
 
 CSS Transitions의 shorthand와 transition-property의 시작 값과 종료 값을 지정함으로써 요소에 대한 애니메이션을 실행합니다.
 
-<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/dialog.gif' />
+<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/threejs/img/dialog.gif' />
 
 ## 마무리
 

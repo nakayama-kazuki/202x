@@ -9,7 +9,7 @@
 
 早速ですが応答ヘッダの Set-Cookie に付随する SameSite 属性の値と User-Agent（ブラウザ）から送信される Cookie の関係性を図にしてみました。矢印上にお菓子のクッキーが記載されているリクエストは Cookie が送信されることを示しています。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/SameSite/img1.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/Cookie/SameSite/img1.png' />
 
 ここまでで大事な部分はお伝えできましたので笑、残りは細かなユースケースで悩みをお持ちの方に読んで頂ければと思います。
 
@@ -17,7 +17,7 @@
 
 図の赤い背景部分について補足します。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/SameSite/img2.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/Cookie/SameSite/img2.png' />
 
 SameSite の判定には [以下のルール](https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis#section-5.2) があります。
 
@@ -25,37 +25,37 @@ SameSite の判定には [以下のルール](https://datatracker.ietf.org/doc/h
 > 2. The request is not the result of a reload navigation triggered through a user interface element (as defined by the user agent; e.g., a request triggered by the user clicking a refresh button on a toolbar).
 > 3. The request's current url's origin is same-site with the request's client's "site for cookies" (which is an origin), or if the request has no client or the request's client is null.
 
-そこで [こちらのテスト](https://github.com/nakayama-kazuki/202x/tree/main/Cookie/SameSite/test) を試してみたところ、以下のような結果でした。
+そこで [こちらのテスト](https://github.com/nakayama-kazuki/202x/tree/main/techblog/Cookie/SameSite/test) を試してみたところ、以下のような結果でした。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/SameSite/strict-1.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/Cookie/SameSite/strict-1.png' />
 
 SameSite=Strict を用いつつも一部の流入経路で暫定的に Cookie を送信させたい、という場合には location.href を用いた client-side redirect（表の 1-4）の利用をご検討ください。
 
 その他のユースケースについては以下のような結果でした。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/SameSite/strict-2.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/Cookie/SameSite/strict-2.png' />
 
 ## POST での流入
 
 図の赤い背景部分について補足します。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/SameSite/img3.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/Cookie/SameSite/img3.png' />
 
 外部サイトからも POST を許可したいフォームがあった場合、SameSite=Strict なログインセッション Cookie や SameSite=Lax なトラッキング Cookie がフォームに送信されません。加えて流入のタイミングでトラッキング Cookie が上書きされてしまう場合があります。
 
 POST での流入時に Cookie を送信させたい場合のアイデアは GET の場合と同様で、ステータスコード 307 / 308 の server-side redirect を経由しても Cookie は送信されないため client-side redirect（表の 4-4）の利用をご検討ください。流入元で POST された情報を埋め込んだフォームを生成し HTMLFormElement.submit() する … というのが GET の場合と比較すると面倒ですね。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/SameSite/lax-1.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/Cookie/SameSite/lax-1.png' />
 
 その他のユースケースについては以下のような結果でした。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/SameSite/lax-2.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/Cookie/SameSite/lax-2.png' />
 
 ## SameSite=None なら機会損失なし？
 
 図の赤い背景部分について補足します。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/SameSite/img4.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/Cookie/SameSite/img4.png' />
 
 遠からず 3rd-party Cookie が廃止され CSRF のリスクも小さくなるので、今は制約条件の少ない SameSite=None にしておけばいいじゃないか … という考え方もあるかもしれませんが、ブラウザのプライバシー関連機能で SameSite=None は不利な扱いを受ける可能性があります。例えば Cookie 削除の UI に「全ての Cookie」と「3rd-party Cookie」の 2 つを設け、後者については SameSite=None の Cookie を削除する、といった具合です。
 

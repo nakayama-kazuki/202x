@@ -1,8 +1,8 @@
 # How to Handle Challenges in Three.js App Development
 
-<img width='100%' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/title.png' />
+<img width='100%' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/threejs/img/title.png' />
 
-[<a href='https://github.com/nakayama-kazuki/202x/tree/main/threejs'>Japanese article</a>]
+[<a href='https://github.com/nakayama-kazuki/202x/tree/main/techblog/threejs'>Japanese article</a>]
 
 Hello, my name is pj-corridor, previously an advertising engineer and currently a data platform engineer. In this article, I will share insights gained through my hobby of developing Three.js applications, such as common beginner pitfalls, browser-compatibility issues, and their solutions. BTW, I would like to express my gratitude to TECHSCORE BLOG for kindly allowing me to publish this article, as we have collaborated before at SynergyMarketing. Thank you very much !
 
@@ -56,7 +56,7 @@ Now, let\'s delve into the insights gained through Three.js app development.
 
 ## The Empty Draw Buffer
 
-<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/screenshot.gif' />
+<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/threejs/img/screenshot.gif' />
 
 In <a href='https://pj-corridor.net/stick-figure/stick-figure.html'>Stick Figure</a>, <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>Rubber Figure</a>, and <a href='https://pj-corridor.net/stick-figure/hand.html'>Hand</a>, I implemented a screenshot feature that copies the image of the determined pose to the clipboard. This feature uses `toDataURL()` on `WebGLRenderer.domElement` (<a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.domElement'>reference</a>), but initially, I struggled to capture the rendered image.
 
@@ -147,7 +147,7 @@ In <a href='https://pj-corridor.net/stick-figure/stick-figure.html'>Stick Figure
 
 This is the common UX. However, when I added an `AxesHelper` (three-colored lines representing axes) to the scene for debugging purposes, it sometimes behaved strangely.
 
-<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/AxesHelper.png' />
+<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/threejs/img/AxesHelper.png' />
 
 The reason was that `AxesHelper` itself was a target for `Raycaster.intersectObject()` (<a href='https://threejs.org/docs/#api/en/core/Raycaster.intersectObject'>reference</a>). To address this, either consider intersections with it or exclude its influence before checking intersections, as shown below.
 
@@ -167,7 +167,7 @@ In <a href='https://pj-corridor.net/stick-figure/stick-figure.html'>Stick Figure
 
 Here\'s a demonstration with the operation object colored for debugging, showing how the stick figure\'s hand moves.
 
-<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/CircleGeometry.gif' />
+<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/threejs/img/CircleGeometry.gif' />
 
 Sometimes, raycasting occurs from the opposite direction of the object in 3D space, and in that case the hit-test behaves unexpectedly. I found that `SphereGeometry` does not intersect with raycasting from the back. Since `CircleGeometry` always faces the `PerspectiveCamera`, this was a blind spot ! ^^;
 
@@ -185,7 +185,7 @@ In <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>Rubber Figu
 
 After researching forums and the <a href='https://github.com/mrdoob/three.js/blob/master/src/objects/SkinnedMesh.js'>implementation</a>, I understood that the actual vertex data is not changed, and the influence of bones is calculated and drawn. So, I created an `ExtrudeGeometry`  (<a href='https://threejs.org/docs/#api/en/geometries/ExtrudeGeometry'>reference</a>) using `SkinnedMesh.skeleton.bones` as rough alternative vertex data, and by dragging the intersection with raycasting, I was able to manipulate the rubber figure.
 
-<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/rubber-figure.gif' />
+<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/threejs/img/rubber-figure.gif' />
 
 ## Browser Compatibility Issues with AdSense
 
@@ -199,7 +199,7 @@ During initialization and window resizing, Three.js apps require appropriate coo
 
 Additionally, since <a href='https://support.google.com/adsense/answer/9190028'>AdSense code</a> may automatically insert ads, potentially changing the size of other elements, similar processing is needed at that timing. For example, the `offsetHeight` of elements is changed.
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/adsense.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/threejs/img/adsense.gif' />
 
 However, since there are writes to the `width` and `height` of `WebGLRenderer.domElement` in the <a href='https://github.com/mrdoob/three.js/blob/master/src/renderers/WebGLRenderer.js'>implementation</a>, calling it within the callback of `ResizeObserver` feels a bit risky (incidentally, in the <a href='https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/resize_observer/resize_observer.cc'>Chromium implementation</a>, it checks for changes in element size from the previous observation, so it doesn\'t fall into an infinite loop).
 
@@ -304,7 +304,7 @@ autoTransition2(element, 'color 1.5s ease-out', 'blue', 'white');
 
 By specifying the shorthand of CSS Transitions and the start and end values of transition-property, you can execute animations related to elements.
 
-<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/dialog.gif' />
+<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/threejs/img/dialog.gif' />
 
 ## Conclusion
 

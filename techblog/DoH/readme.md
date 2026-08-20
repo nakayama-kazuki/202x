@@ -20,7 +20,7 @@ DoH を使うことでプライバシーおよびセキュリティーの向上�
 
 DoH を有効にするにはお手持ちの Web Browser の設定画面（以下は Firefox の例）をご確認ください。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/DoH/setting.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/DoH/setting.png' />
 
 ## RFC 8484 とプライバシー
 
@@ -366,7 +366,7 @@ Pragma: no-cache
 
 今回利用した Web Browser の実装ではシナリオ 1-1, 1-2, 2-1 ともに Cookie は送信されず、ゆえに DoH サービスがユーザーを識別して興味関心情報を蓄積することは困難である、ということが確認できました。ですので、Web Browser と DNS キャッシュサーバ間の通信を「盗聴」「改竄」「なりすまし」から守りたい方は DoH の活用をご検討ください。
 
-蛇足ですが Web アプリケーションの開発 ～ テストの際には hosts を変更することがありますが、設定ミスや元に戻すことを忘れた結果のトラブルをしばしば見かけます。同じ環境で開発 ～ テストをしているグループ向けの設定を社内の DoH サービスで提供し、テスト実施者は Web Browser の DoH を on/off することで利用する環境を切り替える、もしくはテスト専用の Web Browser でのみ DoH を使う、的な運用で hosts 変更によるトラブルが減らせるかも … などと感じた今日この頃です。そのような用途向けに [サンプルコード（個人サイトです）](https://github.com/nakayama-kazuki/202x/blob/main/DoH/doh.php) を用意しましたのでよろしければご活用ください。
+蛇足ですが Web アプリケーションの開発 ～ テストの際には hosts を変更することがありますが、設定ミスや元に戻すことを忘れた結果のトラブルをしばしば見かけます。同じ環境で開発 ～ テストをしているグループ向けの設定を社内の DoH サービスで提供し、テスト実施者は Web Browser の DoH を on/off することで利用する環境を切り替える、もしくはテスト専用の Web Browser でのみ DoH を使う、的な運用で hosts 変更によるトラブルが減らせるかも … などと感じた今日この頃です。そのような用途向けに [サンプルコード（個人サイトです）](https://github.com/nakayama-kazuki/202x/blob/main/techblog/DoH/doh.php) を用意しましたのでよろしければご活用ください。
 
 こんな感じの application/dns-message を
 

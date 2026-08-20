@@ -16,7 +16,7 @@
 
 の関係性を図にしてみました。矢印上にお菓子のクッキーが記載されているリクエストは Cookie が送信されることを示しています。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/Domain/d-1.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/Cookie/Domain/d-1.png' />
 
 ここまでで大事な部分はお伝えできましたので笑、残りは細かなユースケースで悩みをお持ちの方に読んで頂ければと思います。
 
@@ -24,7 +24,7 @@
 
 図の 1-3 の Set-Cookie の場合 User-Agent は受け入れを拒否します。セキュリティー上の理由でそのようになっているのでしょうか？
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/Domain/d-2.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/Cookie/Domain/d-2.png' />
 
 仮にそうだとしても図の 1-2 の Set-Cookie によって、下位ドメイン（例えば sub.me.example）に対して任意の Cookie を送信させることは可能であり、セッション固定化攻撃のリスクは解消できません。というわけでこの仕様は少々疑問ですね。
 
@@ -38,11 +38,11 @@
 
 図の 2-2 の Set-Cookie の場合 User-Agent は受け入れを許可します。下位ドメインを横断した User-Agent 単位のログ収集目的でこの Domain 属性が用いられます。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/Domain/d-3.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/Cookie/Domain/d-3.png' />
 
 ところで 1-2 の Set-Cookie 実行後、同じ &lt;cookie-name&gt; を使って 2-1, 2-2, 2-3 の Set-Cookie を実行した場合に User-Agent がどのように振舞うのかをテストしてみましょう。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/Cookie/Domain/d-4.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/Cookie/Domain/d-4.png' />
 
 結論から述べますと 2-2 は 1-2 を上書きします（逆も言えます）。また 2-1, 2-2, 2-3 は同じ &lt;cookie-name&gt; であっても別の Cookie として扱われ、お菓子のクッキーが記載されているリクエストでは全ての対象 Cookie が送信されます。
 

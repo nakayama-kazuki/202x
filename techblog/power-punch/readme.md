@@ -1,4 +1,4 @@
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-024.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-024.png' />
 
 ## 0. ホワイトボード
 
@@ -13,7 +13,7 @@
 
 など多くの観点で合理的でした。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/white.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/white.png' />
 
 しかし、グローバル協業体制や働き方が多様化した状況下では、関係者が随時集合するわけにはいきません。加えて私たち LINE ヤフー株式会社の場合、旧組織間のナレッジや文化の融合途上でもあります。以前のように、ホワイトボードを活用した議論でギャップを解消していきたいところですが、日常的にはオンラインコミュニケーションの質を高めていく必要があります。
 
@@ -33,7 +33,7 @@
 
 例えば、ある特定の情報を参照するためにスライドを行き来したりリンク先に遷移させることは、理解や議論の妨げになります。同じスライドを繰り返し参照したければ、その都度再掲すべきです。コピーに伴う修正漏れが気になる場合、スライドマスターのレイアウトとして繰り返し参照するスライドを一元管理する方法もあります。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/slide-master-1.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/slide-master-1.png' />
 
 ではさらにページ数を増やしていきましょう。その心構えを前提に
 
@@ -47,7 +47,7 @@
 
 参加者は些細な質問で話の腰を折りたくないとは思いつつも、違和感や不明点を残したままにしておくことにストレスを感じています。そこで、論点が切り替わるタイミングでそれとわかるような（例えば明度反転した）スライドを挿入し、同時に進捗状況も可視化してみましょう。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-001.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-001.png' />
 
 そうすることで
 
@@ -69,25 +69,25 @@
 
 の手順で作ったスライドはこうなります。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-003.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-003.gif' />
 
 暗い色（例えば透明度 50% の黒）を全体にかぶせ、注目させたい部分を型抜きするとこうなります。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-004.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-004.gif' />
 
 放射線や背景色を使う方法もあります。この場合、再利用のためのパーツ集を用意しておくと便利です。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-005.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-005.gif' />
 
 ## 5. 変化からの気付き
 
 スナップショットでは気付きにくいことも、変化を示すことによって参加者の気付きを引き出しやすくなります。これは実案件の議論に用いたポンチ絵ですが、複数の変化を内包した Before & After のポンチ絵だけでは、参加者の思考が追いつきません。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-006.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-006.gif' />
 
 ここで、中間にある複数の変化を表現したポンチ絵を挿入することによって、参加者から多くの視点を引き出し、問題の早期発見や改善につなげることができます。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-007.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-007.gif' />
 
 例えば、ステップごとにこのような気付きを得ることができるかもしれません。
 
@@ -97,7 +97,7 @@
 
 ところで、誰かがペンツールを使い始めると、他の参加者は画面を眺めつつその完成を（思考停止状態で）待つことになります。そして、仕上がった現代アートによって参加者はあらためて混乱します。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/pen.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/pen.png' />
 
 ペンツールは視覚的な刺激により双方向性を促進しますが、ベースとなるポンチ絵に対して
 
@@ -113,59 +113,59 @@
 
 また、つながりを表現するときにも誤解はできるだけ排除しましょう。以下のポンチ絵で同じアルファベットの箱同士をつなげる場合、カギ線コネクタは論外として、直線や曲線も改善の余地があります。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-008.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-008.gif' />
 
 例えば、マスクを使った交差点の視覚的分離はいかがでしょうか。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-009.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-009.gif' />
 
 交差点自体をずらしてしまう方法も使えそうです。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-010.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-010.gif' />
 
 コネクタを最前面へ移動するか、図形の書式 → オブジェクトの選択と表示、でマスクとコネクタの上下関係を変更できます。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/layer.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/layer.png' />
 
 次に正三角形の頂点の関係性をポンチ絵で表現してみます。パワーポイントのガイドにあわせて正三角形をスライド中央に配置した場合、中央と正三角形の重心は一致しません。従って、中央から各頂点を連結したポンチ絵は、頂点Ａが特別な存在であるかのような印象を与えてしまい、対等な関係性を表現する場合には不適切です。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-011.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-011.gif' />
 
 正三角形の重心（垂線の交点）から各頂点を連結したポンチ絵ならば、各頂点の対等な関係性を明示できます。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-012.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-012.gif' />
 
 正五角形の場合、ガイド中央から各頂点を連結したポンチ絵は回転させると違和感の正体に気付きます。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-013.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-013.gif' />
 
 重心から各頂点を連結したポンチ絵ならば、回転しても美しい正五角形を保ちます。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-014.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-014.gif' />
 
 次は具体に特化したトピックですが、ポンチ絵で API の提供やデータの授受を表現することがしばしばあります。このとき API を呼び出す HTTP リクエストの方向とデータ授受の方向は、同じ向きの場合もあれば逆向きの場合もあります。ポンチ絵の矢印が何を意図しているのかは予断や誤解を与えないように注意しましょう。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-025.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-025.gif' />
 
 ## 7. どちらのストレージ？
 
 ポンチ絵でストレージを表現することがしばしばありますが、パワーポイントの図形にはそれらしき円柱が二種類存在します。Ａの円柱は底面の形を調整できないため、縦長にしたときに違和感のあるパースとなりますが、どちらの円柱を使えばいいのでしょうか？
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-015.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-015.gif' />
 
 Ｂの円柱ならばグラデーション塗りつぶしを使わなくても、円柱の重ね合わせでストレージへのデータ蓄積や割合を表現することができます。結論としてＢの円柱を使っておいた方が融通が利きそうです。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-016.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-016.gif' />
 
 ## 8. 表にもポンチ絵
 
 表とポンチ絵を併用してユースケースごとの動作を表現したくなる場合があります。この際、表とポンチ絵を別なスライドにすることで資料としてはスッキリまとまりますが、どのケースでどのような動作になるのか理解するためには両方のスライドを行き来しなければなりません。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-017.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-017.gif' />
 
 そんなときはポンチ絵ごと表にしてしまうのは如何でしょうか。ごちゃごちゃした印象はともかくとして、どのケースで何が起きるのかを端的に表現することができます。ポンチ絵部分をスライドズームで埋め込むことも可能です（スライドショーでしかズームできないのが難点ですが）。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-018.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-018.png' />
 
 ## 9. なんでも描けます
 
@@ -179,27 +179,27 @@
 
 で完成です。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-019.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-019.gif' />
 
 バッグや財布も簡単に描けます。広告や EC の具体例を示すポンチ絵で使いまわしてください。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-020.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-020.png' />
 
 より自由度の高いポンチ絵の準備で、正方形の周囲を曲線で囲み丸みを帯びた図形を用意します。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-021.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-021.gif' />
 
 正方形以外でも同様です。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-022.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-022.gif' />
 
 これらをつなげて接合すれば棒人間の一丁あがり、です。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/sec-023.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/sec-023.gif' />
 
 蛇足ですが PNG や JPG などの画像についても、パワーポイントで色調に関する加工や背景削除が可能です。例えば PNG 画像のアイコンで複数の登場人物を表現したい場合など、異なる画像を用意することなく色調の加工で対応することができます。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/power-punch/img/img.png' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/power-punch/img/img.png' />
 
 ## まとめ
 

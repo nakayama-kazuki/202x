@@ -1,8 +1,8 @@
 # そんな時どうする Three.js アプリ開発
 
-<img width='100%' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/title.png' />
+<img width='100%' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/threejs/img/title.png' />
 
-[<a href='https://github.com/nakayama-kazuki/202x/tree/main/threejs/en'>English article</a>]
+[<a href='https://github.com/nakayama-kazuki/202x/tree/main/techblog/threejs/en'>English article</a>]
 
 こんにちは、以前は広告エンジニア、現在はデータプラットフォームエンジニアの中山です。この記事では趣味の Three.js アプリ開発を通じて得た気付き、例えば Three.js 初心者が陥りそうなトラブルやブラウザ互換問題、それらの解決方法についてご紹介させていただきます。なお、以前シナジーマーケティングでご一緒させて頂いたこともあり、TECHSCORE BLOG への記事掲載についてご快諾いただきました ^^ どうもありがとうございます。
 
@@ -56,7 +56,7 @@
 
 ## 描画バッファはもぬけの殻
 
-<img width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/screenshot.gif' />
+<img width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/threejs/img/screenshot.gif' />
 
 <a href='https://pj-corridor.net/stick-figure/stick-figure.html'>棒人間</a> や <a href='https://pj-corridor.net/stick-figure/rubber-figure.html'>ゴム人間</a> や <a href='https://pj-corridor.net/stick-figure/hand.html'>手</a> では決定したポーズの画像をクリップボードにコピーする screenshot 機能を実装しています。この機能で `WebGLRenderer.domElement`（<a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.domElement'>仕様</a>）の `toDataURL()` を使っていますが、当初描画した画像を取得できずに悩んでいました。
 
@@ -147,7 +147,7 @@ Three.js アプリではタッチやマウスイベントが発生した座標�
 
 … を共通の UX としています。しかしデバッグ目的で `Scene` に `AxesHelper`（軸を表す三色の線）を追加した際、まれに怪しい挙動になります。
 
-<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/AxesHelper.png' />
+<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/threejs/img/AxesHelper.png' />
 
 この理由は `AxesHelper` 自身も `Raycaster.intersectObject()`（<a href='https://threejs.org/docs/#api/en/core/Raycaster.intersectObject'>仕様</a>）の対象となるためでした。それを考慮して交点をチェックするか、チェック手前で `AxesHelper` の影響を排除しておきましょう。
 
@@ -167,7 +167,7 @@ const intersects = raycaster.intersectObjects(children);
 
 のような仕組みになっています。デバッグ用に操作用のオブジェクトを着色し、棒人間の手を動かしている様子をご覧ください。
 
-<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/CircleGeometry.gif' />
+<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/threejs/img/CircleGeometry.gif' />
 
 空間内のパーツの位置に応じて、オブジェクトの反対方向からレイキャストすることもあるのですが、その状況で怪しい挙動になります。調べたところ `SphereGeometry` は背面からのレイキャストと交点を持たないことがわかりました。常に `PerspectiveCamera` 側を向いている `CircleGeometry` だけに、まさに盲点でした ^^;
 
@@ -187,7 +187,7 @@ const circle = new THREE.Mesh(geometry, material);
 
 フォーラムや `SkinnedMesh` の <a href='https://github.com/mrdoob/three.js/blob/master/src/objects/SkinnedMesh.js'>実装</a> を調べ、実際の頂点データは変更せずにボーンの影響を計算～描画していることは理解できました。そこでラフな代替頂点データとして `SkinnedMesh.skeleton.bones` を使った `ExtrudeGeometry`（<a href='https://threejs.org/docs/#api/en/geometries/ExtrudeGeometry'>仕様</a>）を作り、それとレイキャストとの交点をドラッグすることでゴム人間の操作を実現できました。
 
-<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/rubber-figure.gif' />
+<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/threejs/img/rubber-figure.gif' />
 
 ## AdSense で踏んだブラウザ互換問題
 
@@ -201,7 +201,7 @@ Three.js アプリは初期化時とウインドウのリサイズ時、適切�
 
 が必要になります。加えて <a href='https://support.google.com/adsense/answer/9190028'>AdSense コード</a> を設置したサイトで、広告自動挿入時に他の要素のサイズが変更される可能性があるため、そのタイミングでも同様の処理が必要になります。例えばこれは要素の `offsetHeight` が変更されています。
 
-<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/adsense.gif' />
+<img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/threejs/img/adsense.gif' />
 
 ただし `WebGLRenderer.setSize()` の <a href='https://github.com/mrdoob/three.js/blob/master/src/renderers/WebGLRenderer.js'>実装</a> に `WebGLRenderer.domElement` の `width` や `height` への書き込みがあるため、`ResizeObserver` のコールバック内で呼び出すのは少々危うい感じもします（ちなみに <a href='https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/resize_observer/resize_observer.cc'>Chromium の実装</a> では前回観察時からの要素サイズの変化を確認しているので、処理が無限ループに陥ることはないようです）
 
@@ -306,7 +306,7 @@ autoTransition2(element, 'color 1.5s ease-out', 'blue', 'white');
 
 CSS Transitions の shorthand と transition-property の開始値と終了値を指定することで要素に関するアニメーションを実行します。
 
-<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/threejs/img/dialog.gif' />
+<img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/threejs/img/dialog.gif' />
 
 ## おわりに
 
