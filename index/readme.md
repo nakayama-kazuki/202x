@@ -1,6 +1,6 @@
 - techblog（2022 年以降）
 	- LINEヤフー Tech Blog
-		- 2024.05.30 [ポンチ絵で変わるオンライン会議](https://lydesign.jp/n/n3aa55611b347)（[English](https://github.com/nakayama-kazuki/202x/tree/main/power-punch/en)）
+		- 2024.05.30 [ポンチ絵で変わるオンライン会議](https://lydesign.jp/n/n3aa55611b347)（[English](https://github.com/nakayama-kazuki/202x/tree/main/techblog/power-punch/en)）
 		- 2024.05.15 [そのデータ活用、もういちどチェック！](https://techblog.lycorp.co.jp/ja/20240515a)
 	- yahoo techblog
 		- 2023.07.18 [3rd-party JavaScript のリスク対策に CSP（Content Security Policy）を活用する](https://techblog.yahoo.co.jp/entry/2023071830429434/)
