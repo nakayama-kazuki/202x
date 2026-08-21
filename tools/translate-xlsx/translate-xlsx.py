@@ -27,14 +27,32 @@ def abort(in_message):
     finalize()
     sys.exit(1)
 
-for importName, packageName in [
-    ('boto3', 'boto3'),
-    ('dotenv', 'python-dotenv'),
-    ('openpyxl', 'openpyxl')
-]:
+dependencies = {
+    'boto3' : {},
+    'Config' : {
+        'pkg' : 'botocore',
+        'src' : 'botocore.config'
+    },
+    'ChatCompletion' : {
+        'pkg' : 'openai',
+        'src' : 'openai.types.chat'
+    },
+    'requests' : {},
+    'dotenv' : {
+        'pkg' : 'python-dotenv'
+    },
+    'openpyxl' : {}
+}
+
+for dependency, info in dependencies.items():
     try:
-        globals()[importName] = importlib.import_module(importName)
+        if 'src' in info:
+            module = importlib.import_module(info['src'])
+            globals()[dependency] = getattr(module, dependency)
+        else:
+            globals()[dependency] = importlib.import_module(dependency)
     except ImportError:
+        packageName = info.get('pkg', dependency)
         abort(f'ERROR : exec "$ python -m pip install {packageName}" at first.')
 
 def configure(in_specDict, in_prefix='--'):
@@ -87,98 +105,311 @@ ARGS = configure({
     }
 })
 
-def _retry(in_callback, in_retry_count, in_retry_interval):
-    for retry in range(in_retry_count):
-        try:
-            return in_callback()
-        except Exception as err:
-            if retry + 1 >= in_retry_count:
-                abort(f'ERROR : invoke failed : {err}')
-            print(f'WARN : retrying because : {err}')
-            if '429' in str(err):
-                time.sleep(in_retry_interval * 10)
-            else:
-                time.sleep(in_retry_interval)
+ERROR_RETRY_MESSAGE = 'Check whether your PAT has expired.'
 
-class cLLMRunner:
+_TOP_LOGPROBS = 3
+
+class _cBackendBedrock:
     def __init__(
         self,
-        in_model='us.anthropic.claude-sonnet-4-6',
-        in_region='us-east-1',
-        in_maxTokens=ARGS['maxtokens'],
-        in_temperature=0,
-        in_retryCount=3,
-        in_retryInterval=5
+        in_model,
+        in_timeoutConn,
+        in_timeoutRead,
+        in_region='us-east-1'
     ):
         self._model = in_model
         self._region = in_region
-        self._maxTokens = in_maxTokens
-        self._temperature = in_temperature
-        self._retryCount = in_retryCount
-        self._retryInterval = in_retryInterval
-        self._runtime = self._create_runtime()
-    @property
-    def model(self):
-        return self._model
-    def _create_runtime(self):
-        dotenv.load_dotenv()
         for required in [
-            'ACCESS_KEY_ID',
-            'SECRET_ACCESS_KEY',
-            'SESSION_TOKEN',
+            'AWS_ACCESS_KEY_ID',
+            'AWS_SECRET_ACCESS_KEY',
+            'AWS_SESSION_TOKEN',
             'GATEWAY_URL'
         ]:
             if os.getenv(required) is None:
                 abort(f'ERROR : {required} is not defined in ".env".')
         session = boto3.Session(
-            aws_access_key_id=os.getenv('ACCESS_KEY_ID'),
-            aws_secret_access_key=os.getenv('SECRET_ACCESS_KEY'),
-            aws_session_token=os.getenv('SESSION_TOKEN')
+            aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+            aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
+            aws_session_token=os.getenv('AWS_SESSION_TOKEN')
         )
-        return session.client(
+        self._runtime = session.client(
             'bedrock-runtime',
             region_name=self._region,
-            endpoint_url=os.getenv('GATEWAY_URL')
+            endpoint_url=os.getenv('GATEWAY_URL'),
+            config=Config(
+                connect_timeout=in_timeoutConn,
+                read_timeout=in_timeoutRead
+            )
         )
-    def _invoke(self, in_prompt, in_maxTokens, in_temperature):
+    @property
+    def model(self):
+        return self._model
+    def invoke(self, in_prompt, in_maxTokens, in_temperature, in_logprobs):
+        response = self._runtime.converse_stream(
+            modelId=self._model,
+            messages=[{
+                'role' : 'user',
+                'content' : [{'text' : in_prompt}]
+            }],
+            inferenceConfig={
+                'maxTokens' : in_maxTokens,
+                'temperature' : in_temperature
+            }
+        )
+        chunkArr = []
+        for event in response['stream']:
+            if 'contentBlockDelta' not in event:
+                continue
+            delta = event['contentBlockDelta']['delta']
+            if 'text' not in delta:
+                continue
+            chunkArr.append(delta['text'])
+        text = ''.join(chunkArr)
+        if in_logprobs:
+            chatCompletion = ChatCompletion.model_validate({
+                'id' : 'bedrock',
+                'object' : 'chat.completion',
+                'created' : 0,
+                'model' : self._model,
+                'choices' : [{
+                    'index' : 0,
+                    'message' : {
+                        'role' : 'assistant',
+                        'content' : text
+                    },
+                    'finish_reason' : 'stop',
+                    'logprobs' : {
+                        'content' : [{
+                            'token' : text,
+                            'logprob' : 0.0,
+                            'bytes' : None,
+                            'top_logprobs' : [{
+                                'token' : text,
+                                'logprob' : 0.0,
+                                'bytes' : None
+                            }]
+                        }]
+                    }
+                }]
+            })
+        else:
+            chatCompletion = None
+        return text, chatCompletion
+
+class _cBackendOpenAI:
+    def __init__(
+        self,
+        in_model,
+        in_timeoutConn,
+        in_timeoutRead
+    ):
+        self._model = in_model
+        self._timeoutConn = in_timeoutConn
+        self._timeoutRead = in_timeoutRead
+        for required in [
+            'OPENAI_API_KEY',
+            'GATEWAY_URL'
+        ]:
+            if os.getenv(required) is None:
+                abort(f'ERROR : {required} is not defined in ".env".')
+    @property
+    def model(self):
+        return self._model
+    def invoke(self, in_prompt, in_maxTokens, in_temperature, in_logprobs):
+        params = {
+            'model' : self._model,
+            'messages' : [{
+                'role' : 'user',
+                'content' : in_prompt
+            }],
+            'max_completion_tokens' : in_maxTokens,
+            'temperature' : in_temperature
+        }
+        if in_logprobs:
+            params['logprobs'] = True
+            params['top_logprobs'] = _TOP_LOGPROBS
+        response = requests.post(
+            os.getenv('GATEWAY_URL').rstrip('/') + '/v1/chat/completions',
+            headers={
+                'Content-Type' : 'application/json',
+                'Authorization' : f'Bearer {os.getenv("OPENAI_API_KEY")}'
+            },
+            json=params,
+            timeout=(
+                self._timeoutConn,
+                self._timeoutRead
+            )
+        )
+        response.raise_for_status()
+        data = response.json()
+        text = data['choices'][0]['message']['content']
+        if in_logprobs:
+            chatCompletion = ChatCompletion.model_validate(data)
+        else:
+            chatCompletion = None
+        return text, chatCompletion
+
+class _cBackendGemini:
+    def __init__(
+        self,
+        in_model,
+        in_timeoutConn,
+        in_timeoutRead,
+        in_region='us-east-1'
+    ):
+        self._model = in_model
+        self._timeoutConn = in_timeoutConn
+        self._timeoutRead = in_timeoutRead
+        self._region = in_region
+        for required in [
+            'GEMINI_PROJECT',
+            'GEMINI_API_KEY',
+            'GATEWAY_URL'
+        ]:
+            if os.getenv(required) is None:
+                abort(f'ERROR : {required} is not defined in ".env".')
+    @property
+    def model(self):
+        return self._model
+    def invoke(self, in_prompt, in_maxTokens, in_temperature, in_logprobs):
+        url = (
+            os.getenv('GATEWAY_URL').rstrip('/')
+            + f'/v1/projects/{os.getenv("GEMINI_PROJECT")}'
+            + f'/locations/{self._region}'
+            + f'/publishers/google/models/{self._model}:generateContent'
+        )
+        generationConfig = {
+            'maxOutputTokens' : in_maxTokens,
+            'temperature' : in_temperature
+        }
+        if in_logprobs:
+            generationConfig['responseLogprobs'] = True
+            generationConfig['logprobs'] = _TOP_LOGPROBS
+        response = requests.post(
+            url,
+            headers={
+                'Content-Type' : 'application/json',
+                'Authorization' : f'Bearer {os.getenv("GEMINI_API_KEY")}',
+                'X-Provider' : 'google'
+            },
+            json={
+                'contents' : [{
+                    'role' : 'user',
+                    'parts' : [{
+                        'text' : in_prompt
+                    }]
+                }],
+                'generationConfig' : generationConfig
+            },
+            timeout=(
+                self._timeoutConn,
+                self._timeoutRead
+            )
+        )
+        response.raise_for_status()
+        data = response.json()
+        text = data['candidates'][0]['content']['parts'][0]['text']
+        if in_logprobs:
+            contentLogprobs = []
+            logprobsResult = data['candidates'][0]['logprobsResult']
+            for index, chosen in enumerate(logprobsResult['chosenCandidates']):
+                topLogprobs = []
+                for top in logprobsResult['topCandidates'][index]['candidates']:
+                    topLogprobs.append({
+                        'token' : top['token'],
+                        'logprob' : top['logProbability'],
+                        'bytes' : None
+                    })
+                contentLogprobs.append({
+                    'token' : chosen['token'],
+                    'logprob' : chosen['logProbability'],
+                    'bytes' : None,
+                    'top_logprobs' : topLogprobs
+                })
+            chatCompletion = ChatCompletion.model_validate({
+                'id' : 'gemini',
+                'object' : 'chat.completion',
+                'created' : 0,
+                'model' : self._model,
+                'choices' : [{
+                    'index' : 0,
+                    'message' : {
+                        'role' : 'assistant',
+                        'content' : text
+                    },
+                    'finish_reason' : 'stop',
+                    'logprobs' : {
+                        'content' : contentLogprobs
+                    }
+                }]
+            })
+        else:
+            chatCompletion = None
+        return text, chatCompletion
+
+class cLLMRunner:
+    def __init__(
+        self,
+        in_backendClass,
+        in_backendModel,
+        in_maxTokens=8192,
+        in_temperature=0,
+        in_timeoutConn=60,
+        in_timeoutRead=60,
+        in_retryCount=3,
+        in_retryInterval=5
+    ):
+        dotenv.load_dotenv()
+        self._backend = in_backendClass(
+            in_backendModel,
+            in_timeoutConn,
+            in_timeoutRead
+        )
+        self._maxTokens = in_maxTokens
+        self._temperature = in_temperature
+        self._retryCount = in_retryCount
+        self._retryInterval = in_retryInterval
+    @property
+    def model(self):
+        return self._backend.model
+    def _retry(self, in_callback):
+        lastErr = None
+        for i in range(self._retryCount):
+            try:
+                return in_callback(i)
+            except Exception as err:
+                lastErr = err
+                if i < self._retryCount - 1:
+                    if '429' in str(err):
+                        time.sleep(self._retryInterval * 10)
+                    else:
+                        time.sleep(self._retryInterval)
+        abort(f'{ERROR_RETRY_MESSAGE} ({lastErr})')
+    def _invoke(self, in_prompt, in_maxTokens, in_temperature, in_cnt, in_logprobs):
         if in_maxTokens is None:
             in_maxTokens = self._maxTokens
         if in_temperature is None:
             in_temperature = self._temperature
-        def callback():
-            response = self._runtime.converse_stream(
-                modelId=self._model,
-                messages=[{
-                    'role' : 'user',
-                    'content' : [{'text' : in_prompt}]
-                }],
-                inferenceConfig={'maxTokens' : in_maxTokens, 'temperature' : in_temperature}
-            )
-            chunkArr = []
-            for event in response['stream']:
-                if 'contentBlockDelta' not in event:
-                    continue
-                delta = event['contentBlockDelta']['delta']
-                if 'text' not in delta:
-                    continue
-                chunkArr.append(delta['text'])
-            return ''.join(chunkArr)
-        return _retry(callback, self._retryCount, self._retryInterval)
-    def toText(self,
-        in_prompt,
-        in_maxTokens=None,
-        in_temperature=None
-    ):
-        return self._invoke(in_prompt, in_maxTokens, in_temperature)
-    def toJson(self,
-        in_prompt,
-        in_maxTokens=None,
-        in_temperature=None
-    ):
-        try:
-            return json.loads(self._invoke(in_prompt, in_maxTokens, in_temperature))
-        except Exception as err:
-            abort(f'ERROR : invalid json : {err}')
+        if in_cnt > 0:
+            in_maxTokens *= 2
+            if in_temperature == 0:
+                in_temperature = 0.5
+            print(f'INFO : boosting parameters for retry {in_cnt}')
+        return self._backend.invoke(in_prompt, in_maxTokens, in_temperature, in_logprobs)
+    def toText(self, in_prompt, in_maxTokens=None, in_temperature=None):
+        def _toText(in_cnt):
+            text, chatCompletion = self._invoke(in_prompt, in_maxTokens, in_temperature, in_cnt, False)
+            return text
+        return self._retry(_toText)
+    def toJson(self, in_prompt, in_maxTokens=None, in_temperature=None):
+        def _toJson(in_cnt):
+            text, chatCompletion = self._invoke(in_prompt, in_maxTokens, in_temperature, in_cnt, False)
+            return json.loads(text)
+        return self._retry(_toJson)
+    def toTextChatCompletion(self, in_prompt, in_maxTokens=None, in_temperature=None):
+        def _toTextChatCompletion(in_cnt):
+            return self._invoke(in_prompt, in_maxTokens, in_temperature, in_cnt, True)
+        return self._retry(_toTextChatCompletion)
 
 def text_from_template_text(in_text, in_replaceDict):
     text = in_text
@@ -283,7 +514,10 @@ class cBulkTranslater:
             self._invoke(start_index, len(self._targetBufArr) - 1)
         return self._targetBufArr
 
-gRunner = cLLMRunner()
+gRunner = cLLMRunner(_cBackendBedrock, 'us.anthropic.claude-sonnet-4-6')
+#gRunner = cLLMRunner(_cBackendOpenAI, 'gpt-5.2')
+#gRunner = cLLMRunner(_cBackendGemini, 'gemini-2.5-flash')
+
 gTranslater = cBulkTranslater(gRunner.toText, ARGS['lang'], ARGS['maxtokens'])
 
 if ARGS['xlsx'] is None:
