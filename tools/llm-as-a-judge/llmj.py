@@ -562,7 +562,8 @@ class _GatewayLLM(DeepEvalBaseLLM):
     def load_model(self):
         return self
     def generate(self, in_prompt, in_schema=None):
-        text = self.runner.toText(in_prompt)
+        chatCompletion = self.runner.toChatCompletion(in_prompt)
+        text = chatCompletion.choices[0].message.content
         if in_schema is None:
             return text
         return in_schema.model_validate_json(text)
