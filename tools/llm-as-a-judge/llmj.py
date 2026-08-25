@@ -208,57 +208,34 @@ class _cBackendBedrock:
     @property
     def model(self):
         return self._model
-    def invoke(self, in_prompt, in_maxTokens, in_temperature, in_logprobs):
-        response = self._runtime.converse_stream(
-            modelId=self._model,
-            messages=[{
+    def _buildParams(self, in_prompt, in_maxTokens, in_temperature):
+        return {
+            'modelId' : self._model,
+            'messages' : [{
                 'role' : 'user',
-                'content' : [{'text' : in_prompt}]
+                'content' : [{ 'text' : in_prompt}]
             }],
-            inferenceConfig={
+            'inferenceConfig' : {
                 'maxTokens' : in_maxTokens,
                 'temperature' : in_temperature
             }
-        )
+        }
+    def _request(self, in_params):
+        return self._runtime.converse_stream(**in_params)
+    def _parseResponse(self, in_response):
         chunkArr = []
-        for event in response['stream']:
+        for event in in_response['stream']:
             if 'contentBlockDelta' not in event:
                 continue
             delta = event['contentBlockDelta']['delta']
             if 'text' not in delta:
                 continue
             chunkArr.append(delta['text'])
-        text = ''.join(chunkArr)
-        if in_logprobs:
-            chatCompletion = ChatCompletion.model_validate({
-                'id' : 'bedrock',
-                'object' : 'chat.completion',
-                'created' : 0,
-                'model' : self._model,
-                'choices' : [{
-                    'index' : 0,
-                    'message' : {
-                        'role' : 'assistant',
-                        'content' : text
-                    },
-                    'finish_reason' : 'stop',
-                    'logprobs' : {
-                        'content' : [{
-                            'token' : text,
-                            'logprob' : 0.0,
-                            'bytes' : None,
-                            'top_logprobs' : [{
-                                'token' : text,
-                                'logprob' : 0.0,
-                                'bytes' : None
-                            }]
-                        }]
-                    }
-                }]
-            })
-        else:
-            chatCompletion = None
-        return text, chatCompletion
+        return ''.join(chunkArr)
+    def invoke(self, in_prompt, in_maxTokens, in_temperature):
+        params = self._buildParams(in_prompt, in_maxTokens, in_temperature)
+        response = self._request(params)
+        return self._parseResponse(response)
 
 class _cBackendOpenAI:
     def __init__(
@@ -279,8 +256,8 @@ class _cBackendOpenAI:
     @property
     def model(self):
         return self._model
-    def invoke(self, in_prompt, in_maxTokens, in_temperature, in_logprobs):
-        params = {
+    def _buildParams(self, in_prompt, in_maxTokens, in_temperature):
+        return {
             'model' : self._model,
             'messages' : [{
                 'role' : 'user',
@@ -289,29 +266,28 @@ class _cBackendOpenAI:
             'max_completion_tokens' : in_maxTokens,
             'temperature' : in_temperature
         }
-        if in_logprobs:
-            params['logprobs'] = True
-            params['top_logprobs'] = _TOP_LOGPROBS
+    def _request(self, in_params):
         response = requests.post(
             os.getenv('GATEWAY_URL').rstrip('/') + '/v1/chat/completions',
             headers={
                 'Content-Type' : 'application/json',
                 'Authorization' : f'Bearer {os.getenv("OPENAI_API_KEY")}'
             },
-            json=params,
+            json=in_params,
             timeout=(
                 self._timeoutConn,
                 self._timeoutRead
             )
         )
         response.raise_for_status()
-        data = response.json()
-        text = data['choices'][0]['message']['content']
-        if in_logprobs:
-            chatCompletion = ChatCompletion.model_validate(data)
-        else:
-            chatCompletion = None
-        return text, chatCompletion
+        return response
+    def _parseResponse(self, in_response):
+        data = in_response.json()
+        return data['choices'][0]['message']['content']
+    def invoke(self, in_prompt, in_maxTokens, in_temperature):
+        params = self._buildParams(in_prompt, in_maxTokens, in_temperature)
+        response = self._request(params)
+        return self._parseResponse(response)
 
 class _cBackendGemini:
     def __init__(
@@ -335,20 +311,26 @@ class _cBackendGemini:
     @property
     def model(self):
         return self._model
-    def invoke(self, in_prompt, in_maxTokens, in_temperature, in_logprobs):
+    def _buildParams(self, in_prompt, in_maxTokens, in_temperature):
+        return {
+            'contents' : [{
+                'role' : 'user',
+                'parts' : [{
+                    'text' : in_prompt
+                }]
+            }],
+            'generationConfig' : {
+                'maxOutputTokens' : in_maxTokens,
+                'temperature' : in_temperature
+            }
+        }
+    def _request(self, in_params):
         url = (
             os.getenv('GATEWAY_URL').rstrip('/')
             + f'/v1/projects/{os.getenv("GEMINI_PROJECT")}'
             + f'/locations/{self._region}'
             + f'/publishers/google/models/{self._model}:generateContent'
         )
-        generationConfig = {
-            'maxOutputTokens' : in_maxTokens,
-            'temperature' : in_temperature
-        }
-        if in_logprobs:
-            generationConfig['responseLogprobs'] = True
-            generationConfig['logprobs'] = _TOP_LOGPROBS
         response = requests.post(
             url,
             headers={
@@ -356,62 +338,115 @@ class _cBackendGemini:
                 'Authorization' : f'Bearer {os.getenv("GEMINI_API_KEY")}',
                 'X-Provider' : 'google'
             },
-            json={
-                'contents' : [{
-                    'role' : 'user',
-                    'parts' : [{
-                        'text' : in_prompt
-                    }]
-                }],
-                'generationConfig' : generationConfig
-            },
+            json=in_params,
             timeout=(
                 self._timeoutConn,
                 self._timeoutRead
             )
         )
         response.raise_for_status()
-        data = response.json()
-        text = data['candidates'][0]['content']['parts'][0]['text']
-        if in_logprobs:
-            contentLogprobs = []
-            logprobsResult = data['candidates'][0]['logprobsResult']
-            for index, chosen in enumerate(logprobsResult['chosenCandidates']):
-                topLogprobs = []
-                for top in logprobsResult['topCandidates'][index]['candidates']:
-                    topLogprobs.append({
-                        'token' : top['token'],
-                        'logprob' : top['logProbability'],
-                        'bytes' : None
-                    })
-                contentLogprobs.append({
-                    'token' : chosen['token'],
-                    'logprob' : chosen['logProbability'],
-                    'bytes' : None,
-                    'top_logprobs' : topLogprobs
-                })
-            chatCompletion = ChatCompletion.model_validate({
-                'id' : 'gemini',
-                'object' : 'chat.completion',
-                'created' : 0,
-                'model' : self._model,
-                'choices' : [{
-                    'index' : 0,
-                    'message' : {
-                        'role' : 'assistant',
-                        'content' : text
-                    },
-                    'finish_reason' : 'stop',
-                    'logprobs' : {
-                        'content' : contentLogprobs
-                    }
-                }]
-            })
-        else:
-            chatCompletion = None
-        return text, chatCompletion
+        return response
+    def _parseResponse(self, in_response):
+        data = in_response.json()
+        textArr = []
+        for part in data['candidates'][0]['content']['parts']:
+            textArr.append(part.get('text', ''))
+        return ''.join(textArr)
+    def invoke(self, in_prompt, in_maxTokens, in_temperature):
+        params = self._buildParams(in_prompt, in_maxTokens, in_temperature)
+        response = self._request(params)
+        return self._parseResponse(response)
 
-class cLLMRunner:
+class _cDEBackendBedrock(_cBackendBedrock):
+    def _parseResponse(self, in_response):
+        text = super()._parseResponse(in_response)
+        return ChatCompletion.model_validate({
+            'id' : 'bedrock',
+            'object' : 'chat.completion',
+            'created' : 0,
+            'model' : self._model,
+            'choices' : [{
+                'index' : 0,
+                'message' : {
+                    'role' : 'assistant',
+                    'content' : text
+                },
+                'finish_reason' : 'stop',
+                'logprobs' : {
+                    'content' : [{
+                        'token' : text,
+                        'logprob' : 0.0,
+                        'bytes' : None,
+                        'top_logprobs' : [{
+                            'token' : text,
+                            'logprob' : 0.0,
+                            'bytes' : None
+                        }]
+                    }]
+                }
+            }]
+        })
+
+class _cDEBackendOpenAI(_cBackendOpenAI):
+    def _buildParams(self, in_prompt, in_maxTokens, in_temperature):
+        params = super()._buildParams(in_prompt, in_maxTokens, in_temperature)
+        params['logprobs'] = True
+        params['top_logprobs'] = _TOP_LOGPROBS
+        return params
+    def _parseResponse(self, in_response):
+        return ChatCompletion.model_validate(in_response.json())
+
+class _cDEBackendGemini(_cBackendGemini):
+    def _buildParams(self, in_prompt, in_maxTokens, in_temperature):
+        params = super()._buildParams(in_prompt, in_maxTokens, in_temperature)
+        params['generationConfig']['responseLogprobs'] = True
+        params['generationConfig']['logprobs'] = _TOP_LOGPROBS
+        return params
+    def _parseResponse(self, in_response):
+        data = in_response.json()
+        candidate = data['candidates'][0]
+        textArr = []
+        for part in candidate['content']['parts']:
+            textArr.append(part.get('text', ''))
+        text = ''.join(textArr)
+        logprobsResult = candidate['logprobsResult']
+        contentArr = []
+        for chosen, topCandidates in zip(
+            logprobsResult['chosenCandidates'],
+            logprobsResult['topCandidates']
+        ):
+            topLogprobsArr = []
+            for topCandidate in topCandidates['candidates']:
+                topLogprobsArr.append({
+                    'token' : topCandidate['token'],
+                    'logprob' : topCandidate['logProbability'],
+                    'bytes' : None
+                })
+            contentArr.append({
+                'token' : chosen['token'],
+                'logprob' : chosen['logProbability'],
+                'bytes' : None,
+                'top_logprobs' : topLogprobsArr
+            })
+        return ChatCompletion.model_validate({
+            'id' : 'gemini',
+            'object' : 'chat.completion',
+            'created' : 0,
+            'model' : self._model,
+            'choices' : [{
+                'index' : 0,
+                'message' : {
+                    'role' : 'assistant',
+                    'content' : text
+                },
+                'finish_reason' : 'stop',
+                'logprobs' : {
+                    'content' : contentArr
+                }
+            }]
+        })
+
+class _cLLMRunnerBase:
     def __init__(
         self,
         in_backendClass,
@@ -449,7 +484,7 @@ class cLLMRunner:
                     else:
                         time.sleep(self._retryInterval)
         abort(f'{ERROR_RETRY_MESSAGE} ({lastErr})')
-    def _invoke(self, in_prompt, in_maxTokens, in_temperature, in_cnt, in_logprobs):
+    def _invoke(self, in_prompt, in_maxTokens, in_temperature, in_cnt):
         if in_maxTokens is None:
             in_maxTokens = self._maxTokens
         if in_temperature is None:
@@ -459,25 +494,32 @@ class cLLMRunner:
             if in_temperature == 0:
                 in_temperature = 0.5
             print(f'INFO : boosting parameters for retry {in_cnt}')
-        return self._backend.invoke(in_prompt, in_maxTokens, in_temperature, in_logprobs)
+        return self._backend.invoke(in_prompt, in_maxTokens, in_temperature)
+
+class cLLMRunner(_cLLMRunnerBase):
     def toText(self, in_prompt, in_maxTokens=None, in_temperature=None):
         def _toText(in_cnt):
-            text, chatCompletion = self._invoke(in_prompt, in_maxTokens, in_temperature, in_cnt, False)
-            return text
+            return self._invoke(in_prompt, in_maxTokens, in_temperature, in_cnt)
         return self._retry(_toText)
     def toJson(self, in_prompt, in_maxTokens=None, in_temperature=None):
         def _toJson(in_cnt):
-            text, chatCompletion = self._invoke(in_prompt, in_maxTokens, in_temperature, in_cnt, False)
+            text = self._invoke(in_prompt, in_maxTokens, in_temperature, in_cnt)
             return json.loads(text)
         return self._retry(_toJson)
-    def toTextChatCompletion(self, in_prompt, in_maxTokens=None, in_temperature=None):
-        def _toTextChatCompletion(in_cnt):
-            return self._invoke(in_prompt, in_maxTokens, in_temperature, in_cnt, True)
-        return self._retry(_toTextChatCompletion)
 
-RUNNER = cLLMRunner(_cBackendBedrock, 'us.anthropic.claude-sonnet-4-6')
-#RUNNER = cLLMRunner(_cBackendOpenAI, 'gpt-5.2')
-#RUNNER = cLLMRunner(_cBackendGemini, 'gemini-2.5-flash')
+class cDELLMRunner(_cLLMRunnerBase):
+    def toChatCompletion(self, in_prompt, in_maxTokens=None, in_temperature=None):
+        def _toChatCompletion(in_cnt):
+            return self._invoke(in_prompt, in_maxTokens, in_temperature, in_cnt)
+        return self._retry(_toChatCompletion)
+
+backend, deepeval_backend, model = (_cBackendBedrock, _cDEBackendBedrock, 'us.anthropic.claude-sonnet-4-6')
+#backend, deepeval_backend, model = (_cBackendOpenAI, _cDEBackendOpenAI, 'gpt-5.2')
+#backend, deepeval_backend, model = (_cBackendGemini, _cDEBackendGemini, 'gemini-2.5-flash')
+
+RUNNER = cLLMRunner(backend, model)
+
+_DEEPEVAL_RUNNER = cDELLMRunner(deepeval_backend, model)
 
 def text_from_template_text(in_text, in_replaceDict):
     text = in_text
@@ -525,7 +567,28 @@ class _GatewayLLM(DeepEvalBaseLLM):
             return text
         return in_schema.model_validate_json(text)
     def generate_raw_response(self, in_prompt, **in_kwargs):
-        text, chatCompletion = self.runner.toTextChatCompletion(in_prompt)
+        def isDeepEvalSafe(in_string):
+            try:
+                # emulate trimAndLoadJson
+                text = in_string.strip()
+                if text.startswith('```'):
+                    text = text[3:]
+                if text.startswith('json'):
+                    text = text[4:]
+                if text.endswith('```'):
+                    text = text[:-3]
+                json.loads(text.strip())
+                return True
+            except json.JSONDecodeError:
+                return False
+        retryCount = 0
+        while True:
+            chatCompletion = self.runner.toChatCompletion(in_prompt)
+            if isDeepEvalSafe(chatCompletion.choices[0].message.content):
+                break
+            retryCount += 1
+            if retryCount >= 10:
+                raise RuntimeError('DeepEval acceptable response could not be generated.')
         # API cost is not tracked by llmj.
         untrackedCost = 0
         return chatCompletion, untrackedCost
@@ -541,7 +604,7 @@ def _create_judge(in_rubricArr):
             evaluation_steps=in_rubric['evaluation_steps'],
             evaluation_params=[SingleTurnParams.INPUT, SingleTurnParams.ACTUAL_OUTPUT] + ([SingleTurnParams.CONTEXT] if in_useContext else []),
             async_mode=False,
-            model=_GatewayLLM(RUNNER)
+            model=_GatewayLLM(_DEEPEVAL_RUNNER)
         )
         metric.measure(in_testcase)
         resDict = {}
