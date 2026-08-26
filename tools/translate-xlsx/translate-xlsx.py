@@ -8,6 +8,19 @@ import shutil
 import pathlib
 import importlib
 
+dependencies = {
+    'boto3' : {},
+    'Config' : {
+        'pkg' : 'botocore',
+        'src' : 'botocore.config'
+    },
+    'requests' : {},
+    'dotenv' : {
+        'pkg' : 'python-dotenv'
+    },
+    'openpyxl' : {}
+}
+
 def _create_finalize():
     start_time = time.time()
     def _finalize():
@@ -27,23 +40,6 @@ def abort(in_message):
     finalize()
     sys.exit(1)
 
-dependencies = {
-    'boto3' : {},
-    'Config' : {
-        'pkg' : 'botocore',
-        'src' : 'botocore.config'
-    },
-    'ChatCompletion' : {
-        'pkg' : 'openai',
-        'src' : 'openai.types.chat'
-    },
-    'requests' : {},
-    'dotenv' : {
-        'pkg' : 'python-dotenv'
-    },
-    'openpyxl' : {}
-}
-
 for dependency, info in dependencies.items():
     try:
         if 'src' in info:
@@ -55,7 +51,9 @@ for dependency, info in dependencies.items():
         packageName = info.get('pkg', dependency)
         abort(f'ERROR : exec "$ python -m pip install {packageName}" at first.')
 
-def configure(in_specDict, in_prefix='--'):
+ERROR_RETRY_MESSAGE = 'Check whether your PAT has expired.'
+
+def setupArgs(in_specDict, in_prefix='--'):
     if f'{in_prefix}{SHOWHELP}' in sys.argv:
         for name, spec in in_specDict.items():
             print(f'{in_prefix}{name} : {spec["explain"]} ( default = {spec["default"]} )')
@@ -80,7 +78,7 @@ def configure(in_specDict, in_prefix='--'):
             parmDict[name] = spec['convert'](parmDict[name])
     return parmDict
 
-ARGS = configure({
+ARGS = setupArgs({
     'xlsx' : {
         'default' : None,
         'convert' : lambda in_path: None if in_path is None else pathlib.Path(in_path),
@@ -104,10 +102,6 @@ ARGS = configure({
         'explain' : 'Target language for translation.'
     }
 })
-
-ERROR_RETRY_MESSAGE = 'Check whether your PAT has expired.'
-
-_TOP_LOGPROBS = 3
 
 class _cBackendBedrock:
     def __init__(
@@ -144,57 +138,34 @@ class _cBackendBedrock:
     @property
     def model(self):
         return self._model
-    def invoke(self, in_prompt, in_maxTokens, in_temperature, in_logprobs):
-        response = self._runtime.converse_stream(
-            modelId=self._model,
-            messages=[{
+    def _buildParams(self, in_prompt, in_maxTokens, in_temperature):
+        return {
+            'modelId' : self._model,
+            'messages' : [{
                 'role' : 'user',
                 'content' : [{'text' : in_prompt}]
             }],
-            inferenceConfig={
+            'inferenceConfig' : {
                 'maxTokens' : in_maxTokens,
                 'temperature' : in_temperature
             }
-        )
+        }
+    def _request(self, in_params):
+        return self._runtime.converse_stream(**in_params)
+    def _parseResponse(self, in_response):
         chunkArr = []
-        for event in response['stream']:
+        for event in in_response['stream']:
             if 'contentBlockDelta' not in event:
                 continue
             delta = event['contentBlockDelta']['delta']
             if 'text' not in delta:
                 continue
             chunkArr.append(delta['text'])
-        text = ''.join(chunkArr)
-        if in_logprobs:
-            chatCompletion = ChatCompletion.model_validate({
-                'id' : 'bedrock',
-                'object' : 'chat.completion',
-                'created' : 0,
-                'model' : self._model,
-                'choices' : [{
-                    'index' : 0,
-                    'message' : {
-                        'role' : 'assistant',
-                        'content' : text
-                    },
-                    'finish_reason' : 'stop',
-                    'logprobs' : {
-                        'content' : [{
-                            'token' : text,
-                            'logprob' : 0.0,
-                            'bytes' : None,
-                            'top_logprobs' : [{
-                                'token' : text,
-                                'logprob' : 0.0,
-                                'bytes' : None
-                            }]
-                        }]
-                    }
-                }]
-            })
-        else:
-            chatCompletion = None
-        return text, chatCompletion
+        return ''.join(chunkArr)
+    def invoke(self, in_prompt, in_maxTokens, in_temperature):
+        params = self._buildParams(in_prompt, in_maxTokens, in_temperature)
+        response = self._request(params)
+        return self._parseResponse(response)
 
 class _cBackendOpenAI:
     def __init__(
@@ -215,8 +186,8 @@ class _cBackendOpenAI:
     @property
     def model(self):
         return self._model
-    def invoke(self, in_prompt, in_maxTokens, in_temperature, in_logprobs):
-        params = {
+    def _buildParams(self, in_prompt, in_maxTokens, in_temperature):
+        return {
             'model' : self._model,
             'messages' : [{
                 'role' : 'user',
@@ -225,29 +196,28 @@ class _cBackendOpenAI:
             'max_completion_tokens' : in_maxTokens,
             'temperature' : in_temperature
         }
-        if in_logprobs:
-            params['logprobs'] = True
-            params['top_logprobs'] = _TOP_LOGPROBS
+    def _request(self, in_params):
         response = requests.post(
             os.getenv('GATEWAY_URL').rstrip('/') + '/v1/chat/completions',
             headers={
                 'Content-Type' : 'application/json',
                 'Authorization' : f'Bearer {os.getenv("OPENAI_API_KEY")}'
             },
-            json=params,
+            json=in_params,
             timeout=(
                 self._timeoutConn,
                 self._timeoutRead
             )
         )
         response.raise_for_status()
-        data = response.json()
-        text = data['choices'][0]['message']['content']
-        if in_logprobs:
-            chatCompletion = ChatCompletion.model_validate(data)
-        else:
-            chatCompletion = None
-        return text, chatCompletion
+        return response
+    def _parseResponse(self, in_response):
+        data = in_response.json()
+        return data['choices'][0]['message']['content']
+    def invoke(self, in_prompt, in_maxTokens, in_temperature):
+        params = self._buildParams(in_prompt, in_maxTokens, in_temperature)
+        response = self._request(params)
+        return self._parseResponse(response)
 
 class _cBackendGemini:
     def __init__(
@@ -271,20 +241,26 @@ class _cBackendGemini:
     @property
     def model(self):
         return self._model
-    def invoke(self, in_prompt, in_maxTokens, in_temperature, in_logprobs):
+    def _buildParams(self, in_prompt, in_maxTokens, in_temperature):
+        return {
+            'contents' : [{
+                'role' : 'user',
+                'parts' : [{
+                    'text' : in_prompt
+                }]
+            }],
+            'generationConfig' : {
+                'maxOutputTokens' : in_maxTokens,
+                'temperature' : in_temperature
+            }
+        }
+    def _request(self, in_params):
         url = (
             os.getenv('GATEWAY_URL').rstrip('/')
             + f'/v1/projects/{os.getenv("GEMINI_PROJECT")}'
             + f'/locations/{self._region}'
             + f'/publishers/google/models/{self._model}:generateContent'
         )
-        generationConfig = {
-            'maxOutputTokens' : in_maxTokens,
-            'temperature' : in_temperature
-        }
-        if in_logprobs:
-            generationConfig['responseLogprobs'] = True
-            generationConfig['logprobs'] = _TOP_LOGPROBS
         response = requests.post(
             url,
             headers={
@@ -292,62 +268,26 @@ class _cBackendGemini:
                 'Authorization' : f'Bearer {os.getenv("GEMINI_API_KEY")}',
                 'X-Provider' : 'google'
             },
-            json={
-                'contents' : [{
-                    'role' : 'user',
-                    'parts' : [{
-                        'text' : in_prompt
-                    }]
-                }],
-                'generationConfig' : generationConfig
-            },
+            json=in_params,
             timeout=(
                 self._timeoutConn,
                 self._timeoutRead
             )
         )
         response.raise_for_status()
-        data = response.json()
-        text = data['candidates'][0]['content']['parts'][0]['text']
-        if in_logprobs:
-            contentLogprobs = []
-            logprobsResult = data['candidates'][0]['logprobsResult']
-            for index, chosen in enumerate(logprobsResult['chosenCandidates']):
-                topLogprobs = []
-                for top in logprobsResult['topCandidates'][index]['candidates']:
-                    topLogprobs.append({
-                        'token' : top['token'],
-                        'logprob' : top['logProbability'],
-                        'bytes' : None
-                    })
-                contentLogprobs.append({
-                    'token' : chosen['token'],
-                    'logprob' : chosen['logProbability'],
-                    'bytes' : None,
-                    'top_logprobs' : topLogprobs
-                })
-            chatCompletion = ChatCompletion.model_validate({
-                'id' : 'gemini',
-                'object' : 'chat.completion',
-                'created' : 0,
-                'model' : self._model,
-                'choices' : [{
-                    'index' : 0,
-                    'message' : {
-                        'role' : 'assistant',
-                        'content' : text
-                    },
-                    'finish_reason' : 'stop',
-                    'logprobs' : {
-                        'content' : contentLogprobs
-                    }
-                }]
-            })
-        else:
-            chatCompletion = None
-        return text, chatCompletion
+        return response
+    def _parseResponse(self, in_response):
+        data = in_response.json()
+        textArr = []
+        for part in data['candidates'][0]['content']['parts']:
+            textArr.append(part.get('text', ''))
+        return ''.join(textArr)
+    def invoke(self, in_prompt, in_maxTokens, in_temperature):
+        params = self._buildParams(in_prompt, in_maxTokens, in_temperature)
+        response = self._request(params)
+        return self._parseResponse(response)
 
-class cLLMRunner:
+class _cLLMRunnerBase:
     def __init__(
         self,
         in_backendClass,
@@ -385,7 +325,7 @@ class cLLMRunner:
                     else:
                         time.sleep(self._retryInterval)
         abort(f'{ERROR_RETRY_MESSAGE} ({lastErr})')
-    def _invoke(self, in_prompt, in_maxTokens, in_temperature, in_cnt, in_logprobs):
+    def _invoke(self, in_prompt, in_maxTokens, in_temperature, in_cnt):
         if in_maxTokens is None:
             in_maxTokens = self._maxTokens
         if in_temperature is None:
@@ -395,21 +335,18 @@ class cLLMRunner:
             if in_temperature == 0:
                 in_temperature = 0.5
             print(f'INFO : boosting parameters for retry {in_cnt}')
-        return self._backend.invoke(in_prompt, in_maxTokens, in_temperature, in_logprobs)
+        return self._backend.invoke(in_prompt, in_maxTokens, in_temperature)
+
+class cLLMRunner(_cLLMRunnerBase):
     def toText(self, in_prompt, in_maxTokens=None, in_temperature=None):
         def _toText(in_cnt):
-            text, chatCompletion = self._invoke(in_prompt, in_maxTokens, in_temperature, in_cnt, False)
-            return text
+            return self._invoke(in_prompt, in_maxTokens, in_temperature, in_cnt)
         return self._retry(_toText)
     def toJson(self, in_prompt, in_maxTokens=None, in_temperature=None):
         def _toJson(in_cnt):
-            text, chatCompletion = self._invoke(in_prompt, in_maxTokens, in_temperature, in_cnt, False)
+            text = self._invoke(in_prompt, in_maxTokens, in_temperature, in_cnt)
             return json.loads(text)
         return self._retry(_toJson)
-    def toTextChatCompletion(self, in_prompt, in_maxTokens=None, in_temperature=None):
-        def _toTextChatCompletion(in_cnt):
-            return self._invoke(in_prompt, in_maxTokens, in_temperature, in_cnt, True)
-        return self._retry(_toTextChatCompletion)
 
 def text_from_template_text(in_text, in_replaceDict):
     text = in_text
