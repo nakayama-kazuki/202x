@@ -54,9 +54,11 @@ def _create_finalize():
 
 finalize = _create_finalize()
 
-def abort(in_message=None):
-    if in_message:
-        print(in_message)
+SHOWHELP = 'help'
+
+def abort(in_message):
+    print(in_message)
+    print(f'Use "--{SHOWHELP}" to check the available parameters.')
     finalize()
     sys.exit(1)
 
@@ -148,11 +150,10 @@ def find_append_column(in_sheet, in_name):
     return col
 
 def setupArgs(in_specDict, in_prefix='--'):
-    showHelp = 'help'
-    if f'{in_prefix}{showHelp}' in sys.argv:
+    if f'{in_prefix}{SHOWHELP}' in sys.argv:
         for name, spec in in_specDict.items():
             print(f'{in_prefix}{name} : {spec["explain"]} ( default = {spec["default"]} )')
-        finalize() 
+        finalize()
         sys.exit(0)
     parmDict = {}
     if any(arg.startswith(in_prefix) for arg in sys.argv):
@@ -213,7 +214,7 @@ class _cBackendBedrock:
             'modelId' : self._model,
             'messages' : [{
                 'role' : 'user',
-                'content' : [{ 'text' : in_prompt}]
+                'content' : [{'text' : in_prompt}]
             }],
             'inferenceConfig' : {
                 'maxTokens' : in_maxTokens,
