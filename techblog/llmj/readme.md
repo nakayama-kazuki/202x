@@ -8,7 +8,7 @@
 - モデルのアップグレード後、秘伝のタレ（トリッキーな指示）がこれまでと同様に機能するだろうか
 - 生成パイプラインの改善は一見成功しているようだけど、エッジケースで副作用を生まないだろうか
 
-このような悩みを抱えている現場も多いのではないでしょうか。
+このような悩みを抱えている開発現場も多いのではないでしょうか。
 
 私の担当するサービスでも、生成 AI を活用してニュース記事や SNS ポストのブリーフィングを自動生成したい、というニーズがありました。
 
@@ -21,9 +21,9 @@
 1. 熟練編集者に「よいブリーフィング」の具体例を複数件作ってもらう
 2. 上記 1 を参考にしつつ、熟練編集者に「よいブリーフィング」たる品質を定義してもらう
 3. 上記 2 に基づいてブリーフィングをスコアリングする評価ロボットを作る
-4. 評価ロボットに試しに上記 1 を評価させてみる。低評価になる場合は、具体例か定義の一方もしくは両方を調整する
+4. 評価ロボットに試しに上記 1 を評価させてみる。低評価になる場合は上記 1 の具体例か上記 2 の定義の一方、もしくは両方を調整する
 
-<img style='border: 1px solid #000; width: 800px;' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i01.png' />
+<img width='800' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i01.png' />
 
 5. 初期バージョンのブリーフィング生成パイプラインを作る
 6. 複数のソーステキストからブリーフィングを生成する
@@ -31,7 +31,7 @@
 8. 評価に基づきパイプラインを改善し、それを次世代バージョンとする
 9. 上記 6 ～ 8 を繰り返す
 
-<img style='border: 1px solid #000; width: 800px;' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i02.png' />
+<img width='800' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i02.png' />
 
 10. 熟練編集者のチェックを経て最終的な合否判断
 11. 将来モデルの変更やブリーフィングの仕様変更（例えばパーソナライズ強化）が生じた場合、その内容に応じてプロセスを繰り返す
@@ -40,7 +40,7 @@
 
 今回は
 
-<a href='https://deepeval.com/'>DeepEval</a> を利用しつつ
+<a href='https://deepeval.com/'>DeepEval</a> を利用して
 
 評価ロボットとプロセス支援のフレームワークを実装しましたが、
 
@@ -113,7 +113,7 @@
 
 評価プロセス全体像のこの部分です。
 
-<img style='border: 1px solid #000; width: 800px;' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i03.png' />
+<img width='800' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i03.png' />
 
 # 品質の定義
 
