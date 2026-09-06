@@ -32,7 +32,7 @@
 7. 生成～評価のバッチ処理
 	- 十分な件数の入力データセットからブリーフィングを生成する
 	- 評価ロボットがブリーフィングをスコアリング
-8. 評価に基づきパイプラインを改善し、それを次世代バージョンとする
+8. 評価に基づき生成パイプラインを改善し、それを次世代バージョンとする
 9. 上記 7, 8 を繰り返す
 
 <img width='800' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i02.png' />
@@ -42,19 +42,13 @@
 
 このプロセスの狙いは、評価ロボットで評価の量を担保しつつ、熟練編集者は人間だからこそ気付くことのできるリスクの精査にフォーカスすることで、評価の費用対効果を最大化することです。
 
-今回
-
-<a href='https://deepeval.com/'>DeepEval</a> を利用して
-
-評価ロボットを含めたプロセス支援のフレームワークを実装しましたが、
-
-運用を通じて様々な課題が発生しました。
+今回 <a href='https://deepeval.com/'>DeepEval</a> を利用して評価ロボットを含めたプロセス支援のフレームワークを実装しましたが、運用を通じて様々な課題が発生しました。
 
 ここからは発生した課題とその対策について掘り下げていきます。
 
 # よいブリーフィングとはなにか？
 
-唐突ですが、そう遠くない未来に思いを馳せた架空の記事 …
+唐突ですが、架空の記事 …
 
 ```
 宇宙航空研究開発機構（JAXA）をはじめとする国際宇宙探査チームは7日、月面南部にて建設を進めていた人類初の常設月面基地「アルテミス・ベース」の初期建設プロセスがすべて完了したと発表した。2020年代に始まった国際共同月探査プロジェクトの中核を担うこの基地の完成により、人類が月面に長期間滞在し、持続的な科学研究や開発を行うための基盤が整った。完成した月面基地は、居住モジュール、太陽光発電システム、そして月面の水資源から水素と酸素を抽出する実験プラントなどで構成されている。今後は、世界各国から選抜された最大6名の宇宙飛行士が数ヶ月交代で常駐し、低重力環境が人体に与える影響の調査や、月面での天体観測、資源採掘の技術実証を行う予定だ。さらに、この月面基地は将来の有人火星探査に向けた「中継拠点」としての役割も期待されている。地球よりも重力が小さい月面からのロケット打ち上げは、地球から直接火星へ向かうよりも大幅に燃料を削減できるため、深宇宙探査のコスト削減に直結する。国際宇宙探査チームの代表は「今回の基地完成は、人類が『地球に住む種』から『宇宙で暮らす種』へと進化する歴史的な一歩だ」と期待を語った。
@@ -102,9 +96,11 @@
 
 ブリーフィングの品質についても同じことが言えます。
 
-とはいえ、最初から抽象概念を定義することは難しいため、
+とはいえ、最初から抽象概念を定義することは難しいため、評価プロセス全体像のこの部分
 
-サービスの方向性を踏まえつつ、まず評価プロセスにある「よいブリーフィング」の具体例を複数作ります。
+<img width='800' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i03.png' />
+
+ではサービスの方向性を踏まえつつ「よいブリーフィング」の具体例を複数作ります。
 
 それらを並べてみて
 
@@ -115,21 +111,11 @@
 
 などの観点から共通する特徴を抽出し、品質の定義に落とし込んでいきます。
 
-評価プロセス全体像のこの部分です。
-
-<img width='800' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i03.png' />
-
 # 品質の定義
 
-DeepEval には、出力が入力に忠実であるかを評価する Faithfulness や、要約としての品質を評価する Summarization などの Metrics があらかじめ用意されています。
+DeepEval には、出力が入力に忠実であるかを評価する Faithfulness や、要約としての品質を評価する Summarization などの既成 Metrics があらかじめ用意されています。
 
-しかし「よいブリーフィング」たる品質のすべてが、必ずしも Faithfulness や Summarization などの 既成 Metrics で評価できるとは限らないため、
-
-今回は自然言語で記述した評価基準に基づいた評価を実行できる
-
-<a href='https://deepeval.com/docs/metrics-llm-evals'>GEval</a>
-
-を利用することにします。
+しかし「よいブリーフィング」たる品質のすべてが、必ずしも既成 Metrics で評価できるとは限らないため、今回は自然言語で記述した評価基準に基づいた評価を実行できる <a href='https://deepeval.com/docs/metrics-llm-evals'>G-Eval</a> を利用することにします。
 
 例えば正確性の評価には
 
@@ -151,62 +137,101 @@ DeepEval には、出力が入力に忠実であるかを評価する Faithfulne
 
 といった具合です。
 
-GEval はこの criteria を内部的に evaluation_steps という段階的なタスクに分割して評価を実行します。
+G-Eval は、この criteria を内部的に evaluation_steps という段階的なタスクに分割して評価を実行しますが、
 
-大量の評価をできるだけ短時間で実行するために、
+> Since G-Eval is a two-step algorithm that generates chain of thoughts (CoTs) for better evaluation, in deepeval this means first generating a series of evaluation_steps using CoT based on the given criteria, before using the generated steps to determine the final score using the parameters presented in an LLMTestCase.
 
-- criteria から evaluation_steps への変換は最初の一回のみとして、生成された evaluation_steps を二回目以降の評価で使いまわす
-- 正確性、機微情報の取り扱い、その他観点の評価を並列実行
+バッチ処理による繰り返し評価をできるだけ短時間で実行するために
+
+- criteria から evaluation_steps への変換結果をキャッシュして、繰り返し評価で使いまわす
+- 上述「正確性の評価」「機微情報に対する表現上の配慮」など、各観点の評価を並列で実行する
 
 のように評価ロボットを実装しました。
 
-なので、評価観点の追加は運用への影響は少ないのですが、増やせば増やすほど
+なので、評価観点を増やしても運用への影響は少ないのですが、
 
-- 各評価観点間の重複
-- 各評価観点間の衝突
+- 各評価観点間の重複（例えば網羅性と正確性）
+- 各評価観点間の衝突（例えば網羅性と簡潔さ）
 
-の発生が想像できます。
+が発生しやすくなり、評価に基づいた生成パイプラインの改善に支障が生じる場合がありました。
 
+そこで、評価プロセス全体像のこの部分
 
+<img width='800' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i04.png' />
 
+では「よいブリーフィング」の具体例と品質定義の整合性の確認に加え、評価観点の重複や衝突も確認し、改善を促す仕組を実装しました。
 
-ここで重要なのは、評価基準を増やせば増やすほど評価が精密になるわけではない、という点でした。
-
-例えば「正確性」と「主要な情報を適切に取り上げていること」を別々に評価するとします。主要な情報が抜けているブリーフィングを見たとき、正確性の評価基準にも「重要な情報が欠落していないこと」と書いてしまうと、同じ問題を複数の Metrics で減点することになります。
-
-逆に、一方では「簡潔であること」を求め、もう一方では「重要な情報を漏らさないこと」を強く求めれば、評価基準同士が衝突することもあります。
-
-実際に評価基準を作る作業は、単に「よいブリーフィングの条件」を思いつくまま列挙する作業ではありませんでした。
-
-どの品質をどの Metric が担当するのかを決め、同じ問題を二重に評価していないか、ある Metric を改善すると別の Metric が悪化するような矛盾がないかを確認しながら調整していきます。
-
-そして、その確認に使えるのが最初に編集者に作ってもらった「よいブリーフィング」の例です。
-
-評価基準に従って評価ロボットにそれらを採点させ、人間がよいと考えたブリーフィングが低く評価されるのであれば、評価ロボットがおかしいと決めつけるのではなく、評価基準と正解例のどちらに問題があるのかを確認します。
-
-つまり、ここで作っているのは単なる採点用のプロンプトではありません。
-
-**「このサービスにとって、生成 AI のよい仕事とは何か」を、人間と LLM の双方が解釈できる形にしていく作業**でもあります。
-
-
-
-
-
-
-★以下について述べる
-
-・GEval = 既成Metricsも理解したうえで、ブリーフィング固有の品質要件にはcustom metricであるGEvalが適切話
-	・Summarization / Faithfulness等を知らずに独自rubricを作ったわけではない。
-・rubric 同士の重複や矛盾も起きることを調整する話
-
-GEval や logprobs などの用語が出てきますが、初心者〜中級者エンジニアも読者層に含む場合、軽く「GEvalとはLLMに評価ステップを定義させる手法」「logprobsを用いた確信度の取得」といった一言を添えておくと、より親切になります。
+この段階を通じて、人間と AI の双方にとって「よいブリーフィング」の解像度を高めてゆきます。
 
 # 評価のブレへの対策
 
-★以下について述べる
+生成パイプラインを改修した結果、正確性のスコアが 0.88 から 0.91 に変化したとします。
 
-・judge 自身の揺れをどうするか（同じデータを反復評価し、stddevを見る）
-・バックエンドに応じて logprobs を活用した評価
+これは改修による改善効果と言えるでしょうか。
+
+また、機微情報に対する表現上の配慮についてのスコアが 0.93 から 0.87 に変化したとします。
+
+これは改修の副作用と言えるでしょうか。
+
+AI の判断は常に一定となるわけではないため、
+
+- スコアのブレの最小化
+- スコアの変化を解釈するための指針
+
+が必要になります。
+
+前者については、G-Eval には LLM が出力するスコア候補の確率を利用して加重平均を求め、スコアリングのバイアスを抑える仕組みがあるため、それを活用することにしました（Bedrock など一部のバックエンドでは、この機能に必要な logprobs を活用することはできません）。
+
+> In the original G-Eval paper, the authors used the probabilities of the LLM output tokens to normalize the score by calculating a weighted summation.
+> This step was introduced in the paper because it minimizes bias in LLM scoring. This normalization step is automatically handled by deepeval by default (unless you're using a custom model).
+
+後者については、評価観点によってブレ幅が異なることが予想できます。
+
+そこで、生成パイプラインの改善サイクルに入る手前
+
+<img width='800' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i06.png' />
+
+でランダムに生成した多様な入力データを使い、評価ロボットによる評価繰り返し、評価の傾向を把握する仕組みを用意しました。
+
+以下は、50 件の入力データに対して、3 回評価を実施した際の評価観点毎の標準偏差に関する統計情報です。
+
+```
+{
+	"model": "your backend model",
+	"articles": 50,
+	"iterations": 3,
+	"note": {
+		"stddevAvg": "Average standard deviation of repeated evaluations for the same test data. Lower values indicate more consistent scoring.",
+		"stddevMax": "Maximum standard deviation among all test data. Lower values indicate the worst-case evaluation inconsistency is smaller.",
+		"testDataInfo.stddev": "Standard deviation of the average scores across the test data. Higher values indicate the test data covers a wider range of quality."
+	},
+	"rubrics": {
+		"accuracy": {
+			"stddevAvg": 0.14920442564214614,
+			"stddevMax": 0.2943920288775949,
+			"testDataInfo": {
+				"max": 0.8666666666666667,
+				"min": 0.3333333333333333,
+				"avg": 0.6546666666666666,
+				"stddev": 0.10344295260888701
+			}
+		},
+		"sensitivity": {
+			"stddevAvg": 0.06505382386916238,
+			"stddevMax": 0.37712361663282534,
+			"testDataInfo": {
+				"max": 1.0,
+				"min": 0.7333333333333334,
+				"avg": 0.952,
+				"stddev": 0.07216031534791897
+			}
+		},
+		...
+	}
+}
+```
+
+評価ロボットは stddevAvg や stddevMax を参考に、生成パイプライン改修前後のスコア差が通常の評価のブレに対してどの程度の大きさなのかを踏まえ、改善や悪化について定性的なフィードバックを出力します。
 
 # 生成パイプライン
 
