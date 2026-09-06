@@ -96,7 +96,7 @@
 
 ブリーフィングの品質についても同じことが言えます。
 
-とはいえ、最初から抽象概念を定義することは難しいため、評価プロセス全体像のこの部分
+とはいえ、最初から抽象概念を定義することは難しいため、評価プロセス全体像のこの部分 …
 
 <img width='800' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i03.png' />
 
@@ -106,7 +106,7 @@
 
 - 正確であることが重要なのか
 - より読み手を惹きつけることが重要なのか
-- センシティブな内容は表現にどのような配慮が必要か
+- センシティブな内容を表現する際にはどような配慮が必要か
 - 例えばレトリックを用いるなどして、伝わりやすさを重視すべきか
 
 などの観点から共通する特徴を抽出し、品質の定義に落とし込んでいきます。
@@ -148,16 +148,16 @@ G-Eval は、この criteria を内部的に evaluation_steps という段階的
 
 のように評価ロボットを実装しました。
 
-なので、評価観点を増やしても運用への影響は少ないのですが、
+なので、多様な評価観点が処理時間に与える影響は抑えられているものの、増やせば増やすほど
 
 - 各評価観点間の重複（例えば網羅性と正確性）
 - 各評価観点間の衝突（例えば網羅性と簡潔さ）
 
 が発生しやすくなり、評価に基づいた生成パイプラインの改善に支障が生じる場合がありました。
 
-そこで、評価プロセス全体像のこの部分
+そこで、評価プロセス全体像のこの部分 …
 
-<img width='800' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i04.png' />
+<img width='800' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i05.png' />
 
 では「よいブリーフィング」の具体例と品質定義の整合性の確認に加え、評価観点の重複や衝突も確認し、改善を促す仕組を実装しました。
 
@@ -187,7 +187,7 @@ AI の判断は常に一定となるわけではないため、
 
 後者については、評価観点によってブレ幅が異なることが予想できます。
 
-そこで、生成パイプラインの改善サイクルに入る手前
+そこで、生成パイプラインの改善サイクルに入る手前の段階 …
 
 <img width='800' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i06.png' />
 
@@ -197,7 +197,7 @@ AI の判断は常に一定となるわけではないため、
 
 ```
 {
-	"model": "your backend model",
+	"model": "YOUR_BACKEND_MODEL",
 	"articles": 50,
 	"iterations": 3,
 	"note": {
@@ -231,9 +231,95 @@ AI の判断は常に一定となるわけではないため、
 }
 ```
 
-評価ロボットは stddevAvg や stddevMax を参考に、生成パイプライン改修前後のスコア差が通常の評価のブレに対してどの程度の大きさなのかを踏まえ、改善や悪化について定性的なフィードバックを出力します。
+評価ロボットは stddevAvg や stddevMax を参考に、生成パイプライン改修前後のスコア差が想定しうる評価のブレに対してどの程度の大きさなのかを踏まえ、改善や悪化について定性的なフィードバックを出力します。
 
 # 生成パイプライン
+
+さて、いよいよ生成パイプラインの開発です。
+
+品質定義から簡易プロンプトを生成する仕組みを用意したので、初版はそれを用います。
+
+<img width='800' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i04.png' />
+
+大量の入力データで評価すると、早速いろいろと課題が見つかります。
+
+例えば 30 文字以内で、と指示をしてもしばしば文字数をオーバーしてしまいます。
+
+また、稀に多言語混入も発生しますし、禁止した単語を使ってしまう場合もあります。
+
+これらはプロンプトで強く禁止しても、常に守られる保証はありません。
+
+なのでプロンプトによる指示とルールベースの処理を分離することにしました。
+
+例えば以下は
+
+- 絵文字を空白に置換
+- 1000 バイトを超える出力はやりなおし判断
+
+のような処理を担当します。
+
+```
+#!/usr/bin/env python3
+
+import re
+
+EMOJI_PATTERN = re.compile(
+    '['
+    '\U0001F300-\U0001F5FF'
+    '\U0001F600-\U0001F64F'
+    '\U0001F680-\U0001F6FF'
+    '\U0001F700-\U0001F77F'
+    '\U0001F780-\U0001F7FF'
+    '\U0001F800-\U0001F8FF'
+    '\U0001F900-\U0001F9FF'
+    '\U0001FA00-\U0001FA6F'
+    '\U0001FA70-\U0001FAFF'
+    '\U00002600-\U000026FF'
+    '\U00002700-\U000027BF'
+    ']'
+)
+
+MAX_BYTES = 1000
+
+def utf8(in_text):
+    return in_text.encode('utf-8')
+
+#
+# Return (processed_text, None) to accept the output.
+# Return (None, feedback) to retry generation with the feedback.
+#
+
+def postproc(in_text):
+    #
+    # Replace emojis with spaces.
+    #
+    in_text = EMOJI_PATTERN.sub(' ', in_text)
+
+    #
+    # Retry if the generated text exceeds the maximum UTF-8 byte length.
+    #
+    if len(utf8(in_text)) > MAX_BYTES:
+        return None, f'The output exceeds the maximum length of {MAX_BYTES} UTF-8 bytes. Please shorten the output.'
+
+    #
+    # Accept the generated text.
+    #
+    return in_text, None
+```
+
+AI はリトライで同じような失敗を繰り返すことがあるので、
+
+- 失敗事例と失敗理由を添えた改善要求をプロンプトに追加する
+- temperature を一時的に変更し出力候補の多様性を確保する
+
+によって失敗の繰り返しを避けています。
+
+
+
+
+
+# 生成パイプライン
+
 
 ★以下について述べる
 
