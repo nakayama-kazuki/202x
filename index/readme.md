@@ -1,5 +1,4 @@
-# 記事執筆
-
+# 技術記事
 
 |YYYY.MM.DD|Media                       |Article|
 |---       |---                         |---|
@@ -24,14 +23,14 @@
 |2017.10.24|TECHSCORE BLOG              |[META 要素 + Set-Cookie について](https://www.techscore.com/blog/2017/10/24/meta-set-cookie/)|
 |2017.10.06|TECHSCORE BLOG              |[Cookie が上書きされる !?](https://www.techscore.com/blog/2017/10/06/about-cookie/)|
 |2017.09.01|マーケティング BLOG         |[マーケターの危機？ ITP 時代にアドレサブル広告を活用すべき理由](https://www.synergy-marketing.co.jp/blog/itp_and_addressable-advertising)|
-|2017.08.09|マーケティング BLOG         |[アドレサブル広告を支える技術～CRMデータを広告に活用するためのマッチング技術とは](https://www.synergy-marketing.co.jp/blog/technology-of-addressable-advertising)|
+|2017.08.09|マーケティング BLOG         |[CRMデータを広告に活用するためのマッチング技術とは](https://www.synergy-marketing.co.jp/blog/technology-of-addressable-advertising)|
 |2016.06.24|TECHSCORE BLOG              |[3rd party Cookie いただきます](https://www.techscore.com/blog/2016/06/24/3rd-party-cookie/)|
 |2015.12.20|TECHSCORE BLOG              |[ちゃんと読んでくれましたか？](https://www.techscore.com/blog/2015/12/20/perusal/)|
 |2015.04.25|TECHSCORE BLOG              |[想定外のスキームと脆弱性](https://www.techscore.com/blog/2015/04/25/scheme-security/)|
 |2015.02.23|TECHSCORE BLOG              |[タグマネージャによる高速化（document.write 非同期実行？）](https://www.techscore.com/blog/2015/02/23/async-document-write/)|
 |2014.12.18|TECHSCORE BLOG              |[キュートな概念図（プライバシー関連技術）](https://www.techscore.com/blog/2014/12/18/%e3%82%ad%e3%83%a5%e3%83%bc%e3%83%88%e3%81%aa%e6%a6%82%e5%bf%b5%e5%9b%b3%ef%bc%88%e3%83%97%e3%83%a9%e3%82%a4%e3%83%90%e3%82%b7%e3%83%bc%e9%96%a2%e9%80%a3%e6%8a%80%e8%a1%93%ef%bc%89/)|
 
-# プロダクト等
+# プロダクトなど
 
 - [プロダクト公開サイト](https://pj-corridor.net)
 - [リポジトリ](https://github.com/nakayama-kazuki)
