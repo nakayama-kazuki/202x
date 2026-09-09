@@ -37,9 +37,9 @@ def run(in_script, *in_args):
     subprocess.run([sys.executable, str(in_script), *map(str, in_args)], check=True)
 
 def setup_aa_testing(in_iteration):
-    src = DIR_TEMP_WORK / f'{llmj.INITIAL_VERSION_NAME}{llmj.SUFFIX_XLS}'
+    src = DIR_TEMP_WORK / f'{llmj.INITIAL_VERSION_NAME}{llmj.SUFFIX_WORKFILE}'
     for i in range(in_iteration):
-        dst = DIR_TEMP_WORK / f'aa-{i:03d}{llmj.SUFFIX_XLS}'
+        dst = DIR_TEMP_WORK / f'aa-{i:03d}{llmj.SUFFIX_WORKFILE}'
         shutil.copy2(src, dst)
     src.unlink()
 
@@ -103,7 +103,7 @@ def main():
                 run(llmj.DIR_SUPPORTS / 'llmj-fake-source.py', '--source', DIR_TEMP_SOURCE, '--textCnt', ARGS['variation'])
         else:
             shutil.copytree(ARGS['source'], DIR_TEMP_SOURCE, dirs_exist_ok=True)
-        aaPromptPath = DIR_TEMP_WORK / f'{llmj.INITIAL_VERSION_NAME}{llmj.SUFFIX_TXT}'
+        aaPromptPath = DIR_TEMP_WORK / f'{llmj.INITIAL_VERSION_NAME}.txt'
         if not aaPromptPath.exists():
             run(llmj.DIR_SUPPORTS / 'llmj-initial.py', '--work', DIR_TEMP_WORK)
         run(llmj.DIR_ROOT / 'llmj-generate.py', '--work', DIR_TEMP_WORK, '--source', DIR_TEMP_SOURCE)

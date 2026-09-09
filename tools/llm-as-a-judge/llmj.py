@@ -110,12 +110,13 @@ COL_JUD = {
 
 COL_ALL = COL_GEN | COL_JUD
 
-# prompt
-SUFFIX_TXT = '.txt'
 # metadata
 SUFFIX_META = '.meta.json'
 # generated / judged
-SUFFIX_XLS = '.xlsx'
+SUFFIX_WORKFILE = '.work.xlsx'
+# rubric
+_SUFFIX_CRITERIA = '.criteria.txt'
+_SUFFIX_COMPILED = '.evaluation_steps.json'
 
 RANDOM_IN_META = "@random"
 
@@ -131,6 +132,10 @@ PLACEHOLDER_METADATA = '{{' + SECTION_METADATA + '}}'
 WITHOUT_META_MESSAGE = 'No metadata is available. Please follow the requirements using only ' + SECTION_ORIGINAL + ' section.'
 
 ERROR_RETRY_MESSAGE = 'If this error was caused by the LLM or DeepEval, please try running the command again. Also check whether your PAT has expired.'
+
+_TEMPERATURE_LLM = 0.5
+_TEMPERATURE_DELLM = 0
+_TEMPERATURE_RETRY = 1
 
 _TOP_LOGPROBS = 3
 
@@ -453,7 +458,6 @@ class _cLLMRunnerBase:
         in_backendClass,
         in_backendModel,
         in_maxTokens=8192,
-        in_temperature=0,
         in_timeoutConn=60,
         in_timeoutRead=60,
         in_retryCount=3,
@@ -466,7 +470,6 @@ class _cLLMRunnerBase:
             in_timeoutRead
         )
         self._maxTokens = in_maxTokens
-        self._temperature = in_temperature
         self._retryCount = in_retryCount
         self._retryInterval = in_retryInterval
     @property
@@ -478,6 +481,7 @@ class _cLLMRunnerBase:
             try:
                 return in_callback(i)
             except Exception as err:
+                print(f'WARN : _cLLMRunnerBase ({err})')
                 lastErr = err
                 if i < self._retryCount - 1:
                     if '429' in str(err):
@@ -488,28 +492,25 @@ class _cLLMRunnerBase:
     def _invoke(self, in_prompt, in_maxTokens, in_temperature, in_cnt):
         if in_maxTokens is None:
             in_maxTokens = self._maxTokens
-        if in_temperature is None:
-            in_temperature = self._temperature
         if in_cnt > 0:
             in_maxTokens *= 2
-            if in_temperature == 0:
-                in_temperature = 0.5
+            in_temperature = _TEMPERATURE_RETRY
             print(f'INFO : boosting parameters for retry {in_cnt}')
         return self._backend.invoke(in_prompt, in_maxTokens, in_temperature)
 
 class cLLMRunner(_cLLMRunnerBase):
-    def toText(self, in_prompt, in_maxTokens=None, in_temperature=None):
+    def toText(self, in_prompt, in_maxTokens=None, in_temperature=_TEMPERATURE_LLM):
         def _toText(in_cnt):
             return self._invoke(in_prompt, in_maxTokens, in_temperature, in_cnt)
         return self._retry(_toText)
-    def toJson(self, in_prompt, in_maxTokens=None, in_temperature=None):
+    def toJson(self, in_prompt, in_maxTokens=None, in_temperature=_TEMPERATURE_LLM):
         def _toJson(in_cnt):
             text = self._invoke(in_prompt, in_maxTokens, in_temperature, in_cnt)
             return json.loads(text)
         return self._retry(_toJson)
 
 class cDELLMRunner(_cLLMRunnerBase):
-    def toChatCompletion(self, in_prompt, in_maxTokens=None, in_temperature=None):
+    def toChatCompletion(self, in_prompt, in_maxTokens=None, in_temperature=_TEMPERATURE_DELLM):
         def _toChatCompletion(in_cnt):
             return self._invoke(in_prompt, in_maxTokens, in_temperature, in_cnt)
         return self._retry(_toChatCompletion)
@@ -545,15 +546,45 @@ def llm_processed_json(in_path, in_replaceDict):
 
 def load_rubrics():
     rubricArr = []
-    for path in sorted(DIR_RUBRIC.glob('*.json')):
+    for path in sorted(DIR_RUBRIC.glob('*' + _SUFFIX_CRITERIA)):
         try:
             with open(path, encoding='utf-8') as f:
-                rubricArr.append(json.load(f))
+                rubricArr.append({
+                    'name' : path.name.removesuffix(_SUFFIX_CRITERIA),
+                    'criteria' : f.read().strip()
+                })
         except Exception:
             return None
     if len(rubricArr) == 0:
         return None
     return rubricArr
+
+def _load_compiled_rubrics():
+    rubricArr = load_rubrics()
+    if rubricArr is None:
+        return None
+    compiledArr = []
+    renewedArr = []
+    for rubric in rubricArr:
+        path = DIR_RUBRIC / (rubric['name'] + _SUFFIX_COMPILED)
+        try:
+            with open(path, encoding='utf-8') as f:
+                current = json.load(f)
+            if current.get('criteria') == rubric['criteria']:
+                compiledArr.append(current)
+                continue
+        except Exception:
+            pass
+        renewedArr.append(rubric)
+    if len(renewedArr) > 0:
+        print(f'INFO : compiling {len(renewedArr)} rubrics')
+        generatedArr = llm_processed_json(DIR_SUPPORTS / 'template-compiler.txt', {'__JSON__' : renewedArr})
+        for generated in generatedArr:
+            path = DIR_RUBRIC / (generated['name'] + _SUFFIX_COMPILED)
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump(generated, f, ensure_ascii=False, indent=4)
+            compiledArr.append(generated)
+    return sorted(compiledArr, key=lambda in_rubric: in_rubric['name'])
 
 class _GatewayLLM(DeepEvalBaseLLM):
     def __init__(self, in_runner):
@@ -731,7 +762,7 @@ def _build_judged_dataset(in_path):
             jsRowDict[COL_ALL['RESULTS']] = json.loads(jsRowDict[COL_ALL['RESULTS']] or '[]')
             jsRowArr.append(jsRowDict)
         return {
-            'name' : in_path.name.removesuffix(SUFFIX_XLS),
+            'name' : in_path.name.removesuffix(SUFFIX_WORKFILE),
             'totalAvg' : sum(row['average'] for row in jsRowArr) / len(jsRowArr),
             'articleArr' : jsRowArr
         }
@@ -739,17 +770,15 @@ def _build_judged_dataset(in_path):
         workbook.close()
 
 def build_judged_dataset_array(in_path):
-    rubricArr = load_rubrics()
+    rubricArr = _load_compiled_rubrics()
     if rubricArr is None:
-        abort('ERROR : can not read some json')
+        abort('ERROR : can not read some rubric')
     judgeCallback = None
     judgedArr = []
-    for path in sorted(in_path.glob('*' + SUFFIX_XLS)):
+    for path in sorted(in_path.glob('*' + SUFFIX_WORKFILE)):
         if not _is_judged_xlsx(path):
             if judgeCallback is None:
-                print(f'INFO : compiling {len(rubricArr)} rubrics')
-                compiledArr = llm_processed_json(DIR_SUPPORTS / 'template-compiler.txt', {'__JSON__' : rubricArr})
-                judgeCallback = _create_judge(compiledArr)
+                judgeCallback = _create_judge(rubricArr)
             _process_xlsx(path, judgeCallback)
         judgedArr.append(_build_judged_dataset(path))
     return judgedArr

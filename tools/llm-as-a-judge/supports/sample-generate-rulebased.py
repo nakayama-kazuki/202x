@@ -67,7 +67,7 @@ def rulebased_briefing(in_metainfo):
     })
 
 def process_for_run(in_path):
-    xls_path = in_path.with_suffix(llmj.SUFFIX_XLS)
+    xls_path = in_path.with_suffix(llmj.SUFFIX_WORKFILE)
     if xls_path.exists():
         workbook = llmj.openpyxl.load_workbook(xls_path)
     else:
@@ -96,7 +96,7 @@ def process_for_run(in_path):
     print(f'INFO : generated {xls_path.name}')
 
 def main():
-    for path in sorted(ARGS['work'].glob('*' + llmj.SUFFIX_TXT)):
+    for path in sorted(ARGS['work'].glob('*.txt')):
         process_for_run(path)
     llmj.finalize()
 

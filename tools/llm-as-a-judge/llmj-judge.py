@@ -29,7 +29,7 @@ statsPath = ARGS['work'] / llmj.STATS_FILE_NAME
 if not statsPath.exists():
     ARGS['reportTarget'] = None
 else:
-    xlsxArr = sorted(ARGS['work'].glob('*' + llmj.SUFFIX_XLS))
+    xlsxArr = sorted(ARGS['work'].glob('*' + llmj.SUFFIX_WORKFILE))
     if len(xlsxArr) < 2:
         ARGS['reportTarget'] = None
     elif ARGS['reportTarget'] is None:
@@ -38,7 +38,7 @@ else:
 def make_advice(in_judgedArr, in_reportTarget, in_statsPath):
     currentIndex = None
     for i, dataset in enumerate(in_judgedArr):
-        if dataset['name'] + llmj.SUFFIX_XLS == in_reportTarget:
+        if dataset['name'] + llmj.SUFFIX_WORKFILE == in_reportTarget:
             currentIndex = i
             break
     if currentIndex is None:

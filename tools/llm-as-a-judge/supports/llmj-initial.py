@@ -34,7 +34,7 @@ def build_prompt(in_rubricArr):
 def main():
     prompt = build_prompt(llmj.load_rubrics())
     generated = llmj.RUNNER.toText(prompt)
-    target = ARGS[ 'work'] / f'{llmj.INITIAL_VERSION_NAME}{llmj.SUFFIX_TXT}'
+    target = ARGS[ 'work'] / f'{llmj.INITIAL_VERSION_NAME}.txt'
     with open(target, 'w', encoding='utf-8') as f:
         f.write(generated)
     print(f'INFO : generated "{target.name}"')

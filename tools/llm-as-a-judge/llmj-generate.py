@@ -60,7 +60,7 @@ def get_meta(in_path):
     return json.dumps(metainfo, ensure_ascii=False, indent=2)
 
 def process_for_run(in_prompt_path):
-    xls = in_prompt_path.name.removesuffix(llmj.SUFFIX_TXT) + llmj.SUFFIX_XLS
+    xls = in_prompt_path.name.removesuffix('.txt') + llmj.SUFFIX_WORKFILE
     xls_path = in_prompt_path.with_name(xls)
     if xls_path.exists():
         workbook = llmj.openpyxl.load_workbook(xls_path)
@@ -112,7 +112,7 @@ def process_for_run(in_prompt_path):
     print(f'INFO : generated {xls_path.name}')
 
 def main():
-    for path in sorted(ARGS['work'].glob('*' + llmj.SUFFIX_TXT)):
+    for path in sorted(ARGS['work'].glob('*.txt')):
         process_for_run(path)
     llmj.finalize()
 
