@@ -544,7 +544,7 @@ def llm_processed_text(in_path, in_replaceDict):
 def llm_processed_json(in_path, in_replaceDict):
     return RUNNER.toJson(text_from_template_path(in_path, in_replaceDict))
 
-def load_rubrics():
+def ensure_rubrics():
     rubricArr = []
     for path in sorted(DIR_RUBRIC.glob('*' + _SUFFIX_CRITERIA)):
         try:
@@ -554,15 +554,14 @@ def load_rubrics():
                     'criteria' : f.read().strip()
                 })
         except Exception:
-            return None
+            pass
     if len(rubricArr) == 0:
-        return None
+        abort('ERROR : can not read some rubric')
+    print(f'INFO : loaded {len(rubricArr)} rubrics')
     return rubricArr
 
-def _load_compiled_rubrics():
-    rubricArr = load_rubrics()
-    if rubricArr is None:
-        return None
+def _ensure_compiled_rubrics():
+    rubricArr = ensure_rubrics()
     compiledArr = []
     renewedArr = []
     for rubric in rubricArr:
@@ -770,9 +769,7 @@ def _build_judged_dataset(in_path):
         workbook.close()
 
 def build_judged_dataset_array(in_path):
-    rubricArr = _load_compiled_rubrics()
-    if rubricArr is None:
-        abort('ERROR : can not read some rubric')
+    rubricArr = _ensure_compiled_rubrics()
     judgeCallback = None
     judgedArr = []
     for path in sorted(in_path.glob('*' + SUFFIX_WORKFILE)):

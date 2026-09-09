@@ -36,7 +36,7 @@ def main():
     shutil.rmtree(DIR_TEMP, ignore_errors=True)
     gapAnalysis = {"rubrics" : [], "gold" : []}
     goldDatasetIx = 0
-    rubricArr = llmj.load_rubrics()
+    rubricArr = llmj.ensure_rubrics()
     if len(judgedArr) > 0:
         articleArr = judgedArr[goldDatasetIx]['articleArr']
         if len(judgedArr) > 1:
