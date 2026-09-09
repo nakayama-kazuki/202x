@@ -6,7 +6,7 @@
 
 - 肥大化するプロンプトをリファクタリングしたいけど、悪影響が心配だ
 - モデルのアップグレード後、秘伝のタレ（トリッキーな指示）がこれまでと同様に機能するだろうか
-- 生成パイプラインの改善は一見成功しているようだけど、エッジケースで副作用を生まないだろうか
+- 生成パイプラインの構成変更は動作的には問題なさそうだけど、エッジケースで副作用を生まないだろうか
 
 このような悩みを抱えている開発現場も多いのではないでしょうか。
 
@@ -24,12 +24,12 @@
 2. 上記 1 を参考にしつつ、熟練編集者に「よいブリーフィング」たる品質を定義してもらう
 3. 上記 2 に基づいてブリーフィングをスコアリングする評価ロボットを作る
 4. 評価ロボットが「よいブリーフィング」の具体例を「よい」と評価できるかどうかを検証する
-5. 上記 4 の結果、低評価になる場合は上記 1 の具体例か上記 2 の定義の一方、もしくは両方を調整する
+5. 期待した評価が得られなかった場合は、上記 1 の具体例か上記 2 の定義の一方、もしくは両方を調整する
 
 <img width='800' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i01.png' />
 
 6. 初期バージョンのブリーフィング生成パイプラインを作る
-7. 生成～評価のバッチ処理
+7. 生成～評価のバッチ処理を実行
 	- 十分な量と多様性を持つ入力データセットからブリーフィングを生成する
 	- 評価ロボットがブリーフィングをスコアリング
 8. 評価に基づき生成パイプラインを改善し、それを次世代バージョンとする
@@ -40,7 +40,7 @@
 10. 熟練編集者のチェックにより最終的なデプロイ判定を実施
 11. 将来モデルの変更やブリーフィングの仕様変更（例えばパーソナライズ強化）が生じた場合、その内容に応じてプロセスを繰り返す
 
-このプロセスの狙いは、評価ロボットで評価の量を担保しつつ、熟練編集者は人間だからこそ気付くことのできるリスクの精査にフォーカスすることで、評価の費用対効果を最大化することです。
+このプロセスの狙いは、評価ロボットで評価の一定の品質×量を担保しつつ、熟練編集者は人間だからこそ気付くことのできるリスクの精査にフォーカスすることで、評価の費用対効果を最大化することです。
 
 それを実現するため、今回 <a href='https://deepeval.com/'>DeepEval</a> を利用した評価ロボットとプロセス支援のフレームワークを実装しましたが、運用を通じて様々な課題が発生しました。
 
@@ -50,49 +50,35 @@
 
 唐突ですが、架空の記事 …
 
-```
-宇宙航空研究開発機構（JAXA）をはじめとする国際宇宙探査チームは7日、月面南部にて建設を進めていた人類初の常設月面基地「アルテミス・ベース」の初期建設プロセスがすべて完了したと発表した。2020年代に始まった国際共同月探査プロジェクトの中核を担うこの基地の完成により、人類が月面に長期間滞在し、持続的な科学研究や開発を行うための基盤が整った。完成した月面基地は、居住モジュール、太陽光発電システム、そして月面の水資源から水素と酸素を抽出する実験プラントなどで構成されている。今後は、世界各国から選抜された最大6名の宇宙飛行士が数ヶ月交代で常駐し、低重力環境が人体に与える影響の調査や、月面での天体観測、資源採掘の技術実証を行う予定だ。さらに、この月面基地は将来の有人火星探査に向けた「中継拠点」としての役割も期待されている。地球よりも重力が小さい月面からのロケット打ち上げは、地球から直接火星へ向かうよりも大幅に燃料を削減できるため、深宇宙探査のコスト削減に直結する。国際宇宙探査チームの代表は「今回の基地完成は、人類が『地球に住む種』から『宇宙で暮らす種』へと進化する歴史的な一歩だ」と期待を語った。
-```
+> 宇宙航空研究開発機構（JAXA）をはじめとする国際宇宙探査チームは7日、月面南部にて建設を進めていた人類初の常設月面基地「アルテミス・ベース」の初期建設プロセスがすべて完了したと発表した。2020年代に始まった国際共同月探査プロジェクトの中核を担うこの基地の完成により、人類が月面に長期間滞在し、持続的な科学研究や開発を行うための基盤が整った。完成した月面基地は、居住モジュール、太陽光発電システム、そして月面の水資源から水素と酸素を抽出する実験プラントなどで構成されている。今後は、世界各国から選抜された最大6名の宇宙飛行士が数ヶ月交代で常駐し、低重力環境が人体に与える影響の調査や、月面での天体観測、資源採掘の技術実証を行う予定だ。さらに、この月面基地は将来の有人火星探査に向けた「中継拠点」としての役割も期待されている。地球よりも重力が小さい月面からのロケット打ち上げは、地球から直接火星へ向かうよりも大幅に燃料を削減できるため、深宇宙探査のコスト削減に直結する。国際宇宙探査チームの代表は「今回の基地完成は、人類が『地球に住む種』から『宇宙で暮らす種』へと進化する歴史的な一歩だ」と期待を語った。
 
 から、さまざまな形式の短文を生成してみましょう。まずはプロンプトに
 
-```
-記事の内容が端的に伝わるように 30 字以内のタイトルをつけてください
-```
+> 記事の内容が端的に伝わるように 30 字以内のタイトルをつけてください
 
 と指示を与えてみたところ
 
-```
-人類初の常設月面基地「アルテミス・ベース」初期建設完了
-```
+> 人類初の常設月面基地「アルテミス・ベース」初期建設完了
 
 と出力されました。まあ、妥当なタイトルですね。続いて
 
-```
-この記事を匿名掲示板（5ch）のスレタイ風に要約してください
-```
+> この記事を匿名掲示板（5ch）のスレタイ風に要約してください
 
 の指示だと
 
-```
-【朗報】新築一戸建て（閑静・日当たり良好・酸素なし）完成
-```
+> 【朗報】新築一戸建て（閑静・日当たり良好・酸素なし）完成
 
 それっぽいですね。さらに
 
-```
-この記事を川柳（五・七・五）で表現してください
-```
+> この記事を川柳（五・七・五）で表現してください
 
 の指示では
 
-```
-新時代、月を跨いで、火星へと
-```
+> 新時代、月を跨いで、火星へと
 
 なかなか秀逸（？）な作品が出力されました。
 
-ここで「どの短文が一番よいか」を問われても、何をもって「良さ」とするのかが定義されなければ、再現性、もしくは根拠のある回答はできませんよね。
+ここで「どの短文が一番よいか」と問われた場合、何をもって「よい」とするのかの定義を抜きにしては、再現性のある回答はできませんよね。
 
 ブリーフィングの品質についても同じことが言えます。
 
@@ -102,7 +88,7 @@
 
 ではサービスの方向性を踏まえつつ、まずは「よいブリーフィング」の具体例を複数作ります。
 
-それらを並べてみて
+それらを並べて
 
 - 正確であることが重要なのか
 - より読み手を惹きつけることが重要なのか
@@ -119,46 +105,20 @@ DeepEval には、出力が入力に忠実であるかを評価する Faithfulne
 
 例えば正確性の評価には
 
-```
-{
-	"name": "accuracy",
-	"criteria": "generated が original と矛盾せず、内容を正確に反映していること。original にない事実・推測・誇張・断定を追加せず、不確実な情報を事実として扱わないこと。情報量の不足は減点対象としない。"
-}
-```
+> generated が original と矛盾せず、内容を正確に反映していること。original にない事実・推測・誇張・断定を追加せず、不確実な情報を事実として扱わないこと。情報量の不足は減点対象としない。
 
 機微情報に対する表現上の配慮には
 
-```
-{
-	"name": "sensitivity",
-	"criteria": "generated が死亡、事故、災害、犯罪、病気、自殺、差別、人権問題などのセンシティブな内容に対して適切な配慮をしていること。被害者、遺族、関係者、加害を疑われている人への不必要な断罪や揶揄を含まないこと。憶測や未確認情報によって名誉や信用を損なっていないこと。センシティブな内容について読者の興味を過度にあおる表現や娯楽的な表現を用いていないこと。"
-}
-```
+> generated が死亡、事故、災害、犯罪、病気、自殺、差別、人権問題などのセンシティブな内容に対して適切な配慮をしていること。被害者、遺族、関係者、加害を疑われている人への不必要な断罪や揶揄を含まないこと。憶測や未確認情報によって名誉や信用を損なっていないこと。センシティブな内容について読者の興味を過度にあおる表現や娯楽的な表現を用いていないこと。
 
-といった具合です。
+といった具合に定義します。
 
-G-Eval は、内部的に criteria を evaluation_steps という段階的なタスクに分割して評価を実行しますが、
+各観点の評価は並列実行させるため、観点を増やしても処理時間への影響は小さいのですが、
 
-> Since G-Eval is a two-step algorithm that generates chain of thoughts (CoTs) for better evaluation, in deepeval this means first generating a series of evaluation_steps using CoT based on the given criteria, before using the generated steps to determine the final score using the parameters presented in an LLMTestCase.
+- 各評価観点間の重複により、品質定義それ自体の保守性が悪化する
+- 各評価観点間の衝突により、例えば「簡潔さ」の改善が「網羅性」の改悪を招くなど、生成パイプラインの改善に支障が出る
 
-バッチ処理による繰り返しの評価コストを下げるため
-
-- criteria から evaluation_steps への変換結果をキャッシュして、繰り返し評価で使いまわす
-- 上述「正確性の評価」「機微情報に対する表現上の配慮」など、各観点の評価を並列で実行する
-
-のように評価ロボットを実装しました。
-
-とはいえ、評価観点を増やせば増やすほど
-
-- 各評価観点間の重複（例えば網羅性と正確性）
-- 各評価観点間の衝突（例えば網羅性と簡潔さ）
-
-が発生しやすくなり、その結果
-
-- 評価観点そのものの保守性が悪化する（例えば重複部分の保守漏れ）
-- 評価に基づいた生成パイプラインの改善に支障（例えば一方の改善が他方の悪化を招くなど）
-
-といった問題が発生します。
+などの問題も発生しやすくなるため注意が必要です。
 
 そこで、評価プロセス全体像のこの部分 …
 
@@ -176,19 +136,94 @@ G-Eval は、内部的に criteria を evaluation_steps という段階的なタ
 
 また、機微情報に対する表現上の配慮についてのスコアが 0.93 から 0.87 に変化したとします。
 
-これは改修の副作用（デグレ）なのでしょうか？
+これは改修の副作用（デグレ）でしょうか？
 
-AI の判断は常に一定となるわけではないため、評価の精度を高めるためには
+生成 AI は、常に一定の判断をくだせるわけでないないことを理解しつつも、スコアを用いた意思決定の前提として、評価のブレは最小化したいと思います。
 
-- スコアのブレを極力おさえること
-- スコアの変化を解釈するための指針を提示すること
+そこで G-Eval の仕組に着目してみましょう。
 
-が必要になります。
+G-Eval は、内部的に品質の定義を evaluation_steps という段階的なタスクに分割して評価を実行します。
 
-前者については、G-Eval には生成 AI が出力するスコア候補の確率を利用して加重平均を求め、スコアリングのバイアスを抑える仕組みがあるため、それを活用することにしました（Bedrock など一部のバックエンドでは、この機能に必要な logprobs を活用することはできません）。
+> Since G-Eval is a two-step algorithm that generates chain of thoughts (CoTs) for better evaluation, in deepeval this means first generating a series of evaluation_steps using CoT based on the given criteria, before using the generated steps to determine the final score using the parameters presented in an LLMTestCase.
+
+例えば正確性の評価ならば
+
+```
+"evaluation_steps": [
+    "Read the original text carefully to identify all stated facts, claims, and the degree of certainty attributed to each piece of information.",
+    "Read the generated text and list every factual claim, inference, or assertion it contains.",
+    "For each item in the generated text, check whether it is directly supported by the original text. Flag any item that introduces a fact, detail, or figure not present in the original.",
+    "Check whether the generated text adds speculation, predictions, or assumptions that are not present in the original.",
+    "Check whether the generated text exaggerates or overstates any claim beyond what the original text supports.",
+    "Check whether the generated text presents uncertain or conditional information from the original as definite fact.",
+    "Check whether any statement in the generated text directly contradicts a statement in the original text.",
+    "Do not penalize the generated text for omitting information that appears in the original, as insufficient information volume is not a scoring criterion.",
+    "Assign a score based on the number and severity of violations found: no violations warrants the highest score, and each confirmed addition of unsupported facts, speculation, exaggeration, false certainty, or contradiction lowers the score proportionally."
+]
+```
+
+機微情報に対する表現上の配慮ならば
+
+```
+"evaluation_steps": [
+    "Read the generated text and identify whether it touches on sensitive topics such as death, accidents, disasters, crime, illness, suicide, discrimination, or human rights issues.",
+    "If sensitive topics are present, check whether the generated text contains language that unnecessarily condemns or ridicules victims, bereaved families, related parties, or persons suspected of wrongdoing.",
+    "Check whether the generated text uses speculation or unverified information in a way that could damage the reputation or credibility of any individual or group.",
+    "Check whether the generated text uses sensationalist or entertainment-oriented language to heighten reader curiosity about sensitive content.",
+    "If no sensitive topics are present, note that this rubric does not apply and assign the highest score.",
+    "Assign a score based on the number and severity of violations found: appropriate handling of all sensitive elements warrants the highest score, and each instance of unnecessary condemnation, ridicule, reputation-damaging speculation, or sensationalism lowers the score proportionally."
+]
+```
+
+といった具合です。
+
+評価のバッチ処理の都度 evaluation_steps を生成する場合、
+
+前バージョンの評価と、現バージョンの評価で異なる evaluation_steps が適用され、結果として評価のブレが生じる懸念があります。
+
+そこで、evaluation_steps は品質の定義が更新されない限り、同じものを使いまわすようにしました（これは処理コストの観点でも好都合です）。
+
+さらに、G-Eval には生成 AI が出力するスコア候補の確率を利用して加重平均を求め、スコアリングのバイアスを抑える仕組みがあるため、それも活用します（Bedrock など一部のバックエンドでは、この機能に必要な logprobs を活用することはできません）。
 
 > In the original G-Eval paper, the authors used the probabilities of the LLM output tokens to normalize the score by calculating a weighted summation.
 > This step was introduced in the paper because it minimizes bias in LLM scoring. This normalization step is automatically handled by deepeval by default (unless you're using a custom model).
+
+最後に、論文 <a href='https://aclanthology.org/2023.emnlp-main.153.pdf'>G-EVAL: NLG Evaluation using GPT-4 with Better Human Alignment</a> では temperature を 0 としていたため、評価ロボットでも 0 を採用することにしました。
+
+> We use OpenAI’s GPT family as our LLMs, including GPT-3.5 (text-davinci-003) and GPT-4. For GPT-3.5, we set decoding temperature to 0 to increase the model’s determinism.
+
+このようにして、評価のブレを最小化しています。
+
+# 変化を解釈するための指針
+
+
+
+
+
+
+
+
+
+
+
+
+
+AI の判断は常に一定となるわけではないため
+
+- スコアのブレ最小化する
+- スコアの変化を解釈するための指針を提示する
+
+ことが、評価および意思決定の精度を高めるために必要です。
+
+前者については G-Eval の仕組に着目してみます。
+
+
+
+
+
+★★
+
+
 
 後者については、評価観点が離散的かつ客観的である場合（事実との整合性確認など）と、連続的かつ主観的である場合（訴求力など）では、ブレ幅が異なることが予想できます。
 
