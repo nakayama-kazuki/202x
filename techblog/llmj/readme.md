@@ -259,11 +259,22 @@ DeepEval の AnthropicModel でも <a href='https://deepeval.com/integrations/mo
 
 生成パイプラインは、最終的にサービスのプロダクトに実装されることになります。したがって、フレームワーク内で扱うプロンプトやルールベースの処理（Python コード）は、プロダクトに対する実装仕様と位置付けることができます。
 
-最初から高い完成度を目指して作りこんでもよいのですが、複雑化したプロンプトは修正影響の把握が難しくなるため、初版は品質定義から自動生成したシンプルでナイーブなプロンプトを用います。
+最初から高い完成度を目指して作りこんでもよいのですが、複雑化なプロンプトは修正影響の把握が難しくなります。
 
-<img width='800' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i04.png' />
+そこで、初版は品質定義から自動生成したシンプルでナイーブなプロンプトを用いてブリーフィングを生成ます。
 
-早速、いくつかの問題が見つかります。
+<img width='800' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i07.png' />
+
+評価を実行すると
+
+<img width='800' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i08.png' />
+
+
+★★
+★★
+★★
+
+早速、いくつかの問題が見つかりました。
 
 プロンプトの調整で改善する問題もありますが
 
@@ -404,6 +415,9 @@ def generate_raw_response(self, in_prompt, **in_kwargs):
 また、本番システムでもログを評価ロボットに評価させ、危ういスコアの場合にはアラートを上げて、必要に応じて差し止めるなどの早期検知も考えられます。
 
 # 終わりに
+
+★★上のに絵を入れる
+
 
 ★余談だが、ブリーフィングに限らず活用できる
 
