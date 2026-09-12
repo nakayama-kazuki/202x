@@ -579,6 +579,12 @@ def _ensure_compiled_rubrics():
         print(f'INFO : compiling {len(renewedArr)} rubrics')
         generatedArr = llm_processed_json(DIR_SUPPORTS / 'template-compiler.txt', {'__JSON__' : renewedArr})
         for generated in generatedArr:
+            for rubric in renewedArr:
+                if rubric['name'] == generated['name']:
+                    generated['criteria'] = rubric['criteria']
+                    break
+            if 'criteria' not in generated:
+                abort(f'ERROR : unknown compiled rubric ({generated["name"]})')
             path = DIR_RUBRIC / (generated['name'] + _SUFFIX_COMPILED)
             with open(path, 'w', encoding='utf-8') as f:
                 json.dump(generated, f, ensure_ascii=False, indent=4)

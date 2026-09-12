@@ -21,12 +21,10 @@ Convert the criteria into clear evaluation_steps for G-Eval.
 [
     {
         "name": "...",
-        "criteria": "...",
         "evaluation_steps": [...]
     },
     {
         "name": "...",
-        "criteria": "...",
         "evaluation_steps": [...]
     },
     ...
