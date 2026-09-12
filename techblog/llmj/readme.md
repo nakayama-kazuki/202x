@@ -18,14 +18,14 @@
 
 最初に評価プロセス全体像を示します。プロセスに登場するのは、熟練編集者や運用担当などの人間（緑）と、評価ロボット（青）と、生成パイプライン（赤）です。
 
-<img width='800' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i00.png' />
+<img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i00.png' />
 
 1. 熟練編集者に「よいブリーフィング」の具体例を複数件作ってもらう
 2. 続いて、具体例を抽象化し「よいブリーフィング」たる品質を定義してもらい、これを評価ロボットの頭脳とする
 3. ここで、検証目的の評価を行う。評価ロボットは「よいブリーフィング」の具体例を「よい」と評価できるだろうか？
 4. 期待した検証結果に至るまで、具体例もしくは品質の定義を調整する
 
-<img width='800' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i01.png' />
+<img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i01.png' />
 
 5. 初期バージョンのブリーフィング生成パイプラインを作る
 6. 生成～評価のバッチ処理を実行する
@@ -35,7 +35,7 @@
 8. 事前に定めた基準を達成するまで 6, 7 を繰り返す
 9. 熟練編集者のチェックにより最終的なデプロイ判定を実施する
 
-<img width='800' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i02.png' />
+<img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i02.png' />
 
 関連アセットはリポジトリで管理し、将来、モデルの変更やブリーフィングの仕様変更（例えばパーソナライズ強化）が生じた場合、プロセスを反復し、必要ならば過去版との比較を行います。
 
@@ -83,7 +83,7 @@
 
 とはいえ、最初から抽象概念にたどり着くことは難しいため、評価プロセス全体像のこの部分 …
 
-<img width='800' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i03.png' />
+<img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i03.png' />
 
 ではサービスの方向性を踏まえつつ、まずは「よいブリーフィング」の具体例をいくつか作ります。
 
@@ -121,19 +121,19 @@ DeepEval には、出力が入力に忠実であるかを評価する Faithfulne
 
 そこで、評価プロセス全体像のこの部分 …
 
-<img width='800' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i05.png' />
+<img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i05.png' />
 
 では「よいブリーフィング」の具体例と品質定義の整合性に加え、評価観点の重複や衝突もレポートすることで、評価ロボットの改善を促すことにしました。
 
 この段階を経ることで、人間と評価ロボットの双方にとって「よいブリーフィング」の解像度向上が期待できます。
 
-<img width='800' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/review-ja.png' />
+<img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/review-ja.png' />
 
 # 生成パイプライン
 
 評価プロセス全体像のこの部分 …
 
-<img width='800' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i07.png' />
+<img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i07.png' />
 
 は、最終的に本番プロダクトに実装されることになります。
 
@@ -175,7 +175,7 @@ DeepEval には、出力が入力に忠実であるかを評価する Faithfulne
 
 さて、ブリーフィングを評価してみます。
 
-<img width='800' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i08.png' />
+<img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i08.png' />
 
 前回の評価では 0.75 だった正確性のスコアが、生成パイプラインを改修した結果 0.91 に変化したとします。
 
@@ -261,7 +261,7 @@ DeepEval には、出力が入力に忠実であるかを評価する Faithfulne
 
 評価プロセス全体像の、生成パイプラインの改善サイクルに入る手前の段階 …
 
-<img width='800' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i07.png' />
+<img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i07.png' />
 
 でランダムに生成した入力データセットを使い、同じ評価を繰り返すことで「評価のブレ」についての傾向をレポートします。
 
@@ -287,7 +287,7 @@ DeepEval には、出力が入力に忠実であるかを評価する Faithfulne
 
 そこで、生成パイプラインの改善サイクルに入る手前の段階 …
 
-<img width='800' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i06.png' />
+<img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i06.png' />
 
 でランダムに生成した入力データセットを使い、同じ評価を繰り返すことで「評価のブレ」についての傾向をレポートします。
 
@@ -407,7 +407,7 @@ def generate_raw_response(self, in_prompt, **in_kwargs):
 
 評価ロボットはこのようなレポートを出力します。
 
-<img width='800' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/report-ja.png' />
+<img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/report-ja.png' />
 
 全体的な評価に続き、個別評価が並びます。
 
