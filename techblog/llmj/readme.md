@@ -112,7 +112,7 @@ DeepEval には、出力が入力に忠実であるかを評価する Faithfulne
 
 といった具合に定義し、評価ロボットはこれらの品質の定義に基づいた評価を行います。
 
-各観点の評価は並列実行させるため、観点を増やしても処理時間への影響を抑えることはできますが
+各観点の評価は並列に実行するため、観点を増やしても処理時間への影響を抑えることはできますが
 
 - 観点の重複により、品質定義それ自体の保守性が悪化する
 - 観点の衝突により、例えば「簡潔さ」の改善が「網羅性」の改悪を招くなど、生成パイプラインの改善に支障が出る
@@ -126,6 +126,8 @@ DeepEval には、出力が入力に忠実であるかを評価する Faithfulne
 では「よいブリーフィング」の具体例と品質定義の整合性に加え、評価観点の重複や衝突もレポートすることで、評価ロボットの改善を促すことにしました。
 
 この段階を経ることで、人間と評価ロボットの双方にとって「よいブリーフィング」の解像度向上が期待できます。
+
+<img width='800' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/review-ja.png' />
 
 # 生成パイプライン
 
@@ -153,15 +155,13 @@ DeepEval には、出力が入力に忠実であるかを評価する Faithfulne
 
 1. プロンプトによるブリーフィング生成
 2. ルールベースの処理で生成結果の調整および制約のチェック
-3. 制約を満たさないときは、失敗回避の「おまじない」を添えて 1 を再実行
-	- プロンプトに失敗事例と失敗理由を添えた改善指示を追加
-	- パラメータ（temperature）を一時的に変更し出力候補の多様性を高める
+3. 制約を満たさないときは、失敗回避の「おまじない」を添えて 1 を再度実行
+	- プロンプトに失敗事例と失敗理由を含めた改善指示を追加
+	- パラメータ `temperature` を一時的に変更し出力候補の多様性を高める
 
 のように生成パイプラインを実装しました。
 
-条件分岐や多段プロンプトへの対応は、将来ニーズが生じたときに考えることにします。
-
-より現実的なニーズとしては、メタ情報の活用が考えられます。
+条件分岐や多段プロンプトへの対応は、将来ニーズが生じたときに検討するとして、より現実的なニーズとしてはメタ情報の活用が考えられます。
 
 40 代男性と 10 代女性では、同じニュースに対しても注目するポイントは異なるかもしれません。
 
@@ -169,11 +169,11 @@ DeepEval には、出力が入力に忠実であるかを評価する Faithfulne
 
 そこで、メタ情報も入力データとしてプロンプトに入力できるようにしました。
 
-補足として、この場合は評価ロボットも G-Eval の SingleTurnParams.CONTEXT を有効化し、生成条件と評価条件をそろえるようにしています。
+ちなみに、この場合は評価ロボットも G-Eval の `SingleTurnParams.CONTEXT` を有効化し、生成条件と評価条件をそろえるようにしています。
 
 # 評価のブレへの対策
 
-早速ブリーフィングを評価してみましょう。
+さて、ブリーフィングを評価してみます。
 
 <img width='800' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i08.png' />
 
@@ -185,19 +185,21 @@ DeepEval には、出力が入力に忠実であるかを評価する Faithfulne
 
 これは改修の副作用（デグレ）でしょうか？
 
-スコアに基づく意思決定のためには、評価のブレを抑制した上で、ブレの傾向を理解する必要がありそうです。
+スコアに基づく意思決定のためには、評価のブレを抑制しつつ、ブレの傾向も理解する必要がありそうです。
 
-まず、論文 <a href='https://aclanthology.org/2023.emnlp-main.153.pdf'>G-EVAL: NLG Evaluation using GPT-4 with Better Human Alignment</a> では GPT-3.5 の評価において、モデルの決定性を高めるため temperature を 0 としていることと
+最初に、生成 AI の出力の多様性を調整する `temperature` に着目します
+
+論文 <a href='https://aclanthology.org/2023.emnlp-main.153.pdf'>G-EVAL: NLG Evaluation using GPT-4 with Better Human Alignment</a> では GPT-3.5 の評価において、モデルの決定性を高めるため `temperature` を 0 としていること
 
 > We use OpenAI’s GPT family as our LLMs, including GPT-3.5 (text-davinci-003) and GPT-4. For GPT-3.5, we set decoding temperature to 0 to increase the model’s determinism.
 
-DeepEval の AnthropicModel でも <a href='https://deepeval.com/integrations/models/anthropic#in-code'>デフォルトが 0</a> とされていること
+および DeepEval の AnthropicModel でも <a href='https://deepeval.com/integrations/models/anthropic#in-code'>デフォルトが 0</a> とされていること
 
 > temperature: A float specifying the model temperature. Defaults to TEMPERATURE if not passed; falls back to 0.0 if unset and raises if < 0.
 
-を根拠に、評価ロボットでも同じ値を採用することが、ブレの抑制には有利だろうと判断しました。
+を根拠に、評価ロボットでも 0 を採用します。
 
-ただし、将来のモデルではこの値を見直す必要があるかもしれません。
+ただし、将来のモデルではこの値を見直すことがあるかもしれません。
 
 加えて G-Eval には、生成 AI が出力するスコア候補の確率を利用して加重平均を求め、スコアリングの <a href='https://deepeval.com/docs/metrics-llm-evals#how-is-it-calculated'>バイアスを抑える仕組み</a> があります。
 
@@ -241,7 +243,7 @@ DeepEval の AnthropicModel でも <a href='https://deepeval.com/integrations/mo
 
 といった具合です。
 
-ここで、バッチ処理の都度タスク分割（= evaluation_steps の生成）を行う場合、
+ここで、バッチ処理の都度タスク分割（= evaluation_steps の生成）を行うとすれば、
 
 前バージョンと現バージョンの評価で、異なる evaluation_steps が生成され、結果として評価のブレが生じる懸念があります。
 
