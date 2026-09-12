@@ -49,9 +49,7 @@
 
 唐突ですが、架空の記事（長いので斜め読みで結構です）から
 
-> 宇宙航空研究開発機構（JAXA）をはじめとする国際宇宙探査チームは7日、月面南部で建設を進めていた人類初の常設月面基地「アルテミス・ベース」の初期建設が完了したと発表した。これにより、人類が月面に長期間滞在し、科学研究や開発を行うための基盤が整った。
-> 基地は居住モジュール、太陽光発電システム、月面の水資源から水素と酸素を抽出する実験プラントなどで構成される。今後は最大6名の宇宙飛行士が交代で常駐し、低重力環境が人体に与える影響の調査や天体観測、資源採掘の技術実証を行う予定だ。
-> さらに、将来の有人火星探査に向けた「中継拠点」としての役割も期待されている。月面からのロケット打ち上げは、地球から直接火星へ向かうより燃料を削減できるためだ。国際宇宙探査チームの代表は、基地完成を人類が「宇宙で暮らす種」へ進化する歴史的な一歩だと期待を語った。
+> 宇宙航空研究開発機構（JAXA）をはじめとする国際宇宙探査チームは7日、月面南部で建設を進めていた人類初の常設月面基地「アルテミス・ベース」の初期建設が完了したと発表した。これにより、人類が月面に長期間滞在し、科学研究や開発を行うための基盤が整った。基地は居住モジュール、太陽光発電システム、月面の水資源から水素と酸素を抽出する実験プラントなどで構成される。今後は最大6名の宇宙飛行士が交代で常駐し、低重力環境が人体に与える影響の調査や天体観測、資源採掘の技術実証を行う予定だ。さらに、将来の有人火星探査に向けた「中継拠点」としての役割も期待されている。月面からのロケット打ち上げは、地球から直接火星へ向かうより燃料を削減できるためだ。国際宇宙探査チームの代表は、基地完成を人類が「宇宙で暮らす種」へ進化する歴史的な一歩だと期待を語った。
 
 さまざまな形式の短文を生成してみましょう。まずはプロンプトに
 
@@ -112,9 +110,7 @@ DeepEval には、出力が入力に忠実であるかを評価する Faithfulne
 
 > generated が死亡、事故、災害、犯罪、病気、自殺、差別、人権問題などのセンシティブな内容に対して適切な配慮をしていること。被害者、遺族、関係者、加害を疑われている人への不必要な断罪や揶揄を含まないこと。憶測や未確認情報によって名誉や信用を損なっていないこと。センシティブな内容について読者の興味を過度にあおる表現や娯楽的な表現を用いていないこと。
 
-といった具合に定義します。
-
-評価ロボットは、これらの品質の定義に基づいて評価を行います。
+といった具合に定義し、評価ロボットはこれらの品質の定義に基づいた評価を行います。
 
 各観点の評価は並列実行させるため、観点を増やしても処理時間への影響を抑えることはできますが
 
@@ -149,7 +145,7 @@ DeepEval には、出力が入力に忠実であるかを評価する Faithfulne
 
 - 多言語混入
 - 文字数制限に違反
-- 禁止した用語の利用
+- 禁止した単語の利用
 
 などは、プロンプトで強い禁止や推敲を課したとしても発生する場合があります。
 
@@ -189,21 +185,23 @@ DeepEval には、出力が入力に忠実であるかを評価する Faithfulne
 
 これは改修の副作用（デグレ）でしょうか？
 
-スコアに基づく意思決定のためには、まず評価のブレを抑制した上で、ブレの傾向を理解する必要がありそうです。
+スコアに基づく意思決定のためには、評価のブレを抑制した上で、ブレの傾向を理解する必要がありそうです。
 
 まず、論文 <a href='https://aclanthology.org/2023.emnlp-main.153.pdf'>G-EVAL: NLG Evaluation using GPT-4 with Better Human Alignment</a> では GPT-3.5 の評価において、モデルの決定性を高めるため temperature を 0 としていることと
 
 > We use OpenAI’s GPT family as our LLMs, including GPT-3.5 (text-davinci-003) and GPT-4. For GPT-3.5, we set decoding temperature to 0 to increase the model’s determinism.
 
-DeepEval の AnthropicModel でも <a href='https://deepeval.com/integrations/models/anthropic#in-code'>デフォルトが 0</a> とされていることを根拠に
+DeepEval の AnthropicModel でも <a href='https://deepeval.com/integrations/models/anthropic#in-code'>デフォルトが 0</a> とされていること
 
 > temperature: A float specifying the model temperature. Defaults to TEMPERATURE if not passed; falls back to 0.0 if unset and raises if < 0.
 
-評価ロボットでも 0 がブレの抑制に有利だと判断しました。ただし、将来のモデルではこの値を見直す必要があるかもしれません。
+を根拠に、評価ロボットでも同じ値を採用することが、ブレの抑制には有利だろうと判断しました。
 
-また、G-Eval には生成 AI が出力するスコア候補の確率を利用して加重平均を求め、スコアリングの <a href='https://deepeval.com/docs/metrics-llm-evals#how-is-it-calculated'>バイアスを抑える仕組み</a> があります。
+ただし、将来のモデルではこの値を見直す必要があるかもしれません。
 
-評価のブレを直接的に抑制する機能ではありませんが、安定したスコアリングへの寄与を期待して、この仕組みも活用することにします（ただし Bedrock など一部のバックエンドでは、スコア候補の確率を利用することができません）。
+加えて G-Eval には、生成 AI が出力するスコア候補の確率を利用して加重平均を求め、スコアリングの <a href='https://deepeval.com/docs/metrics-llm-evals#how-is-it-calculated'>バイアスを抑える仕組み</a> があります。
+
+評価のブレを直接的に抑制する機能ではありませんが、安定したスコアリングへの寄与を期待して、この仕組みも利用することにします（ただし Bedrock など一部のバックエンドでは、スコア候補の確率を利用することができません）。
 
 > In the original G-Eval paper, the authors used the probabilities of the LLM output tokens to normalize the score by calculating a weighted summation.
 > This step was introduced in the paper because it minimizes bias in LLM scoring. This normalization step is automatically handled by deepeval by default (unless you're using a custom model).
