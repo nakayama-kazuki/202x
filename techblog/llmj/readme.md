@@ -98,9 +98,9 @@
 
 # 品質の定義
 
-DeepEval には、出力が入力に忠実であるかを評価する Faithfulness や、要約としての品質を評価する Summarization などの既成 Metrics が用意されています。
+DeepEval には、出力が入力に忠実であるかを評価する `Faithfulness` や、要約としての品質を評価する `Summarization` などの既成 Metrics が用意されています。
 
-しかし「よいブリーフィング」の品質が、必ずしも既成 Metrics で評価できるとは限らないため、今回は自然言語で評価観点を定義できる <a href='https://deepeval.com/docs/metrics-llm-evals'>G-Eval</a> を利用することにします。
+しかし「よいブリーフィング」の品質が、必ずしも既成 Metrics の評価でカバーできるとは限らないため、今回は自然言語で評価観点を定義できる <a href='https://deepeval.com/docs/metrics-llm-evals'>G-Eval</a> を利用することにします。
 
 例えば、正確性なら
 
@@ -110,7 +110,7 @@ DeepEval には、出力が入力に忠実であるかを評価する Faithfulne
 
 > generated が死亡、事故、災害、犯罪、病気、自殺、差別、人権問題などのセンシティブな内容に対して適切な配慮をしていること。被害者、遺族、関係者、加害を疑われている人への不必要な断罪や揶揄を含まないこと。憶測や未確認情報によって名誉や信用を損なっていないこと。センシティブな内容について読者の興味を過度にあおる表現や娯楽的な表現を用いていないこと。
 
-といった具合に定義し、評価ロボットはこれらの品質の定義に基づいた評価を行います。
+といった具合に定義し、評価ロボットはこれらの定義に基づいた評価を行います。
 
 各観点の評価は並列に実行するため、観点を増やしても処理時間への影響を抑えることはできますが
 
@@ -125,9 +125,9 @@ DeepEval には、出力が入力に忠実であるかを評価する Faithfulne
 
 では「よいブリーフィング」の具体例と品質定義の整合性に加え、評価観点の重複や衝突もレポートすることで、評価ロボットの改善を促すことにしました。
 
-この段階を経ることで、人間と評価ロボットの双方にとって「よいブリーフィング」の解像度向上が期待できます。
-
 <img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/review-ja.png' />
+
+この段階を経ることで、人間と評価ロボットの双方にとって「よいブリーフィング」の解像度向上が期待できます。
 
 # 生成パイプライン
 
@@ -171,9 +171,9 @@ DeepEval には、出力が入力に忠実であるかを評価する Faithfulne
 
 ちなみに、この場合は評価ロボットも G-Eval の `SingleTurnParams.CONTEXT` を有効化し、生成条件と評価条件をそろえるようにしています。
 
-# 評価のブレへの対策
+# 評価のブレを抑制
 
-さて、ブリーフィングを評価してみます。
+それでは、ブリーフィングを評価してみましょう。
 
 <img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i08.png' />
 
@@ -185,15 +185,15 @@ DeepEval には、出力が入力に忠実であるかを評価する Faithfulne
 
 これは改修の副作用（デグレ）でしょうか？
 
-スコアに基づく意思決定のためには、評価のブレを抑制しつつ、ブレの傾向も理解する必要がありそうです。
+スコアに基づく意思決定のためには、評価のブレを抑制しつつ、その傾向も理解する必要がありそうです。
 
-最初に、生成 AI の出力の多様性を調整する `temperature` に着目します
+最初に、多様性を調整する `temperature` パラメータに着目します。
 
 論文 <a href='https://aclanthology.org/2023.emnlp-main.153.pdf'>G-EVAL: NLG Evaluation using GPT-4 with Better Human Alignment</a> では GPT-3.5 の評価において、モデルの決定性を高めるため `temperature` を 0 としていること
 
 > We use OpenAI’s GPT family as our LLMs, including GPT-3.5 (text-davinci-003) and GPT-4. For GPT-3.5, we set decoding temperature to 0 to increase the model’s determinism.
 
-および DeepEval の AnthropicModel でも <a href='https://deepeval.com/integrations/models/anthropic#in-code'>デフォルトが 0</a> とされていること
+および DeepEval の `AnthropicModel` でも <a href='https://deepeval.com/integrations/models/anthropic#in-code'>デフォルトを 0 としている</a> こと
 
 > temperature: A float specifying the model temperature. Defaults to TEMPERATURE if not passed; falls back to 0.0 if unset and raises if < 0.
 
@@ -208,11 +208,11 @@ DeepEval には、出力が入力に忠実であるかを評価する Faithfulne
 > In the original G-Eval paper, the authors used the probabilities of the LLM output tokens to normalize the score by calculating a weighted summation.
 > This step was introduced in the paper because it minimizes bias in LLM scoring. This normalization step is automatically handled by deepeval by default (unless you're using a custom model).
 
-さらに、G-Eval は内部的に、品質の定義を evaluation_steps という <a href='https://deepeval.com/docs/metrics-llm-evals#how-is-it-calculated'>段階的なタスクに分割</a> して評価を実行します。
+さらに、G-Eval は内部的に、品質の定義を `evaluation_steps` という <a href='https://deepeval.com/docs/metrics-llm-evals#how-is-it-calculated'>段階的なタスクに分割</a> して評価を実行します。
 
 > Since G-Eval is a two-step algorithm that generates chain of thoughts (CoTs) for better evaluation, in deepeval this means first generating a series of evaluation_steps using CoT based on the given criteria, before using the generated steps to determine the final score using the parameters presented in an LLMTestCase.
 
-例えば、正確性を評価する際は
+例えば、上で取り上げた正確性を評価する際には
 
 ```
 "evaluation_steps": [
@@ -228,64 +228,23 @@ DeepEval には、出力が入力に忠実であるかを評価する Faithfulne
 ]
 ```
 
-機微情報に対する表現上の配慮を評価する際は
+のように分割されます。
 
-```
-"evaluation_steps": [
-    "Read the generated text and identify whether it touches on sensitive topics such as death, accidents, disasters, crime, illness, suicide, discrimination, or human rights issues.",
-    "If sensitive topics are present, check whether the generated text contains language that unnecessarily condemns or ridicules victims, bereaved families, related parties, or persons suspected of wrongdoing.",
-    "Check whether the generated text uses speculation or unverified information in a way that could damage the reputation or credibility of any individual or group.",
-    "Check whether the generated text uses sensationalist or entertainment-oriented language to heighten reader curiosity about sensitive content.",
-    "If no sensitive topics are present, note that this rubric does not apply and assign the highest score.",
-    "Assign a score based on the number and severity of violations found: appropriate handling of all sensitive elements warrants the highest score, and each instance of unnecessary condemnation, ridicule, reputation-damaging speculation, or sensationalism lowers the score proportionally."
-]
-```
+ここで、バッチ処理の都度タスク分割を行う場合、
 
-といった具合です。
+前バージョンと現バージョンの評価で、異なる `evaluation_steps` が生成され、結果として評価のブレが生じる懸念があります。
 
-ここで、バッチ処理の都度タスク分割（= evaluation_steps の生成）を行うとすれば、
+そこで、`evaluation_steps` は品質の定義が更新されない限り、同じものを再利用する実装にして評価のブレを抑制しました（副次的には処理コストの観点でも好都合です）。
 
-前バージョンと現バージョンの評価で、異なる evaluation_steps が生成され、結果として評価のブレが生じる懸念があります。
+# ブレの傾向を理解
 
-そこで、evaluation_steps は品質の定義が更新されない限り、同じものを再利用する実装にして評価のブレを抑制しました（副次的には処理コストの観点でも好都合です）。
+ブレの抑制は試みたものの、完全に排除することはできません。
 
-# 変化を解釈するための指針
+さらに、評価観点が離散的かつ客観的である場合（事実との整合性など）と、連続的かつ主観的である場合（ブリーフィングの訴求力など）では、評価のブレ幅が異なることが予想できます。
 
+そこで、ブレの傾向を理解してスコアに基づく意思決定に役立てたいと思います。
 
-★★★
-
-
-それでも評価のブレは発生するため、その傾向を理解した上でスコアに基づく意思決定をしましょう。
-
-例えば、評価観点が離散的かつ客観的である場合（事実との整合性など）と、連続的かつ主観的である場合（ブリーフィングの訴求力など）では、ブレ幅が異なることが予想できます。
-
-評価プロセス全体像の、生成パイプラインの改善サイクルに入る手前の段階 …
-
-<img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i07.png' />
-
-でランダムに生成した入力データセットを使い、同じ評価を繰り返すことで「評価のブレ」についての傾向をレポートします。
-
-
-ブレの傾向を理解する必要がありそうです。
-
-
-
-なお、評価プロセスの序盤では、少ない入力データセットでも問題を見つけやすいため、改善サイクルの速度を優先することをお勧めします。
-
-生成パイプラインの品質が一定程度高くなった後に、十分な量と多様性を持つ入力データセットに切り替えることで、全体として効率よく改善を進めることができます。
-
-
-
-
-
-
-# 変化を解釈するための指針
-
-それでも、評価のブレをゼロにすることはできません。
-
-加えて言えば、評価観点が離散的かつ客観的である場合（事実との整合性など）と、連続的かつ主観的である場合（ブリーフィングの訴求力など）では、ブレ幅が異なることが予想できます。
-
-そこで、生成パイプラインの改善サイクルに入る手前の段階 …
+生成パイプラインの改善サイクルに入る手前の段階 …
 
 <img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i06.png' />
 
@@ -329,15 +288,13 @@ DeepEval には、出力が入力に忠実であるかを評価する Faithfulne
 }
 ```
 
-評価ロボットは、stddevAvg や stddevMax から把握した評価の安定性も参考にしつつ、生成パイプライン改修前後のスコア変化を解釈し、改善や副作用（デグレ）について定性的なフィードバックを出力します。
+評価ロボットは、`stddevAvg` や `stddevMax` から把握した評価の安定性も参考にしつつ、生成パイプライン改修前後のスコア変化を解釈し、改善や副作用（デグレ）について定性的なフィードバックを出力します。
 
-なお testDataInfo.stddev は評価自体のブレではなく、入力データセットに含まれる生成結果の品質のばらつきを見るための指標です。
+なお `testDataInfo.stddev` は評価自体のブレではなく、入力データセットに含まれる生成結果の品質のばらつきを見るための指標です。
 
 品質の幅を十分にカバーできていない場合は、入力データセットを見直して傾向を再度取得します。
 
-こうすることで、生成パイプラインの改善方針や、デプロイ判定などの意思決定の根拠を強化することができます。
-
-
+こうすることで、生成パイプラインの改善方針や、デプロイ判定などの意思決定の根拠を強化することができました。
 
 # 利用者体験への配慮
 
@@ -345,9 +302,9 @@ DeepEval には、出力が入力に忠実であるかを評価する Faithfulne
 
 その場合、トレースバックの出力で利用者を困惑させるわけにはいきません。
 
-フレームワーク側では try ～ except により例外を捕捉し、対応方法や再実行を促すメッセージを出力するようにしましたが、DeepEval 内部で発生する例外については、もう一歩踏み込んだ対策が必要でした。
+フレームワーク側では `try` ～ `except` により例外を捕捉し、対応方法や再実行を促すメッセージを出力するようにしましたが、DeepEval 内部で発生する例外については、もう一歩踏み込んだ対策が必要でした。
 
-例えば DeepEval の GEval._evaluate() には、評価モデルから返された値を JSON として解釈する箇所がありますが、あるモデルでは
+例えば DeepEval の `GEval._evaluate()` には、評価モデルから返された値を JSON として解釈する箇所がありますが、あるモデルでは
 
 ```
 {
@@ -399,59 +356,51 @@ def generate_raw_response(self, in_prompt, **in_kwargs):
 トレースバック対策に加えて
 
 - 恒常的に利用するツールと、補助ツールを明示的に分離する
-- 関連業務に転用を想定して、中間結果の出力先をエクセルとする
+- 関連業務への転用を想定して、中間結果の出力先をエクセルとする
 
-によって、エンジニア以外のプロジェクトメンバーの利用ハードルを下げています。
+によって、エンジニア以外のプロジェクトメンバーの利用者体験に配慮しました。
 
-# 評価と改善
+# 改善サイクルの運用
 
 評価ロボットはこのようなレポートを出力します。
 
 <img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/report-ja.png' />
 
-全体的な評価に続き、個別評価が並びます。
+全体的な評価に続いて、ブリーフィングごとの個別評価が並びます。
 
-個別評価には G-Eval の出力する評価理由も含まれるため、適宜スコアの理由を確認しつつ生成パイプライン改善の参考にします。
+個別評価には G-Eval の出力する評価理由も含まれるため、適宜スコアの理由を確認しつつ生成パイプラインを見直し、改善サイクルを反復します。
 
-ここでちょっとしたナレッジの共有です。
+ここでは運用上のナレッジをいくつかご紹介します。
 
 ニュース記事のタイトルには、その媒体の意図（例えば何を強調したいか）が含まれる場合があります。
 
 生成パイプラインの入力にニュース記事のタイトルも併用したところ、この意図に出力が影響を受け、事実誤認寄りのブリーフィングが生成されてしまうことがありました。
 
-他方、評価ロボット目線では入力と出力の整合性は保たれているため、正確性の評価では検知することができませんでした。
+このケースでは、評価ロボット目線では入力と出力の整合性は保たれているため、正確性の評価では検知することができませんでした。
 
-評価モデルや品質定義だけでなく、入力データも評価結果を左右します。
-
-品質の定義に応じて、入力データを選択するようにしましょう。
+評価モデルや品質定義だけでなく、入力データも評価結果を左右するため、時には改善の対象として精査しましょう。
 
 また、個別の事実は正確でも、関係性を間違えたブリーフィングを出力してしまうケースもしばしば発生しました。
 
-このケースについては、正確性の品質定義に「主体」「対象」「出来事」「条件」などの関係性の維持を指示として加えることで改善することができました。
+このケースについては、正確性の品質定義に「主体」「対象」「出来事」「条件」などの関係性維持の指示を追加し、改善を試みました。
 
-# それでも残る品質問題
+なお、改善サイクルの序盤では、少ない入力データセットでも問題を見つけやすいため、スピードを優先することをお勧めします。
 
-ここまでくれば、ブリーフィングの自動生成は問題なし、と言えるでしょうか。
+生成パイプラインの品質が一定程度高くなった後に、十分な量と多様性を持つ入力データセットに切り替えることで、全体として効率よく改善を進めることができます。
 
-いいえ、残念ながらリスクはゼロにはできません。
+加えて、本番運用についても補足します。
 
-しかし、どこまでのリスクを排除すべきか、はサービスの方針次第です。
+ニュース記事のブリーフィングでは、皇室に関する話題や著名人の自殺報道など、リスクを受け入れがたいケースもあるかもしれません。
 
-万が一のリスクを重く見る場合は、例えば皇室に関する話題や著名人の自殺報道などは
+このようなケースでは、自動生成の対象外とするか、HITL による掲出前の目視が対策として考えられます。
 
-自動生成の対象外とするか、掲出前のチェックなど HITL によるガードを検討すべきかもしれません。
-
-また、本番システムでもログを評価ロボットに評価させ、危ういスコアの場合にはアラートを上げて、必要に応じて差し止めるなどの早期検知も考えられます。
+また、本番プロダクト側でも評価ロボットを動かし、リスクを検知した時には必要に応じて差し止める運用機能が必要になるかもしれません。
 
 # 終わりに
 
-★★上のに絵を入れる
+実は、少し前に <a href='https://blog.techscore.com/entry/2026/05/13/080000_1'>個人開発の AI 連携アプリに関する記事</a> を書いたのですが、その記事の結びで用意した伏線を、今回の記事で無事回収することができました ^^
 
+この記事ではブリーフィングの自動生成を題材にしましたが、評価ロボットとプロセス支援のフレームワークは、汎用的なテキスト生成用途に対応した <a href='https://github.com/nakayama-kazuki/202x/tree/main/tools/llm-as-a-judge'>実装を公開（個人サイト）</a> しているので、よろしければご活用ください。
 
-★余談だが、ブリーフィングに限らず活用できる
-
-
-★以下について述べる
-
-・終わりに、で前作の伏線回収
+この記事が、生成 AI の出力品質に関する悩みを解決するヒントになれば幸いです。
 
