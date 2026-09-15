@@ -208,42 +208,43 @@ DeepEval には、出力が入力に忠実であるかを評価する `Faithfuln
 
 <img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i06.png' />
 
-でランダムに生成した入力データセットを使い、同じ評価を繰り返すことで「評価のブレ」についての傾向をレポートします。例えば、以下は 100 件の入力データに対し、3 回評価を繰り返した際の標準偏差に関する統計情報です。
+でランダムに生成した入力データセットを使い、同じ評価を繰り返すことで「評価のブレ」についての傾向をレポートします。例えば、以下は 75 件の入力データに対し、5 回評価を繰り返した際の標準偏差に関する統計情報です。
 
 ```
 {
-	"model": "YOUR_BACKEND_MODEL",
-	"articles": 100,
-	"iterations": 3,
+	"model": "us.anthropic.claude-sonnet-4-6",
+	"articles": 75,
+	"iterations": 5,
 	"note": {
 		"stddevAvg": "Average standard deviation of repeated evaluations for the same test data. Lower values indicate more consistent scoring.",
 		"stddevMax": "Maximum standard deviation among all test data. Lower values indicate the worst-case evaluation inconsistency is smaller.",
 		"testDataInfo.stddev": "Standard deviation of the average scores across the test data. Higher values indicate the test data covers a wider range of quality."
 	},
 	"rubrics": {
-		"accuracy": {
-			"stddevAvg": 0.14920442564214614,
-			"stddevMax": 0.2943920288775949,
+		"sample-accuracy": {
+			"stddevAvg": 0.17848219523165634,
+			"stddevMax": 0.3666060555964672,
 			"testDataInfo": {
-				"max": 0.8666666666666667,
-				"min": 0.3333333333333333,
-				"avg": 0.6546666666666666,
-				"stddev": 0.10344295260888701
+				"max": 0.96,
+				"min": 0.56,
+				"avg": 0.7906666666666667,
+				"stddev": 0.09308538493710433
 			}
 		},
-		"sensitivity": {
-			"stddevAvg": 0.06505382386916238,
-			"stddevMax": 0.37712361663282534,
+		"sample-sensitivity": {
+			"stddevAvg": 0.09983845129437227,
+			"stddevMax": 0.3006659275674582,
 			"testDataInfo": {
-				"max": 1.0,
-				"min": 0.7333333333333334,
-				"avg": 0.952,
-				"stddev": 0.07216031534791897
+				"max": 0.98,
+				"min": 0.74,
+				"avg": 0.8904,
+				"stddev": 0.05650817050067478
 			}
 		},
 		...
 	}
 }
+
 ```
 
 これを読み解くと、正確性は全体的に、機微情報に対する表現上の配慮は、一部の記事で「評価のブレ」が生じる傾向が見て取れます。なお `testDataInfo.stddev` は評価のブレではなく、入力データセットに対する評価のスコアがどの程度幅広く分布しているかを見るための指標です。多様性が不十分ならば、入力データセットを見直して傾向を再度取得します。
