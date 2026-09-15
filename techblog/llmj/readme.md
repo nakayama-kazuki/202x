@@ -1,3 +1,5 @@
+<img width='100%' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/ogp.png' />
+
 # 今日、生成 AI は良い仕事をした。では、明日は？
 
 こんにちは、エンジニアの中山です。
