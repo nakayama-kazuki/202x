@@ -208,13 +208,13 @@ DeepEval には、出力が入力に忠実であるかを評価する `Faithfuln
 
 <img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i06.png' />
 
-でランダムに生成した入力データセットを使い、同じ評価を繰り返すことで「評価のブレ」についての傾向をレポートします。例えば、以下は 100 件の入力データに対し、3 回評価を繰り返した際の標準偏差に関する統計情報です。
+でランダムに生成した入力データセットを使い、同じ評価を繰り返すことで「評価のブレ」についての傾向をレポートします。例えば、以下は 100 件の入力データに対し、5 回評価を繰り返した際の標準偏差に関する統計情報です。
 
 ```
 {
 	"model": "YOUR_BACKEND_MODEL",
 	"articles": 100,
-	"iterations": 3,
+	"iterations": 5,
 	"note": {
 		"stddevAvg": "Average standard deviation of repeated evaluations for the same test data. Lower values indicate more consistent scoring.",
 		"stddevMax": "Maximum standard deviation among all test data. Lower values indicate the worst-case evaluation inconsistency is smaller.",
