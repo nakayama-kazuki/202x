@@ -2,7 +2,7 @@
 
 # 오늘, 생성형 AI는 좋은 일을 했다. 그렇다면 내일은?
 
-안녕하세요. 엔지니어 나카야마입니다.
+안녕하세요, 저는 일본인 엔지니어 pj-corridor입니다.
 
 이전에 Google의 AI Overview가 <a href='https://blog.google/products-and-platforms/products/search/ai-overviews-update-may-2024/'>피자에 접착제를 사용하라는 조언</a>을 노출해 화제가 된 적이 있는데요. 여러분은 생성형 AI의 출력 품질을 어떻게 관리하고 계신가요?
 
@@ -117,9 +117,9 @@ DeepEval에는 출력이 입력에 충실한지를 평가하는 `Faithfulness`, 
 
 <img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i05.png' />
 
-에서는 '좋은 브리핑'의 Gold Data와 Rubric 간의 정합성뿐만 아니라 Rubric 간의 중복과 충돌도 리포트하도록 해 평가 로봇 자체를 개선할 수 있게 했습니다.
+에서는 '좋은 브리핑'의 Gold Data와 Rubric 간의 정합성뿐만 아니라 Rubric 간의 중복과 충돌도 리포트하도록 해 평가 로봇 자체를 개선할 수 있게 했습니다(리포트의 출력 언어는 변경할 수 있습니다).
 
-<img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/review-ja.png' />
+<img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/review-en.png' />
 
 이 단계를 거치면 사람과 평가 로봇 모두 '좋은 브리핑'에 대한 이해도를 높일 수 있습니다.
 
@@ -249,9 +249,9 @@ DeepEval에는 출력이 입력에 충실한지를 평가하는 `Faithfulness`, 
 
 # 개선 사이클 반복하기
 
-평가 로봇은 통계 정보의 `stddevAvg`와 `stddevMax`도 참고하면서 점수 변화를 해석하고, 개선이나 부작용(성능 저하)에 관한 리포트를 출력합니다.
+평가 로봇은 통계 정보의 `stddevAvg`와 `stddevMax`도 참고하면서 점수 변화를 해석하고, 개선이나 부작용(성능 저하)에 관한 리포트를 출력합니다(리포트의 출력 언어는 변경할 수 있습니다).
 
-<img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/report-ja.png' />
+<img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/report-en.png' />
 
 전체 평가에 이어 각 브리핑의 점수와 평가 이유가 표시됩니다.
 
@@ -326,4 +326,4 @@ def generate_raw_response(self, in_prompt, **in_kwargs):
 
 이 글에서는 브리핑 자동 생성을 사례로 다뤘지만, 평가 로봇과 프로세스 지원 프레임워크는 범용적인 텍스트 생성 용도에도 사용할 수 있도록 <a href='https://github.com/nakayama-kazuki/202x/tree/main/tools/llm-as-a-judge'>구현을 공개하고 있으니(개인 사이트)</a> 필요하신 분들은 활용해 보시기 바랍니다.
 
-그리고 얼마 전 <a href='https://blog.techscore.com/entry/2026/05/13/080000_1'>개인 개발 AI 연동 애플리케이션에 관한 글</a>을 썼는데요. 그 글의 마지막에 깔아 두었던 LLM-as-a-Judge라는 복선을 이번 글에서 무사히 회수할 수 있었습니다. 관심 있으시다면 이전 글도 Episode #1으로 함께 읽어 보세요.
+그리고 얼마 전 <a href='https://velog.io/@corridor-project/%EC%83%9D%EC%84%B1-AI-%EC%97%B0%EA%B3%84-%EC%95%A0%ED%94%8C%EB%A6%AC%EC%BC%80%EC%9D%B4%EC%85%98-%EA%B0%9C%EB%B0%9C-%EC%9D%B4%EB%9F%B0-%EC%83%81%ED%99%A9%EC%97%90%EC%84%9C%EB%8A%94-%EC%96%B4%EB%96%BB%EA%B2%8C-%ED%95%A0%EA%B9%8C'>개인 개발 AI 연동 애플리케이션에 관한 글</a>을 썼는데요. 그 글의 마지막에 깔아 두었던 LLM-as-a-Judge라는 복선을 이번 글에서 무사히 회수할 수 있었습니다. 관심 있으시다면 이전 글도 Episode #1으로 함께 읽어 보세요.
