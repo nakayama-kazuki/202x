@@ -120,9 +120,9 @@ So, at this part of the overall evaluation process ...
 
 <img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i05.png' />
 
-... we made the framework report not only inconsistencies between the Gold Data and the rubrics, but also overlaps and conflicts among the rubrics, so that the AI evaluator itself can be improved (the report output language can be changed).
+... we made the framework report not only inconsistencies between the Gold Data and the rubrics, but also overlaps and conflicts among the rubrics, so that the AI evaluator itself can be improved.
 
-<img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/review-ja.png' />
+<img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/review-en.png' />
 
 Going through this step helps both humans and the AI evaluator develop a clearer understanding of what constitutes a "good briefing."
 
@@ -252,9 +252,9 @@ From these results, we can see a tendency for accuracy evaluations to vary acros
 
 # Iterating on the Improvement Cycle
 
-The AI evaluator interprets score changes while also taking statistics such as `stddevAvg` and `stddevMax` into account, and produces a report on improvements and possible side effects (regressions). The report output language can be changed.
+The AI evaluator interprets score changes while also taking statistics such as `stddevAvg` and `stddevMax` into account, and produces a report on improvements and possible side effects (regressions).
 
-<img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/report-ja.png' />
+<img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/report-en.png' />
 
 The overall evaluation is followed by the score and evaluation rationale for each briefing.
 
