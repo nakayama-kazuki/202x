@@ -1,4 +1,4 @@
-<img width='100%' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/ogp.png' />
+<img width='100%' alt='ogp' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/ogp.png' />
 
 # 今日、生成 AI は良い仕事をした。では、明日は？
 
@@ -18,14 +18,14 @@
 
 最初に評価プロセス全体像を示します。プロセスに登場するのは、熟練編集者や運用担当などの人間（緑）と、評価ロボット（青）と、生成パイプライン（赤）です。
 
-<img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i00.png' />
+<img width='600' alt='evaluation roles' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i00.png' />
 
 1. 熟練編集者に「よいブリーフィング」の具体例（以後 Gold Data）を作ってもらう
 2. 続いて、Gold Data を抽象化して「よいブリーフィング」たる評価基準（以後 Rubric）を定義してもらい、評価ロボットの頭脳とする
 3. 試しに検証してみる。評価ロボットは Gold Data に高いスコアをつけることができるだろうか？
 4. 期待した検証結果に至るまで、Gold Data もしくは Rubric を見直す
 
-<img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i01.png' />
+<img width='600' alt='Gold Data and Rubric validation' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i01.png' />
 
 5. 初期バージョンのブリーフィング生成パイプラインを作る
 6. 生成～評価のバッチ処理を実行する
@@ -35,7 +35,7 @@
 8. 事前に定めた基準を達成するまで生成、評価、改善を繰り返す
 9. 熟練編集者のチェックにより最終的なデプロイ判定を実施する
 
-<img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i02.png' />
+<img width='600' alt='generation to deployment' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i02.png' />
 
 成果物やレポートはリポジトリで管理し、将来、モデルの変更やブリーフィングの仕様変更（例えばパーソナライズ強化）が生じた場合、プロセスを反復し、必要ならば過去版との比較を行います。
 
@@ -79,7 +79,7 @@
 
 ブリーフィングについても同様ですが、最初から抽象概念にたどり着くことは難しいため、評価プロセス全体像のこの部分 …
 
-<img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i03.png' />
+<img width='600' alt='Rubric definition' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i03.png' />
 
 ではサービスの方向性を踏まえつつ、まずは「よいブリーフィング」の Gold Data を複数例作ります。
 
@@ -115,11 +115,11 @@ DeepEval には、出力が入力に忠実であるかを評価する `Faithfuln
 
 そこで、評価プロセス全体像のこの部分 …
 
-<img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i05.png' />
+<img width='600' alt='Gold Data and Rubric review' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i05.png' />
 
 では「よいブリーフィング」の Gold Data と Rubric の整合性に加え、Rubric の重複や衝突もレポートすることで、評価ロボットの改善を促すようにしました。
 
-<img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/review-ja.png' />
+<img width='600' alt='Gold Data and Rubric review report' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/review-ja.png' />
 
 この段階を経ることで、人間と評価ロボットの双方にとって「よいブリーフィング」の解像度向上が期待できます。
 
@@ -127,7 +127,7 @@ DeepEval には、出力が入力に忠実であるかを評価する `Faithfuln
 
 評価プロセス全体像のこの部分 …
 
-<img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i07.png' />
+<img width='600' alt='briefing generation pipeline' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i07.png' />
 
 は、最終的に本番プロダクトに実装されることになり、フレームワーク内で扱うプロンプトやルールベースの処理（Python コード）は、本番プロダクトに対する実装仕様と位置付けることができます。
 
@@ -157,7 +157,7 @@ DeepEval には、出力が入力に忠実であるかを評価する `Faithfuln
 
 それでは、生成パイプラインの出力を評価してみましょう。
 
-<img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i08.png' />
+<img width='600' alt='generation and evaluation' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i08.png' />
 
 前回の評価では `0.75` だった正確性のスコアが、今回 `0.91` に変化したとします。これは改善したと言えるでしょうか。また、機微情報に対する表現上の配慮についてのスコアが `0.93` から `0.84` に変化したとします。これは副作用（デグレ）でしょうか？
 
@@ -206,7 +206,7 @@ DeepEval には、出力が入力に忠実であるかを評価する `Faithfuln
 
 生成パイプラインの改善サイクルに入る手前の段階 …
 
-<img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i06.png' />
+<img width='600' alt='evaluation variance check' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i06.png' />
 
 でランダムに生成した入力データセットを使い、同じ評価を繰り返すことで「評価のブレ」についての傾向をレポートします。例えば、以下は `articles` 件の入力データセットに対し `iterations` 回評価を繰り返した際の標準偏差に関する統計情報です。
 
@@ -255,7 +255,7 @@ DeepEval には、出力が入力に忠実であるかを評価する `Faithfuln
 
 評価ロボットは、統計情報の `stddevAvg` や `stddevMax` も参考にしつつスコア変化を解釈し、改善や副作用（デグレ）に関するレポートを出力します。
 
-<img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/report-ja.png' />
+<img width='600' alt='briefing evaluation report' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/report-ja.png' />
 
 全体的な評価に続いて、ブリーフィングごとのスコアや評価理由が並びます。
 
@@ -320,7 +320,7 @@ def generate_raw_response(self, in_prompt, **in_kwargs):
 
 こうして、ニュース記事や SNS ポストから「よいブリーフィング」の自動生成が可能になり、熟練編集者からも及第点 😊 をもらうことができました。
 
-<img width='600' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i09.png' />
+<img width='600' alt='final deployment review' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/llmj/img/i09.png' />
 
 これならば、明日以降の自動生成も問題ないと言えるでしょうか。
 
