@@ -394,6 +394,6 @@ I hope this article provides some useful ideas for anyone struggling with the qu
 
 Although this article focused on automatically generating briefings, the evaluation bot and process-support framework are implemented as a general-purpose system for text-generation use cases. The <a href='https://github.com/nakayama-kazuki/202x/tree/main/tools/llm-as-a-judge'>implementation is available on my personal GitHub repository</a>, so feel free to use it if you find it useful.
 
-I also wrote <a href='https://blog.techscore.com/entry/2026/05/13/080000_1'>an earlier article about a personal AI-integrated application</a>. That article ended with a small teaser about LLM-as-a-Judge, so I'm glad I finally got to follow up on it here.
+I also wrote <a href='https://blog.techscore.com/entry/2026/05/13/080000'>an earlier article about a personal AI-integrated application</a>. That article ended with a small teaser about LLM-as-a-Judge, so I'm glad I finally got to follow up on it here.
 
 If you're interested, you can think of that earlier article as Episode #1.
