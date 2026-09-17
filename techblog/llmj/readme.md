@@ -167,7 +167,7 @@ DeepEval には、出力が入力に忠実であるかを評価する `Faithfuln
 
 > We use OpenAI’s GPT family as our LLMs, including GPT-3.5 (text-davinci-003) and GPT-4. For GPT-3.5, we set decoding temperature to 0 to increase the model’s determinism.
 
-また `AnthropicModel` でもデフォルトは <a href='https://deepeval.com/integrations/models/anthropic#in-code'>0.0</a> です。
+また `AnthropicModel` でも <a href='https://deepeval.com/integrations/models/anthropic#in-code'>デフォルト</a> は `0.0` です。
 
 > temperature: A float specifying the model temperature. Defaults to TEMPERATURE if not passed; falls back to 0.0 if unset and raises if < 0.
 
