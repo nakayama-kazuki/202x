@@ -123,6 +123,10 @@ DeepEval には、出力が入力に忠実であるかを評価する `Faithfuln
 
 この段階を経ることで、人間と評価ロボットの双方にとって「よいブリーフィング」の解像度向上が期待できます。
 
+ただし、<a href='https://aclanthology.org/2023.emnlp-main.153.pdf'>G-Eval の元論文</a> では、要約タスクにおいて従来手法に対する優位性が報告されている一方で、人間評価との Spearman 相関は `0.514` です。そのため、Gold Data による検証だけで人間の判断との一致まで担保できるとは考えず、上でも述べたとおり評価ロボットは「一定の品質×量」を担う役割とするのが賢明です。
+
+> We show that G-EVAL with GPT-4 as the backbone model achieves a Spearman correlation of 0.514 with human on summarization task, outperforming all previous methods by a large margin.
+
 # 生成パイプライン
 
 評価プロセス全体像のこの部分 …
@@ -247,7 +251,7 @@ DeepEval には、出力が入力に忠実であるかを評価する `Faithfuln
 
 ```
 
-これを読み解くと、正確性は全体的に、機微情報に対する表現上の配慮は、一部の記事で「評価のブレ」が生じる傾向が見て取れます。なお `testDataInfo.stddev` は評価のブレではなく、入力データセットに対する評価のスコアがどの程度幅広く分布しているかを見るための指標です。多様性が不十分ならば、入力データセットを見直して傾向を再度取得します。
+これを読み解くと、正確性は全体的に、機微情報に対する表現上の配慮は、一部の記事で「評価のブレ」が生じる傾向が見て取れます。なお `testDataInfo.stddev` は評価のブレではなく、入力データセットに対する評価のスコアがどの程度幅広く分布しているかを見るための指標です。分布の広がりが不十分ならば、入力データセットを見直して傾向を再度取得します。
 
 蛇足ですが、最近 TypeSafe AI から <a href='https://typesafe.ai/blog/introducing-system-one-models-and-jev'>Jev が発表</a> されました。テキスト生成ではなく、事前に定義された判断とその信頼度を出力するアプローチは、評価のブレに関連した課題の解消に期待できそうですね。
 
