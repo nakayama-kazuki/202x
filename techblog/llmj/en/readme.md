@@ -79,10 +79,10 @@ Next:
 
 And got:
 
-> **M**ankind makes a home beyond Earth
-> **O**n the Moon, a new chapter begins
-> **O**utward lies the journey to Mars
-> **N**ow, space becomes a place to live
+> **M**ankind makes a home beyond Earth <br>
+> **O**n the Moon, a new chapter begins <br>
+> **O**utward lies the journey to Mars <br>
+> **N**ow, space becomes a place to live <br>
 
 Not bad for an acrostic, right?
 
@@ -140,9 +140,9 @@ Going through this step helps both humans and the evaluation bot develop a clear
 
 That said, although <a href='https://aclanthology.org/2023.emnlp-main.153.pdf'>the original G-Eval paper</a> reported improvements over previous approaches for summarization tasks, its Spearman correlation with human evaluation was `0.514`.
 
-We therefore do not assume that validation against Gold Data alone guarantees agreement with human judgment. As described earlier, it is more appropriate to assign the evaluation bot the role of providing "a certain level of quality at scale."
-
 > We show that G-EVAL with GPT-4 as the backbone model achieves a Spearman correlation of 0.514 with human on summarization task, outperforming all previous methods by a large margin.
+
+We therefore do not assume that validation against Gold Data alone guarantees agreement with human judgment. As described earlier, it is more appropriate to assign the evaluation bot the role of providing "a certain level of quality at scale."
 
 # Generation Pipeline
 
