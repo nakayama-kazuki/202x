@@ -135,9 +135,9 @@ DeepEval에는 출력이 입력 내용에 충실한지 평가하는 `Faithfulnes
 
 다만 <a href='https://aclanthology.org/2023.emnlp-main.153.pdf'>G-Eval의 원 논문</a>에서는 요약 태스크에서 기존 방식보다 우수한 성능을 보였다고 보고하면서도, 사람 평가와의 Spearman 상관계수는 `0.514`였습니다.
 
-따라서 Gold Data를 이용한 검증만으로 사람의 판단과 일치한다고 보장할 수 있다고 생각하지는 않습니다. 앞에서 설명했듯 평가 봇은 "일정 수준의 품질 × 규모"를 담당하는 역할로 두는 것이 현명합니다.
-
 > We show that G-EVAL with GPT-4 as the backbone model achieves a Spearman correlation of 0.514 with human on summarization task, outperforming all previous methods by a large margin.
+
+따라서 Gold Data를 이용한 검증만으로 사람의 판단과 일치한다고 보장할 수 있다고 생각하지는 않습니다. 앞에서 설명했듯 평가 봇은 "일정 수준의 품질 × 규모"를 담당하는 역할로 두는 것이 현명합니다.
 
 # 생성 파이프라인
 
