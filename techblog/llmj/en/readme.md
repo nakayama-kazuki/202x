@@ -364,7 +364,7 @@ From the evaluation bot's perspective, however, the input and output were still 
 
 We ultimately resolved the issue by excluding headlines from the input, but the lesson was that evaluation results are affected not only by the evaluation model and Rubrics, but also by the input data itself.
 
-We also encountered cases where each individual fact was correct, but the relationships between those facts were wrong and could not be detected by the accuracy Rubric.
+We also encountered cases where each individual fact was correct, but incorrect relationships between those facts could not be detected.
 
 For those cases, we revised the accuracy Rubric so that relationships such as "actor," "target," "event," and "condition" would also be preserved and evaluated.
 
