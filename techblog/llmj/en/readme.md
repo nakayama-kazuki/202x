@@ -358,13 +358,13 @@ As we repeated the improvement cycle, we discovered a number of practical issues
 
 News headlines often reflect the publisher's editorial intent—for example, which aspect of a story they want to emphasize.
 
-In some cases, the generation pipeline was pulled toward that framing and produced briefings that were closer to factual misrepresentation.
+In some cases, the generation pipeline was pulled toward that framing and produced briefings that were factually misleading.
 
 From the evaluation bot's perspective, however, the input and output were still consistent with each other, so the accuracy Rubric could not detect the problem.
 
 We ultimately resolved the issue by excluding headlines from the input, but the lesson was that evaluation results are affected not only by the evaluation model and Rubrics, but also by the input data itself.
 
-We also encountered cases where each individual fact was correct, but the relationships between those facts were wrong.
+We also encountered cases where each individual fact was correct, but the relationships between those facts were wrong and could not be detected by the accuracy Rubric.
 
 For those cases, we revised the accuracy Rubric so that relationships such as "actor," "target," "event," and "condition" would also be preserved and evaluated.
 
