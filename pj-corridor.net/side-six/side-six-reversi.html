@@ -4074,14 +4074,14 @@ const focusHere = (() => {
 	let focusedEmpty = null;
 	const HIGHLIGHT = (new THREE.Color(EMPTYCOLOR)).lerp(new THREE.Color(0xFFFFFF), 0.3).getHex();
 	return in_ndc => {
-		let current, color;
-		let intersects = gWorld.intersectPositive(in_ndc);
-		if (intersects.length > 0) {
-			current = intersects[0].object;
-			color = getShellColor(current);
-		} else {
-			current = null;
-			color = -1;
+		let current = null
+		let color = -1;
+		if (in_ndc != null) {
+			let intersects = gWorld.intersectPositive(in_ndc);
+			if (intersects.length > 0) {
+				current = intersects[0].object;
+				color = getShellColor(current);
+			}
 		}
 		if ((color === EMPTYCOLOR) || (color === HIGHLIGHT)) {
 			if (current === focusedEmpty) {
@@ -4102,8 +4102,7 @@ const focusHere = (() => {
 })();
 
 function resetFocus() {
-	const outOfRange = new THREE.Vector2(1, 1);
-	focusHere(outOfRange);
+	focusHere(null);
 }
 
 function rotateDone() {
