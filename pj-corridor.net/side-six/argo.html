@@ -178,7 +178,9 @@ class cLineParser {
 			ePressureToMe : false,
 			ePrePressureToMe : false,
 			ePressureByMe : false,
-			bFulfilledWith : false,
+			bOccupiedByMe : false,
+			bPreOccupiedByMe : false,
+			bOccupiedByBoth : false,
 			bPressureToMe : false,
 			bPrePressureToMe : false,
 			bPressureByMe : false,
@@ -192,9 +194,6 @@ class cLineParser {
 			items = [...in_items];
 		} else {
 			items = [cLineParser.#border, ...in_items, cLineParser.#border];
-		}
-		if (items.indexOf(in_player) === -1) {
-			return parsed;
 		}
 		/*
 			(1) as in_player should be exist from here, split array using in_player
@@ -215,13 +214,15 @@ class cLineParser {
 				ex2 (non-loop) : [B12],[34],[B]
 				ex3 (non-loop) : [B],[12],[34],[B]
 		*/
+		let meCnt = 0;
 		let meMaxIx = 0;
 		let meStart = false;
+		let emptyInLine = false;
 		// the 1st item may be empty
 		const subsets = [[]];
-		parsed.bFulfilledWith = true;
 		for (let i = 0; i < items.length; i++) {
 			if (items[i] === in_player) {
+				meCnt++;
 				if (meStart) {
 					continue;
 				} else {
@@ -232,12 +233,18 @@ class cLineParser {
 			} else {
 				meStart = false;
 				if (items[i] === cLineParser.#empty) {
-					parsed.bFulfilledWith = false;
+					emptyInLine = true;
 				}
 				subsets[meMaxIx].push(items[i]);
 			}
 		}
-		if (parsed.bFulfilledWith) {
+		if (emptyInLine) {
+			parsed.bPreOccupiedByMe = (meCnt === in_items.length - 1);
+		} else {
+			parsed.bOccupiedByMe = (meCnt === in_items.length);
+			parsed.bOccupiedByBoth = (meCnt > 0);
+		}
+		if (parsed.bOccupiedByMe || parsed.bPreOccupiedByMe || parsed.bOccupiedByBoth || (meCnt === 0)) {
 			return parsed;
 		}
 		/*
@@ -430,21 +437,43 @@ const suites = [
 		{items : [1,9,9,9,9,9,0,1], loop : true, safetyScore : -1, dp : false},
 		{items : [1,0,9,9,9,9,0,1], loop : true, safetyScore : -2, dp : false},
 
-	{group : '*** 7. bFulfilledWith ***'},
+	{group : '*** 7. bOccupiedByMe ***'},
 
-		{items : [1,1,1,1,1,1,1,1], loop : false, bFulfilledWith : false, dp : false},
-		{items : [1,1,1,9,0,1,1,1], loop : false, bFulfilledWith : false, dp : false},
-		{items : [1,1,1,0,0,1,1,1], loop : false, bFulfilledWith : true, dp : false},
-		{items : [0,0,0,0,0,0,0,0], loop : false, bFulfilledWith : true, dp : false},
-		{items : [0,0,0,9,0,0,0,0], loop : false, bFulfilledWith : false, dp : false},
+		{items : [1,1,1,1,1,1,1,1], loop : false, bOccupiedByMe : false, dp : false},
+		{items : [0,0,0,0,0,0,0,0], loop : false, bOccupiedByMe : true, dp : false},
+		{items : [0,0,0,9,0,0,0,0], loop : false, bOccupiedByMe : false, dp : false},
 
-		{items : [1,1,1,1,1,1,1,1], loop : true, bFulfilledWith : false, dp : false},
-		{items : [1,1,1,9,0,1,1,1], loop : true, bFulfilledWith : false, dp : false},
-		{items : [1,1,1,0,0,1,1,1], loop : true, bFulfilledWith : true, dp : false},
-		{items : [0,0,0,0,0,0,0,0], loop : true, bFulfilledWith : true, dp : false},
-		{items : [0,0,0,9,0,0,0,0], loop : true, bFulfilledWith : false, dp : false},
+		{items : [1,1,1,1,1,1,1,1], loop : true, bOccupiedByMe : false, dp : false},
+		{items : [0,0,0,0,0,0,0,0], loop : true, bOccupiedByMe : true, dp : false},
+		{items : [0,0,0,9,0,0,0,0], loop : true, bOccupiedByMe : false, dp : false},
 
-	{group : '*** 8. bOuterByMe ***'},
+	{group : '*** 8. bPreOccupiedByMe ***'},
+
+		{items : [1,1,1,1,1,1,1,1], loop : false, bPreOccupiedByMe : false, dp : false},
+		{items : [0,0,0,0,0,0,0,0], loop : false, bPreOccupiedByMe : false, dp : false},
+		{items : [0,0,0,1,0,0,0,0], loop : false, bPreOccupiedByMe : false, dp : false},
+		{items : [0,0,0,9,0,0,0,0], loop : false, bPreOccupiedByMe : true, dp : false},
+
+		{items : [1,1,1,1,1,1,1,1], loop : true, bPreOccupiedByMe : false, dp : false},
+		{items : [0,0,0,0,0,0,0,0], loop : true, bPreOccupiedByMe : false, dp : false},
+		{items : [0,0,0,1,0,0,0,0], loop : true, bPreOccupiedByMe : false, dp : false},
+		{items : [0,0,0,9,0,0,0,0], loop : true, bPreOccupiedByMe : true, dp : false},
+
+	{group : '*** 9. bOccupiedByBoth ***'},
+
+		{items : [1,1,1,1,1,1,1,1], loop : false, bOccupiedByBoth : false, dp : false},
+		{items : [1,1,1,9,0,1,1,1], loop : false, bOccupiedByBoth : false, dp : false},
+		{items : [1,1,1,0,0,1,1,1], loop : false, bOccupiedByBoth : true, dp : false},
+		{items : [0,0,0,0,0,0,0,0], loop : false, bOccupiedByBoth : true, dp : false},
+		{items : [0,0,0,9,0,0,0,0], loop : false, bOccupiedByBoth : false, dp : false},
+
+		{items : [1,1,1,1,1,1,1,1], loop : true, bOccupiedByBoth : false, dp : false},
+		{items : [1,1,1,9,0,1,1,1], loop : true, bOccupiedByBoth : false, dp : false},
+		{items : [1,1,1,0,0,1,1,1], loop : true, bOccupiedByBoth : true, dp : false},
+		{items : [0,0,0,0,0,0,0,0], loop : true, bOccupiedByBoth : true, dp : false},
+		{items : [0,0,0,9,0,0,0,0], loop : true, bOccupiedByBoth : false, dp : false},
+
+	{group : '*** 10. bOuterByMe ***'},
 
 		{items : [0,1,0,9,9,9,9,9], loop : false, bOuterByMe : true, dp : false},
 		{items : [1,0,9,9,9,9,9,0], loop : false, bOuterByMe : false, dp : false},
@@ -460,7 +489,7 @@ const suites = [
 		{items : [9,9,0,1,2,0,9,9], loop : true, bOuterByMe : true, dp : false},
 		{items : [2,0,9,9,9,9,0,1], loop : true, bOuterByMe : true, dp : false},
 
-	{group : '*** 9. bPreOuterByMe ***'},
+	{group : '*** 11. bPreOuterByMe ***'},
 
 		{items : [9,0,9,9,9,9,9,0], loop : false, bPreOuterByMe : false, dp : false},
 		{items : [0,9,0,9,9,9,9,9], loop : false, bPreOuterByMe : true, dp : false},
@@ -470,7 +499,7 @@ const suites = [
 
 		{items : [9,0,9,9,9,9,9,0], loop : true, bPreOuterByMe : true, dp : false},
 
-	{group : '*** 10. eCriticalToMe ***'},
+	{group : '*** 12. eCriticalToMe ***'},
 
 		{items : [0,1,9,9,9,9,9,9], loop : false, eCriticalToMe : false, dp : false},
 		{items : [9,0,1,9,9,9,9,9], loop : false, eCriticalToMe : true, dp : false},
@@ -484,7 +513,7 @@ const suites = [
 		{items : [9,9,9,9,2,1,0,9], loop : false, eCriticalToMe : true, dp : false},
 		{items : [9,9,9,9,1,9,0,9], loop : false, eCriticalToMe : false, dp : false},
 
-	{group : '*** 11. ePreRiskToMe ***'},
+	{group : '*** 13. ePreRiskToMe ***'},
 
 		{items : [9,0,9,0,9,9,9,9], loop : false, ePreRiskToMe : true, dp : false},
 		{items : [9,0,9,9,0,9,9,9], loop : false, ePreRiskToMe : false, dp : false},
@@ -496,7 +525,7 @@ const suites = [
 		{items : [9,9,9,0,9,0,9,9], loop : false, ePreRiskToMe : false, dp : false},
 		{items : [9,9,0,0,9,0,0,9], loop : false, ePreRiskToMe : true, dp : false},
 
-	{group : '*** 12. ePressureToMe ***'},
+	{group : '*** 14. ePressureToMe ***'},
 
 		{items : [9,0,1,9,1,9,9,9], loop : false, ePressureToMe : true, dp : false},
 		{items : [9,9,0,1,9,1,9,9], loop : false, ePressureToMe : false, dp : false},
@@ -508,7 +537,7 @@ const suites = [
 		{items : [9,9,1,9,1,0,9,9], loop : false, ePressureToMe : false, dp : false},
 		{items : [9,1,9,1,1,0,0,9], loop : false, ePressureToMe : true, dp : false},
 
-	{group : '*** 13. bPressureToMe ***'},
+	{group : '*** 15. bPressureToMe ***'},
 
 		{items : [9,0,1,9,1,9,9,9], loop : false, bPressureToMe : true, dp : false},
 		{items : [9,9,0,1,9,1,9,9], loop : false, bPressureToMe : true, dp : false},
@@ -520,7 +549,7 @@ const suites = [
 		{items : [9,9,1,9,1,0,9,9], loop : false, bPressureToMe : true, dp : false},
 		{items : [9,1,9,1,1,0,0,9], loop : false, bPressureToMe : true, dp : false},
 
-	{group : '*** 14. ePrePressureToMe ***'},
+	{group : '*** 16. ePrePressureToMe ***'},
 
 		{items : [9,0,9,9,1,9,9,9], loop : false, ePrePressureToMe : true, dp : false},
 		{items : [9,9,0,9,9,1,9,9], loop : false, ePrePressureToMe : false, dp : false},
@@ -532,7 +561,7 @@ const suites = [
 		{items : [9,9,1,9,9,0,9,9], loop : false, ePrePressureToMe : false, dp : false},
 		{items : [9,1,9,1,9,0,0,9], loop : false, ePrePressureToMe : true, dp : false},
 
-	{group : '*** 15. bPrePressureToMe ***'},
+	{group : '*** 17. bPrePressureToMe ***'},
 
 		{items : [9,0,9,9,1,9,9,9], loop : false, bPrePressureToMe : true, dp : false},
 		{items : [9,9,0,9,9,1,9,9], loop : false, bPrePressureToMe : true, dp : false},
@@ -544,7 +573,7 @@ const suites = [
 		{items : [9,9,1,9,9,0,9,9], loop : false, bPrePressureToMe : true, dp : false},
 		{items : [9,1,9,1,9,0,0,9], loop : false, bPrePressureToMe : true, dp : false},
 
-	{group : '*** 16. ePressureByMe ***'},
+	{group : '*** 18. ePressureByMe ***'},
 
 		{items : [1,1,0,9,0,9,9,9], loop : false, ePressureByMe : false, dp : false},
 		{items : [9,9,1,0,9,0,9,9], loop : false, ePressureByMe : false, dp : false},
@@ -560,7 +589,7 @@ const suites = [
 		{items : [9,9,0,9,0,1,1,9], loop : false, ePressureByMe : true, dp : false},
 		{items : [9,9,0,9,0,1,1,9], loop : true, ePressureByMe : false, dp : false},
 
-	{group : '*** 17. bPressureByMe ***'},
+	{group : '*** 19. bPressureByMe ***'},
 
 		{items : [1,1,0,9,0,9,9,9], loop : false, bPressureByMe : false, dp : false},
 		{items : [9,9,1,0,9,0,9,9], loop : false, bPressureByMe : true, dp : false},
@@ -576,7 +605,7 @@ const suites = [
 		{items : [9,9,0,9,0,1,1,9], loop : false, bPressureByMe : true, dp : false},
 		{items : [9,9,0,9,0,1,1,9], loop : true, bPressureByMe : true, dp : false},
 
-	{group : '*** 18. bInnerByMe ***'},
+	{group : '*** 20. bInnerByMe ***'},
 
 		{items : [9,9,9,9,9,9,9,9], loop : false, bInnerByMe : false, dp : false},
 
@@ -595,6 +624,7 @@ const suites = [
 		{items : [0,1,9,9,9,9,2,0], loop : true, bInnerByMe : false, dp : false},
 		{items : [0,1,9,9,9,9,1,9], loop : true, bInnerByMe : false, dp : false}
 ];
+
 suites.forEach(in_suite => {
 	if (in_suite.group) {
 		console.log(in_suite.group);
@@ -1144,15 +1174,15 @@ class cReversi {
 	#emptyCnt() {
 		return this.#count(cReversi.#empty);
 	}
-	#flipCandidates(in_player) {
-		const candidates = [];
+	#flippableIxArr(in_player) {
+		const ixArr = [];
 		const asDryRun = true;
 		this.#area.options.forEach(in_empty_ix => {
 			if (this.#flip(in_player, in_empty_ix, asDryRun)) {
-				candidates.push(in_empty_ix);
+				ixArr.push(in_empty_ix);
 			}
 		});
-		return candidates;
+		return ixArr;
 	}
 	#updateOptions(in_ix) {
 		const aroundArr = this.#aroundIndexes(in_ix);
@@ -1285,7 +1315,11 @@ class cReversi {
 			{format : 'ePressureByMe', positive : true},
 			{format : 'ePressureToMe', positive : false},
 			{format : 'ePrePressureToMe', positive : false},
-			{format : 'bFulfilledWith', positive : true},
+
+			{format : 'bOccupiedByMe', positive : true},
+			{format : 'bPreOccupiedByMe', positive : true},
+			{format : 'bOccupiedByBoth', positive : true},
+
 			{format : 'bPressureByMe', positive : true},
 			{format : 'bPressureToMe', positive : false},
 			{format : 'bPrePressureToMe', positive : false},
@@ -1337,7 +1371,7 @@ class cReversi {
 		cReversi.#registerStats('can not evaluate');
 		return 0;
 	}
-	#scoringHeuristicPriority(in_player, in_ix) {
+	#scoringFlipPriority(in_player, in_ix) {
 		cReversi.#registerStats('total');
 		const loop = !this.#conf.row.edge || !this.#conf.col.edge;
 		/*
@@ -1413,7 +1447,7 @@ class cReversi {
 		const scale = 10;
 		return this.#evaluateByScale(check.e.currParsed, check.e.nextParsed, check.x.increased, scale);
 	}
-	#scoringHeuristicTiebreak(in_player, in_ix) {
+	#scoringFlipTiebreak(in_player, in_ix) {
 		const loop = !this.#conf.row.edge || !this.#conf.col.edge;
 		const radiating = this.#conf.tagIndexes.radiating[in_ix];
 		const pairs = Array.from(this.#conf.dirStyle.pair.values());
@@ -1432,7 +1466,11 @@ class cReversi {
 		let total = 0;
 		const xInside = false;
 		// npc scoreing > scaled scoreing (for tie-break delta)
-		const scale = 0.01;
+		let scale = 0.01;
+		// todo : change scale + priorityArr,for loop
+		//if (!this.#conf.row.edge && !this.#conf.col.edge) {
+		//	scale = 2;
+		//}
 		for (let i = 0; i < currRadiatingLines.length; i++) {
 			const currParsed = cLineParser.parse(currRadiatingLines[i], in_player, loop);
 			const nextParsed = cLineParser.parse(nextRadiatingLines[i], in_player, loop);
@@ -1446,9 +1484,9 @@ class cReversi {
 	}
 	#scoringHeuristic(in_player, in_cand) {
 		if (in_cand.type === 'flip') {
-			const score = this.#scoringHeuristicPriority(in_player, in_cand.ix);
+			const score = this.#scoringFlipPriority(in_player, in_cand.ix);
 			if (score === 0) {
-				return this.#scoringHeuristicTiebreak(in_player, in_cand.ix);
+				return this.#scoringFlipTiebreak(in_player, in_cand.ix);
 			} else {
 				return score;
 			}
@@ -1465,10 +1503,10 @@ class cReversi {
 	}
 	#countNextEnemyOption(in_player) {
 		const player = (in_player + 1 + cReversi.#maxPlayers) % cReversi.#maxPlayers;
-		return this.#flipCandidates(player).length;
+		return this.#flippableIxArr(player).length;
 	}
 	#countNextOption(in_player) {
-		return this.#flipCandidates(in_player).length;
+		return this.#flippableIxArr(in_player).length;
 	}
 	#countNextOwnedSafeArea(in_player) {
 		let count = 0;
@@ -1882,15 +1920,15 @@ class cReversi {
 			npcArgo = this.#npcArgoPriority[in_player];
 		}
 		// console.log(in_player, npcAlive, playerCnt, npcArgo);
-		let candidates = this.#flipCandidates(in_player).map(in_ix => ({
-			type : 'flip',
+		let candArr = this.#flippableIxArr(in_player).map(in_ix => ({
 			ix : in_ix,
+			type : 'flip',
 			apply : () => this.#flip(in_player, in_ix)
 		}));
-		if (candidates.length > 0) {
-			const action = this.#npcSet[npcArgo].call(this, in_player, candidates); 
-			(action.apply)();
-			this.#commit(in_player, 'choose-item', action.ix, -1, -1, -1);
+		if (candArr.length > 0) {
+			const cand = this.#npcSet[npcArgo].call(this, in_player, candArr); 
+			(cand.apply)();
+			this.#commit(in_player, 'choose-item', cand.ix, -1, -1, -1);
 			return true;
 		} else {
 			let action, result;
@@ -1956,7 +1994,7 @@ class cReversi {
 		return table;
 	}
 	flippable(in_player) {
-		return ((this.#flipCandidates(in_player)).length > 0);
+		return ((this.#flippableIxArr(in_player)).length > 0);
 	}
 	getCurrentCondition() {
 		const condition = {
