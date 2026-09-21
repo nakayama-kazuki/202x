@@ -4,10 +4,10 @@
 
 안녕하세요. 일본인 엔지니어 pj-corridor입니다. 이 글에서는 생성 AI 연계 애플리케이션 개발을 통해 직면한 과제, 예를 들어 어뷰즈 대응이나 프롬프트 튜닝 과정에서의 시행착오와 트레이드오프에 어떻게 대응했는지 소개합니다. 한국어 표현이 다소 부자연스러울 수 있는 점 양해 부탁드립니다.
 
-먼저, 개발한 성격 진단 애플리케이션을 체험해 보시기 바랍니다. 거슬리는 광고 😆 는 브라우저 창 너비를 조정하면 사라집니다.
+먼저, 개발한 성격 진단 애플리케이션을 체험해 보시기 바랍니다. 거슬리는 광고 😆는 브라우저 창 너비를 조정하면 사라집니다.
 
-- <a href='https://pj-corridor.net/personalitytest/OpenCAPS.html'>CAPS（= Controller, Analyzer, Promoter, Supporter）진단</a>
-- <a href='https://pj-corridor.net/personalitytest/OpenDiSC.html'>DiSC（= Drive, Influence, Steadiness, Compliance）진단</a>
+- <a href='https://pj-corridor.net/personalitytest/OpenCAPS.html'>CAPS(= Controller, Analyzer, Promoter, Supporter) 진단</a>
+- <a href='https://pj-corridor.net/personalitytest/OpenDiSC.html'>DiSC(= Drive, Influence, Steadiness, Compliance) 진단</a>
 
 CAPS와 DiSC는 최근 유행하는 MBTI와 마찬가지로 이른바 유사과학적인 성격 진단입니다. 의사결정의 근거로 사용하기는 어렵지만, 예를 들어 워크숍 참가자들이 진단 결과를 공유함으로써 자기소개 세션을 활기차게 만들고 분위기를 부드럽게 하는 데에는 도움이 됩니다. 이러한 자리에서 한 번 사용해 보시길 권장합니다.
 
@@ -15,9 +15,9 @@ CAPS와 DiSC는 최근 유행하는 MBTI와 마찬가지로 이른바 유사과�
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/pj-corridor.net/personalitytest/blog/sample.png' />
 
-조언과 사용자 매뉴얼은 생성 AI에 의해 출력된 것이지만, 일본어 문장 안에 나타나는 “Respondent”라는 주어는 다소 어색하게 느껴집니다. 이처럼 생성 AI 연계 애플리케이션은 높은 표현력을 제공하는 한편, 품질 측면의 리스크도 함께 발생합니다.
+조언과 사용자 매뉴얼은 생성 AI가 출력한 것이지만, 일본어 문장 안에 나타나는 “Respondent”라는 주어는 다소 어색하게 느껴집니다. 이처럼 생성 AI 연계 애플리케이션은 높은 표현력을 제공하는 한편, 품질 측면의 리스크도 함께 발생합니다.
 
-다만 개인 개발(취미 프로젝트) 범위에서 품질 보증 비용을 억제한다는 전제를 두었기 때문에, 룰 기반 채점 로직은 deterministic하게 유지하고 생성 AI의 출력은 보조적인 문장으로 제한함으로써 할루시네이션의 영향 범위를 제어했습니다.
+다만 개인 개발(취미 프로젝트) 범위에서 품질 보증 비용을 억제한다는 전제를 두었기 때문에, 룰 기반 채점 로직은 결정론적(deterministic)으로 유지하고 생성 AI의 출력은 보조적인 문장으로 제한함으로써 할루시네이션의 영향 범위를 제어했습니다.
 
 이제부터는 구체적인 시행착오와 트레이드오프 대응 방법을 세 가지 장으로 나누어 소개하겠습니다.
 
@@ -34,11 +34,11 @@ CAPS와 DiSC는 최근 유행하는 MBTI와 마찬가지로 이른바 유사과�
 
 WAF는 AWS 표준 보호 패키지를 참고하여 다음을 채택했습니다.
 
-- `GeoRule` (공격이 많은 지역의 IP 차단)
-- `AWS-AWSManagedRulesAmazonIpReputationList` (AWS에서 인증된 공격 IP 차단)
-- `AWS-AWSManagedRulesAnonymousIpList` (터널링 등 신원 은폐 IP 차단)
-- 애플리케이션에 맞게 조정한 `GlobalRateBasedRule` (요청 상한 설정)
-- 애플리케이션에 맞게 조정한 `RateBasedRulePOST` (POST / PUT / DELETE 상한 설정)
+- `GeoRule`(공격이 많은 지역의 IP 차단)
+- `AWS-AWSManagedRulesAmazonIpReputationList`(AWS에서 알려진 악성 IP 차단)
+- `AWS-AWSManagedRulesAnonymousIpList`(터널링 등 신원 은폐 IP 차단)
+- 애플리케이션에 맞게 조정한 `GlobalRateBasedRule`(요청 상한 설정)
+- 애플리케이션에 맞게 조정한 `RateBasedRulePOST`(POST / PUT / DELETE 상한 설정)
 
 그리고 `AWS-AWSManagedRulesSQLiRuleSet` 등 애플리케이션에 필요하지 않은 규칙은 제거했습니다.
 
@@ -86,16 +86,16 @@ WAF는 AWS 표준 보호 패키지를 참고하여 다음을 채택했습니다.
 
 진단 애플리케이션의 실행 환경으로서 Lambda는 합리적인 선택이었지만,
 
-1. Lambda 독자 컨테이너 방식 (PHP 사용)
-2. Lambda zip 방식 (Python / Node 사용)
+1. Lambda 자체 컨테이너 방식(PHP 사용)
+2. Lambda zip 방식(Python / Node 사용)
 
-중에서 처음에는 1번에 더 마음이 기울었습니다. 이미 로컬에 PHP 테스트 환경을 구축해 두었기 때문에 애자일한 개발과 테스트가 가능하다고 생각했기 때문입니다.
+중에서 처음에는 1번에 더 마음이 갔습니다. 이미 로컬에 PHP 테스트 환경을 구축해 두었기 때문에 애자일한 개발과 테스트가 가능하다고 생각했기 때문입니다.
 
-그러나 Lambda와의 친화성이나 CI 복잡도에 대한 우려를 고려하여 최종적으로는 2번을 선택했습니다. 결과적으로 AWS 환경에서의 시행착오와 블랙박스를 해소하는 데 걸린 시간이 더 길었기 때문에, 적절한 선택이었다고 생각합니다.
+그러나 Lambda와의 호환성과 CI 복잡도에 대한 우려를 고려하여 최종적으로는 2번을 선택했습니다. 결과적으로 AWS 환경에서의 시행착오와 블랙박스를 해소하는 데 걸린 시간이 더 길었기 때문에, 적절한 선택이었다고 생각합니다.
 
-또한 AWS 콘솔에서 Lambda 함수를 반복해서 생성하다 보면 그때마다 새로운 IAM Role이 자동 생성됩니다. 이러한 잔해뿐만 아니라 사용하지 않는 리소스를 방치하면 장기적인 기술 부채가 되므로, 반드시 정리하는 것이 좋습니다.
+또한 AWS 콘솔에서 Lambda 함수를 반복해서 생성하다 보면 그때마다 새로운 IAM Role이 자동 생성됩니다. 이렇게 생긴 불필요한 리소스를 비롯해 사용하지 않는 리소스를 방치하면 장기적인 기술 부채가 되므로, 반드시 정리하는 것이 좋습니다.
 
-실행 환경 준비가 끝났지만 바로 애플리케이션 개발로 들어가기보다는, 이후 작업을 수월하게 하기 위해 Lambda 환경과 테스트 환경을 투명하게 다룰 수 있는 구조를 먼저 준비했습니다.
+실행 환경 준비가 끝났지만 바로 애플리케이션 개발로 들어가기보다는, 이후 작업을 수월하게 하기 위해 Lambda 환경과 테스트 환경을 동일한 방식으로 다룰 수 있는 구조를 먼저 준비했습니다.
 
 - <a href='https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/template.py'>환경 공통 Python 템플릿</a>
 - <a href='https://github.com/nakayama-kazuki/202x/blob/main/testenv/scripts/restart-python.bat'>테스트 환경 런처</a>
@@ -114,7 +114,7 @@ WAF는 AWS 표준 보호 패키지를 참고하여 다음을 채택했습니다.
 
 ## 3. 애플리케이션 개발
 
-어뷰즈 대응이 정해지고 기술 선택도 끝났다면, 이제 본격적인 애플리케이션 개발 단계입니다. 완성되면 전 세계 사용자에게 사용해 보도록 Reddit에 게시하고 싶습니다. 그렇다면 사용자의 모국어로 UI를 제공하고 싶어집니다. 이러한 동기에서 9개 언어를 지원하기 위해 간단한 i18n 클래스를 구현했습니다.
+어뷰즈 대응이 정해지고 기술 선택도 끝났다면, 이제 본격적인 애플리케이션 개발 단계입니다. 완성되면 전 세계 사용자들이 사용해 볼 수 있도록 Reddit에 공개하고 싶습니다. 그렇다면 사용자에게 모국어 UI를 제공하고 싶어집니다. 이러한 동기에서 9개 언어를 지원하기 위해 간단한 i18n 클래스를 구현했습니다.
 
 ```
 const GREETING = i18n.text({
@@ -136,7 +136,7 @@ const GREETING = i18n.text({
 
 또한 상태 관리와 UI 구성 요소, Lambda 및 테스트 환경과의 인터페이스 구현은 DiSC와 CAPS에서 공통화하여, 향후 MBTI와 같은 진단 애플리케이션을 개발할 때도 동일한 프레임워크를 활용할 수 있도록 했습니다.
 
-이제 애플리케이션 개발도 막바지입니다. 마지막으로 생성 AI 출력 품질의 향상과 안정화를 위해, 즉 프롬프트 튜닝에 착수합니다. 여기서는 서두르지 않고 먼저 시행착오를 위한 기반을 마련합니다. 기술 선택 단계에서 준비한 기반에 더해,
+이제 애플리케이션 개발도 막바지입니다. 마지막으로 생성 AI 출력 품질을 높이고 안정화하기 위해 마지막으로 프롬프트 튜닝에 착수합니다. 여기서는 바로 튜닝에 들어가기보다 먼저 시행착오를 반복할 수 있는 기반을 마련합니다. 기술 선택 단계에서 준비한 기반에 더해,
 
 1. 프롬프트 생성용 단축 기능을 미리 준비  
    - 진단 애플리케이션에서는 랜덤 응답과 진단 쿼리 실행을 자동화  
@@ -162,7 +162,7 @@ The grammatical subject must be the colleagues or friends, and when referring to
 consistently use the {{lang}} term for "Respondent".
 ```
 
-이와 같이 지시하면 문법상의 주어가 당신으로 바뀌는 문제가 발생합니다. 그래서 대명사 사용을 금지하면 이번에는 Respondent가 그대로 출력됩니다 🤔. 이는 학습 데이터 기반의 자연스러운 표현 생성과 주어 및 참조 제약이 충돌하기 때문입니다. 결국 출력의 안정성을 확보하기 위해
+이와 같이 지시하면 문법상의 주어가 "당신"으로 바뀌는 문제가 발생합니다. 그래서 대명사 사용을 금지하면 이번에는 Respondent가 그대로 출력됩니다 🤔. 이는 학습 데이터 기반의 자연스러운 표현 생성과 주어 및 참조 제약이 충돌하기 때문입니다. 결국 출력의 안정성을 확보하기 위해
 
 ```
 The second response must be written for the Respondent's colleagues or friends.
@@ -188,7 +188,7 @@ const RESPONDENT = i18n.text({
 
 ## 마무리
 
-여기까지 읽어주셔서 감사합니다. 이번 진단 애플리케이션에서는 할루시네이션 영향 범위를 제어하는 것을 전제로 프롬프트 튜닝 구조화에 초점을 맞췄지만, 생성 AI 출력 품질 검증 자동화
+여기까지 읽어주셔서 감사합니다. 이번 진단 애플리케이션에서는 할루시네이션 영향 범위를 제어하는 것을 전제로 프롬프트 튜닝 과정을 구조화하는 데 초점을 맞췄지만, 생성 AI 출력 품질 검증 자동화
 
 - 규칙 기반 출력 형식 및 키워드 검사  
 - LLM A의 출력과 평가 기준을 LLM B에 입력하여 정성 평가  
