@@ -23,10 +23,6 @@ dependencies = {
     }
 }
 
-dependencies.update({
-    'openpyxl' : {}
-})
-
 def _create_finalize():
     start_time = time.time()
     def _finalize():
@@ -325,168 +321,34 @@ class cLLMRunner(_cLLMRunnerBase):
             return json.loads(text)
         return self._retry(_toJson)
 
-def text_from_template_text(in_text, in_replaceDict):
-    text = in_text
-    for placeholder, replaced in in_replaceDict.items():
-        if isinstance(replaced, (dict, list)):
-            replaced = json.dumps(replaced, ensure_ascii=False, indent=2)
-        else:
-            replaced = str(replaced)
-        text = text.replace(placeholder, replaced)
-    return text
-
-class cBulkTranslater:
-    _prompt = chr(10).join([
-        'Translate the "src" field of each object in the input JSON into __LANG__.',
-        'Return a JSON array with the original "marker" and "src" fields unchanged,',
-        'and add the translated text in the "dst" field,',
-        '',
-        'Interpret the context of the document from the "src" text.',
-        'Translate technical terms and proper nouns according to the context rather than literally.',
-        'Keeping the original term is acceptable when it is the standard usage in the target language.',
-        '',
-        'Return only JSON.',
-        'Do not use markdown.',
-        'Do not wrap the response in code fences.',
-        '',
-        '[Input]',
-        '',
-        '__JSON__'
-    ])
-    _tokenParm = {
-        'wLangTokenPerChar' : 1.5,
-        'eLangTokenPerChar' : 0.25,
-        'slack' : 0.2
-    }
-    def __init__(
-        self,
-        in_callback=None,
-        in_language=None,
-        in_maxTokens=None
-    ):
-        self._targetBufArr = []
-        self._totalChars = 0
-        for required in [in_callback, in_language, in_maxTokens]:
-            if required is None:
-                abort('ERROR : no required parameter')
-        self._callback = in_callback
-        self._maxTokens = in_maxTokens
-        self._language = in_language
-    def _isFullBuffer(self, in_start_index, in_end_index):
-        chars = 0
-        for i in range(in_start_index, in_end_index + 1):
-            chars += len(self._targetBufArr[i]['src'])
-        if self._language in ['Japanese', 'Chinese', 'Korean']:
-            estimated = chars * cBulkTranslater._tokenParm['wLangTokenPerChar']
-        else:
-            estimated = chars * cBulkTranslater._tokenParm['eLangTokenPerChar']
-        if estimated >= self._maxTokens * (1 - cBulkTranslater._tokenParm['slack']):
-            if in_start_index == in_end_index:
-                abort('ERROR : in_maxTokens is not enough')
-            return True
-        return False
-    def _invoke(self, in_start_index, in_end_index):
-        slicedArr = self._targetBufArr[in_start_index:in_end_index + 1]
-        prompt = text_from_template_text(cBulkTranslater._prompt, {
-            '__LANG__' : self._language,
-            '__JSON__' : json.dumps(slicedArr, ensure_ascii=False, indent=2)
-        })
-        try:
-            response_text = self._callback(prompt)
-            tempArr = json.loads(response_text)
-            resDict = {}
-            for item in tempArr:
-                if 'marker' not in item:
-                    continue
-                resDict[item['marker']] = item.get('dst', '')
-            for i in range(in_start_index, in_end_index + 1):
-                marker = self._targetBufArr[i]['marker']
-                if marker in resDict:
-                    self._targetBufArr[i]['dst'] = resDict[marker]
-                else:
-                    print(f"WARN : Missing translation for {marker}")
-                    self._targetBufArr[i]['dst'] = self._targetBufArr[i]['src']
-        except Exception as err:
-            abort(f'ERROR : invalid json or mapping failed : {err}')
-    def append(self, in_marker, in_text):
-        text = '' if in_text is None else in_text
-        for doubleQuote in [chr(0x0022), chr(0x201C), chr(0x201D)]:
-            text = text.replace(doubleQuote, "'")
-        self._totalChars += len(text)
-        self._targetBufArr.append({'marker' : in_marker, 'src' : text, 'dst' : None})
-    def translate(self):
-        start_index = 0
-        processedChars = 0
-        for end_index in range(1, len(self._targetBufArr)):
-            if self._isFullBuffer(start_index, end_index):
-                print(f'INFO : {processedChars * 100 / self._totalChars:.1f}%')
-                self._invoke(start_index, end_index - 1)
-                for i in range(start_index, end_index):
-                    processedChars += len(self._targetBufArr[i]['src'])
-                start_index = end_index
-        if start_index < len(self._targetBufArr):
-            self._invoke(start_index, len(self._targetBufArr) - 1)
-        return self._targetBufArr
-
 gRunner = cLLMRunner(_cBackendBedrock, 'us.anthropic.claude-sonnet-4-6')
 #gRunner = cLLMRunner(_cBackendOpenAI, 'gpt-5.2')
 #gRunner = cLLMRunner(_cBackendGemini, 'gemini-2.5-flash')
 
 ARGS = setupArgs({
-    'xlsx' : {
-        'default' : None,
+    'sample_input' : {
+        'default' : 'input.json',
         'convert' : lambda in_path: None if in_path is None else pathlib.Path(in_path),
-        'explain' : 'Target XLSX file. Required.'
+        'explain' : 'Input file path.'
     },
-    'sheet' : {
-        'default' : None,
-        'explain' : 'Target worksheet name. Defaults to the first worksheet.'
+    'sample_mode' : {
+        'default' : 'fast',
+        'convert' : lambda in_mode: in_mode if in_mode in ['fast', 'slow'] else 'fast',
+        'explain' : 'fast or slow.'
     },
-    'range' : {
-        'default' : 'A:XFD',
-        'explain' : 'Cell range to translate (for example, "F:E"). Defaults to the entire worksheet.'
+    'sample_limit' : {
+        'default' : '100',
+        'convert' : lambda in_limit: int(in_limit),
+        'explain' : 'Maximum number of items to process.'
     },
-    'maxtokens' : {
-        'default' : '4096',
-        'convert' : lambda in_tokens: int(in_tokens),
-        'explain' : 'Maximum number of output tokens for each translation request.'
-    },
-    'lang' : {
+    'sample_language' : {
         'default' : 'Japanese',
-        'explain' : 'Target language for translation.'
+        'explain' : 'Output language.'
     }
 })
 
-gTranslater = cBulkTranslater(gRunner.toText, ARGS['lang'], ARGS['maxtokens'])
+def main():
+    # application logic
 
-if ARGS['xlsx'] is None:
-    abort('ERROR : parameter is required.')
-else:
-    try:
-        workbook = openpyxl.load_workbook(ARGS['xlsx'])
-    except Exception as err:
-        abort(f'ERROR : can not open xlsx ({err})')
-
-try:
-    if ARGS['sheet'] is None:
-        sheet = workbook.worksheets[0]
-    else:
-        sheet = workbook[ARGS['sheet']]
-    for rowArr in sheet[ARGS['range']]:
-        for cell in rowArr:
-            if not isinstance(cell.value, str):
-                continue
-            markerText = cell.value.strip()
-            if markerText == '' or cell.data_type == 'f':
-                continue
-            gTranslater.append(cell.coordinate, markerText)
-    for translated in gTranslater.translate():
-        if translated['dst'] is not None:
-            sheet[translated['marker']].value = translated['dst']
-    workbook.save(ARGS['xlsx'])
-except Exception as err:
-    abort(f'ERROR : can not handle xlsx ({err})')
-finally:
-    workbook.close()
-
-finalize()
+if __name__ == '__main__':
+    main()
