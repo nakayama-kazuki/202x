@@ -23,6 +23,10 @@ dependencies = {
     }
 }
 
+dependencies.update({
+    # add modules
+})
+
 def _create_finalize():
     start_time = time.time()
     def _finalize():
