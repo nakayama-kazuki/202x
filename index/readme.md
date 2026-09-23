@@ -40,7 +40,7 @@
 		- [3D 棒人間](https://github.com/nakayama-kazuki/202x/blob/main/pj-corridor.net/stick-figure/stick-figure.html)
 		- [AI パーソナリティー診断](https://github.com/nakayama-kazuki/202x/tree/main/pj-corridor.net/personalitytest)
 		- [生成 AI 出力評価基盤](https://github.com/nakayama-kazuki/202x/tree/main/tools/llm-as-a-judge)
-		- [DNS パケット解析](https://github.com/nakayama-kazuki/202x/blob/main/DoH/doh.php)
+		- [DNS パケット解析](https://github.com/nakayama-kazuki/202x/blob/main/techblog/DoH/doh.php)
 	- 古い時代のコード例
 		- [HTTP スタック自前実装](https://github.com/ichiro-hiroshi/camouflage-code/blob/master/HTTP/chttp.php)
 		- [Super Cookie お試し実装](https://github.com/ichiro-hiroshi/camouflage-code/blob/master/misc/trackman.php)
