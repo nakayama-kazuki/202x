@@ -368,7 +368,9 @@ We also encountered cases where each individual fact was correct, but incorrect 
 
 For those cases, we revised the accuracy Rubric so that relationships such as "actor," "target," "event," and "condition" would also be preserved and evaluated.
 
-Another lesson came from operations.
+SNS posts may also contain typos or factual errors, but we cannot simply correct them during briefing generation based on our own assumptions. In such cases, we need to avoid relying on potentially incorrect information and abstract the content to a level where the briefing can be expressed without using it.
+
+Finally, a lesson from operations.
 
 Early in the improvement cycle, even a relatively small input dataset is often enough to expose critical problems.
 
