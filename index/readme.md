@@ -1,4 +1,4 @@
-# 技術記事
+# Technical Articles
 
 |YYYY.MM.DD|Media                       |Article|
 |---       |---                         |---|
@@ -30,7 +30,7 @@
 |2015.02.23|TECHSCORE BLOG              |[タグマネージャによる高速化（document.write 非同期実行？）](https://www.techscore.com/blog/2015/02/23/async-document-write/)|
 |2014.12.18|TECHSCORE BLOG              |[キュートな概念図（プライバシー関連技術）](https://www.techscore.com/blog/2014/12/18/%e3%82%ad%e3%83%a5%e3%83%bc%e3%83%88%e3%81%aa%e6%a6%82%e5%bf%b5%e5%9b%b3%ef%bc%88%e3%83%97%e3%83%a9%e3%82%a4%e3%83%90%e3%82%b7%e3%83%bc%e9%96%a2%e9%80%a3%e6%8a%80%e8%a1%93%ef%bc%89/)|
 
-# プロダクトなど
+# Projects etc
 
 - [プロダクト公開サイト](https://pj-corridor.net)
 - [リポジトリ](https://github.com/nakayama-kazuki)
