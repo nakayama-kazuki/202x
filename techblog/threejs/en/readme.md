@@ -6,7 +6,7 @@
 
 Hello, my name is pj-corridor, previously an advertising engineer and currently a data platform engineer. In this article, I will share insights gained through my hobby of developing Three.js applications, such as common beginner pitfalls, browser-compatibility issues, and their solutions. BTW, I would like to express my gratitude to TECHSCORE BLOG for kindly allowing me to publish this article, as we have collaborated before at SynergyMarketing. Thank you very much !
 
-Let\'s start by introducing some of my Three.js applications.
+Let's start by introducing some of my Three.js applications.
 
 ### A New Concept for Reversi
 
@@ -23,9 +23,9 @@ You might wonder, Is Three.js necessary for Reversi ? But with a 3D board that l
 
 <img width='300' src='https://pj-corridor.net/images/ix-cube1.png' />
 
-I developed various puzzles by expanding on the classic Three.js study subject, the Rubik\'s Cube. However, my collection still pales in comparison to <a href='https://www.youtube.com/@Z3Cubing'>Z3Cubing</a>. In the future, I aim to explore directions that cannot be realized with physical gadgets (such as <a href='https://pj-corridor.net/cube3d/caterpillar.html'>Cube with Anomalous Rotations</a>).
+I developed various puzzles by expanding on the classic Three.js study subject, the Rubik's Cube. However, my collection still pales in comparison to <a href='https://www.youtube.com/@Z3Cubing'>Z3Cubing</a>. In the future, I aim to explore directions that cannot be realized with physical gadgets (such as <a href='https://pj-corridor.net/cube3d/caterpillar.html'>Cube with Anomalous Rotations</a>).
 
-- <a href='https://pj-corridor.net/cube3d/cube3d.html'>Standard Rubik\'s Cube</a>
+- <a href='https://pj-corridor.net/cube3d/cube3d.html'>Standard Rubik's Cube</a>
 - <a href='https://pj-corridor.net/cube3d/cube3d.html?level=3'>Cube with Anomalous Piece Shapes</a>
 - <a href='https://pj-corridor.net/cube3d/caterpillar.html'>Cube with Anomalous Rotations</a>
 - <a href='https://pj-corridor.net/cube3d/diamond.html'>Diamond-Shaped Puzzle</a>
@@ -50,9 +50,9 @@ While the stick figures solved the issue of finding materials, even posing them 
 
 - <a href='https://pj-corridor.net/stick-figure/gallery/index.html'>Stick Figure Gallery</a>
 
-As the next step, I\'m envisioning a stick figure that generates appropriate poses from natural language (e.g., words expressing emotions or postures) using machine learning by labeling pose data.
+As the next step, I'm envisioning a stick figure that generates appropriate poses from natural language (e.g., words expressing emotions or postures) using machine learning by labeling pose data.
 
-Now, let\'s delve into the insights gained through Three.js app development.
+Now, let's delve into the insights gained through Three.js app development.
 
 ## The Empty Draw Buffer
 
@@ -98,7 +98,7 @@ button.addEventListener('click', in_ev => {
 
 ```
 
-At the timing of (1), `toDataURL()` provides the expected output, but at (2) and (3), it doesn\'t work. This is because the `WebGLRenderer` automatically clears the draw buffer after rendering each frame. By trying to set `WebGLRenderer.preserveDrawingBuffer` (<a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.preserveDrawingBuffer'>reference</a>) to retain the draw buffer :
+At the timing of (1), `toDataURL()` provides the expected output, but at (2) and (3), it doesn't work. This is because the `WebGLRenderer` automatically clears the draw buffer after rendering each frame. By trying to set `WebGLRenderer.preserveDrawingBuffer` (<a href='https://threejs.org/docs/#api/en/renderers/WebGLRenderer.preserveDrawingBuffer'>reference</a>) to retain the draw buffer :
 
 ```javascript
 const renderer = new THREE.WebGLRenderer({preserveDrawingBuffer : true});
@@ -136,7 +136,7 @@ Here, I will introduce three traps (or failures) related to raycasting.
 
 ### 1. Intrusive AxesHelper
 
-In <a href='https://pj-corridor.net/stick-figure/stick-figure.html'>Stick Figure</a> and <a href='https://pj-corridor.net/cube3d/cube3d.html'>Rubik\'s Cube</a>, raycasting from the coordinates where `touchstart` or `mousedown` events occur is used to determine if :
+In <a href='https://pj-corridor.net/stick-figure/stick-figure.html'>Stick Figure</a> and <a href='https://pj-corridor.net/cube3d/cube3d.html'>Rubik's Cube</a>, raycasting from the coordinates where `touchstart` or `mousedown` events occur is used to determine if :
 
 1. There is an intersection with an object in the scene :
    - Drag the intersecting part
@@ -165,7 +165,7 @@ In <a href='https://pj-corridor.net/stick-figure/stick-figure.html'>Stick Figure
    - `CircleGeometry` that passes through the center of the `SphereGeometry` with its normal vector facing the `PerspectiveCamera`
 2. Use raycasting from the coordinates where `touchmove` or `mousemove` events occur to determine the intersection direction with the operation object, and have the dragged part `lookAt()` (<a href='https://threejs.org/docs/#api/en/core/Object3D.lookAt'>reference</a>) it
 
-Here\'s a demonstration with the operation object colored for debugging, showing how the stick figure\'s hand moves.
+Here's a demonstration with the operation object colored for debugging, showing how the stick figure's hand moves.
 
 <img  width='300' src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/threejs/img/CircleGeometry.gif' />
 
@@ -201,7 +201,7 @@ Additionally, since <a href='https://support.google.com/adsense/answer/9190028'>
 
 <img src='https://raw.githubusercontent.com/nakayama-kazuki/202x/main/techblog/threejs/img/adsense.gif' />
 
-However, since there are writes to the `width` and `height` of `WebGLRenderer.domElement` in the <a href='https://github.com/mrdoob/three.js/blob/master/src/renderers/WebGLRenderer.js'>implementation</a>, calling it within the callback of `ResizeObserver` feels a bit risky (incidentally, in the <a href='https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/resize_observer/resize_observer.cc'>Chromium implementation</a>, it checks for changes in element size from the previous observation, so it doesn\'t fall into an infinite loop).
+However, since there are writes to the `width` and `height` of `WebGLRenderer.domElement` in the <a href='https://github.com/mrdoob/three.js/blob/master/src/renderers/WebGLRenderer.js'>implementation</a>, calling it within the callback of `ResizeObserver` feels a bit risky (incidentally, in the <a href='https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/resize_observer/resize_observer.cc'>Chromium implementation</a>, it checks for changes in element size from the previous observation, so it doesn't fall into an infinite loop).
 
 Therefore, by placing `WebGLRenderer.domElement` inside an `iframe` :
 
@@ -272,7 +272,7 @@ With this, I finally managed to keep up with automatic ad insertion for coordina
 
 ## My Super Special Duper Animation Function
 
-Now that AdSense implementation is settled, I want to brush up on the overall UX. In my Three.js apps, `WebGLRenderer` rendering adopts animation expressions overall, but I want to adopt similar UX for rendering regular HTML elements (such as dialog displays) as well. However, I don\'t want to disperse animation-related descriptions like CSS `@keyframes` definitions. Here\'s an implementation I came up with to manage it simply and centrally with JavaScript code only.
+Now that AdSense implementation is settled, I want to brush up on the overall UX. In my Three.js apps, `WebGLRenderer` rendering adopts animation expressions overall, but I want to adopt similar UX for rendering regular HTML elements (such as dialog displays) as well. However, I don't want to disperse animation-related descriptions like CSS `@keyframes` definitions. Here's an implementation I came up with to manage it simply and centrally with JavaScript code only.
 
 ```javascript
 function autoTransition1(in_elem, in_shorthand, in_start, in_end) {
@@ -308,6 +308,6 @@ By specifying the shorthand of CSS Transitions and the start and end values of t
 
 ## Conclusion
 
-Thank you for reading this far. Although I didn\'t create headings for them, there were various minor failures as well. For example, many classes in Three.js have a `clone()` method implemented, but when I implemented a new class by inheriting a class, I struggled with suspicious behavior of cloned instances due to changing the constructor\'s interface, which is quite embarrassing.
+Thank you for reading this far. Although I didn't create headings for them, there were various minor failures as well. For example, many classes in Three.js have a `clone()` method implemented, but when I implemented a new class by inheriting a class, I struggled with suspicious behavior of cloned instances due to changing the constructor's interface, which is quite embarrassing.
 
 I hope that the insights (or failures ?) I gained through Three.js app development will be useful information for you.
