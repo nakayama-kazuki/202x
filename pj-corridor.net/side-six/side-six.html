@@ -235,20 +235,30 @@ const gMeshLevelMap = ((in_diameter) => {
 		const circumf = in_diameter * Math.PI;
 		const unitSize = circumf / in_shell.rowsForCircle;
 		const unitThick = unitSize * 0.3;
-		const unitAngle = Math.PI * 2 / in_shell.rowsForCircle;
+		// reference point for position calculation
+		const o_x = unitSize * (in_shell.colsForLength - 1) / 2 * -1;
+		const o_y = (in_diameter / 2 - unitThick) * 1.2;
+		const o_z = 0;
+		const structure = {
+			rowsForCircle : in_shell.rowsForCircle,
+			colsForLength : in_shell.colsForLength,
+			origin : VEC3(o_x, o_y, o_z),
+			unitDelta : unitSize,
+			unitAngle : Math.PI * 2 / in_shell.rowsForCircle
+		};
 		const geometry = shellGeometryFactory.create(unitSize, ((radius - unitThick) / radius), unitThick);
 		const pieces = [];
-		for (let col = 0; col < in_shell.colsForLength; col++) {
-			let x = unitSize * col - unitSize * (in_shell.colsForLength - 1) / 2;
-			let y = (in_diameter / 2 - unitThick) * 1.2;
-			for (let row = 0; row < in_shell.rowsForCircle; row++) {
+		for (let col = 0; col < structure.colsForLength; col++) {
+			const x = structure.origin.x + structure.unitDelta * col;
+			const y = structure.origin.y;
+			for (let row = 0; row < structure.rowsForCircle; row++) {
 				const materials = shellMaterials(unitSize, colors[row], BGCOLOR);
 				materials.push(edgeMaterial);
 				const piece = new THREE.Mesh(geometry, materials);
 				const pivot = new THREE.Object3D();
 				pivot.add(piece);
-				piece.position.copy(VEC3(x, y, 0));
-				pivot.rotateX(unitAngle * row);
+				piece.position.copy(VEC3(x, y, structure.origin.z));
+				pivot.rotateX(structure.unitAngle * row);
 				/*
 					*** NOTE ***
 					you can use matrix,
@@ -262,8 +272,8 @@ const gMeshLevelMap = ((in_diameter) => {
 		}
 		// the last piece is removed to allow sliding
 		pieces.pop();
-		const stage = LABEL_LV + in_shell.rowsForCircle + 'x' + in_shell.colsForLength;
-		map.set(stage, pieces);
+		const stage = LABEL_LV + structure.rowsForCircle + 'x' + structure.colsForLength;
+		map.set(stage, {structure : structure, pieces : pieces});
 	});
 	return map;
 })(COLONY_SIZE);
@@ -274,8 +284,8 @@ const gMeshLevelMap = ((in_diameter) => {
 */
 
 class cColonyPuzzle extends cColony {
-	setupAllPieces(in_pieces) {
-		super.setupAllPieces(in_pieces);
+	setupPieces(in_pieces) {
+		super.setupPieces(in_pieces);
 		if (!this.settingVal.initialized) {
 			this.settingVal.completeCallback = null;
 			this.settingVal.operationCount = 0;
@@ -519,7 +529,8 @@ async function updateLevel() {
 	await gWorld.motionFog(color, 0, 100);
 	gColony.removePieces();
 	const current = gMeshLevelMap.currItemByOrder();
-	gColony.setupAllPieces(current.v);
+	gColony.setupPieces(current.v.pieces);
+	gColony.setupCyclicStructure(current.v.structure);
 	await gWorld.motionFog(color, 100, 0);
 	const prev = gMeshLevelMap.prevItemByOrder();
 	const next = gMeshLevelMap.nextItemByOrder();

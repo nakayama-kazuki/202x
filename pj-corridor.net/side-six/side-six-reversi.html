@@ -87,6 +87,7 @@ import * as SOUND from 'sound';
 	the cReversi class is designed to implement NPC algorithms for the game of reversi.
 */
 
+class cLineParser {
 	static #border = -1;
 	static #empty = 9;
 	static #cntEmpty(in_arr) {
@@ -2904,11 +2905,23 @@ const gCyclicLevels = ((in_diameter) => {
 		const unitThick = unitSize * conf.tWeight;
 		const ratio = ((radius - unitThick) / radius);
 		const geometry = topology.factory.create(unitSize, ratio, unitThick);
+		// reference point for position calculation
+		const o_x = (unitSize + marginCol) * (cols - 1) / 2 * -1;
+		const o_y = radius;
+		const o_z = 0;
+		const structure = {
+			rowsForCircle : rows,
+			colsForLength : cols,
+			origin : VEC3(o_x, o_y, o_z),
+			unitDelta : unitSize + marginCol,
+			unitAngle : unitAngle,
+			offset : topology.offset
+		};
 		const pieces = [];
 		for (let row = 0; row < rows; row++) {
 			for (let col = 0; col < cols; col++) {
-				let x = (unitSize + marginCol) * col - (unitSize + marginCol) * (cols - 1) / 2;
-				let y = radius;
+				const x = structure.origin.x + structure.unitDelta * col;
+				const y = structure.origin.y;
 				const color = in_level.table[row][col];
 				const useTexture = (color === D) ? true : false;
 				const materials = [
@@ -2919,10 +2932,10 @@ const gCyclicLevels = ((in_diameter) => {
 				const pivot = new THREE.Object3D();
 				pivot.add(piece);
 				piece.position.copy(VEC3(x, y, 0));
-				if ((in_level.format === 'hexFlatTopped') && (col % 2 === topology.offset)) {
-					pivot.rotateX(unitAngle * (row + 0.5));
+				if ((in_level.format === 'hexFlatTopped') && (col % 2 === structure.offset)) {
+					pivot.rotateX(structure.unitAngle * (row + 0.5));
 				} else {
-					pivot.rotateX(unitAngle * row);
+					pivot.rotateX(structure.unitAngle * row);
 				}
 				/*
 					*** NOTE ***
@@ -2961,7 +2974,7 @@ const gCyclicLevels = ((in_diameter) => {
 			name : name,
 			loop : !dmzRow,
 			format : in_level.format,
-			offset : topology.offset,
+			structure : structure,
 			colorArr : Array.from(colorSet),
 			pieces : pieces
 		});
@@ -2977,12 +2990,9 @@ class cColonyBoard extends cColony {
 	#makeRotationX(in_rad) {
 		return this.settingVal.origin.clone().applyMatrix4((new THREE.Matrix4()).makeRotationX(in_rad));
 	}
-	setupAllPieces(in_pieces, in_offsetCol = -1) {
-		super.setupAllPieces(in_pieces);
-		this.settingVal.offset = in_offsetCol;
-		if (this.settingVal.offset >= 0) {
-			this.settingVal.offset %= 2;
-		}
+	setupCyclicStructure(in_structure) {
+		super.setupCyclicStructure(in_structure);
+		this.settingVal.offset = in_structure.offset;
 	}
 	indexToPiece(in_row, in_col) {
 		let row = in_row;
@@ -3698,12 +3708,8 @@ const ID_NEXT_LEVEL = randomString();
 async function updateLevel(in_curr) {
 	const color = 0x000000;
 	await gWorld.motionFog(color, 0, 100);
-	gColony.removePieces();
-	if (in_curr.offset >= 0) {
-		gColony.setupAllPieces(in_curr.pieces, in_curr.offset);
-	} else {
-		gColony.setupAllPieces(in_curr.pieces);
-	}
+	gColony.setupPieces(in_curr.pieces);
+	gColony.setupCyclicStructure(in_curr.structure);
 	if (in_curr.format === 'hexFlatTopped') {
 		gColony.bobRotation = true;
 	} else {

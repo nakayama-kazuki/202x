@@ -80,29 +80,21 @@ class cColonyCore extends THREE.Object3D {
 		});
 		this.userData.currentSettingKey = null;
 	}
-	setupAllPieces(in_pieces) {
+	setupCyclicStructure(in_structure) {
+		this.settingVal.rowsForCircle = in_structure.rowsForCircle;
+		this.settingVal.colsForLength = in_structure.colsForLength;
+		this.settingVal.origin = in_structure.origin.clone();
+		this.settingVal.unitDelta = in_structure.unitDelta;
+		this.settingVal.unitAngle = in_structure.unitAngle;
+	}
+	setupPieces(in_pieces) {
 		this.removePieces();
 		const uuids = [];
-		const posCntOnSameX = new Map();
 		in_pieces.forEach(in_piece => {
 			uuids.push(in_piece.uuid);
 			this.add(in_piece);
-			// how many pieces are at position x ?
-			const x = in_piece.position.x;
-			if (posCntOnSameX.has(x)) {
-				posCntOnSameX.set(x, posCntOnSameX.get(x) + 1);
-			} else {
-				posCntOnSameX.set(x, 1);
-			}
 		});
 		this.#settingKey = pseudoMessageDigest1(uuids);
-		// information related to structure
-		this.settingVal.rowsForCircle = Math.max(...Array.from(posCntOnSameX.values()));
-		this.settingVal.colsForLength = Array.from(posCntOnSameX.keys()).length;
-		this.settingVal.origin = in_pieces[0].position.clone();
-		const sorted = [...posCntOnSameX.keys()].sort((in_e1, in_e2) => in_e1 - in_e2);
-		this.settingVal.unitDelta = sorted[1] - sorted[0];
-		this.settingVal.unitAngle = Math.PI * 2 / this.settingVal.rowsForCircle;
 	}
 }
 
