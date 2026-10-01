@@ -74,28 +74,28 @@ export class cRubiksCube extends THREE.Object3D {
 			return props[0];
 		}
 	}
-	get #settingVal() {
-		if (this.userData.currentSettingKey) {
-			return this.userData.settingPerPieces[this.userData.currentSettingKey];
+	get #currPiecesCache() {
+		if (this.userData.cacheKey) {
+			return this.userData.cache[this.userData.cacheKey];
 		} else {
-			throw new Error('no currentSettingKey');
+			throw new Error('no cacheKey');
 		}
 	}
-	set #settingKey(in_value) {
-		if (!this.userData.settingPerPieces) {
-			this.userData.settingPerPieces = {};
+	set #currPiecesCacheKey(in_key) {
+		if (!this.userData.cache) {
+			this.userData.cache = {};
 		}
-		if (!this.userData.settingPerPieces[in_value]) {
-			this.userData.settingPerPieces[in_value] = {};
+		if (!this.userData.cache[in_key]) {
+			this.userData.cache[in_key] = {};
 		}
-		this.userData.currentSettingKey = in_value;
+		this.userData.cacheKey = in_key;
 	}
 	removePieces() {
 		const pieces = [...this.children];
 		pieces.forEach(in_piece => {
 			this.remove(in_piece);
 		});
-		this.userData.currentSettingKey = null;
+		this.userData.cacheKey = null;
 	}
 	setupAllPieces(in_pieces) {
 		this.removePieces();
@@ -104,19 +104,19 @@ export class cRubiksCube extends THREE.Object3D {
 			uuids.push(in_piece.uuid);
 			this.add(in_piece);
 		});
-		this.#settingKey = pseudoMessageDigest1(uuids);
-		if (!this.#settingVal.initialized) {
+		this.#currPiecesCacheKey = pseudoMessageDigest1(uuids);
+		if (!this.#currPiecesCache.initialized) {
 			const size = (new THREE.Box3()).setFromObject(this).getSize(VEC3());
-			this.#settingVal.raycastDistance = Math.max(size.x, size.y, size.z) + 1;
-			this.#settingVal.completeCallback = null;
-			this.#settingVal.operationCount = 0;
-			this.#settingVal.shuffled = false;
-			this.#settingVal.initialized = true;
+			this.#currPiecesCache.raycastDistance = Math.max(size.x, size.y, size.z) + 1;
+			this.#currPiecesCache.completeCallback = null;
+			this.#currPiecesCache.operationCount = 0;
+			this.#currPiecesCache.shuffled = false;
+			this.#currPiecesCache.initialized = true;
 		}
 	}
 	getScore() {
 		const max = 100;
-		return Math.max(Math.ceil((max - this.#settingVal.operationCount) / 10) * 10, 0);
+		return Math.max(Math.ceil((max - this.#currPiecesCache.operationCount) / 10) * 10, 0);
 	}
 	#isSurface(in_piece, in_surface) {
 		const far = VEC3();
@@ -124,7 +124,7 @@ export class cRubiksCube extends THREE.Object3D {
 			if (in_surface[in_xyz] === 0) {
 				far[in_xyz] = in_piece.position[in_xyz];
 			} else {
-				far[in_xyz] = in_surface[in_xyz] * this.#settingVal.raycastDistance;
+				far[in_xyz] = in_surface[in_xyz] * this.#currPiecesCache.raycastDistance;
 			}
 		});
 		const raycaster = new THREE.Raycaster(far, in_surface.clone().negate());
@@ -360,15 +360,15 @@ export class cRubiksCube extends THREE.Object3D {
 				return;
 			}
 			this.#releaseGroup(group);
-			this.#settingVal.shuffled = true;
+			this.#currPiecesCache.shuffled = true;
 			(in_callback)();
 		});
 	}
 	registerCompleteCallback(in_callback) {
-		this.#settingVal.completeCallback = in_callback;
+		this.#currPiecesCache.completeCallback = in_callback;
 	}
 	removeCompleteCallback() {
-		this.#settingVal.completeCallback = null;
+		this.#currPiecesCache.completeCallback = null;
 	}
 	static #detectMovingDirection(in_dstV3, in_srcV3, in_surfaceV3) {
 		const vec3 = VEC3().subVectors(in_dstV3, in_srcV3);
@@ -607,13 +607,13 @@ export class cRubiksCube extends THREE.Object3D {
 			this.#uiInitSession();
 			this.#transition('stop');
 			(in_callback)(rotateURFDLB);
-			if (!this.#settingVal.shuffled) {
+			if (!this.#currPiecesCache.shuffled) {
 				// when without shuffled, do nothing
 				return;
 			}
-			this.#settingVal.operationCount++;
-			if (this.#settingVal.completeCallback && this.#isComplete()) {
-				(this.#settingVal.completeCallback)(this.#settingVal.operationCount);
+			this.#currPiecesCache.operationCount++;
+			if (this.#currPiecesCache.completeCallback && this.#isComplete()) {
+				(this.#currPiecesCache.completeCallback)(this.#currPiecesCache.operationCount);
 			}
 		});
 	}
