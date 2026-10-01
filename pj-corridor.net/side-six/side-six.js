@@ -56,21 +56,73 @@ import {
 	cSphericalWorld
 } from 'basic';
 
-class cColonyCore extends THREE.Object3D {
-	set #settingKey(in_value) {
-		if (!this.userData.settingPerPieces) {
-			this.userData.settingPerPieces = {};
-		}
-		if (!this.userData.settingPerPieces[in_value]) {
-			this.userData.settingPerPieces[in_value] = {};
-		}
-		this.userData.currentSettingKey = in_value;
+export class cCylinderStructure {
+	static error = 0.01;
+	constructor(in_rowsForCircle, in_colsForLength, in_origin, in_unitDelta, in_offset = -1) {
+		this.rowsForCircle = in_rowsForCircle;
+		this.colsForLength = in_colsForLength;
+		this.origin = in_origin.clone();
+		this.unitDelta = in_unitDelta;
+		this.unitAngle = Math.PI * 2 / in_rowsForCircle;
+		this.offset = in_offset;
 	}
-	get settingVal() {
-		if (this.userData.currentSettingKey) {
-			return this.userData.settingPerPieces[this.userData.currentSettingKey];
+	#locationToRow(in_row, in_col) {
+		if ((this.offset >= 0) && (in_col % 2 === this.offset)) {
+			return in_row + 0.5;
+		}
+		return in_row;
+	}
+	locationToPosition(in_row, in_col) {
+		const row = this.#locationToRow(in_row, in_col);
+		const pos = this.origin.clone();
+		pos.x += this.unitDelta * in_col;
+		pos.applyAxisAngle(cColony.axes.x, this.unitAngle * row);
+		return pos;
+	}
+	locationToQuaternion(in_row, in_col) {
+		// determine rotation based on geometry and placement
+		const row = this.#locationToRow(in_row, in_col);
+		return new THREE.Quaternion().setFromAxisAngle(cColony.axes.x, this.unitAngle * row);
+	}
+	locationToOverviewPosition(in_row, in_col) {
+		const pos = this.locationToPosition(in_row, in_col);
+		const x = pos.x;
+		const y = 0;
+		const z = Math.hypot(pos.y, pos.z) * Math.atan2(pos.z, pos.y);
+		return VEC3(x, y, z);
+	}
+	locationToOverviewQuaternion(in_row, in_col) {
+		// in_row and in_col are unused for cylinder, but may be required by other structures
+		return new THREE.Quaternion();
+	}
+	positionToLocation(in_position) {
+		const col = Math.round((in_position.x - this.origin.x) / this.unitDelta);
+		for (let row = 0; row < this.rowsForCircle; row++) {
+			const pos = this.locationToPosition(row, col);
+			if (pos.distanceTo(in_position) < cCylinderStructure.error) {
+				return {row : row, col : col};
+			}
+		}
+		console.log('positionToLocation failed : ', in_position);
+		throw new Error('');
+	}
+}
+
+class cPieceSet extends THREE.Object3D {
+	set #currPiecesCacheKey(in_key) {
+		if (!this.userData.cache) {
+			this.userData.cache = {};
+		}
+		if (!this.userData.cache[in_key]) {
+			this.userData.cache[in_key] = {};
+		}
+		this.userData.cacheKey = in_key;
+	}
+	get currPiecesCache() {
+		if (this.userData.cacheKey) {
+			return this.userData.cache[this.userData.cacheKey];
 		} else {
-			throw new Error('no currentSettingKey');
+			throw new Error('no cacheKey');
 		}
 	}
 	removePieces() {
@@ -78,33 +130,42 @@ class cColonyCore extends THREE.Object3D {
 		pieces.forEach(in_piece => {
 			this.remove(in_piece);
 		});
-		this.userData.currentSettingKey = null;
+		this.userData.cacheKey = null;
 	}
-	setupCyclicStructure(in_structure) {
-		this.settingVal.rowsForCircle = in_structure.rowsForCircle;
-		this.settingVal.colsForLength = in_structure.colsForLength;
-		this.settingVal.origin = in_structure.origin.clone();
-		this.settingVal.unitDelta = in_structure.unitDelta;
-		this.settingVal.unitAngle = in_structure.unitAngle;
-	}
-	setupPieces(in_pieces) {
+	activatePiecesCache(in_pieces) {
 		this.removePieces();
 		const uuids = [];
 		in_pieces.forEach(in_piece => {
 			uuids.push(in_piece.uuid);
 			this.add(in_piece);
 		});
-		this.#settingKey = pseudoMessageDigest1(uuids);
+		this.#currPiecesCacheKey = pseudoMessageDigest1(uuids);
 	}
 }
 
-export class cColony extends cColonyCore {
+export class cColony extends cPieceSet {
 	static error = 0.01;
 	static axes = {
 		x : VEC3(1, 0, 0),
 		y : VEC3(0, 1, 0),
 		z : VEC3(0, 0, 1)
 	};
+	setupPieces(in_pieces, in_structure) {
+		this.activatePiecesCache(in_pieces);
+		this.currPiecesCache.structure = in_structure;
+	}
+	locationToPiece(in_row, in_col) {
+		const pos = this.currPiecesCache.structure.locationToPosition(in_row, in_col);
+		const piece = this.children.find(in_child => XYZ.every(in_xyz => Math.abs(in_child.position[in_xyz] - pos[in_xyz]) < cColony.error));
+		if (!piece) {
+			console.log('locationToPiece failed : ', in_row, in_col);
+			throw new Error('');
+		}
+		return piece;
+	}
+	pieceToLocation(in_piece) {
+		return this.currPiecesCache.structure.positionToLocation(in_piece.position);
+	}
 	static axisComponent(in_axis, in_match = true) {
 		const props = Object.keys(cColony.axes).filter(in_key => {
 			const equal = cColony.axes[in_key].equals(in_axis);
@@ -149,16 +210,24 @@ export class cColony extends cColonyCore {
 		});
 		this.remove(in_group);
 	}
-	// public because of customizing
 	affectedRotatePieces(in_piece, in_axis) {
-		const pieces = [];
-		const component = in_piece.position.dot(in_axis);
-		this.children.forEach(in_child => {
-			if (Math.abs(component - in_child.position.dot(in_axis)) < cColony.error) {
-				pieces.push(in_child);
-			}
-		});
-		return pieces;
+		if (in_axis.equals(cColony.axes.x)) {
+			const col = this.pieceToLocation(in_piece).col;
+			return this.children.filter(in_child => this.pieceToLocation(in_child).col === col);
+		} else {
+			// do not infer logical groups from physical positions when adding other axes.
+			throw new Error('unsupported rotation axis');
+			/*
+			const pieces = [];
+			const component = in_piece.position.dot(in_axis);
+			this.children.forEach(in_child => {
+				if (Math.abs(component - in_child.position.dot(in_axis)) < cColony.error) {
+					pieces.push(in_child);
+				}
+			});
+			return pieces;
+			*/
+		}
 	}
 	affectedSlidePieces(in_piece, in_sign) {
 		const pieces = [];
@@ -428,7 +497,7 @@ export class cColony extends cColonyCore {
 				}
 			}
 			this.rotate(ctx.group, ctx.rotationAxis, amount);
-			notch = this.settingVal.unitAngle;
+			notch = this.currPiecesCache.structure.unitAngle;
 		} else {
 			amount = in_posV2.distanceTo(ctx.initPosV2) * ctx.direction * 250;
 			if (amount < ctx.movableRange.min) {
@@ -457,17 +526,18 @@ export class cColony extends cColonyCore {
 		}
 		this.#transition('release');
 		const ctx = this.#uiSession.ctx;
+		const st = this.currPiecesCache.structure;
 		let type, notch, last, delta;
 		if (ctx.rotationAxis) {
 			type = 'rotate';
-			notch = this.settingVal.unitAngle;
+			notch = st.unitAngle;
 			last = snapToNotch(ctx.currAmount, notch);
-			delta = Math.round(last / this.settingVal.unitAngle);
+			delta = Math.round(last / st.unitAngle);
 		} else {
 			type = 'slide';
 			notch = Math.abs(ctx.movableRange.min + ctx.movableRange.max);
 			last = snapToNotch(ctx.currAmount, notch);
-			delta = Math.round(last / this.settingVal.unitDelta);
+			delta = Math.round(last / st.unitDelta);
 		}
 		const piece = ctx.group.children[0];
 		return this.makeAnimationProgress(ctx.group, ctx.rotationAxis, ctx.currAmount, last, (in_ratio) => {

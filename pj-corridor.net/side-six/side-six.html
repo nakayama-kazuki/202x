@@ -77,6 +77,7 @@ import {
 	cSphericalWorld
 } from 'basic';
 import {
+	cCylinderStructure,
 	cColony
 } from 'side6';
 import * as SOUND from 'sound';
@@ -239,41 +240,28 @@ const gMeshLevelMap = ((in_diameter) => {
 		const o_x = unitSize * (in_shell.colsForLength - 1) / 2 * -1;
 		const o_y = (in_diameter / 2 - unitThick) * 1.2;
 		const o_z = 0;
-		const structure = {
-			rowsForCircle : in_shell.rowsForCircle,
-			colsForLength : in_shell.colsForLength,
-			origin : VEC3(o_x, o_y, o_z),
-			unitDelta : unitSize,
-			unitAngle : Math.PI * 2 / in_shell.rowsForCircle
-		};
+		const st = new cCylinderStructure(
+			in_shell.rowsForCircle,
+			in_shell.colsForLength,
+			VEC3(o_x, o_y, o_z),
+			unitSize
+		);
 		const geometry = shellGeometryFactory.create(unitSize, ((radius - unitThick) / radius), unitThick);
 		const pieces = [];
-		for (let col = 0; col < structure.colsForLength; col++) {
-			const x = structure.origin.x + structure.unitDelta * col;
-			const y = structure.origin.y;
-			for (let row = 0; row < structure.rowsForCircle; row++) {
+		for (let col = 0; col < st.colsForLength; col++) {
+			for (let row = 0; row < st.rowsForCircle; row++) {
 				const materials = shellMaterials(unitSize, colors[row], BGCOLOR);
 				materials.push(edgeMaterial);
 				const piece = new THREE.Mesh(geometry, materials);
-				const pivot = new THREE.Object3D();
-				pivot.add(piece);
-				piece.position.copy(VEC3(x, y, structure.origin.z));
-				pivot.rotateX(structure.unitAngle * row);
-				/*
-					*** NOTE ***
-					you can use matrix,
-					to apply rotated position before adding to scene
-				*/
-				pivot.updateMatrixWorld();
-				piece.applyMatrix4(pivot.matrix);
-				pivot.remove(piece);
+				piece.position.copy(st.locationToPosition(row, col));
+				piece.quaternion.copy(st.locationToQuaternion(row, col));
 				pieces.push(piece);
 			}
 		}
 		// the last piece is removed to allow sliding
 		pieces.pop();
-		const stage = LABEL_LV + structure.rowsForCircle + 'x' + structure.colsForLength;
-		map.set(stage, {structure : structure, pieces : pieces});
+		const stage = LABEL_LV + st.rowsForCircle + 'x' + st.colsForLength;
+		map.set(stage, {structure : st, pieces : pieces});
 	});
 	return map;
 })(COLONY_SIZE);
@@ -284,24 +272,24 @@ const gMeshLevelMap = ((in_diameter) => {
 */
 
 class cColonyPuzzle extends cColony {
-	setupPieces(in_pieces) {
-		super.setupPieces(in_pieces);
-		if (!this.settingVal.initialized) {
-			this.settingVal.completeCallback = null;
-			this.settingVal.operationCount = 0;
-			this.settingVal.shuffled = false;
-			this.settingVal.initialized = true;
+	setupPieces(in_pieces, in_structure) {
+		super.setupPieces(in_pieces, in_structure);
+		if (!this.currPiecesCache.initialized) {
+			this.currPiecesCache.completeCallback = null;
+			this.currPiecesCache.operationCount = 0;
+			this.currPiecesCache.shuffled = false;
+			this.currPiecesCache.initialized = true;
 		}
 	}
 	registerCompleteCallback(in_callback) {
-		this.settingVal.completeCallback = in_callback;
+		this.currPiecesCache.completeCallback = in_callback;
 	}
 	removeCompleteCallback() {
-		this.settingVal.completeCallback = null;
+		this.currPiecesCache.completeCallback = null;
 	}
 	getScore() {
 		const max = 100;
-		return Math.max(Math.ceil((max - this.settingVal.operationCount) / 10) * 10, 0);
+		return Math.max(Math.ceil((max - this.currPiecesCache.operationCount) / 10) * 10, 0);
 	}
 	#isComplete() {
 		const evaluators = [
@@ -368,7 +356,7 @@ class cColonyPuzzle extends cColony {
 				axis = cColony.axes.x;
 				pieces = this.affectedRotatePieces(_piece, axis);
 				if (pieces.length < this.children.length) {
-					last = this.settingVal.unitAngle * [1, 2, 3][arrRand]();
+					last = this.currPiecesCache.structure.unitAngle * [1, 2, 3][arrRand]();
 					break;
 				}
 			}
@@ -376,16 +364,16 @@ class cColonyPuzzle extends cColony {
 		this[cColonyPuzzle.#oneByOne] = !this[cColonyPuzzle.#oneByOne];
 		const group = this.setupGroup(pieces);
 		// calling this method means shuffling
-		this.settingVal.shuffled = true;
+		this.currPiecesCache.shuffled = true;
 		return this.makeAnimationProgress(group, axis, 0, last, in_callback);
 	}
 	uiRelease(in_ending_callback) {
 		const callback = () => {
 			(in_ending_callback)();
-			if (this.settingVal.shuffled) {
-				this.settingVal.operationCount++;
-				if (this.settingVal.completeCallback && this.#isComplete()) {
-					(this.settingVal.completeCallback)(this.settingVal.operationCount);
+			if (this.currPiecesCache.shuffled) {
+				this.currPiecesCache.operationCount++;
+				if (this.currPiecesCache.completeCallback && this.#isComplete()) {
+					(this.currPiecesCache.completeCallback)(this.currPiecesCache.operationCount);
 				}
 			}
 		};
@@ -529,8 +517,7 @@ async function updateLevel() {
 	await gWorld.motionFog(color, 0, 100);
 	gColony.removePieces();
 	const current = gMeshLevelMap.currItemByOrder();
-	gColony.setupPieces(current.v.pieces);
-	gColony.setupCyclicStructure(current.v.structure);
+	gColony.setupPieces(current.v.pieces, current.v.structure);
 	await gWorld.motionFog(color, 100, 0);
 	const prev = gMeshLevelMap.prevItemByOrder();
 	const next = gMeshLevelMap.nextItemByOrder();

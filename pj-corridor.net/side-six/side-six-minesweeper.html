@@ -77,6 +77,7 @@ import {
 	cSphericalWorld
 } from 'basic';
 import {
+	cCylinderStructure,
 	cColony
 } from 'side6';
 import * as SOUND from 'sound';
@@ -1238,7 +1239,6 @@ const gCyclicLevels = ((in_diameter) => {
 		const circumf = in_diameter * Math.PI * conf.rZoom;
 		const rows = in_level.rows;
 		const cols = in_level.cols;
-		const unitAngle = Math.PI * 2 / rows;
 		const marginRow = circumf / rows * conf.mWeight;
 		const unitSize = circumf / rows - marginRow;
 		const marginCol = topology.marginCol(unitSize, marginRow);
@@ -1249,40 +1249,23 @@ const gCyclicLevels = ((in_diameter) => {
 		const o_x = (unitSize + marginCol) * (cols - 1) / 2 * -1;
 		const o_y = radius;
 		const o_z = 0;
-		const structure = {
-			rowsForCircle : rows,
-			colsForLength : cols,
-			origin : VEC3(o_x, o_y, o_z),
-			unitDelta : unitSize + marginCol,
-			unitAngle : unitAngle,
-			offset : topology.offset
-		};
+		const st = new cCylinderStructure(
+			rows,
+			cols,
+			VEC3(o_x, o_y, o_z),
+			unitSize + marginCol,
+			topology.offset
+		);
 		const pieces = [];
 		for (let row = 0; row < rows; row++) {
 			for (let col = 0; col < cols; col++) {
-				const x = structure.origin.x + structure.unitDelta * col;
-				const y = structure.origin.y;
 				const materials = [
 					materialFactory.create(CLOSED, unitSize),
 					materialFactory.create(BGCOLOR, unitSize)
 				];
 				const piece = new THREE.Mesh(geometry, materials);
-				const pivot = new THREE.Object3D();
-				pivot.add(piece);
-				piece.position.copy(VEC3(x, y, 0));
-				if ((in_level.format === 'hexFlatTopped') && (col % 2 === structure.offset)) {
-					pivot.rotateX(structure.unitAngle * (row + 0.5));
-				} else {
-					pivot.rotateX(structure.unitAngle * row);
-				}
-				/*
-					*** NOTE ***
-					you can use matrix,
-					to apply rotated position before adding to scene
-				*/
-				pivot.updateMatrixWorld();
-				piece.applyMatrix4(pivot.matrix);
-				pivot.remove(piece);
+				piece.position.copy(st.locationToPosition(row, col));
+				piece.quaternion.copy(st.locationToQuaternion(row, col));
 				pieces.push(piece);
 			}
 		}
@@ -1304,7 +1287,7 @@ const gCyclicLevels = ((in_diameter) => {
 				edgeCol : edgeCol,
 				format : in_level.format
 			},
-			structure : structure,
+			structure : st,
 			pieces : pieces
 		});
 	});
@@ -1312,52 +1295,17 @@ const gCyclicLevels = ((in_diameter) => {
 })(COLONY_SIZE);
 
 /*
-	the cBoard is designed to represent a reversi board.
+	the cColonyBoard represents a game-specific board.
 */
 
 class cColonyBoard extends cColony {
-	#makeRotationX(in_rad) {
-		return this.settingVal.origin.clone().applyMatrix4((new THREE.Matrix4()).makeRotationX(in_rad));
-	}
-	setupCyclicStructure(in_structure) {
-		super.setupCyclicStructure(in_structure);
-		this.settingVal.offset = in_structure.offset;
-	}
-	indexToPiece(in_row, in_col) {
-		let row = in_row;
-		if ((this.settingVal.offset >= 0) && (in_col % 2 === this.settingVal.offset)) {
-			row += 0.5;
-		}
-		const vec3 = this.#makeRotationX(this.settingVal.unitAngle * row);
-		vec3.x += this.settingVal.unitDelta * in_col;
-		const piece = this.children.find(in_child => XYZ.every(in_xyz => Math.abs(in_child.position[in_xyz] - vec3[in_xyz]) < cColony.error));
-		if (!piece) {
-			console.log('indexToPiece failed : ', in_row, in_col);
-			throw new Error('');
-		}
-		return piece;
-	}
-	pieceToIndex(in_piece) {
-		const pos = in_piece.position;
-		const col = Math.round((pos.x - this.settingVal.origin.x) / this.settingVal.unitDelta);
-		let offset = 0;
-		if ((this.settingVal.offset >= 0) && (col % 2 === this.settingVal.offset)) {
-			offset = 0.5;
-		}
-		for (let row = 0; row < this.settingVal.rowsForCircle; row++) {
-			const vec3 = this.#makeRotationX(this.settingVal.unitAngle * (row + offset));
-			if ((Math.abs(pos.y - vec3.y) < cColony.error) && (Math.abs(pos.z - vec3.z) < cColony.error)) {
-				return {row : row, col : col};
-			}
-		}
-		throw new Error('pieceToIndex failed');
-	}
 	getColorTable() {
 		const table = [];
-		for (let row = 0; row < this.settingVal.rowsForCircle; row++) {
+		const st = this.currPiecesCache.structure;
+		for (let row = 0; row < st.rowsForCircle; row++) {
 			table[row] = [];
-			for (let col = 0; col < this.settingVal.colsForLength; col++) {
-				const piece = this.indexToPiece(row, col);
+			for (let col = 0; col < st.colsForLength; col++) {
+				const piece = this.locationToPiece(row, col);
 				table[row].push(getShellColor(piece));
 			}
 		}
@@ -1367,7 +1315,7 @@ class cColonyBoard extends cColony {
 		const changedArr = [];
 		for (let row = 0; row < in_table.length; row++) {
 			for (let col = 0; col < in_table[row].length; col++) {
-				const piece = this.indexToPiece(row, col);
+				const piece = this.locationToPiece(row, col);
 				const currColor = getShellColor(piece);
 				const nextColor = in_table[row][col];
 				if (currColor !== nextColor) {
@@ -1392,7 +1340,7 @@ class cColonyBoard extends cColony {
 			return;
 		}
 		const max = 1.2;
-		const scalar = (createPeriodicCos(this.settingVal.unitAngle, 1, max, true))(in_rad);
+		const scalar = (createPeriodicCos(this.currPiecesCache.structure.unitAngle, 1, max, true))(in_rad);
 		in_group.children.forEach(in_child => {
 			const basePos = in_child.userData.tmpCache.position;
 			in_child.position.copy(basePos.clone().multiplyScalar(scalar));
@@ -1401,9 +1349,8 @@ class cColonyBoard extends cColony {
 	}
 	makeRotateProgress(in_col, in_delta, in_ending_callback) {
 		this.uiDisable();
-		const last = this.settingVal.unitAngle * in_delta;
-		const x = this.settingVal.origin.x + this.settingVal.unitDelta * in_col;
-		const pieces = this.children.filter(in_child => Math.abs(in_child.position.x - x) < cColony.error);
+		const last = this.currPiecesCache.structure.unitAngle * in_delta;
+		const pieces = this.children.filter(in_child => this.pieceToLocation(in_child).col === in_col);
 		const group = this.setupGroup(pieces);
 		return this.makeAnimationProgress(group, cColony.axes.x, 0, last, in_ratio => {
 			if (in_ratio < 1) {
@@ -1465,11 +1412,11 @@ class cColonyBoard extends cColony {
 			if (this.isColonyView) {
 				this.uiDisable();
 				this.#transition('toOverview');
+				const st = this.currPiecesCache.structure;
 				this.children.forEach(in_child => {
-					const world = VEC3().setFromMatrixPosition(in_child.matrixWorld);
-					const s = Math.hypot(world.y, world.z) * Math.atan2(world.z, world.y);
-					last.position.set(in_child, VEC3(world.x, 0, s));
-					last.quaternion.set(in_child, new THREE.Quaternion());
+					const {row, col} = this.pieceToLocation(in_child);
+					last.position.set(in_child, st.locationToOverviewPosition(row, col));
+					last.quaternion.set(in_child, st.locationToOverviewQuaternion(row, col));
 				});
 				endingProcess = () => {
 					this.cache = init;
@@ -1781,8 +1728,7 @@ const ID_NEXT_LEVEL = randomString();
 async function updateLevel(in_curr) {
 	const black = 0x000000;
 	await gWorld.motionFog(black, 0, 100);
-	gColony.setupPieces(in_curr.pieces);
-	gColony.setupCyclicStructure(in_curr.structure);
+	gColony.setupPieces(in_curr.pieces, in_curr.structure);
 	if (in_curr.options.format === 'hexFlatTopped') {
 		gColony.bobRotation = true;
 	} else {
@@ -2148,7 +2094,7 @@ function resetFocus() {
 
 async function rotateDone(in_changed) {
 	resetFocus();
-	const {col} = gColony.pieceToIndex(in_changed.piece);
+	const {col} = gColony.pieceToLocation(in_changed.piece);
 	const rc = gMinesweeper.rotate(col, in_changed.delta);
 	if (rc === cMinesweeperModel.RC.SUCCESS) {
 		await dynamicUpdate(gMinesweeper.getRiskTable(), true);
@@ -2232,8 +2178,8 @@ async function chooseHere(in_ev) {
 	}
 	resetFocus();
 	const curr = intersects[0].object;
-	const pos = gColony.pieceToIndex(curr);
-	const {rc, ratio, hasSafe} = gMinesweeper.open(pos.row, pos.col);
+	const {row, col} = gColony.pieceToLocation(curr);
+	const {rc, ratio, hasSafe} = gMinesweeper.open(row, col);
 	if (rc === cMinesweeper.RC.CANNOT) {
 		effectError();
 		return;
