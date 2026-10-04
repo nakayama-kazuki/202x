@@ -1000,32 +1000,41 @@ function setShellColor(in_object, in_color) {
 	return in_object.material[SHELL_SURFACE_IX] = materialFactory.create(in_color, size);
 }
 
-function chamferedShape(in_n, in_edgeLength, in_taper = 0.05) {
-	const r = in_edgeLength / (2 * Math.sin(Math.PI / in_n)); 
+function regularPolygonVertices(in_n, in_edgeLength, in_rotateAngle = 0) {
+	const radius = in_edgeLength / (2 * Math.sin(Math.PI / in_n));
 	const unitAngle = 2 * Math.PI / in_n;
-	const v = [];
+	const vertexArr = [];
 	for (let i = 0; i < in_n; i++) {
-		const angle = unitAngle * i;
-		v.push(new THREE.Vector2(r * Math.cos(angle), r * Math.sin(angle)));
+		const angle = unitAngle * i + in_rotateAngle;
+		vertexArr.push(new THREE.Vector2(
+			radius * Math.cos(angle),
+			radius * Math.sin(angle)
+		));
 	}
-	const prev = [];
-	const next = [];
-	for (let i = 0; i < in_n; i++) {
-		prev[i] = v[i].clone().lerp(v[(i + in_n - 1) % in_n], in_taper);
-		next[i] = v[i].clone().lerp(v[(i + 1) % in_n], in_taper);
+	return vertexArr;
+}
+
+function chamferedShape(in_vertexArr, in_taper = 0.05) {
+	const prevArr = [];
+	const nextArr = [];
+	for (let i = 0; i < in_vertexArr.length; i++) {
+		const prev = (i + in_vertexArr.length - 1) % in_vertexArr.length;
+		const next = (i + 1) % in_vertexArr.length;
+		prevArr[i] = in_vertexArr[i].clone().lerp(in_vertexArr[prev], in_taper);
+		nextArr[i] = in_vertexArr[i].clone().lerp(in_vertexArr[next], in_taper);
 	}
 	const shape = new THREE.Shape();
-	shape.moveTo(next[0].x, next[0].y);
-	for (let i = 1; i < in_n; i++) {
-		shape.lineTo(prev[i].x, prev[i].y);
-		shape.lineTo(next[i].x, next[i].y);
+	shape.moveTo(nextArr[0].x, nextArr[0].y);
+	for (let i = 1; i < in_vertexArr.length; i++) {
+		shape.lineTo(prevArr[i].x, prevArr[i].y);
+		shape.lineTo(nextArr[i].x, nextArr[i].y);
 	}
-	shape.lineTo(prev[0].x, prev[0].y);
+	shape.lineTo(prevArr[0].x, prevArr[0].y);
 	shape.closePath();
 	return shape;
 }
 
-function chamferedGeometry(in_n, in_edgeLength, in_innerRatio, in_thickness) {
+function chamferedGeometry(in_vertexArr, in_edgeLength, in_innerRatio, in_thickness) {
 	const err = 1e-6;
 	const taper = 0.05;
 
@@ -1037,9 +1046,9 @@ function chamferedGeometry(in_n, in_edgeLength, in_innerRatio, in_thickness) {
 		bevelSize : in_edgeLength * taper,
 		bevelOffset : in_edgeLength * taper * -1,
 		bevelSegments : 1,
-		steps: 1
+		steps : 1
 	};
-	const shape = chamferedShape(in_n, in_edgeLength, taper);
+	const shape = chamferedShape(in_vertexArr, taper);
 	const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
 
 	// 2. transform & make two groups (surface + the other)
@@ -1086,17 +1095,40 @@ function chamferedGeometry(in_n, in_edgeLength, in_innerRatio, in_thickness) {
 }
 
 const hexmapGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickness) => {
+	const size = in_size;
+	const cornerCnt = 6;
 	const edgeLength = in_size / (3 ** 0.5);
-	const geometry = chamferedGeometry(6, edgeLength, in_innerRatio, in_thickness);
-	geometry.parameters = {size : in_size};
+	const rotateAngle = 0;
+	const vertexArr = regularPolygonVertices(cornerCnt, edgeLength, rotateAngle);
+	const geometry = chamferedGeometry(vertexArr, edgeLength, in_innerRatio, in_thickness);
+	geometry.parameters = {
+		size : size,
+		cornerCnt : cornerCnt,
+		edgeLength : edgeLength,
+		rotateAngle : rotateAngle,
+		vertexArr : vertexArr.map(v => v.clone()),
+		innerRatio : in_innerRatio,
+		thickness : in_thickness
+	};
 	return geometry;
 });
 
 const squareGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickness) => {
+	const size = in_size;
+	const cornerCnt = 4;
 	const edgeLength = in_size;
-	const geometry = chamferedGeometry(4, edgeLength, in_innerRatio, in_thickness);
-	geometry.rotateY(Math.PI / 4);
-	geometry.parameters = {size : in_size};
+	const rotateAngle = Math.PI / 4 * -1;
+	const vertexArr = regularPolygonVertices(cornerCnt, edgeLength, rotateAngle);
+	const geometry = chamferedGeometry(vertexArr, edgeLength, in_innerRatio, in_thickness);
+	geometry.parameters = {
+		size : size,
+		cornerCnt : cornerCnt,
+		edgeLength : edgeLength,
+		rotateAngle : rotateAngle,
+		vertexArr : vertexArr.map(v => v.clone()),
+		innerRatio : in_innerRatio,
+		thickness : in_thickness
+	};
 	return geometry;
 });
 
