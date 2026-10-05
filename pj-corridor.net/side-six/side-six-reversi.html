@@ -2236,7 +2236,7 @@ function chamferedGeometry(in_vertexArr, in_edgeLength, in_innerRatio, in_thickn
 	return geometry;
 }
 
-const hexmapGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickness) => {
+function createHexmapGeometry(in_size, in_innerRatio, in_thickness) {
 	const size = in_size;
 	const cornerCnt = 6;
 	const edgeLength = in_size / (3 ** 0.5);
@@ -2253,9 +2253,19 @@ const hexmapGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickne
 		thickness : in_thickness
 	};
 	return geometry;
+}
+
+const hexmapGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickness) => {
+	return createHexmapGeometry(in_size, in_innerRatio, in_thickness);
 });
 
-const squareGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickness) => {
+const hexmapSharedGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickness, in_initialPoloidalAngle) => {
+	const geometry = createHexmapGeometry(in_size, in_innerRatio, in_thickness);
+	geometry.parameters.initialPoloidalAngle = in_initialPoloidalAngle;
+	return geometry;
+});
+
+function createSquareGeometry(in_size, in_innerRatio, in_thickness) {
 	const size = in_size;
 	const cornerCnt = 4;
 	const edgeLength = in_size;
@@ -2271,6 +2281,16 @@ const squareGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickne
 		innerRatio : in_innerRatio,
 		thickness : in_thickness
 	};
+	return geometry;
+}
+
+const squareGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickness) => {
+	return createSquareGeometry(in_size, in_innerRatio, in_thickness);
+});
+
+const squareSharedGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickness, in_initialPoloidalAngle) => {
+	const geometry = createSquareGeometry(in_size, in_innerRatio, in_thickness);
+	geometry.parameters.initialPoloidalAngle = in_initialPoloidalAngle;
 	return geometry;
 });
 
@@ -3043,7 +3063,7 @@ class cColonyBoard extends cColony {
 			return;
 		}
 		const max = 1.2;
-		const scalar = (createPeriodicCos(this.currPiecesCache.structure.unitAngle, 1, max, true))(in_rad);
+		const scalar = (createPeriodicCos(this.currPiecesCache.structure.rowsAngle, 1, max, true))(in_rad);
 		in_group.children.forEach(in_child => {
 			const basePos = in_child.userData.tmpCache.position;
 			in_child.position.copy(basePos.clone().multiplyScalar(scalar));
@@ -3052,7 +3072,7 @@ class cColonyBoard extends cColony {
 	}
 	makeRotateProgress(in_col, in_delta, in_ending_callback) {
 		this.uiDisable();
-		const last = this.currPiecesCache.structure.unitAngle * in_delta;
+		const last = this.currPiecesCache.structure.rowsAngle * in_delta;
 		const pieces = this.children.filter(in_child => this.pieceToLocation(in_child).col === in_col);
 		const group = this.setupGroup(pieces);
 		return this.makeAnimationProgress(group, cColony.axes.x, 0, last, in_ratio => {

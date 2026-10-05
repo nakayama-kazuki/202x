@@ -356,7 +356,7 @@ class cColonyPuzzle extends cColony {
 				axis = cColony.axes.x;
 				pieces = this.affectedRotatePieces(_piece, axis);
 				if (pieces.length < this.children.length) {
-					last = this.currPiecesCache.structure.unitAngle * [1, 2, 3][arrRand]();
+					last = this.currPiecesCache.structure.rowsAngle * [1, 2, 3][arrRand]();
 					break;
 				}
 			}

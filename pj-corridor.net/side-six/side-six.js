@@ -58,12 +58,12 @@ import {
 
 export class cCylinderStructure {
 	static error = 0.01;
-	constructor(in_rowsForCircle, in_colsForLength, in_origin, in_unitDelta, in_offset = -1) {
+	constructor(in_rowsForCircle, in_colsForLength, in_origin, in_colsDelta, in_offset = -1) {
 		this.rowsForCircle = in_rowsForCircle;
 		this.colsForLength = in_colsForLength;
 		this.origin = in_origin.clone();
-		this.unitDelta = in_unitDelta;
-		this.unitAngle = Math.PI * 2 / in_rowsForCircle;
+		this.colsDelta = in_colsDelta;
+		this.rowsAngle = Math.PI * 2 / in_rowsForCircle;
 		this.offset = in_offset;
 	}
 	#locationToRow(in_row, in_col) {
@@ -75,14 +75,14 @@ export class cCylinderStructure {
 	locationToPosition(in_row, in_col) {
 		const row = this.#locationToRow(in_row, in_col);
 		const pos = this.origin.clone();
-		pos.x += this.unitDelta * in_col;
-		pos.applyAxisAngle(cColony.axes.x, this.unitAngle * row);
+		pos.x += this.colsDelta * in_col;
+		pos.applyAxisAngle(cColony.axes.x, this.rowsAngle * row);
 		return pos;
 	}
 	locationToQuaternion(in_row, in_col) {
 		// determine rotation based on geometry and placement
 		const row = this.#locationToRow(in_row, in_col);
-		return new THREE.Quaternion().setFromAxisAngle(cColony.axes.x, this.unitAngle * row);
+		return new THREE.Quaternion().setFromAxisAngle(cColony.axes.x, this.rowsAngle * row);
 	}
 	locationToOverviewPosition(in_row, in_col) {
 		const pos = this.locationToPosition(in_row, in_col);
@@ -96,7 +96,7 @@ export class cCylinderStructure {
 		return new THREE.Quaternion();
 	}
 	positionToLocation(in_position) {
-		const col = Math.round((in_position.x - this.origin.x) / this.unitDelta);
+		const col = Math.round((in_position.x - this.origin.x) / this.colsDelta);
 		for (let row = 0; row < this.rowsForCircle; row++) {
 			const pos = this.locationToPosition(row, col);
 			if (pos.distanceTo(in_position) < cCylinderStructure.error) {
@@ -497,7 +497,7 @@ export class cColony extends cPieceSet {
 				}
 			}
 			this.rotate(ctx.group, ctx.rotationAxis, amount);
-			notch = this.currPiecesCache.structure.unitAngle;
+			notch = this.currPiecesCache.structure.rowsAngle;
 		} else {
 			amount = in_posV2.distanceTo(ctx.initPosV2) * ctx.direction * 250;
 			if (amount < ctx.movableRange.min) {
@@ -530,14 +530,14 @@ export class cColony extends cPieceSet {
 		let type, notch, last, delta;
 		if (ctx.rotationAxis) {
 			type = 'rotate';
-			notch = st.unitAngle;
+			notch = st.rowsAngle;
 			last = snapToNotch(ctx.currAmount, notch);
-			delta = Math.round(last / st.unitAngle);
+			delta = Math.round(last / st.rowsAngle);
 		} else {
 			type = 'slide';
 			notch = Math.abs(ctx.movableRange.min + ctx.movableRange.max);
 			last = snapToNotch(ctx.currAmount, notch);
-			delta = Math.round(last / st.unitDelta);
+			delta = Math.round(last / st.colsDelta);
 		}
 		const piece = ctx.group.children[0];
 		return this.makeAnimationProgress(ctx.group, ctx.rotationAxis, ctx.currAmount, last, (in_ratio) => {
