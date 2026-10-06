@@ -153,8 +153,7 @@ function getShellColor(in_object) {
 }
 
 function setShellColor(in_object, in_color) {
-	const setting = in_object.geometry.parameters;
-	return in_object.material[SHELL_COLOR_INDEX] = surfaceFactory.create(in_color, setting.size);
+	in_object.material[SHELL_COLOR_INDEX] = surfaceFactory.create(in_color, in_object.geometry.userData.size);
 }
 
 const shellGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickness) => {
@@ -163,7 +162,7 @@ const shellGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thicknes
 	const innerLen = outerLen * in_innerRatio;
 	const thickness = in_thickness - radian * 2;
 	const geometry = trapezoidGeometryUtil(outerLen, outerLen, outerLen, innerLen, thickness, radian);
-	geometry.parameters = {
+	geometry.userData = {
 		size : in_size,
 		innerRatio : in_innerRatio,
 		thickness : in_thickness

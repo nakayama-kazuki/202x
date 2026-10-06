@@ -996,8 +996,7 @@ function getShellColor(in_object) {
 }
 
 function setShellColor(in_object, in_color) {
-	const size = in_object.geometry.parameters.size;
-	return in_object.material[SHELL_SURFACE_IX] = materialFactory.create(in_color, size);
+	in_object.material[SHELL_SURFACE_IX] = materialFactory.create(in_color, in_object.geometry.userData.size);
 }
 
 function regularPolygonVertices(in_n, in_edgeLength, in_rotateAngle = 0) {
@@ -1101,25 +1100,26 @@ function createHexmapGeometry(in_size, in_innerRatio, in_thickness) {
 	const rotateAngle = 0;
 	const vertexArr = regularPolygonVertices(cornerCnt, edgeLength, rotateAngle);
 	const geometry = chamferedGeometry(vertexArr, edgeLength, in_innerRatio, in_thickness);
-	geometry.parameters = {
+	geometry.userData = {
 		size : size,
 		cornerCnt : cornerCnt,
 		edgeLength : edgeLength,
 		rotateAngle : rotateAngle,
 		vertexArr : vertexArr.map(v => v.clone()),
+		position : geometry.attributes.position.clone(),
 		innerRatio : in_innerRatio,
 		thickness : in_thickness
 	};
 	return geometry;
 }
 
-const hexmapGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickness) => {
+const allSharedHexmapFactory = factoryBuilder((in_size, in_innerRatio, in_thickness) => {
 	return createHexmapGeometry(in_size, in_innerRatio, in_thickness);
 });
 
-const hexmapSharedGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickness, in_initialPoloidalAngle) => {
+const angleSharedHexmapFactory = factoryBuilder((in_size, in_innerRatio, in_thickness, in_initialPoloidalAngle) => {
 	const geometry = createHexmapGeometry(in_size, in_innerRatio, in_thickness);
-	geometry.parameters.initialPoloidalAngle = in_initialPoloidalAngle;
+	geometry.userData.initialPoloidalAngle = in_initialPoloidalAngle;
 	return geometry;
 });
 
@@ -1130,25 +1130,26 @@ function createSquareGeometry(in_size, in_innerRatio, in_thickness) {
 	const rotateAngle = Math.PI / 4 * -1;
 	const vertexArr = regularPolygonVertices(cornerCnt, edgeLength, rotateAngle);
 	const geometry = chamferedGeometry(vertexArr, edgeLength, in_innerRatio, in_thickness);
-	geometry.parameters = {
+	geometry.userData = {
 		size : size,
 		cornerCnt : cornerCnt,
 		edgeLength : edgeLength,
 		rotateAngle : rotateAngle,
 		vertexArr : vertexArr.map(v => v.clone()),
+		position : geometry.attributes.position.clone(),
 		innerRatio : in_innerRatio,
 		thickness : in_thickness
 	};
 	return geometry;
 }
 
-const squareGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickness) => {
+const allSharedSquareFactory = factoryBuilder((in_size, in_innerRatio, in_thickness) => {
 	return createSquareGeometry(in_size, in_innerRatio, in_thickness);
 });
 
-const squareSharedGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickness, in_initialPoloidalAngle) => {
+const angleSharedSquareFactory = factoryBuilder((in_size, in_innerRatio, in_thickness, in_initialPoloidalAngle) => {
 	const geometry = createSquareGeometry(in_size, in_innerRatio, in_thickness);
-	geometry.parameters.initialPoloidalAngle = in_initialPoloidalAngle;
+	geometry.userData.initialPoloidalAngle = in_initialPoloidalAngle;
 	return geometry;
 });
 
@@ -1181,12 +1182,12 @@ const COLONY_SIZE = 400;
 const gCyclicLevels = ((in_diameter) => {
 	const topologyMap = new Map([
 		['hexFlatTopped', {
-			factory : hexmapGeometryFactory,
+			factory : allSharedHexmapFactory,
 			marginCol : (in_size, in_margin) => 2 * in_margin / 3 ** 0.5 - (3 ** 0.5 - 1) / 4 * in_size,
 			offset : 1
 		}],
 		['square', {
-			factory : squareGeometryFactory,
+			factory : allSharedSquareFactory,
 			marginCol : (in_size, in_margin) => in_margin,
 			offset : -1,
 		}]
