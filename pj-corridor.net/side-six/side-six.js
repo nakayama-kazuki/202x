@@ -108,6 +108,322 @@ export class cCylinderStructure {
 	}
 }
 
+export class cTorusStructure {
+	static error = 0.01;
+	static #gapRatio = 0.05;
+	constructor(
+		in_rowsForPoloidal,
+		in_colsForToroidal,
+		in_origin,
+		in_majorRadius,
+		in_minorRadius,
+		in_size,
+		in_offset = -1,
+		in_poloidalRotation = 0
+	) {
+		this.rowsForPoloidal = in_rowsForPoloidal;
+		this.colsForToroidal = in_colsForToroidal;
+		this.origin = in_origin.clone();
+		this.majorRadius = in_majorRadius;
+		this.minorRadius = in_minorRadius;
+		this.size = in_size;
+		this.rowsAngle = Math.PI * 2 / in_rowsForPoloidal;
+		this.colsAngle = Math.PI * 2 / in_colsForToroidal;
+		this.offset = in_offset;
+		this.poloidalRotation = in_poloidalRotation;
+	}
+	get gap() {
+		return this.size * cTorusStructure.#gapRatio;
+	}
+	poloidalAngle(in_row) {
+		return this.rowsAngle * in_row + this.poloidalRotation;
+	}
+	positionByPoloidalAngle(in_angle) {
+		const pos = this.origin.clone();
+		pos.y += this.minorRadius * Math.sin(in_angle);
+		pos.z += this.minorRadius * Math.cos(in_angle);
+		return pos;
+	}
+	toroidalAngle(in_col) {
+		return this.colsAngle * in_col;
+	}
+	position(in_poloidalAngle, in_toroidalAngle) {
+		const radius = this.majorRadius + this.minorRadius * Math.cos(in_poloidalAngle);
+		const pos = this.origin.clone();
+		pos.x += radius * Math.sin(in_toroidalAngle);
+		pos.y += this.minorRadius * Math.sin(in_poloidalAngle);
+		pos.z += radius * Math.cos(in_toroidalAngle);
+		return pos;
+	}
+	knowledgeByPoloidalAngle(in_angle) {
+		const tRadius = this.majorRadius + this.minorRadius * Math.cos(in_angle - this.rowsAngle / 2);
+		const bRadius = this.majorRadius + this.minorRadius * Math.cos(in_angle + this.rowsAngle / 2);
+		const tWidth = 2 * tRadius * Math.tan(this.colsAngle / 2);
+		const bWidth = 2 * bRadius * Math.tan(this.colsAngle / 2);
+		const height = 2 * this.minorRadius * Math.tan(this.rowsAngle / 2) - this.gap;
+		return {
+			tWidth : tWidth,
+			bWidth : bWidth,
+			height : height,
+			rotation : -in_angle + Math.PI / 2
+		};
+	}
+	locationToPoloidalAngle(in_row, in_col) {
+		let row = in_row;
+		if ((this.offset >= 0) && (in_col % 2 === this.offset)) {
+			row += 0.5;
+		}
+		return this.poloidalAngle(row);
+	}
+	locationToPosition(in_row, in_col) {
+		const poloidalAngle = this.locationToPoloidalAngle(in_row, in_col);
+		const toroidalAngle = this.toroidalAngle(in_col);
+		return this.position(poloidalAngle, toroidalAngle);
+	}
+	locationToQuaternion(in_row, in_col) {
+		const toroidalAngle = this.toroidalAngle(in_col);
+		return new THREE.Quaternion().setFromAxisAngle(VEC3(0, 1, 0), toroidalAngle);
+	}
+	positionToLocation(in_position) {
+		for (let row = 0; row < this.rowsForPoloidal; row++) {
+			for (let col = 0; col < this.colsForToroidal; col++) {
+				const pos = this.locationToPosition(row, col);
+				if (pos.distanceTo(in_position) < cTorusStructure.error) {
+					return {
+						row : row,
+						col : col
+					};
+				}
+			}
+		}
+		console.log('positionToLocation failed : ', in_position);
+		throw new Error('');
+	}
+}
+
+export const CHAMFERED_SURFACE_IX = 0;
+
+function regularPolygonVertices(in_n, in_edgeLength, in_rotateAngle = 0) {
+	const radius = in_edgeLength / (2 * Math.sin(Math.PI / in_n));
+	const unitAngle = 2 * Math.PI / in_n;
+	const vertexArr = [];
+	for (let i = 0; i < in_n; i++) {
+		const angle = unitAngle * i + in_rotateAngle;
+		vertexArr.push(new THREE.Vector2(
+			radius * Math.cos(angle),
+			radius * Math.sin(angle)
+		));
+	}
+	return vertexArr;
+}
+
+function chamferedShape(in_vertexArr, in_taper = 0.05) {
+	const prevArr = [];
+	const nextArr = [];
+	for (let i = 0; i < in_vertexArr.length; i++) {
+		const prev = (i + in_vertexArr.length - 1) % in_vertexArr.length;
+		const next = (i + 1) % in_vertexArr.length;
+		prevArr[i] = in_vertexArr[i].clone().lerp(in_vertexArr[prev], in_taper);
+		nextArr[i] = in_vertexArr[i].clone().lerp(in_vertexArr[next], in_taper);
+	}
+	const shape = new THREE.Shape();
+	shape.moveTo(nextArr[0].x, nextArr[0].y);
+	for (let i = 1; i < in_vertexArr.length; i++) {
+		shape.lineTo(prevArr[i].x, prevArr[i].y);
+		shape.lineTo(nextArr[i].x, nextArr[i].y);
+	}
+	shape.lineTo(prevArr[0].x, prevArr[0].y);
+	shape.closePath();
+	return shape;
+}
+
+function chamferedGeometry(in_vertexArr, in_edgeLength, in_innerRatio, in_thickness) {
+	/*
+		step#1
+
+		     +y
+		     |  /
+		     | /
+		    ###
+		 ---#*#---+x
+		    /##
+		   / |
+		  /  |
+		 /
+		+z = direction to extrude
+
+		step#2
+
+		     +y = outer surface ( as a result of rotated )
+		     |
+		     |  /
+		     | /
+		     |##
+		 ---#*#---+x
+		   ###
+		   / |
+		  /  |
+		 /
+		+z
+	*/
+	const err = 1e-6;
+	const taper = 0.05;
+
+	// 1. merged ExtrudeGeometry
+	const extrudeSettings = {
+		depth : in_thickness,
+		bevelEnabled : true,
+		bevelThickness : in_edgeLength * taper,
+		bevelSize : in_edgeLength * taper,
+		bevelOffset : in_edgeLength * taper * -1,
+		bevelSegments : 1,
+		steps : 1
+	};
+	const shape = chamferedShape(in_vertexArr, taper);
+	const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+
+	// 2. transform & make two groups (surface + the other)
+	const pos = geometry.attributes.position;
+	const combinedArr = new Uint16Array(pos.count);
+	let headIndex = 0;
+	let tailIndex = combinedArr.length;
+	for (let t = 0; t < pos.count / 3; t++) {
+		const triMap = new Map([
+			[3 * t + 0, pos.getZ(3 * t + 0)],
+			[3 * t + 1, pos.getZ(3 * t + 1)],
+			[3 * t + 2, pos.getZ(3 * t + 2)]
+		]);
+		let triInSurface = true;
+		for (const [ix, z] of triMap) {
+			if (z > in_thickness / 2) {
+				pos.setX(ix, pos.getX(ix) * in_innerRatio);
+				pos.setY(ix, pos.getY(ix) * in_innerRatio);
+			}
+			if (z > err * -1) {
+				triInSurface = false;
+			}
+		}
+		let index;
+		if (triInSurface) {
+			index = headIndex;
+			headIndex += 3;
+		} else {
+			tailIndex -= 3;
+			index = tailIndex;
+		}
+		Array.from(triMap.keys()).forEach((ix, delta) => combinedArr[index + delta] = ix);
+	}
+	geometry.setIndex(new THREE.BufferAttribute(combinedArr, 1));
+	geometry.clearGroups();
+	geometry.addGroup(0, headIndex, CHAMFERED_SURFACE_IX);
+	geometry.addGroup(headIndex, combinedArr.length - headIndex, 1);
+
+	// 3. reset
+	pos.needsUpdate = true;
+	geometry.computeVertexNormals();
+	geometry.rotateX(Math.PI / 2);
+	return geometry;
+}
+
+function createHexmapGeometry(in_size, in_innerRatio, in_thickness) {
+	const size = in_size;
+	const cornerCnt = 6;
+	const edgeLength = in_size / (3 ** 0.5);
+	const rotateAngle = 0;
+	const vertexArr = regularPolygonVertices(cornerCnt, edgeLength, rotateAngle);
+	const geometry = chamferedGeometry(vertexArr, edgeLength, in_innerRatio, in_thickness);
+	geometry.userData = {
+		size : size,
+		cornerCnt : cornerCnt,
+		edgeLength : edgeLength,
+		rotateAngle : rotateAngle,
+		vertexArr : vertexArr.map(v => v.clone()),
+		position : geometry.attributes.position.clone(),
+		innerRatio : in_innerRatio,
+		thickness : in_thickness
+	};
+	return geometry;
+}
+
+export const allSharedHexmapFactory = factoryBuilder((in_size, in_innerRatio, in_thickness) => {
+	return createHexmapGeometry(in_size, in_innerRatio, in_thickness);
+});
+
+export const angleSharedHexmapFactory = factoryBuilder((in_size, in_innerRatio, in_thickness, in_initialPoloidalAngle) => {
+	const geometry = createHexmapGeometry(in_size, in_innerRatio, in_thickness);
+	geometry.userData.initialPoloidalAngle = in_initialPoloidalAngle;
+	return geometry;
+});
+
+function createSquareGeometry(in_size, in_innerRatio, in_thickness) {
+	const size = in_size;
+	const cornerCnt = 4;
+	const edgeLength = in_size;
+	const rotateAngle = Math.PI / 4 * -1;
+	const vertexArr = regularPolygonVertices(cornerCnt, edgeLength, rotateAngle);
+	const geometry = chamferedGeometry(vertexArr, edgeLength, in_innerRatio, in_thickness);
+	geometry.userData = {
+		size : size,
+		cornerCnt : cornerCnt,
+		edgeLength : edgeLength,
+		rotateAngle : rotateAngle,
+		vertexArr : vertexArr.map(v => v.clone()),
+		position : geometry.attributes.position.clone(),
+		innerRatio : in_innerRatio,
+		thickness : in_thickness
+	};
+	return geometry;
+}
+
+export const allSharedSquareFactory = factoryBuilder((in_size, in_innerRatio, in_thickness) => {
+	return createSquareGeometry(in_size, in_innerRatio, in_thickness);
+});
+
+export const angleSharedSquareFactory = factoryBuilder((in_size, in_innerRatio, in_thickness, in_initialPoloidalAngle) => {
+	const geometry = createSquareGeometry(in_size, in_innerRatio, in_thickness);
+	geometry.userData.initialPoloidalAngle = in_initialPoloidalAngle;
+	return geometry;
+});
+
+export function updateChamferedGeometry(in_geometry, in_tWidth, in_bWidth, in_height, in_rotation) {
+	const position = in_geometry.attributes.position;
+	const requiredArr = ['position', 'vertexArr', 'size'];
+	const init = {};
+	requiredArr.forEach(in_required => {
+		if (in_geometry.userData[in_required] === undefined) {
+			throw new Error('not found : ' + in_required);
+		}
+		init[in_required] = in_geometry.userData[in_required];
+	});
+	let minInitY = Infinity;
+	let maxInitY = -Infinity;
+	for (let i = 0; i < init.vertexArr.length; i++) {
+		minInitY = Math.min(minInitY, init.vertexArr[i].y);
+		maxInitY = Math.max(maxInitY, init.vertexArr[i].y);
+	}
+	// otateX(Math.PI / 2)
+	const minZ = minInitY;
+	const maxZ = maxInitY;
+	const tRatio = in_tWidth / init.size;
+	const bRatio = in_bWidth / init.size;
+	const cos = Math.cos(in_rotation);
+	const sin = Math.sin(in_rotation);
+	for (let i = 0; i < position.count; i++) {
+		const x = init.position.getX(i);
+		const y = init.position.getY(i);
+		const z = init.position.getZ(i);
+		const zRatio = (z - minZ) / (maxZ - minZ);
+		const wRatio = bRatio + (tRatio - bRatio) * zRatio;
+		const newX = x * wRatio;
+		const newZ = (z / init.size) * in_height;
+		const rotatedY = y * cos - newZ * sin;
+		const rotatedZ = y * sin + newZ * cos;
+		position.setXYZ(i, newX, rotatedY, rotatedZ);
+	}
+	position.needsUpdate = true;
+	in_geometry.computeVertexNormals();
+}
+
 class cPieceSet extends THREE.Object3D {
 	set #currPiecesCacheKey(in_key) {
 		if (!this.userData.cache) {
@@ -230,40 +546,18 @@ export class cColony extends cPieceSet {
 		}
 	}
 	affectedSlidePieces(in_piece, in_sign) {
-		const pieces = [];
-		const y = in_piece.position.dot(cColony.axes.y);
-		const z = in_piece.position.dot(cColony.axes.z);
-		this.children.forEach(in_child => {
-			const pos = in_child.position;
-			if ((Math.abs(y - pos.y) < cColony.error) && (Math.abs(z - pos.z) < cColony.error)) {
-				pieces.push(in_child);
-			}
-		});
-		const currSide = (in_sign > 0) ? 'max' : 'min';
-		const nextSide = (in_sign > 0) ? 'min' : 'max';
-		pieces.sort((in_e1, in_e2) => (in_e1.position.x - in_e2.position.x) * in_sign);
-		const getEdgeX = (in_object, in_edge) => {
-			const box = new THREE.Box3();
-			box.setFromObject(in_object);
-			return box[in_edge].x;
-		};
-		let started = false;
-		let edge = getEdgeX(in_piece, currSide);
+		const location = this.pieceToLocation(in_piece);
 		const affected = [in_piece];
-		pieces.forEach(in_sorted => {
-			if (started) {
-				// find the adjacent piece
-				if (Math.abs(edge - getEdgeX(in_sorted, nextSide)) < cColony.error) {
-					affected.push(in_sorted);
-					edge = getEdgeX(in_sorted, currSide);
-				}
-			} else {
-				if (in_sorted === in_piece) {
-					started = true;
-				}
+		for (let col = location.col + in_sign; 0 <= col && col < this.currPiecesCache.structure.colsForLength; col += in_sign) {
+			const piece = this.children.find(in_child => {
+				const childLocation = this.pieceToLocation(in_child);
+				return childLocation.row === location.row && childLocation.col === col;
+			});
+			if (!piece) {
+				break;
 			}
-		});
-		// for in_sign direction, there is not piece next to the last element
+			affected.push(piece);
+		}
 		return affected;
 	}
 	slidableDistance(in_piece, in_sign) {

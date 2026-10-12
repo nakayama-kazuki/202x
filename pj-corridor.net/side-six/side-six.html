@@ -78,6 +78,13 @@ import {
 } from 'basic';
 import {
 	cCylinderStructure,
+	cTorusStructure,
+	CHAMFERED_SURFACE_IX,
+	allSharedHexmapFactory,
+	allSharedSquareFactory,
+	angleSharedHexmapFactory,
+	angleSharedSquareFactory,
+	updateChamferedGeometry,
 	cColony
 } from 'side6';
 import * as SOUND from 'sound';
@@ -134,12 +141,10 @@ const surfaceFactory = factoryBuilder((in_color, in_size = -1) => {
 	return material;
 });
 
-const SHELL_COLOR_INDEX = 2;
-
 function shellMaterials(in_size, in_color_main, in_color_back) {
 	const materials = [];
 	for (let i = 0; i < Object.keys(DIRECTION).length; i++) {
-		if (i === SHELL_COLOR_INDEX) {
+		if (i === CHAMFERED_SURFACE_IX) {
 			materials.push(surfaceFactory.create(in_color_main, in_size));
 		} else {
 			materials.push(surfaceFactory.create(in_color_back));
@@ -149,26 +154,12 @@ function shellMaterials(in_size, in_color_main, in_color_back) {
 }
 
 function getShellColor(in_object) {
-	return in_object.material[SHELL_COLOR_INDEX].color.getHex();
+	return in_object.material[CHAMFERED_SURFACE_IX].color.getHex();
 }
 
 function setShellColor(in_object, in_color) {
-	in_object.material[SHELL_COLOR_INDEX] = surfaceFactory.create(in_color, in_object.geometry.userData.size);
+	in_object.material[CHAMFERED_SURFACE_IX] = surfaceFactory.create(in_color, in_object.geometry.userData.size);
 }
-
-const shellGeometryFactory = factoryBuilder((in_size, in_innerRatio, in_thickness) => {
-	const radian = 6;
-	const outerLen = in_size - radian * 2;
-	const innerLen = outerLen * in_innerRatio;
-	const thickness = in_thickness - radian * 2;
-	const geometry = trapezoidGeometryUtil(outerLen, outerLen, outerLen, innerLen, thickness, radian);
-	geometry.userData = {
-		size : in_size,
-		innerRatio : in_innerRatio,
-		thickness : in_thickness
-	};
-	return geometry;
-});
 
 const GRAY1 = 0x222222;
 const GRAY2 = 0x444444;
@@ -245,7 +236,11 @@ const gMeshLevelMap = ((in_diameter) => {
 			VEC3(o_x, o_y, o_z),
 			unitSize
 		);
-		const geometry = shellGeometryFactory.create(unitSize, ((radius - unitThick) / radius), unitThick);
+		const radian = 6;
+		const outerLen = unitSize - radian * 2;
+		const innerRatio = (radius - unitThick) / radius;
+		const thickness = unitThick - radian * 2;
+		const geometry = allSharedSquareFactory.create(outerLen, innerRatio, thickness);
 		const pieces = [];
 		for (let col = 0; col < st.colsForLength; col++) {
 			for (let row = 0; row < st.rowsForCircle; row++) {
