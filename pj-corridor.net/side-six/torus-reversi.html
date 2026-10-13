@@ -1,0 +1,3706 @@
+<html>
+<head>
+<!-- MIT License Copyright (c) 2024 pj-corridor.net -->
+<meta name='viewport' content='width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1' />
+<meta charset='utf-8' />
+<script async src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7863584801355594' crossorigin='anonymous'></script>
+<script type='importmap'>
+{
+	"imports" : {
+		"three" : "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.min.js",
+		"utils" : "https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/utils/BufferGeometryUtils.js",
+		"basic" : "./basic-functions.js",
+		"side6" : "./side-six.js",
+		"s6res" : "./side-six-reversi-res.js",
+		"sound" : "./sound-effect.js"
+	}
+}
+</script>
+</head>
+<body>
+<script type='module'>
+
+import * as THREE from 'three';
+import * as UTILS from 'utils';
+import {
+	getResource,
+	postResource,
+	getParam,
+	DEBUG,
+	COLOR,
+	randomString,
+	snapToNotch,
+	snapToPI,
+	snapTo05PI,
+	createPeriodicSin,
+	createPeriodicCos,
+	pseudoMessageDigest1,
+	pseudoMessageDigest2,
+	beep,
+	isEmulated,
+	throttling,
+	thresholding,
+	debouncing,
+	nonReentrantAsync,
+	autoTransition,
+	makeSpeaker,
+	startDialog,
+	factoryBuilder,
+	arrRand,
+	arrTrim,
+	cEase,
+	cApproximateMap,
+	cApproximateSet,
+	cCyclicMap,
+	cCyclicValues,
+	forEachCombination,
+	cChart,
+	clipArea,
+	clipClearArea,
+	fillRoundRect,
+	XYZ,
+	VEC3,
+	DIRECTION,
+	ndcFromEvent,
+	ndcToAbs,
+	getWorldVec3,
+	getWorldUp,
+	instanceInAncestor,
+	lookAtWithoutRotation,
+	safeMergeGeometry,
+	makeTrapezoidGeometryParts,
+	trapezoidGeometryUtil,
+	roundBoxGeometry,
+	roundRegularBoxGeometry,
+	roundTrapezoidGeometry,
+	capsuleConfigure,
+	customCapsuleGeometry,
+	cSphericalWorld
+} from 'basic';
+import {
+	cCylinderStructure,
+	cTorusStructure,
+	CHAMFERED_SURFACE_IX,
+	allSharedHexmapFactory,
+	allSharedSquareFactory,
+	angleSharedHexmapFactory,
+	angleSharedSquareFactory,
+	updateChamferedGeometry,
+	cColony
+} from 'side6';
+import {FIGURES} from 's6res';
+import * as SOUND from 'sound';
+
+/*
+	the cReversi class is designed to implement NPC algorithms for the game of reversi.
+*/
+
+class cLineParser {
+	static #border = -1;
+	static #empty = 9;
+	static #cntEmpty(in_arr) {
+		return in_arr.filter(in_el => in_el === cLineParser.#empty).length;
+	}
+	static #findOneInnerEmpty(in_arr) {
+		let emptyAppear = false;
+		for (let i = 1; i < in_arr.length - 1; i++) {
+			if (emptyAppear) {
+				if (in_arr[i] === cLineParser.#empty) {
+					return false;
+				} else {
+					return true;
+				}
+			}
+			if (in_arr[i] === cLineParser.#empty) {
+				emptyAppear = true;
+			}
+		}
+		return false;
+	}
+	/*
+		fmt_eXXXXX is for edge
+	*/
+	static #fmt_eCriticalToMe(in_l, in_r) {
+		// B90011 ---> [B9][11]
+		if ((in_l.length === 2) &&
+			(in_l[0] === cLineParser.#border) &&
+			(in_l[1] === cLineParser.#empty)) {
+			if (in_r[0] !== cLineParser.#empty) {
+				return true;
+			}
+		}
+		return false;
+	}
+	static #fmt_ePreRiskToMe(in_l, in_r) {
+		// B90090 ---> [B9][9]
+		if ((in_l.length === 2) &&
+			(in_l[0] === cLineParser.#border) &&
+			(in_l[1] === cLineParser.#empty)) {
+			if ((in_r.length === 1) &&
+				(in_r[0] === cLineParser.#empty)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	static #fmt_ePressureToMe(in_l, in_r) {
+		// B900191 ---> [B9][191]
+		if ((in_l.length === 2) &&
+			(in_l[0] === cLineParser.#border)) {
+			return cLineParser.#fmt_bPressureToMe(in_l, in_r);
+		}
+		return false;
+	}
+	static #fmt_ePrePressureToMe(in_l, in_r) {
+		// B909191 ---> [B9][9191]
+		if ((in_l.length === 2) &&
+			(in_l[0] === cLineParser.#border)) {
+			return cLineParser.#fmt_bPrePressureToMe(in_l, in_r);
+		}
+		return false;
+	}
+	static #fmt_ePressureByMe(in_l, in_r) {
+		// B911090 ---> [B911][9]
+		if ((in_l.length >= 3) &&
+			(in_l[0] === cLineParser.#border) &&
+			(in_l[1] === cLineParser.#empty) &&
+			(cLineParser.#cntEmpty(in_l) === 1)) {
+			return cLineParser.#fmt_bPressureByMe(in_l, in_r);
+		}
+		return false;
+	}
+	/*
+		fmt_bXXXXX is for both edge and inner
+	*/
+	static #fmt_bPressureToMe(in_l, in_r) {
+		// 9900191 ---> [99][191]
+		if (in_l[in_l.length - 1] === cLineParser.#empty) {
+			if ((in_r.length >= 3) &&
+				(in_r[0] !== cLineParser.#empty)) {
+				return cLineParser.#findOneInnerEmpty(in_r);
+			}
+		}
+		return false;
+	}
+	static #fmt_bPrePressureToMe(in_l, in_r) {
+		// 9909191 ---> [99][9191]
+		if (in_l[in_l.length - 1] === cLineParser.#empty) {
+			if ((in_r.length >= 3) &&
+				(in_r[0] === cLineParser.#empty)) {
+				return cLineParser.#findOneInnerEmpty(in_r);
+			}
+		}
+		return false;
+	}
+	static #fmt_bPressureByMe(in_l, in_r) {
+		// 9911090 ---> [9911][9]
+		if ((in_l[in_l.length - 1] !== cLineParser.#empty) &&
+			(cLineParser.#cntEmpty(in_l) >= 1)) {
+			if ((in_r.length === 1) &&
+				(in_r[0] === cLineParser.#empty)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	static #fmt_bInnerByMe(in_l, in_r) {
+		// 110199 --> [11][199]
+		if ((in_l[in_l.length - 1] === in_r[0]) &&
+			(in_r[0] !== cLineParser.#empty)) {
+			return true;
+		}
+		return false;
+	}
+	static parse(in_items, in_player, in_loop, in_debug = false) {
+		const parsed = {
+			eCriticalToMe : false,
+			ePreRiskToMe : false,
+			ePressureToMe : false,
+			ePrePressureToMe : false,
+			ePressureByMe : false,
+			bOccupiedByMe : false,
+			bPreOccupiedByMe : false,
+			bOccupiedByBoth : false,
+			bPressureToMe : false,
+			bPrePressureToMe : false,
+			bPressureByMe : false,
+			bPreOuterByMe : false,
+			bOuterByMe : false,
+			bInnerByMe : false,
+			safetyScore : 0
+		};
+		let items;
+		if (in_loop) {
+			items = [...in_items];
+		} else {
+			items = [cLineParser.#border, ...in_items, cLineParser.#border];
+		}
+		/*
+			(1) as in_player should be exist from here, split array using in_player
+
+				from ...
+
+				ex1 : [12*34]
+				ex2 : [12*34*]
+				ex3 : [*12*34*]
+
+				to ...
+
+				ex1 (loop) : [12],[34]
+				ex2 (loop) : [12],[34],[]
+				ex3 (loop) : [],[12],[34],[]
+
+				ex1 (non-loop) : [B12],[45B]
+				ex2 (non-loop) : [B12],[34],[B]
+				ex3 (non-loop) : [B],[12],[34],[B]
+		*/
+		let meCnt = 0;
+		let meMaxIx = 0;
+		let meStart = false;
+		let emptyInLine = false;
+		// the 1st item may be empty
+		const subsets = [[]];
+		for (let i = 0; i < items.length; i++) {
+			if (items[i] === in_player) {
+				meCnt++;
+				if (meStart) {
+					continue;
+				} else {
+					meStart = true;
+					// the last item may be empty
+					subsets[++meMaxIx] = [];
+				}
+			} else {
+				meStart = false;
+				if (items[i] === cLineParser.#empty) {
+					emptyInLine = true;
+				}
+				subsets[meMaxIx].push(items[i]);
+			}
+		}
+		if (emptyInLine) {
+			parsed.bPreOccupiedByMe = (meCnt === in_items.length - 1);
+		} else {
+			parsed.bOccupiedByMe = (meCnt === in_items.length);
+			parsed.bOccupiedByBoth = (meCnt > 0);
+		}
+		if (parsed.bOccupiedByMe || parsed.bPreOccupiedByMe || parsed.bOccupiedByBoth || (meCnt === 0)) {
+			return parsed;
+		}
+		/*
+			(2) relate left side / right side to in_player
+
+				from ...
+
+				ex1 : [12*34]
+				ex2 : [12*34*]
+				ex3 : [*12*34*]
+
+				to ...
+
+				ex1 (loop) : L[12]+R[34]
+				ex2 (loop) : L[12]+R[34], L[34]+R[]
+				ex3 (loop) : L[]+R[12],L[12]+R[34],L[34]+R[]
+
+				ex1 (non-loop) : L[B12]+R[45B]
+				ex2 (non-loop) : L[B12]+R[34],L[34]+R[B]
+				ex3 (non-loop) : L[B]+R[12],L[12]+R[34],L[34]+R[B]
+		*/
+		const meNodes = [];
+		for (let i = 0; i < meMaxIx; i++) {
+			meNodes[i] = {
+				L : subsets[i],
+				R : subsets[i + 1]
+			};
+		}
+		/*
+			(3) normalize
+
+				from ...
+
+				ex1 : [12*34]
+				ex2 : [12*34*]
+				ex3 : [*12*34*]
+
+				to ...
+
+				ex1 (loop) : L[3412]+R[3412]
+				ex2 (loop) : L[12]+R[34],L[34]+R[12]
+				ex3 (loop) : L[34]+R[12],L[12]+R[34]
+
+				ex1 (non-loop) : L[B12]+R[45B]
+				ex2 (non-loop) : L[B12]+R[34],L[34]+R[B]
+				ex3 (non-loop) : L[B]+R[12],L[12]+R[34],L[34]+R[B]
+		*/
+		const meFirst = meNodes[0];
+		const meLast = meNodes[meNodes.length - 1];
+		if (in_loop) {
+			if ((meFirst.L.length === 0) && (meLast.R.length === 0)) {
+				meFirst.L = [...meLast.L];
+				meNodes.pop();
+			} else {
+				meFirst.L = [...meLast.R, ...meFirst.L];
+				meLast.R = meFirst.L;
+			}
+		}
+		/*
+			(4) bPreOuterByMe, bOuterByMe
+		*/
+		if (in_loop) {
+			for (let i = 0; i < meNodes.length; i++) {
+				const cnt = cLineParser.#cntEmpty(meNodes[i].L);
+				parsed['bPreOuterByMe'] ||= (cnt === 1);
+				parsed['bOuterByMe'] ||= (cnt === 0);
+			}
+		} else {
+			// except for both edges
+			for (let i = 1; i < subsets.length - 1; i++) {
+				const cnt = cLineParser.#cntEmpty(subsets[i]);
+				parsed['bPreOuterByMe'] ||= (cnt === 1);
+				parsed['bOuterByMe'] ||= (cnt === 0);
+			}
+		}
+		/*
+			(5) calculate score + check format
+		*/
+		const formatArr = [
+			['eCriticalToMe', cLineParser.#fmt_eCriticalToMe],
+			['ePreRiskToMe', cLineParser.#fmt_ePreRiskToMe],
+			['ePressureToMe', cLineParser.#fmt_ePressureToMe],
+			['ePrePressureToMe', cLineParser.#fmt_ePrePressureToMe],
+			['ePressureByMe', cLineParser.#fmt_ePressureByMe],
+			['bPressureToMe', cLineParser.#fmt_bPressureToMe],
+			['bPrePressureToMe', cLineParser.#fmt_bPrePressureToMe],
+			['bPressureByMe', cLineParser.#fmt_bPressureByMe],
+			['bInnerByMe', cLineParser.#fmt_bInnerByMe]
+		];
+		for (let i = 0; i < meNodes.length; i++) {
+			const curr = meNodes[i];
+			const neighborL = curr.L[curr.L.length - 1];
+			const neighborR = curr.R[0];
+			if ((neighborL === neighborR) ||
+				(neighborL === cLineParser.#border) ||
+				(neighborR === cLineParser.#border)) {
+				parsed.safetyScore += 1;
+			} else {
+				parsed.safetyScore -= 1;
+			}
+			const reversedR = curr.R.toReversed();
+			const reversedL = curr.L.toReversed()
+			formatArr.forEach(([in_format, in_checker]) => {
+				if (parsed[in_format]) {
+					return;
+				}
+				const toL = (in_checker)(curr.L, curr.R);
+				const toR = (in_checker)(reversedR, reversedL);
+				parsed[in_format] = toL || toR;
+			});
+		}
+		return parsed;
+	}
+}
+
+(in_test => {
+
+if (!in_test) {
+	return;
+}
+
+const suites = [
+
+	{group : '*** 1. there is no pc ***'},
+
+		{items : [9,9,9,9,9,9,9,9], loop : false, safetyScore : 0, dp : false},
+		{items : [9,9,9,9,1,2,1,2], loop : false, safetyScore : 0, dp : false},
+		{items : [1,2,1,2,1,2,1,2], loop : false, safetyScore : 0, dp : false},
+
+		{items : [9,9,9,9,9,9,9,9], loop : true, safetyScore : 0, dp : false},
+		{items : [9,9,9,9,1,2,1,2], loop : true, safetyScore : 0, dp : false},
+		{items : [1,2,1,2,1,2,1,2], loop : true, safetyScore : 0, dp : false},
+
+	{group : '*** 2. no empty ***'},
+
+		{items : [0,0,0,0,0,0,0,0], loop : false, safetyScore : 0, dp : false},
+		{items : [1,2,1,2,0,0,0,0], loop : false, safetyScore : 0, dp : false},
+
+		{items : [0,0,0,0,0,0,0,0], loop : true, safetyScore : 0, dp : false},
+		{items : [1,2,1,2,0,0,0,0], loop : true, safetyScore : 0, dp : false},
+
+	{group : '*** 3. pc is on the left side ***'},
+
+		{items : [0,9,9,9,9,9,9,9], loop : false, safetyScore : 1, dp : false},
+		{items : [0,1,9,9,9,9,9,9], loop : false, safetyScore : 1, dp : false},
+		{items : [0,9,9,9,9,9,9,1], loop : false, safetyScore : 1, dp : false},
+		{items : [0,1,9,9,9,9,9,1], loop : false, safetyScore : 1, dp : false},
+
+		{items : [0,9,9,9,9,9,9,9], loop : true, safetyScore : 1, dp : false},
+		{items : [0,1,9,9,9,9,9,9], loop : true, safetyScore : -1, dp : false},
+		{items : [0,9,9,9,9,9,9,1], loop : true, safetyScore : -1, dp : false},
+		{items : [0,1,9,9,9,9,9,1], loop : true, safetyScore : 1, dp : false},
+		{items : [0,1,9,9,9,9,9,2], loop : true, safetyScore : -1, dp : false},
+
+	{group : '*** 4. pc is on the right side ***'},
+
+		{items : [9,9,9,9,9,9,9,0], loop : false, safetyScore : 1, dp : false},
+		{items : [9,9,9,9,9,9,1,0], loop : false, safetyScore : 1, dp : false},
+		{items : [1,9,9,9,9,9,9,0], loop : false, safetyScore : 1, dp : false},
+		{items : [1,9,9,9,9,9,1,0], loop : false, safetyScore : 1, dp : false},
+
+		{items : [9,9,9,9,9,9,9,0], loop : true, safetyScore : 1, dp : false},
+		{items : [9,9,9,9,9,9,1,0], loop : true, safetyScore : -1, dp : false},
+		{items : [1,9,9,9,9,9,9,0], loop : true, safetyScore : -1, dp : false},
+		{items : [1,0,9,9,9,9,1,0], loop : true, safetyScore : 0, dp : false},
+		{items : [2,0,9,9,9,9,1,0], loop : true, safetyScore : -2, dp : false},
+
+	{group : '*** 5. pc is on the both sides ***'},
+
+		{items : [0,9,9,9,9,9,9,0], loop : false, safetyScore : 2, dp : false},
+		{items : [0,1,9,9,9,9,9,0], loop : false, safetyScore : 2, dp : false},
+		{items : [0,9,9,9,9,9,1,0], loop : false, safetyScore : 2, dp : false},
+		{items : [0,1,9,9,9,9,1,0], loop : false, safetyScore : 2, dp : false},
+
+		{items : [0,9,9,9,9,9,9,0], loop : true, safetyScore : 1, dp : false},
+		{items : [0,1,9,9,9,9,9,0], loop : true, safetyScore : -1, dp : false},
+		{items : [0,9,9,9,9,9,1,0], loop : true, safetyScore : -1, dp : false},
+		{items : [0,1,9,9,9,9,1,0], loop : true, safetyScore : 1, dp : false},
+		{items : [0,2,9,9,9,9,1,0], loop : true, safetyScore : -1, dp : false},
+
+	{group : '*** 6. npc is on the both sides ***'},
+
+		{items : [1,9,9,9,9,9,9,1], loop : false, safetyScore : 0, dp : false},
+		{items : [1,0,9,9,9,9,9,1], loop : false, safetyScore : -1, dp : false},
+		{items : [1,9,9,9,9,9,0,1], loop : false, safetyScore : -1, dp : false},
+		{items : [1,0,9,9,9,9,0,1], loop : false, safetyScore : -2, dp : false},
+
+		{items : [1,9,9,9,9,9,9,1], loop : true, safetyScore : 0, dp : false},
+		{items : [1,0,9,9,9,9,9,1], loop : true, safetyScore : -1, dp : false},
+		{items : [1,9,9,9,9,9,0,1], loop : true, safetyScore : -1, dp : false},
+		{items : [1,0,9,9,9,9,0,1], loop : true, safetyScore : -2, dp : false},
+
+	{group : '*** 7. bOccupiedByMe ***'},
+
+		{items : [1,1,1,1,1,1,1,1], loop : false, bOccupiedByMe : false, dp : false},
+		{items : [0,0,0,0,0,0,0,0], loop : false, bOccupiedByMe : true, dp : false},
+		{items : [0,0,0,9,0,0,0,0], loop : false, bOccupiedByMe : false, dp : false},
+
+		{items : [1,1,1,1,1,1,1,1], loop : true, bOccupiedByMe : false, dp : false},
+		{items : [0,0,0,0,0,0,0,0], loop : true, bOccupiedByMe : true, dp : false},
+		{items : [0,0,0,9,0,0,0,0], loop : true, bOccupiedByMe : false, dp : false},
+
+	{group : '*** 8. bPreOccupiedByMe ***'},
+
+		{items : [1,1,1,1,1,1,1,1], loop : false, bPreOccupiedByMe : false, dp : false},
+		{items : [0,0,0,0,0,0,0,0], loop : false, bPreOccupiedByMe : false, dp : false},
+		{items : [0,0,0,1,0,0,0,0], loop : false, bPreOccupiedByMe : false, dp : false},
+		{items : [0,0,0,9,0,0,0,0], loop : false, bPreOccupiedByMe : true, dp : false},
+
+		{items : [1,1,1,1,1,1,1,1], loop : true, bPreOccupiedByMe : false, dp : false},
+		{items : [0,0,0,0,0,0,0,0], loop : true, bPreOccupiedByMe : false, dp : false},
+		{items : [0,0,0,1,0,0,0,0], loop : true, bPreOccupiedByMe : false, dp : false},
+		{items : [0,0,0,9,0,0,0,0], loop : true, bPreOccupiedByMe : true, dp : false},
+
+	{group : '*** 9. bOccupiedByBoth ***'},
+
+		{items : [1,1,1,1,1,1,1,1], loop : false, bOccupiedByBoth : false, dp : false},
+		{items : [1,1,1,9,0,1,1,1], loop : false, bOccupiedByBoth : false, dp : false},
+		{items : [1,1,1,0,0,1,1,1], loop : false, bOccupiedByBoth : true, dp : false},
+		{items : [0,0,0,0,0,0,0,0], loop : false, bOccupiedByBoth : true, dp : false},
+		{items : [0,0,0,9,0,0,0,0], loop : false, bOccupiedByBoth : false, dp : false},
+
+		{items : [1,1,1,1,1,1,1,1], loop : true, bOccupiedByBoth : false, dp : false},
+		{items : [1,1,1,9,0,1,1,1], loop : true, bOccupiedByBoth : false, dp : false},
+		{items : [1,1,1,0,0,1,1,1], loop : true, bOccupiedByBoth : true, dp : false},
+		{items : [0,0,0,0,0,0,0,0], loop : true, bOccupiedByBoth : true, dp : false},
+		{items : [0,0,0,9,0,0,0,0], loop : true, bOccupiedByBoth : false, dp : false},
+
+	{group : '*** 10. bOuterByMe ***'},
+
+		{items : [0,1,0,9,9,9,9,9], loop : false, bOuterByMe : true, dp : false},
+		{items : [1,0,9,9,9,9,9,0], loop : false, bOuterByMe : false, dp : false},
+		{items : [0,9,9,9,9,9,0,1], loop : false, bOuterByMe : false, dp : false},
+		{items : [9,9,9,9,9,0,1,0], loop : false, bOuterByMe : true, dp : false},
+		{items : [9,9,0,1,2,0,9,9], loop : false, bOuterByMe : true, dp : false},
+		{items : [2,0,9,9,9,9,0,1], loop : false, bOuterByMe : false, dp : false},
+
+		{items : [0,1,0,9,9,9,9,9], loop : true, bOuterByMe : true, dp : false},
+		{items : [1,0,9,9,9,9,9,0], loop : true, bOuterByMe : true, dp : false},
+		{items : [0,9,9,9,9,9,0,1], loop : true, bOuterByMe : true, dp : false},
+		{items : [9,9,9,9,9,0,1,0], loop : true, bOuterByMe : true, dp : false},
+		{items : [9,9,0,1,2,0,9,9], loop : true, bOuterByMe : true, dp : false},
+		{items : [2,0,9,9,9,9,0,1], loop : true, bOuterByMe : true, dp : false},
+
+	{group : '*** 11. bPreOuterByMe ***'},
+
+		{items : [9,0,9,9,9,9,9,0], loop : false, bPreOuterByMe : false, dp : false},
+		{items : [0,9,0,9,9,9,9,9], loop : false, bPreOuterByMe : true, dp : false},
+		{items : [9,0,9,0,9,9,9,9], loop : false, bPreOuterByMe : true, dp : false},
+		{items : [9,0,1,0,9,9,9,9], loop : false, bPreOuterByMe : false, dp : false},
+		{items : [9,0,9,9,0,9,9,9], loop : false, bPreOuterByMe : false, dp : false},
+
+		{items : [9,0,9,9,9,9,9,0], loop : true, bPreOuterByMe : true, dp : false},
+
+	{group : '*** 12. eCriticalToMe ***'},
+
+		{items : [0,1,9,9,9,9,9,9], loop : false, eCriticalToMe : false, dp : false},
+		{items : [9,0,1,9,9,9,9,9], loop : false, eCriticalToMe : true, dp : false},
+		{items : [9,0,1,0,9,9,9,9], loop : false, eCriticalToMe : true, dp : false},
+		{items : [9,0,1,2,9,9,9,9], loop : false, eCriticalToMe : true, dp : false},
+		{items : [9,0,9,1,9,9,9,9], loop : false, eCriticalToMe : false, dp : false},
+
+		{items : [9,9,9,9,9,9,1,0], loop : false, eCriticalToMe : false, dp : false},
+		{items : [9,9,9,9,9,1,0,9], loop : false, eCriticalToMe : true, dp : false},
+		{items : [9,9,9,9,0,1,0,9], loop : false, eCriticalToMe : true, dp : false},
+		{items : [9,9,9,9,2,1,0,9], loop : false, eCriticalToMe : true, dp : false},
+		{items : [9,9,9,9,1,9,0,9], loop : false, eCriticalToMe : false, dp : false},
+
+	{group : '*** 13. ePreRiskToMe ***'},
+
+		{items : [9,0,9,0,9,9,9,9], loop : false, ePreRiskToMe : true, dp : false},
+		{items : [9,0,9,9,0,9,9,9], loop : false, ePreRiskToMe : false, dp : false},
+		{items : [9,9,0,9,0,9,9,9], loop : false, ePreRiskToMe : false, dp : false},
+		{items : [9,0,0,9,0,0,9,9], loop : false, ePreRiskToMe : true, dp : false},
+
+		{items : [9,9,9,9,0,9,0,9], loop : false, ePreRiskToMe : true, dp : false},
+		{items : [9,9,9,0,9,9,0,9], loop : false, ePreRiskToMe : false, dp : false},
+		{items : [9,9,9,0,9,0,9,9], loop : false, ePreRiskToMe : false, dp : false},
+		{items : [9,9,0,0,9,0,0,9], loop : false, ePreRiskToMe : true, dp : false},
+
+	{group : '*** 14. ePressureToMe ***'},
+
+		{items : [9,0,1,9,1,9,9,9], loop : false, ePressureToMe : true, dp : false},
+		{items : [9,9,0,1,9,1,9,9], loop : false, ePressureToMe : false, dp : false},
+		{items : [9,0,0,1,1,9,1,9], loop : false, ePressureToMe : true, dp : false},
+		{items : [9,0,1,9,1,9,9,9], loop : true, ePressureToMe : false, dp : false},
+		{items : [9,9,0,1,9,1,9,9], loop : true, ePressureToMe : false, dp : false},
+		{items : [9,0,0,1,1,9,1,9], loop : true, ePressureToMe : false, dp : false},
+
+		{items : [9,9,1,9,1,0,9,9], loop : false, ePressureToMe : false, dp : false},
+		{items : [9,1,9,1,1,0,0,9], loop : false, ePressureToMe : true, dp : false},
+
+	{group : '*** 15. bPressureToMe ***'},
+
+		{items : [9,0,1,9,1,9,9,9], loop : false, bPressureToMe : true, dp : false},
+		{items : [9,9,0,1,9,1,9,9], loop : false, bPressureToMe : true, dp : false},
+		{items : [9,0,0,1,1,9,1,9], loop : false, bPressureToMe : true, dp : false},
+		{items : [9,0,1,9,1,9,9,9], loop : true, bPressureToMe : true, dp : false},
+		{items : [9,9,0,1,9,1,9,9], loop : true, bPressureToMe : true, dp : false},
+		{items : [9,0,0,1,1,9,1,9], loop : true, bPressureToMe : true, dp : false},
+
+		{items : [9,9,1,9,1,0,9,9], loop : false, bPressureToMe : true, dp : false},
+		{items : [9,1,9,1,1,0,0,9], loop : false, bPressureToMe : true, dp : false},
+
+	{group : '*** 16. ePrePressureToMe ***'},
+
+		{items : [9,0,9,9,1,9,9,9], loop : false, ePrePressureToMe : true, dp : false},
+		{items : [9,9,0,9,9,1,9,9], loop : false, ePrePressureToMe : false, dp : false},
+		{items : [9,0,0,9,1,9,1,9], loop : false, ePrePressureToMe : true, dp : false},
+		{items : [9,0,9,9,1,9,9,9], loop : true, ePrePressureToMe : false, dp : false},
+		{items : [9,9,0,9,9,1,9,9], loop : true, ePrePressureToMe : false, dp : false},
+		{items : [9,0,0,9,1,9,1,9], loop : true, ePrePressureToMe : false, dp : false},
+
+		{items : [9,9,1,9,9,0,9,9], loop : false, ePrePressureToMe : false, dp : false},
+		{items : [9,1,9,1,9,0,0,9], loop : false, ePrePressureToMe : true, dp : false},
+
+	{group : '*** 17. bPrePressureToMe ***'},
+
+		{items : [9,0,9,9,1,9,9,9], loop : false, bPrePressureToMe : true, dp : false},
+		{items : [9,9,0,9,9,1,9,9], loop : false, bPrePressureToMe : true, dp : false},
+		{items : [9,0,0,9,1,9,1,9], loop : false, bPrePressureToMe : true, dp : false},
+		{items : [9,0,9,9,1,9,9,9], loop : true, bPrePressureToMe : true, dp : false},
+		{items : [9,9,0,9,9,1,9,9], loop : true, bPrePressureToMe : true, dp : false},
+		{items : [9,0,0,9,1,9,1,9], loop : true, bPrePressureToMe : true, dp : false},
+
+		{items : [9,9,1,9,9,0,9,9], loop : false, bPrePressureToMe : true, dp : false},
+		{items : [9,1,9,1,9,0,0,9], loop : false, bPrePressureToMe : true, dp : false},
+
+	{group : '*** 18. ePressureByMe ***'},
+
+		{items : [1,1,0,9,0,9,9,9], loop : false, ePressureByMe : false, dp : false},
+		{items : [9,9,1,0,9,0,9,9], loop : false, ePressureByMe : false, dp : false},
+		{items : [9,1,0,9,0,9,9,9], loop : false, ePressureByMe : true, dp : false},
+		{items : [9,1,0,0,9,0,9,9], loop : false, ePressureByMe : true, dp : false},
+		{items : [9,1,1,0,9,0,9,9], loop : false, ePressureByMe : true, dp : false},
+		{items : [9,1,1,0,9,0,9,9], loop : true, ePressureByMe : false, dp : false},
+
+		{items : [9,9,9,0,9,0,1,1], loop : false, ePressureByMe : false, dp : false},
+		{items : [9,9,0,9,0,1,9,9], loop : false, ePressureByMe : false, dp : false},
+		{items : [9,9,9,0,9,0,1,9], loop : false, ePressureByMe : true, dp : false},
+		{items : [9,9,0,9,0,0,1,9], loop : false, ePressureByMe : true, dp : false},
+		{items : [9,9,0,9,0,1,1,9], loop : false, ePressureByMe : true, dp : false},
+		{items : [9,9,0,9,0,1,1,9], loop : true, ePressureByMe : false, dp : false},
+
+	{group : '*** 19. bPressureByMe ***'},
+
+		{items : [1,1,0,9,0,9,9,9], loop : false, bPressureByMe : false, dp : false},
+		{items : [9,9,1,0,9,0,9,9], loop : false, bPressureByMe : true, dp : false},
+		{items : [9,1,0,9,0,9,9,9], loop : false, bPressureByMe : true, dp : false},
+		{items : [9,1,0,0,9,0,9,9], loop : false, bPressureByMe : true, dp : false},
+		{items : [9,1,1,0,9,0,9,9], loop : false, bPressureByMe : true, dp : false},
+		{items : [9,1,1,0,9,0,9,9], loop : true, bPressureByMe : true, dp : false},
+
+		{items : [9,9,9,0,9,0,1,1], loop : false, bPressureByMe : false, dp : false},
+		{items : [9,9,0,9,0,1,9,9], loop : false, bPressureByMe : true, dp : false},
+		{items : [9,9,9,0,9,0,1,9], loop : false, bPressureByMe : true, dp : false},
+		{items : [9,9,0,9,0,0,1,9], loop : false, bPressureByMe : true, dp : false},
+		{items : [9,9,0,9,0,1,1,9], loop : false, bPressureByMe : true, dp : false},
+		{items : [9,9,0,9,0,1,1,9], loop : true, bPressureByMe : true, dp : false},
+
+	{group : '*** 20. bInnerByMe ***'},
+
+		{items : [9,9,9,9,9,9,9,9], loop : false, bInnerByMe : false, dp : false},
+
+		{items : [1,0,1,9,9,9,9,9], loop : false, bInnerByMe : true, dp : false},
+		{items : [1,0,0,1,9,9,9,9], loop : false, bInnerByMe : true, dp : false},
+		{items : [2,0,0,1,9,9,9,9], loop : false, bInnerByMe : false, dp : false},
+		{items : [1,9,0,1,9,9,9,9], loop : false, bInnerByMe : false, dp : false},
+
+		{items : [0,1,9,9,9,9,9,1], loop : false, bInnerByMe : false, dp : false},
+		{items : [0,1,9,9,9,9,1,0], loop : false, bInnerByMe : false, dp : false},
+		{items : [0,1,9,9,9,9,2,0], loop : false, bInnerByMe : false, dp : false},
+		{items : [0,1,9,9,9,9,1,9], loop : false, bInnerByMe : false, dp : false},
+
+		{items : [0,1,9,9,9,9,9,1], loop : true, bInnerByMe : true, dp : false},
+		{items : [0,1,9,9,9,9,1,0], loop : true, bInnerByMe : true, dp : false},
+		{items : [0,1,9,9,9,9,2,0], loop : true, bInnerByMe : false, dp : false},
+		{items : [0,1,9,9,9,9,1,9], loop : true, bInnerByMe : false, dp : false}
+];
+
+suites.forEach(in_suite => {
+	if (in_suite.group) {
+		console.log(in_suite.group);
+	} else {
+		const parsed = cLineParser.parse(in_suite.items, 0, in_suite.loop, in_suite.dp);
+		Object.keys(parsed).forEach(in_prop => {
+			if (!in_suite.hasOwnProperty(in_prop)) {
+				return;
+			}
+			if (in_suite[in_prop] !== parsed[in_prop]) {
+				const loop = in_suite.loop ? ' (loop)' : '';
+				console.log('failed : ' + in_suite.items.join() + loop + ' is ' + parsed[in_prop]);
+			}
+		});
+	}
+});
+
+})(false);
+
+class cReversi {
+	static maximizedRecMap = new Map();
+	static #maximize(in_evaluator, in_player, in_candArr) {
+		const evaluated = new Map();
+		in_candArr.forEach(in_cand => evaluated.set(in_cand, (in_evaluator)(in_player, in_cand)));
+		const max = {
+			current : -Infinity,
+			candArr : []
+		};
+		for (const [cand, score] of evaluated.entries()) {
+			if (score > max.current) {
+				max.current = score;
+				max.candArr = [cand];
+			} else {
+				if (score === max.current) {
+					// tie-break
+					max.candArr.push(cand);
+				}
+			}
+		}
+		if (max.candArr.length === 0) {
+			throw new Error('can not maximize');
+		}
+		const rec = cReversi.maximizedRecMap.get(in_player) ?? 0;
+		if (rec < max.current) {
+			cReversi.maximizedRecMap.set(in_player, max.current);
+		}
+		return max.candArr;
+	}
+	static #rotateArray(in_array, in_shiftCnt, in_shiftRight = true) {
+		const len = in_array.length;
+		let shiftCnt = ((in_shiftCnt % len) + len) % len;
+		if (in_shiftRight) {
+			// reverse
+			shiftCnt = (len - shiftCnt) % len;
+		}
+		return in_array.slice(shiftCnt).concat(in_array.slice(0, shiftCnt));
+	}
+	static #dmz = 8;
+	static #empty = 9;
+	static #maxPlayers = 6;
+	static #validData = (() => {
+		const arr = [cReversi.#dmz, cReversi.#empty];
+		for (let player = 0; player < cReversi.#maxPlayers; player++) {
+			arr.push(player);
+		}
+		return arr;
+	})();
+	static #addUniqueSet(in_newSet, in_arr) {
+		const duplicated = in_arr.some(in_addedSet => {
+			if (in_newSet.size !== in_addedSet.size) {
+				return false;
+			}
+			for (const item of in_newSet) {
+				if (!in_addedSet.has(item)) {
+					return false;
+				}
+			}
+			return true;
+		});
+		if (!duplicated) {
+			in_arr.push(in_newSet);
+		}
+	}
+	static #dirStyle = {
+		square : {
+			onehand : {
+				regular : [
+					[-1, -1],
+					[-1,  0],
+					[-1, +1],
+					[ 0, -1],
+					[ 0, +1],
+					[+1, -1],
+					[+1,  0],
+					[+1, +1]
+				],
+				offset : [
+					[-1, -1],
+					[-1,  0],
+					[-1, +1],
+					[ 0, -1],
+					[ 0, +1],
+					[+1, -1],
+					[+1,  0],
+					[+1, +1]
+				]
+			},
+			pair : new Map([
+				[  0, [1, 6]],
+				[ 45, [2, 5]],
+				[ 90, [3, 4]],
+				[135, [0, 7]]
+			])
+		},
+		hexPointyTopped : {
+			onehand : {
+				/*
+					@@
+					@+@
+					@@
+				*/
+				regular : [
+					[-1, -1],
+					[-1,  0],
+					[ 0, +1],
+					[+1,  0],
+					[+1, -1],
+					[ 0, -1]
+				],
+				/*
+					 @@
+					@+@
+					 @@
+				*/
+				offset : [
+					[-1,  0],
+					[-1, +1],
+					[ 0, +1],
+					[+1, +1],
+					[+1,  0],
+					[ 0, -1]
+				]
+			},
+			pair : new Map([
+				[ 30, [1, 4]],
+				[ 90, [2, 5]],
+				[150, [0, 3]]
+			])
+		},
+		hexFlatTopped : {
+			onehand : {
+				/*
+					@@@
+					@+@
+					 @
+				*/
+				regular : [
+					[-1, -1],
+					[-1,  0],
+					[-1, +1],
+					[ 0, +1],
+					[+1,  0],
+					[ 0, -1]
+				],
+				/*
+					 @
+					@+@
+					@@@
+				*/
+				offset : [
+					[ 0, -1],
+					[-1,  0],
+					[ 0, +1],
+					[+1, +1],
+					[+1,  0],
+					[+1, -1]
+				]
+			},
+			pair : new Map([
+				[  0, [1, 4]],
+				[ 60, [2, 5]],
+				[120, [0, 3]]
+			])
+		}
+	};
+	#area = {
+		items : [],
+		initialItems : [],
+		options : new Set(),
+		scores : {
+			default : [],
+			players : []
+		}
+	};
+	#npcArgoPriority = [];
+	#history = [];
+	#conf = null;
+	#getDirections(in_row, in_col) {
+		const dirStyle = this.#conf.dirStyle;
+		let useOffset = false;
+		if (dirStyle.pair.get(0)) {
+			// square or hexFlatTopped
+			useOffset = (in_col % 2 === this.#conf.offset);
+		} else {
+			// hexPointyTopped
+			useOffset = (in_row % 2 === this.#conf.offset);
+		}
+		if (useOffset) {
+			return dirStyle.onehand.offset;
+		} else {
+			return dirStyle.onehand.regular;
+		}
+	}
+	#getDirection(in_row, in_col, in_dirIx) {
+		return this.#getDirections(in_row, in_col)[in_dirIx];
+	}
+	#aroundIndexes(in_ix) {
+		const pos = this.#indexToPos(in_ix);
+		return this.#aroundPositions(pos.row, pos.col).map(([in_row, in_col]) => this.#posToIndex(in_row, in_col));
+	}
+	#aroundPositions(in_row, in_col) {
+		const directions = this.#getDirections(in_row, in_col);
+		const aroundPos = [];
+		const sizeRow = this.#conf.row.size;
+		const sizeCol = this.#conf.col.size;
+		directions.forEach(([in_dr, in_dc]) => {
+			let row = in_row + in_dr;
+			let col = in_col + in_dc;
+			if ((row < 0) || (sizeRow -1 < row)) {
+				if (this.#conf.row.edge) {
+					return;
+				} else {
+					row = (sizeRow + row) % sizeRow;
+				}
+			}
+			if ((col < 0) || (sizeCol -1 < col)) {
+				if (this.#conf.col.edge) {
+					return;
+				} else {
+					col = (sizeCol + col) % sizeCol;
+				}
+			}
+			aroundPos.push([row, col]);
+		});
+		return aroundPos;
+	}
+	#indexesUntil(in_indexes, in_item) {
+		const toItem = in_indexes.findIndex(in_ix => this.#getItemByIndex(in_ix) === in_item);
+		if (toItem < 0) {
+			return in_indexes;
+		} else {
+			return in_indexes.slice(0, toItem);
+		}
+	}
+	constructor(in_table, in_rowEdge, in_colEdge, in_format = 'square', in_offset = 1) {
+		const sizeRow = in_table.length;
+		const sizeCol = in_table.reduce((in_maxLen, in_row) => {
+			return Math.max(in_maxLen, in_row.length);
+		}, 0);
+		if (cReversi.#dirStyle.hasOwnProperty(in_format)) {
+			if (!in_rowEdge && (sizeRow % 2 === 1) && (in_format === 'hexPointyTopped')) {
+				throw new Error('invalid rows (' + sizeRow + ') for row-loop of ' + in_format);
+			}
+			if (!in_colEdge && (sizeCol % 2 === 1) && (in_format === 'hexFlatTopped')) {
+				throw new Error('invalid cols (' + sizeRow + ') for col-loop of ' + in_format);
+			}
+		} else {
+			throw new Error('invalid input');
+		}
+		const dirStyle = cReversi.#dirStyle[in_format];
+		this.#conf = {
+			row : {
+				size : sizeRow,
+				edge : in_rowEdge
+			},
+			col : {
+				size : sizeCol,
+				edge : in_colEdge
+			},
+			dirStyle : dirStyle,
+			// square can accommodate any offset
+			offset : (in_offset % 2),
+			rotatable : {
+				fixedCol : !in_rowEdge && dirStyle.pair.has(0),
+				fixedRow : !in_colEdge && dirStyle.pair.has(90)
+			},
+			tagIndexes : {
+				radiating : [],
+				edgeSetArr : [],
+				cornerSet : new Set(),
+				xInsideSet : new Set()
+			}
+		};
+		this.#setTable(in_table);
+		this.#area.initialItems = [...this.#area.items];
+		this.#initTagIndexes();
+		this.#initScore();
+		const argoArr = ['spiteful', 'safety', 'greedy', 'rational', 'classic', 'monkey'];
+		for (let i = 0; i < argoArr.length; i++) {
+			this.#npcArgoPriority.push((argoArr.slice(0, i + 1))[arrRand]());
+		}
+		this.#updateOptionsAll();
+		cReversi.maximizedRecMap.clear();
+		// console.log(this.#conf.tagIndexes);
+	}
+	#initTagIndexesRadiating() {
+		const tagIndexes = this.#conf.tagIndexes;
+		for (let areaIx = 0; areaIx < this.#area.items.length; areaIx++) {
+			const {row : initRow, col : initCol} = this.#indexToPos(areaIx);
+			const radiating = tagIndexes.radiating[areaIx] = [];
+			const dirStyle = this.#getDirections(initRow, initCol);
+			// don't need radiating which starts from dmz
+			const wouldScan = (this.#getItemByIndex(areaIx) !== cReversi.#dmz);
+			for (let dirIx = 0; dirIx < dirStyle.length; dirIx++) {
+				const towards = [];
+				let currRow = initRow;
+				let currCol = initCol;
+				while (wouldScan) {
+					const [dr, dc] = this.#getDirection(currRow, currCol, dirIx);
+					currRow += dr;
+					if (this.#conf.row.edge) {
+						if ((currRow < 0) || (this.#conf.row.size - 1 < currRow)) {
+							// out of range
+							break;
+						}
+					} else {
+						currRow = (currRow + this.#conf.row.size) % this.#conf.row.size;
+						if ((currRow === initRow) && (dr !== 0)) {
+							// cyclic
+							break;
+						}
+					}
+					currCol += dc;
+					if (this.#conf.col.edge) {
+						if ((currCol < 0) || (this.#conf.col.size - 1 < currCol)) {
+							// out of range
+							break;
+						}
+					} else {
+						currCol = (currCol + this.#conf.col.size) % this.#conf.col.size;
+						if ((currCol === initCol) && (dc !== 0)) {
+							// cyclic
+							break;
+						}
+					}
+					towards.push(this.#posToIndex(currRow, currCol));
+				}
+				radiating.push(towards);
+			}
+		}
+	}
+	#initTagIndexes() {
+		this.#initTagIndexesRadiating();
+		const pairs = Array.from(this.#conf.dirStyle.pair.values());
+		const edgeAdhocMinLength = 6;
+		const tagIndexes = this.#conf.tagIndexes;
+		for (let areaIx = 0; areaIx < this.#area.items.length; areaIx++) {
+			if (this.#getItemByIndex(areaIx) === cReversi.#dmz) {
+				continue;
+			}
+			const radiating = tagIndexes.radiating[areaIx];
+			// (1) edgeSetArr
+			pairs.forEach(([in_neg, in_pos]) => {
+				const neg = this.#indexesUntil(radiating[in_neg], cReversi.#dmz);
+				const pos = this.#indexesUntil(radiating[in_pos], cReversi.#dmz);
+				const edgeSet = new Set([...neg, areaIx, ...pos]);
+				if (edgeSet.size < edgeAdhocMinLength) {
+					return;
+				}
+				const isEdge = Array.from(edgeSet).every(edgeIx => {
+					const aroundArr = this.#aroundIndexes(edgeIx);
+					if (aroundArr.length < pairs.length * 2) {
+						return true;
+					}
+					return aroundArr.some(in_aroundIx => {
+						return (this.#getItemByIndex(in_aroundIx) === cReversi.#dmz);
+					});
+				});
+				if (isEdge) {
+					cReversi.#addUniqueSet(edgeSet, tagIndexes.edgeSetArr);
+				}
+			});
+			// (2) corner
+			const isCorner = pairs.every(([in_neg, in_pos]) => {
+				const N = radiating[in_neg];
+				const P = radiating[in_pos];
+				if ((N.length === 0) || (this.#getItemByIndex(N[0]) === cReversi.#dmz)) {
+					return true;
+				}
+				if ((P.length === 0) || (this.#getItemByIndex(P[0]) === cReversi.#dmz)) {
+					return true;
+				}
+				// both sides are available
+				return false;
+			});
+			if (!isCorner) {
+				continue;
+			} else {
+				tagIndexes.cornerSet.add(areaIx);
+			}
+			// (3) xInsideSet, when areaIx is corner
+			const aroundArr = this.#aroundIndexes(areaIx);
+			aroundArr.forEach(in_aroundIx => {
+				const testArr = this.#aroundIndexes(in_aroundIx);
+				if (testArr.length < pairs.length * 2) {
+					return;
+				}
+				if (testArr.every(in_testIx => this.#getItemByIndex(in_testIx) === cReversi.#empty)) {
+					tagIndexes.xInsideSet.add(in_aroundIx);
+				}
+			});
+		}
+	}
+	#indexToPos(in_ix) {
+		return {
+			row : Math.floor(in_ix / this.#conf.col.size),
+			col : in_ix % this.#conf.col.size
+		};
+	}
+	#posToIndex(in_row, in_col) {
+		return in_row * this.#conf.col.size + in_col;
+	}
+	#setItemByIndex(in_ix, in_item) {
+		this.#area.items[in_ix] = in_item;
+	}
+	#setItemByPos(in_row, in_col, in_item) {
+		this.#setItemByIndex(this.#posToIndex(in_row, in_col), in_item);
+	}
+	#getItemByIndex(in_ix) {
+		return this.#area.items[in_ix];
+	}
+	#getItemByPos(in_row, in_col) {
+		return this.#getItemByIndex(this.#posToIndex(in_row, in_col));
+	}
+	#items(in_indexes) {
+		const items = [];
+		in_indexes.forEach(in_ix => {
+			items.push(this.#getItemByIndex(in_ix));
+		});
+		return items;
+	}
+	#rotateItems(in_indexes, in_rightShiftCnt) {
+		const initialItems = in_indexes.map(in_ix => this.#getItemByIndex(in_ix));
+		const rotatedItems = cReversi.#rotateArray(initialItems, in_rightShiftCnt);
+		rotatedItems.forEach((in_item, in_order) => this.#setItemByIndex(in_indexes[in_order], in_item));
+	}
+	#rotateSameRowItems(in_fixedRow, in_deltaCol) {
+		const ix = this.#posToIndex(in_fixedRow, 0);
+		const radiating = this.#conf.tagIndexes.radiating[ix];
+		// in case of loop, neg and pos include the same indexes
+		const [neg, pos] = this.#conf.dirStyle.pair.get(90);
+		this.#rotateItems([ix, ...radiating[pos]], in_deltaCol);
+	}
+	#rotateSameColItems(in_fixedCol, in_deltaRow) {
+		const ix = this.#posToIndex(0, in_fixedCol);
+		const radiating = this.#conf.tagIndexes.radiating[ix];
+		// in case of loop, neg and pos include the same indexes
+		const [neg, pos] = this.#conf.dirStyle.pair.get(0);
+		this.#rotateItems([ix, ...radiating[pos]], in_deltaRow);
+	}
+	#flip(in_player, in_ix, in_dryRun = false) {
+		const radiating = this.#conf.tagIndexes.radiating[in_ix];
+		let flipped = false;
+		for (let i = 0; i < radiating.length; i++) {
+			const towards = radiating[i];
+			const ixArr = [in_ix];
+			let enemyAppears = false;
+			for (let j = 0; j < towards.length; j++) {
+				const ix = towards[j];
+				const item = this.#getItemByIndex(ix);
+				if (item === in_player) {
+					if (enemyAppears) {
+						if (in_dryRun) {
+							// the same as Array.some() for dry run
+							return true;
+						} else {
+							flipped = true;
+							ixArr.forEach(in_flipped_ix => this.#setItemByIndex(in_flipped_ix, in_player));
+						}
+					}
+					break;
+				} else {
+					if ((item === cReversi.#dmz) || (item === cReversi.#empty)) {
+						break;
+					} else {
+						ixArr.push(ix);
+						enemyAppears = true;
+					}
+				}
+			}
+		}
+		return flipped;
+	}
+	#tryRotation(in_player, in_action) {
+		// step1 : find rows/cols where in_player owns at least one cell
+		const rowSet = new Set();
+		const colSet = new Set();
+		for (let ix = 0; ix < this.#area.items.length; ix++) {
+			if (this.#getItemByIndex(ix) !== in_player) {
+				continue;
+			}
+			const col = ix % this.#conf.col.size;
+			const row = (ix - col) / this.#conf.col.size;
+			rowSet.add(row);
+			colSet.add(col);
+		}
+		// step2 : test for in_action. this algorithm can be improved
+		const setting = {
+			'fixed-row-rotate' : {
+				targetArr : Array.from(rowSet),
+				rotateFunc : this.#rotateSameRowItems,
+				maxCnt : this.#conf.col.size
+			},
+			'fixed-col-rotate' : {
+				targetArr : Array.from(colSet),
+				rotateFunc : this.#rotateSameColItems,
+				maxCnt : this.#conf.row.size
+			}
+		}
+		const {targetArr, rotateFunc, maxCnt} = setting[in_action];
+		const result = {target : -1, delta : -1};
+		const rollback = this.#createRollback();
+		const rotated = targetArr.some(in_target => {
+			result.target = in_target;
+			let rest = maxCnt;
+			while (--rest > 0) {
+				// rotate +1 (maxCnt - 1) times
+				rotateFunc.call(this, in_target, 1);
+				if (this.flippable(in_player)) {
+					result.delta = maxCnt - rest;
+					return true;
+				}
+			}
+			(rollback)();
+			return false;
+		});
+		if (rotated) {
+			return result;
+		} else {
+			return null;
+		}
+	}
+	#count(in_player) {
+		const items = this.#area.items.filter(in_el => in_el === in_player);
+		return items.length;
+	}
+	#emptyCnt() {
+		return this.#count(cReversi.#empty);
+	}
+	#flippableIxArr(in_player) {
+		const ixArr = [];
+		const asDryRun = true;
+		this.#area.options.forEach(in_empty_ix => {
+			if (this.#flip(in_player, in_empty_ix, asDryRun)) {
+				ixArr.push(in_empty_ix);
+			}
+		});
+		return ixArr;
+	}
+	#updateOptions(in_ix) {
+		const aroundArr = this.#aroundIndexes(in_ix);
+		aroundArr.forEach(in_aroundIx => {
+			if (this.#getItemByIndex(in_aroundIx) === cReversi.#empty) {
+				this.#area.options.add(in_aroundIx);
+			}
+		});
+		// in_ix should be new occupied position
+		this.#area.options.delete(in_ix);
+	}
+	#updateOptionsAll() {
+		this.#area.options.clear();
+		for (let ix = 0; ix < this.#area.items.length; ix++) {
+			const item = this.#getItemByIndex(ix);
+			if ((item === cReversi.#empty) || (item === cReversi.#dmz)) {
+				continue;
+			}
+			this.#updateOptions(ix);
+		}
+	}
+	#getAreaScore(in_player, in_ix) {
+		return this.#area.scores.players[in_player][in_ix];
+	}
+	#initScore() {
+		this.#initScore_forDefault();
+		this.#initScore_forPlayers();
+	}
+	#initScore_forDefault() {
+		const attenuation = 5;
+		this.#area.scores.default = new Array(this.#area.items.length).fill(0);
+		let loopCnt = 3;
+		while (loopCnt-- > 0) {
+			const buff = [];
+			for (let areaIx = 0; areaIx < this.#area.items.length; areaIx++) {
+				const aroundArr = this.#aroundIndexes(areaIx);
+				let score = this.#conf.dirStyle.pair.size * 2 - aroundArr.length;
+				aroundArr.forEach(in_aroundIx => {
+					if (this.#area.items[in_aroundIx] === cReversi.#dmz) {
+						score++;
+					} else {
+						// a cell adjacent to a high-score cell should have its score reduced
+						score -= Math.floor(this.#area.scores.default[in_aroundIx] / attenuation);
+					}
+				});
+				buff[areaIx] = score;
+			}
+			for (let areaIx = 0; areaIx < this.#area.scores.default.length; areaIx++) {
+				this.#area.scores.default[areaIx] += buff[areaIx];
+			}
+		}
+	}
+	#initScore_forPlayers() {
+		// each player has own score based on owned area
+		for (let player = 0; player < cReversi.#maxPlayers; player++) {
+			this.#area.scores.players[player] = [...this.#area.scores.default];
+		}
+	}
+	#updateScore() {
+		this.#updateScore_forPlayersCorner();
+		this.#updateScore_forPlayersEdge();
+	}
+	#updateScore_forPlayersCorner() {
+		for (const cornerIx of this.#conf.tagIndexes.cornerSet) {
+			const owner = this.#getItemByIndex(cornerIx);
+			if ((owner === cReversi.#empty) || (owner === cReversi.#dmz)) {
+				continue;
+			}
+			const aroundArr = this.#aroundIndexes(cornerIx);
+			const newScore = this.#area.scores.default[cornerIx];
+			aroundArr.forEach(in_aroundIx => this.#area.scores.players[owner][in_aroundIx] = newScore);
+		}
+	}
+	#updateScore_forPlayersEdge() {
+		const tagIndexes = this.#conf.tagIndexes;
+		tagIndexes.edgeSetArr.forEach(in_edgeSet => {
+			for (const edgeIx of in_edgeSet) {
+				const owner = this.#getItemByIndex(edgeIx);
+				if ((owner === cReversi.#dmz) || (owner === cReversi.#empty)) {
+					// edge is not owned
+					continue;
+				}
+				const aroundArr = this.#aroundIndexes(edgeIx);
+				aroundArr.forEach(in_aroundIx => {
+					// edgeSetArr should be removed
+					if (in_edgeSet.has(in_aroundIx)) {
+						return;
+					}
+					// xInsideSet should be removed
+					if (tagIndexes.xInsideSet.has(in_aroundIx)) {
+						return;
+					}
+					for (let player = 0; player < cReversi.#maxPlayers; player++) {
+						let update = this.#area.scores.default[in_aroundIx];
+						if (player === owner) {
+							update = this.#area.scores.default[edgeIx];
+						}
+						this.#area.scores.players[player][in_aroundIx] = update;
+					}
+				});
+			}
+		});
+	}
+	#createRollback() {
+		const backup = {
+			items : [...this.#area.items],
+			options : [...this.#area.options],
+			players : this.#area.scores.players.map(in_arr => [...in_arr]) 
+		};
+		return () => {
+			const area = this.#area;
+			area.items = [...backup.items];
+			area.options = new Set(backup.options);
+			area.scores.players = backup.players.map(in_arr => [...in_arr]);
+		};
+	}
+	static #evaluateStats = {};
+	static #registerStats(in_key) {
+		if (cReversi.#evaluateStats[in_key]) {
+			cReversi.#evaluateStats[in_key]++;
+		} else {
+			cReversi.#evaluateStats[in_key] = 1;
+		}
+	}
+	#evaluate(in_curr, in_next, in_xInside, in_priorityArr) {
+		for (let i = 0; i < in_priorityArr.length; i++) {
+			const {format, positive} = in_priorityArr[i];
+			let score = (in_priorityArr.length - i - 1) * (positive ? +1 : -1);
+			if (format === 'xInside') {
+				// 1. special case (xInside)
+				if (in_xInside) {
+					cReversi.#registerStats(format);
+					return score;
+				} else {
+					continue;
+				}
+			}
+			if (in_curr[format] === in_next[format]) {
+				// 2. special case (bOuterByMe)
+				if ((format === 'bOuterByMe') && (in_next[format])) {
+					cReversi.#registerStats(format);
+					return score;
+				} else {
+					continue;
+				}
+			} else {
+				// 3. generic cases
+				if (typeof in_next[format] === 'number') {
+					const delta = in_next[format] - in_curr[format];
+					cReversi.#registerStats(format);
+					return (delta > 0) ? score * +1 : score * -1;
+				} else {
+					let statsKey;
+					if (in_next[format]) {
+						statsKey = format + '-false-to-true';
+						score *= +1;
+					} else {
+						statsKey = format + '-true-to-false';
+						score *= -1;
+					}
+					cReversi.#registerStats(statsKey);
+					return score;
+				}
+			}
+		}
+		cReversi.#registerStats('can not evaluate');
+		return 0;
+	}
+	#scoringCoastalZone(in_player, in_cand) {
+		if (in_cand.type !== 'flip') {
+			return 0;
+		}
+		if (!this.#conf.row.edge && !this.#conf.col.edge) {
+			return 0;
+		}
+		cReversi.#registerStats('total');
+		const loop = !this.#conf.row.edge || !this.#conf.col.edge;
+		/*
+			1. e (= edge) : check if area of edge is safe
+			2. x (= xInside) : check if xInside positions will be not changed
+		*/
+		const check = {
+			e : {
+				indexes : [],
+				currItems : [],
+				nextItems : [],
+				currParsed : {},
+				nextParsed : {}
+			},
+			x : {
+				indexes : [],
+				currItems : [],
+				nextItems : [],
+				increased : false
+			}
+		};
+		const tagIndexes = this.#conf.tagIndexes;
+		if (tagIndexes.cornerSet.has(in_cand.ix)) {
+			cReversi.#registerStats('corner');
+			return +999;
+		}
+		const ixInEdge = tagIndexes.edgeSetArr.some(in_edgeSet => {
+			if (in_edgeSet.has(in_cand.ix)) {
+				check.e.indexes = [...in_edgeSet];
+				return true;
+			} else {
+				return false;
+			}
+		});
+		if (loop) {
+			if (!ixInEdge) {
+				cReversi.#registerStats('inside & loop = without xInside');
+				return 0;
+			}
+		} else {
+			const riskCornerSet = new Set();
+			for (const cornerIx of tagIndexes.cornerSet) {
+				if (this.#getItemByIndex(cornerIx) === cReversi.#empty) {
+					riskCornerSet.add(cornerIx);
+				}
+			}
+			for (const xInsideIx of tagIndexes.xInsideSet) {
+				const aroundArr = this.#aroundIndexes(xInsideIx);
+				if (aroundArr.some(in_aroundIx => riskCornerSet.has(in_aroundIx))) {
+					check.x.indexes.push(xInsideIx);
+				}
+			}
+		}
+		if (check.e.indexes.length > 0) {
+			check.e.currItems = this.#items(check.e.indexes);
+		}
+		if (check.x.indexes.length > 0) {
+			check.x.currItems = this.#items(check.x.indexes);
+		}
+		const rollback = this.#createRollback();
+		this.#flip(in_player, in_cand.ix);
+		if (check.e.indexes.length > 0) {
+			check.e.nextItems = this.#items(check.e.indexes);
+			check.e.currParsed = cLineParser.parse(check.e.currItems, in_player, loop);
+			check.e.nextParsed = cLineParser.parse(check.e.nextItems, in_player, loop);
+		}
+		if (check.x.indexes.length > 0) {
+			check.x.nextItems = this.#items(check.x.indexes);
+			check.x.increased = !check.x.nextItems.every((in_item, in_ix) => in_item === check.x.currItems[in_ix]);
+		}
+		(rollback)();
+		// scaled scoreing > npc scoreing
+		const priorityArr = [
+			// corner control strategy
+			{format : 'eCriticalToMe', positive : false},
+			{format : 'ePreRiskToMe', positive : false},
+			{format : 'xInside', positive : false},
+			{format : 'ePressureByMe', positive : true},
+			{format : 'ePressureToMe', positive : false},
+			{format : 'ePrePressureToMe', positive : false},
+			// safe zone strategy
+			{format : 'bOccupiedByMe', positive : true},
+			{format : 'bPreOccupiedByMe', positive : true},
+			{format : 'bOccupiedByBoth', positive : true},
+			// secondary corner control strategy
+			{format : 'bPressureByMe', positive : true},
+			{format : 'bPressureToMe', positive : false},
+			{format : 'bPrePressureToMe', positive : false},
+			// secondary safe zone strategy
+			{format : 'bInnerByMe', positive : true},
+			{format : 'bPreOuterByMe', positive : false},
+			{format : 'bOuterByMe', positive : true},
+			// slightly better
+			{format : 'safetyScore', positive : true}
+		];
+		return this.#evaluate(check.e.currParsed, check.e.nextParsed, check.x.increased, priorityArr);
+	}
+	#scoringInlandZone(in_player, in_cand) {
+		if (in_cand.type !== 'flip') {
+			return 0;
+		}
+		const loop = !this.#conf.row.edge || !this.#conf.col.edge;
+		const radiating = this.#conf.tagIndexes.radiating[in_cand.ix];
+		const pairs = Array.from(this.#conf.dirStyle.pair.values());
+		const radiatingLines = () => {
+			return pairs.map(([in_neg, in_pos]) => {
+				const n = radiating[in_neg].map(in_r_ix => this.#getItemByIndex(in_r_ix)).toReversed();
+				const p = radiating[in_pos].map(in_r_ix => this.#getItemByIndex(in_r_ix));
+				return [...n, this.#getItemByIndex(in_cand.ix), ...p];
+			});
+		};
+		const currRadiatingLines = radiatingLines();
+		const rollback = this.#createRollback();
+		this.#flip(in_player, in_cand.ix);
+		const nextRadiatingLines = radiatingLines();
+		(rollback)();
+		let total = 0;
+		const xInside = false;
+		const priorityArr = [
+			// safe zone (= controlled line) strategy
+			{format : 'bOccupiedByMe', positive : true},
+			{format : 'bPreOccupiedByMe', positive : true},
+			{format : 'bOccupiedByBoth', positive : true},
+			// edge control strategy
+			{format : 'eCriticalToMe', positive : false},
+			{format : 'ePreRiskToMe', positive : false},
+			{format : 'ePressureByMe', positive : true},
+			{format : 'ePressureToMe', positive : false},
+			{format : 'ePrePressureToMe', positive : false}
+		];
+		for (let i = 0; i < currRadiatingLines.length; i++) {
+			const currParsed = cLineParser.parse(currRadiatingLines[i], in_player, loop);
+			const nextParsed = cLineParser.parse(nextRadiatingLines[i], in_player, loop);
+			total += this.#evaluate(currParsed, nextParsed, xInside, priorityArr);
+		}
+		return total;
+	}
+	#scoringRuleDriven(in_player, in_cand, in_callback) {
+		const rollback = this.#createRollback();
+		(in_cand.apply)();
+		const score = in_callback.call(this, in_player); 
+		(rollback)();
+		return score;
+	}
+	#countNextEnemyOption(in_player) {
+		const player = (in_player + 1 + cReversi.#maxPlayers) % cReversi.#maxPlayers;
+		return this.#flippableIxArr(player).length;
+	}
+	#countNextOwnedSafeArea(in_player) {
+		let count = 0;
+		const findNeighbor = in_arr => {
+			for (let i = 0; i < in_arr.length; i++) {
+				const neighbor = this.#getItemByIndex(in_arr[i]);
+				if (neighbor !== in_player) {
+					return neighbor;
+				}
+			}
+			return null;
+		}
+		const pairs = Array.from(this.#conf.dirStyle.pair.values());
+		for (let ix = 0; ix < this.#area.items.length; ix++) {
+			if (this.#getItemByIndex(ix) !== in_player) {
+				continue;
+			}
+			const radiating = this.#conf.tagIndexes.radiating[ix];
+			const isSafe = pairs.every(([in_neg, in_pos])  => {
+				const N = findNeighbor(radiating[in_neg]);
+				const P = findNeighbor(radiating[in_pos]);
+				// player reachs all the way to the board edge, or to the DMZ
+				if ((N === null) || (N === cReversi.#dmz)) {
+					return true;
+				}
+				if ((P === null) || (P === cReversi.#dmz)) {
+					return true;
+				}
+				// both sides are bordered by the same object
+				if (P === N) {
+					return true;
+				}
+				return false;
+			});
+			count += isSafe ? 1 : 0;
+		}
+		return count;
+	}
+	#countNextOwnedArea(in_player) {
+		return this.#count(in_player);
+	}
+	#calculateNextScore(in_player) {
+		let score = 0;
+		for (let ix = 0; ix < this.#area.items.length; ix++) {
+			if (this.#getItemByIndex(ix) === in_player) {
+				score += this.#getAreaScore(in_player, ix);
+			}
+		}
+		return score;
+	}
+	#smartFilter(in_player, in_candArr, in_callback) {
+		const randomizeCnt = 5;
+		if (this.#history.length < randomizeCnt) {
+			return this.#npc_random(in_player, in_candArr);
+		}
+		let evaluator;
+		let narrowedArr = in_candArr;
+		// (1)
+		evaluator = (in_player, in_cand) => {
+			return this.#scoringCoastalZone(in_player, in_cand);
+		};
+		narrowedArr = cReversi.#maximize(evaluator, in_player, narrowedArr);
+		if (narrowedArr.length === 1) {
+			return narrowedArr[0];
+		}
+		// (2)
+		evaluator = (in_player, in_cand) => {
+			return this.#scoringRuleDriven(in_player, in_cand, in_callback);
+		};
+		narrowedArr = cReversi.#maximize(evaluator, in_player, narrowedArr);
+		if (narrowedArr.length === 1) {
+			return narrowedArr[0];
+		}
+		// (3)
+		evaluator = (in_player, in_cand) => {
+			return this.#scoringInlandZone(in_player, in_cand);
+		};
+		narrowedArr = cReversi.#maximize(evaluator, in_player, narrowedArr);
+		if (narrowedArr.length === 1) {
+			return narrowedArr[0];
+		}
+		// (4)
+		return this.#npc_random(in_player, narrowedArr);
+	}
+	#npc_min_enemy_option(in_player, in_candArr) {
+		return this.#smartFilter(in_player, in_candArr, in_player => this.#countNextEnemyOption(in_player) * -1);
+	}
+	#npc_max_owned_safe_area(in_player, in_candArr) {
+		return this.#smartFilter(in_player, in_candArr, this.#countNextOwnedSafeArea);
+	}
+	#npc_max_owned_area(in_player, in_candArr) {
+		return this.#smartFilter(in_player, in_candArr, this.#countNextOwnedArea);
+	}
+	#npc_only_evaluate(in_player, in_candArr) {
+		return this.#smartFilter(in_player, in_candArr, in_player => 0);
+	}
+	#npc_score_total(in_player, in_candArr) {
+		let evaluator, narrowedArr;
+		evaluator = (in_player, in_cand) => {
+			const score = this.#scoringRuleDriven(in_player, in_cand, this.#calculateNextScore);
+			return score;
+		};
+		narrowedArr = cReversi.#maximize(evaluator, in_player, in_candArr);
+		return this.#npc_random(in_player, narrowedArr);
+	}
+	#npc_random(in_player, in_candArr) {
+		return in_candArr[arrRand]();
+	}
+	#npcSet = {
+		spiteful : this.#npc_min_enemy_option,
+		safety : this.#npc_max_owned_safe_area,
+		greedy : this.#npc_max_owned_area,
+		rational : this.#npc_only_evaluate,
+		classic : this.#npc_score_total,
+		monkey : this.#npc_random
+	}
+	_simulation(in_repeat = 17) {
+		const truncateDecimal = (in_value, in_digit) => {
+			const order = 10 ** in_digit;
+			return Math.floor(in_value * order) / order;
+		};
+		const test = (in_argoArr) => {
+			let infiniteGuardCnt = 100;
+			while (true) {
+				const resultArr = [];
+				for (let i = 0; i < in_argoArr.length; i++) {
+					resultArr[i] = this.playAutomatically(i, in_argoArr[i]);
+				}
+				if (resultArr.some(in_result => in_result)) {
+					if (infiniteGuardCnt-- === 0) {
+						break;
+					}
+				} else {
+					break;
+				}
+				// this.dp();
+			}
+			let max = -Infinity;
+			let winner = -1;
+			const cond = this.getCurrentCondition();
+			for (let i = 0; i < cond.players.length; i++) {
+				if (cond.players[i].score > max) {
+					max = cond.players[i].score;
+					winner = i;
+				}
+			}
+			return winner;
+		};
+		const rollback = this.#createRollback();
+		// start simulation
+		const table = [];
+		table.push(['(vs)', ...Object.keys(this.#npcSet)]);
+		Object.keys(this.#npcSet).forEach(p1 => {
+			const row = [p1];
+			Object.keys(this.#npcSet).forEach(p2 => {
+				const players = [p1, p2];
+				if (p1 === p2) {
+					row.push('-');
+					return;
+				}
+				let cnt = in_repeat;
+				let win = 0;
+				while (true) {
+					if (cnt-- > 0) {
+						if (test(players) === 0) {
+							win++;
+						}
+						this.#initScore();
+						this.#history.length = 0;
+						(rollback)();
+					} else {
+						break;
+					}
+				}
+				row.push(truncateDecimal(win / in_repeat, 2));
+				this.#initScore();
+				this.#history.length = 0;
+				(rollback)();
+			});
+			table.push(row);
+		});
+		const elem = (in_table => {
+			const ret = document.createElement('TABLE');
+			in_table.forEach(in_row => {
+				const row = document.createElement('TR');
+				in_row.forEach(in_cell => {
+					const cell = document.createElement('TD');
+					cell.innerText = in_cell;
+					let color = 'eeeeee';
+					if (typeof in_cell === 'boolean') {
+						if (in_cell) {
+							color = 'ccccff';
+						} else {
+							color = 'ffcccc';
+						}
+					} else {
+						if (typeof in_cell === 'number') {
+							if (in_cell > 0.5) {
+								color = 'ccccff';
+							} else {
+								color = 'ffcccc';
+							}
+						}
+					}
+					cell.style.backgroundColor = color;
+					cell.style.textAlign = 'center';
+					cell.style.border = '1px solid black';
+					cell.style.padding = '3px';
+					cell.style.width = '5em';
+					row.appendChild(cell);
+				});
+				ret.appendChild(row);
+			});
+			ret.style.borderCollapse = 'collapse';
+			return ret;
+		})(table);
+		const script = document.currentScript;
+		script.parentNode.insertBefore(elem, script.nextSibling);
+		let total = 1;
+		Object.keys(cReversi.#evaluateStats).forEach(in_key => {
+			if (in_key === 'total') {
+				total = cReversi.#evaluateStats[in_key];
+				return;
+			}
+			const taking = truncateDecimal(cReversi.#evaluateStats[in_key] / total, 4);
+			console.log(in_key + ' : ' + taking);
+		});
+	}
+	_snapshot() {
+		const bg = new Map([
+			[0, 'red'],
+			[1, 'blue'],
+			[2, 'green'],
+			[3, 'yellow'],
+			[cReversi.#empty, 'silver']
+		]);
+		const rightMargin = 10;
+		const cellSize = 20;
+		const cellMargin = 5;
+		for (let row = 0; row < this.#conf.row.size; row++) {
+			for (let col = 0; col < this.#conf.col.size; col++) {
+				const color = bg.get(this.#getItemByPos(row, col));
+				const id = '_' + row + 'x' + col;
+				let cell = document.getElementById(id);
+				if (cell) {
+					cell.style.backgroundColor = color;
+					continue;
+				} else {
+					cell = document.createElement('DIV');
+				}
+				let l = rightMargin + (cellSize + cellMargin) * col;
+				let t = rightMargin + (cellSize + cellMargin) * row;
+				const pair = this.#conf.dirStyle.pair;
+				if (pair.has(90) && !pair.has(0)) {
+					l += (row % 2 === this.#conf.offset ? (cellSize + cellMargin) / 2 : 0);
+				}
+				if (!pair.has(90) && pair.has(0)) {
+					t += (col % 2 === this.#conf.offset ? (cellSize + cellMargin) / 2 : 0);
+				}
+				Object.assign(cell.style, {
+					id : id,
+					width : cellSize + 'px',
+					height : cellSize + 'px',
+					backgroundColor : color,
+					border : 'solid gray 1px',
+					position : 'absolute',
+					left : l + 'px',
+					top : t + 'px'
+				});
+				document.body.appendChild(cell);
+			}
+		}
+	}
+	_debug(in_stop = true) {
+		const sources = {
+			default : this.#area.scores.default,
+			occupied : this.#area.items
+		};
+		for (let player = 0; player < cReversi.#maxPlayers; player++) {
+			sources['p-' + player] = this.#area.scores.players[player];
+		}
+		Object.keys(sources).forEach(in_key => {
+			console.log('*** ' + in_key + ' ***');
+			const data = sources[in_key];
+			for (let row = 0; row < this.#conf.row.size; row++) {
+				const items = [];
+				for (let col = 0; col < this.#conf.col.size; col++) {
+					const ix = this.#posToIndex(row, col);
+					items.push(data[ix]);
+				}
+				console.log(items);
+			}
+		});
+		if (in_stop) {
+			throw new Error();
+		}
+	}
+	#commit(in_player, in_action, in_ix, in_row, in_col, in_delta) {
+		let row, col;
+		if (in_ix < 0) {
+			this.#updateOptionsAll();
+			row = in_row;
+			col = in_col;
+		} else {
+			this.#updateOptions(in_ix);
+			const pos = this.#indexToPos(in_ix);
+			row = pos.row;
+			col = pos.col;
+		}
+		this.#history.push({
+			who : in_player,
+			action : in_action,
+			row : row,
+			col : col,
+			delta : in_delta
+		});
+		this.#updateScore();
+	}
+	playUndo(in_player) {
+		const last = this.getLast({who : in_player});
+		if (!last) {
+			return false;
+		}
+		const history = [...this.#history];
+		this.#history.length = 0;
+		this.#area.items = [...this.#area.initialItems];
+		this.#initScore();
+		this.#updateOptionsAll();
+		for (let i = 0; i < history.length - 1; i++) {
+			const curr = history[i];
+			if (curr === last) {
+				break;
+			}
+			switch (curr.action) {
+			case 'choose-item':
+				this.playSetPosition(curr.who, curr.row, curr.col);
+				break;
+			case 'fixed-col-rotate':
+				this.playRotate(curr.who, curr.action, curr.col, curr.delta);
+				break;
+			case 'fixed-row-rotate':
+				this.playRotate(curr.who, curr.action, curr.row, curr.delta);
+				break;
+			default :
+				throw new Error('invalid history');
+				break;
+			}
+		}
+		return true;
+	}
+	playRotate(in_player, in_action, in_target, in_delta) {
+		switch (in_action) {
+		case 'fixed-col-rotate' :
+			this.#rotateSameColItems(in_target, in_delta);
+			this.#commit(in_player, in_action, -1, -1, in_target, in_delta);
+			break;
+		case 'fixed-row-rotate' :
+			this.#rotateSameRowItems(in_target, in_delta);
+			this.#commit(in_player, in_action, -1, in_target, -1, in_delta);
+			break;
+		default :
+			throw new Error('invalid history');
+			break;
+		}
+	}
+	playSetPosition(in_player, in_row, in_col) {
+		const ix = this.#posToIndex(in_row, in_col);
+		if (this.#getItemByIndex(ix) !== cReversi.#empty) {
+			return false;
+		}
+		const flipped = this.#flip(in_player, ix);
+		if (flipped) {
+			this.#commit(in_player, 'choose-item', ix, -1, -1, -1);
+		}
+		return flipped;
+	}
+	playAutomatically(in_player, in_argo = null) {
+		let npcAlive = false;
+		let playerCnt = 0;
+		for (let player = 0; player < cReversi.#maxPlayers; player++) {
+			if (this.#area.items.indexOf(player) >= 0) {
+				playerCnt++;
+				if (player === in_player) {
+					npcAlive = true;
+				}
+			}
+		}
+		if (npcAlive) {
+			if (playerCnt === 1) {
+				// only in_player
+				return false;
+			}
+		} else {
+			// in_player is died
+			return false;
+		}
+		if (this.#area.items.indexOf(cReversi.#empty) === -1) {
+			// fulfilled
+			return false;
+		}
+		let npcArgo;
+		if (in_argo) {
+			npcArgo = in_argo;
+		} else {
+			npcArgo = this.#npcArgoPriority[in_player];
+		}
+		// console.log(in_player, npcAlive, playerCnt, npcArgo);
+		let candArr = this.#flippableIxArr(in_player).map(in_ix => ({
+			ix : in_ix,
+			type : 'flip',
+			apply : () => this.#flip(in_player, in_ix)
+		}));
+		if (candArr.length > 0) {
+			const cand = this.#npcSet[npcArgo].call(this, in_player, candArr); 
+			(cand.apply)();
+			this.#commit(in_player, 'choose-item', cand.ix, -1, -1, -1);
+			return true;
+		} else {
+			let action, result;
+			if (this.#conf.rotatable.fixedCol) {
+				action = 'fixed-col-rotate';
+				result = this.#tryRotation(in_player, action);
+				if (result) {
+					this.#commit(in_player, action, -1, -1, result.target, result.delta);
+					return true;
+				}
+			}
+			if (this.#conf.rotatable.fixedRow) {
+				action = 'fixed-row-rotate';
+				result = this.#tryRotation(in_player, action);
+				if (result) {
+					this.#commit(in_player, action, -1, result.target, -1, result.delta);
+					return true;
+				}
+			}
+			// can not do anything
+			return false;
+		}
+	}
+	rotatableFixedCol() {
+		return this.#conf.rotatable.fixedCol;
+	}
+	rotatableFixedRow() {
+		return this.#conf.rotatable.fixedRow;
+	}
+	getLast(in_conditions = {}) {
+		// in_conditions : {who, action, row, col, delta}
+		for (let i = this.#history.length - 1; i >= 0; i--) {
+			const last = this.#history[i];
+			if (Object.keys(in_conditions).some(in_key => in_conditions[in_key] !== last[in_key])) {
+				continue;
+			} else {
+				return last;
+			}
+		}
+		return null;
+	}
+	#setTable(in_table) {
+		for (let row = 0; row < in_table.length; row++) {
+			for (let col = 0; col < in_table[row].length; col++) {
+				const item = in_table[row][col];
+				if (cReversi.#validData.indexOf(item) < 0) {
+					throw new Error('invalid input');
+				} else {
+					this.#setItemByPos(row, col, item);
+				}
+			}
+		}
+	}
+	getTable() {
+		const table = [];
+		for (let ix = 0; ix < this.#area.items.length; ix++) {
+			const pos = this.#indexToPos(ix);
+			if (!table[pos.row]) {
+				table[pos.row] = [];
+			}
+			table[pos.row][pos.col] = parseInt(this.#getItemByIndex(ix));
+		}
+		return table;
+	}
+	flippable(in_player) {
+		return ((this.#flippableIxArr(in_player)).length > 0);
+	}
+	getCurrentCondition() {
+		const condition = {
+			finished : false,
+			players : []
+		};
+		const canRotate = this.#conf.rotatable.fixedCol || this.#conf.rotatable.fixedRow;
+		const cnt = {
+			activePlayer : 0,
+			frozenPlayer : 0
+		};
+		for (let player = 0; player < cReversi.#maxPlayers; player++) {
+			let score, dead, frozen;
+			score = this.#count(player);
+			dead = (score === 0);
+			if (dead) {
+				frozen = true;
+			} else {
+				if (this.flippable(player) || canRotate) {
+					cnt.activePlayer++;
+					frozen = false;
+				} else {
+					cnt.frozenPlayer++;
+					frozen = true;
+				}
+			}
+			condition.players[player] = {score : score, dead : dead, frozen : frozen};
+		}
+		condition.finished =
+			// only 1 player is active
+			(cnt.activePlayer + cnt.frozenPlayer === 1) ||
+			// all players are frozen
+			(cnt.activePlayer === 0) ||
+			// there is no emply
+			(this.#emptyCnt() === 0);
+		return condition;
+	}
+}
+
+/*
+	the cColony class related functions provide the ability to create cylinder-shaped threejs objects.
+*/
+
+function drawCross(in_ctx, in_length, in_width, in_color, in_angle) {
+	const drawLine = () => {
+		in_ctx.beginPath();
+		in_ctx.moveTo(in_length / 2 * -1, 0);
+		in_ctx.lineTo(in_length / 2 * +1, 0);
+		in_ctx.stroke();
+	};
+	const w = in_ctx.canvas.width / 2;
+	const h = in_ctx.canvas.height / 2;
+	// common
+	in_ctx.lineCap = 'round';
+	in_ctx.lineWidth = in_width;
+	in_ctx.strokeStyle = in_color;
+	// 1st line
+	in_ctx.save();
+	in_ctx.translate(w, h);
+	in_ctx.rotate(in_angle);
+	drawLine();
+	// 2nd line
+	in_ctx.save();
+	in_ctx.rotate(Math.PI / 2);
+	drawLine();
+	in_ctx.restore();
+	in_ctx.restore();
+}
+
+function gray(in_ratio) {
+	const ratio = Math.min(1, Math.max(0, in_ratio));
+	const level = Math.round(255 * ratio);
+	return 'rgb(' + level + ',' + level + ',' + level + ')';
+}
+
+function drawGradCross(in_ctx, in_length, in_width, in_angle) {
+	in_ctx.fillStyle = 'white';
+	in_ctx.fillRect(0, 0, in_ctx.canvas.width, in_ctx.canvas.height);
+	in_ctx.globalCompositeOperation = 'multiply';
+	const steps = Math.floor(in_width / 2);
+	for (let i = 0; i < steps; i++) {
+		const color = gray(1 - i / (steps - 1));
+		drawCross(in_ctx, in_length - i * 2, in_width - i * 2, color, in_angle);
+	}
+}
+
+const textureFactory = factoryBuilder((in_w, in_h) => {
+	const canvas = document.createElement('CANVAS');
+	canvas.width = in_w;
+	canvas.height = in_h;
+	const ctx = canvas.getContext('2d');
+	const length = Math.min(in_w, in_h) * 0.7;
+	const width = 6;
+	const angle = Math.PI;
+	drawGradCross(ctx, length, width, angle);
+	return (new THREE.TextureLoader()).load(canvas.toDataURL());
+});
+
+const materialFactory = factoryBuilder((in_color, in_size, in_dmz) => {
+	const material = new THREE.MeshLambertMaterial();
+	material.color = new THREE.Color(in_color);
+	if (in_dmz) {
+		material.map = textureFactory.create(in_size, in_size);
+		material.map.wrapS = THREE.ClampToEdgeWrapping;
+		material.map.wrapT = THREE.ClampToEdgeWrapping;
+		material.map.repeat.set(0.02, 0.02);
+		material.map.offset.set(0.5, 0.5);
+	}
+	return material;
+});
+
+function getShellColor(in_object) {
+	return in_object.material[CHAMFERED_SURFACE_IX].color.getHex();
+}
+
+function setShellColor(in_object, in_color) {
+	in_object.material[CHAMFERED_SURFACE_IX] = materialFactory.create(in_color, in_object.geometry.userData.size);
+}
+
+const COLONY_SIZE = 400;
+
+/*
+
+	    +-------+-----------+
+	   /|      /|          /|
+	  / |     / |         / |
+	 /  |    /  |        /  |
+	+-------+-----------+---------------> row-0
+	|   |   |   |       |   |
+	|   +---|---+-------|---+
+	|  /    |  /        |  /
+	+-------+-----------+---------------> row-i
+	|/      |/          |/
+	+-------+-----------+
+	|       |
+	|       |
+	v       v
+	col-0   col-j
+
+	* cylinder oriented around the x-axis
+	- row : a position along the circumference of the cylinder
+	- col : a position along the height of the cylinder
+
+*/
+
+const GRAY1 = 0x222222;
+const GRAY2 = 0x444444;
+const GRAY3 = 0x666666;
+
+const BGCOLOR = GRAY1;
+
+const ORANGE = 0xFFAA00, O = ORANGE;
+const RED = 0xFF0000, R = RED;
+const WHITE = 0xFFFFFF, W = WHITE;
+const YELLOW = 0xFFFF00, Y = YELLOW;
+const BLUE = 0x3333FF, B = BLUE;
+const GREEN = 0x118811, G = GREEN;
+const SKYBLUE = 0x5588FF, S = SKYBLUE;
+const LIME = 0x55CC55, L = LIME;
+const DMZCOLOR = GRAY2, D = DMZCOLOR;
+const EMPTYCOLOR = GRAY3, E = EMPTYCOLOR;
+
+const gColoredArgo = new Map([
+	[RED, 'safety'],
+	[YELLOW, 'spiteful'],
+	[GREEN, 'greedy'],
+	[ORANGE, 'rational'],
+	[SKYBLUE, 'classic'],
+	[LIME, 'monkey']
+]);
+
+const BOARD_DB = [
+	{
+		type : 'traditional',
+		desc : '2 players reversi using 8x8 square',
+		levels : [
+			{
+				format : 'square',
+				table : [
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,B,G,E,E,E,E],
+					[E,E,E,E,G,B,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E]
+				]
+			},
+			{
+				format : 'square',
+				table : [
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,G,B,E,E,E,E],
+					[E,E,E,E,B,G,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E]
+				]
+			},
+			{
+				format : 'square',
+				table : [
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,B,Y,E,E,E,E],
+					[E,E,E,E,Y,B,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E]
+				]
+			},
+			{
+				format : 'square',
+				table : [
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,Y,B,E,E,E,E],
+					[E,E,E,E,B,Y,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E]
+				]
+			},
+			{
+				format : 'square',
+				table : [
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,B,R,E,E,E,E],
+					[E,E,E,E,R,B,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E]
+				]
+			},
+			{
+				format : 'square',
+				table : [
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,R,B,E,E,E,E],
+					[E,E,E,E,B,R,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E]
+				]
+			}
+		]
+	},
+	{
+		type : 'hexmap',
+		desc : 'multiplayers reversi using hexmap',
+		levels : [
+			{
+				format : 'hexFlatTopped',
+				table : [
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,B,G,E,E,E,E],
+					[E,E,E,E,G,B,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E]
+				]
+			},
+			{
+				format : 'hexFlatTopped',
+				table : [
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,G,B,E,E,E,E],
+					[E,E,E,E,B,G,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E]
+				]
+			},
+			{
+				format : 'hexFlatTopped',
+				table : [
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,B,Y,E,E,E,E],
+					[E,E,E,E,Y,B,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E]
+				]
+			},
+			{
+				format : 'hexFlatTopped',
+				table : [
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,Y,B,E,E,E,E],
+					[E,E,E,E,B,Y,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E]
+				]
+			},
+			{
+				format : 'hexFlatTopped',
+				table : [
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,B,R,E,E,E,E],
+					[E,E,E,E,R,B,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E]
+				]
+			},
+			{
+				format : 'hexFlatTopped',
+				table : [
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,R,B,E,E,E,E],
+					[E,E,E,E,B,R,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E]
+				]
+			}
+		]
+	}
+];
+
+//★隙間がイマイチ
+//★HEX がキモイ
+//★loop の考え方はちょい見直しが必要
+//★DB の処理修正
+
+let gTypeParamIsInvalid = false;
+
+const gCyclicLevels = ((in_diameter) => {
+	const topologyMap = new Map([
+		['hexFlatTopped', {
+			factory : angleSharedHexmapFactory,
+			offset : 1
+		}],
+		['square', {
+			factory : angleSharedSquareFactory,
+			offset : -1
+		}]
+	]);
+	const conf = {
+		rZoom : 1.2,
+		tWeight : 0.5,
+		minorRatio : 0.5
+	};
+	const levelArr = (in_type => {
+		const board = BOARD_DB.find(in_board => in_board.type === in_type);
+		if (!board) {
+			gTypeParamIsInvalid = true;
+			const defaultIndex = 0;
+			return BOARD_DB[defaultIndex].levels;
+		} else {
+			return board.levels;
+		}
+	})(getParam('type'));
+	const uniqueNameSet = new Set();
+	const values = new cCyclicValues();
+	levelArr.forEach(in_level => {
+		const topology = topologyMap.get(in_level.format);
+		const rows = in_level.table.length;
+		const cols = Math.max(...in_level.table.map(row => row.length));
+		const majorRadius = in_diameter / 2 * conf.rZoom;
+		const minorRadius = majorRadius * conf.minorRatio;
+		const unitSize = 2 * minorRadius * Math.tan(Math.PI / rows);
+		const unitThick = unitSize * conf.tWeight;
+		const st = new cTorusStructure(
+			rows,
+			cols,
+			majorRadius,
+			minorRadius,
+			unitSize,
+			topology.offset
+		);
+		const pieces = [];
+		for (let row = 0; row < st.rows; row++) {
+			for (let col = 0; col < st.cols; col++) {
+				const initialPoloidalAngle = st.locationToPoloidalAngle(row, col);
+				const geometry = topology.factory.create(
+					unitSize,
+					1,
+					unitThick,
+					initialPoloidalAngle
+				);
+				const knowledge = st.knowledgeByPoloidalAngle(initialPoloidalAngle);
+				updateChamferedGeometry(
+					geometry,
+					knowledge.tWidth,
+					knowledge.bWidth,
+					knowledge.height,
+					knowledge.rotation
+				);
+				const color = in_level.table[row][col];
+				const useTexture = (color === D) ? true : false;
+				const materials = [
+					materialFactory.create(color, unitSize, useTexture),
+					materialFactory.create(BGCOLOR, unitSize, false)
+				];
+				const piece = new THREE.Mesh(geometry, materials);
+				piece.position.copy(st.locationToPosition(row, col));
+				piece.quaternion.copy(st.locationToQuaternion(row, col));
+				pieces.push(piece);
+			}
+		}
+		const colorSet = new Set(in_level.table.flat());
+		colorSet.delete(D);
+		colorSet.delete(E);
+		const emptyCnt = in_level.table.flat().filter(in_color => in_color === E).length;
+		let name = 'vs ';
+		if (colorSet.size > 2) {
+			name += (colorSet.size - 1) + 'NPC';
+		} else {
+			let argo;
+			for (const color of colorSet) {
+				if (color !== B) {
+					argo = gColoredArgo.get(color);
+				}
+			}
+			name += argo.charAt(0).toUpperCase() + argo.slice(1);
+		}
+		name += ' (' + emptyCnt + ')';
+		if (uniqueNameSet.has(name)) {
+			name += ' mirrored';
+		}
+		uniqueNameSet.add(name);
+		const dmzRow = in_level.table.some(in_row => in_row.every(in_color => in_color === D));
+		values.push({
+			name : name,
+			loop : !dmzRow,
+			format : in_level.format,
+			structure : st,
+			colorArr : Array.from(colorSet),
+			pieces : pieces
+		});
+	});
+	return values;
+})(COLONY_SIZE);
+
+/*
+	the cColonyBoard represents a game-specific board.
+*/
+
+class cColonyBoard extends cColony {
+	getColorTable() {
+		const table = [];
+		const st = this.currPiecesCache.structure;
+		for (let row = 0; row < st.rows; row++) {
+			table[row] = [];
+			for (let col = 0; col < st.cols; col++) {
+				const piece = this.locationToPiece(row, col);
+				table[row].push(getShellColor(piece));
+			}
+		}
+		return table;
+	}
+	changedPieces(in_table) {
+		const changedArr = [];
+		for (let row = 0; row < in_table.length; row++) {
+			for (let col = 0; col < in_table[row].length; col++) {
+				const piece = this.locationToPiece(row, col);
+				const currColor = getShellColor(piece);
+				const nextColor = in_table[row][col];
+				if (currColor !== nextColor) {
+					changedArr.push({
+						piece : piece,
+						curr : currColor,
+						next : nextColor
+					});
+				}
+			}
+		}
+		return changedArr;
+	}
+	slidableDistance(in_piece, in_sign) {
+		// can not slide in cColonyBoard
+		return 0;
+	}
+	bobRotation = false;
+	rotate(in_group, in_axis, in_rad) {
+		super.rotate(in_group, in_axis, in_rad);
+		if (!this.bobRotation) {
+			return;
+		}
+		const max = 1.2;
+		const scalar = (createPeriodicCos(this.currPiecesCache.structure.rowsAngle, 1, max, true))(in_rad);
+		in_group.children.forEach(in_child => {
+			const basePos = in_child.userData.tmpCache.position;
+			in_child.position.copy(basePos.clone().multiplyScalar(scalar));
+			in_child.position.x = basePos.x;
+		});
+	}
+	makeRotateProgress(in_col, in_delta, in_ending_callback) {
+		this.uiDisable();
+		const last = this.currPiecesCache.structure.rowsAngle * in_delta;
+		const pieces = this.children.filter(in_child => this.pieceToLocation(in_child).col === in_col);
+		const group = this.setupGroup(pieces);
+		return this.makeAnimationProgress(group, cColony.axes.x, 0, last, in_ratio => {
+			if (in_ratio < 1) {
+				return;
+			}
+			this.uiEnable();
+			(in_ending_callback)();
+		});
+	}
+	static #views  = {
+		COLONYVIEW : Symbol(),
+		TRNSFORMING : Symbol(),
+		OVERVIEW : Symbol()
+	};
+	static #viewTransitions = {
+		[cColonyBoard.#views.COLONYVIEW] : {
+			toOverview : cColonyBoard.#views.TRNSFORMING
+		},
+		[cColonyBoard.#views.TRNSFORMING] : {
+			toColonyView : cColonyBoard.#views.COLONYVIEW,
+			toOverview : cColonyBoard.#views.OVERVIEW
+		},
+		[cColonyBoard.#views.OVERVIEW] : {
+			toColonyView : cColonyBoard.#views.TRNSFORMING
+		}
+	};
+	#state = cColonyBoard.#views.COLONYVIEW;
+	#transition(in_action) {
+		const state = cColonyBoard.#viewTransitions[this.#state][in_action];
+		if (state) {
+			this.#state = state;
+		} else {
+			throw new Error('invalid transition : ' + in_action);
+		}
+	}
+	get isColonyView() {
+		return (this.#state === cColonyBoard.#views.COLONYVIEW);
+	}
+	get isOverview() {
+		return (this.#state === cColonyBoard.#views.OVERVIEW);
+	}
+	makeSwitchViewProgress(in_c_to_o, in_duration, in_ending_callback) {
+		const init = {
+			amount : 0,
+			position : new Map(),
+			quaternion : new Map()
+		};
+		const last = {
+			amount : 1,
+			position : new Map(),
+			quaternion : new Map()
+		};
+		this.children.forEach(in_child => {
+			init.position.set(in_child, in_child.position.clone());
+			init.quaternion.set(in_child, in_child.quaternion.clone());
+		});
+		let endingProcess;
+		if (in_c_to_o) {
+			if (this.isColonyView) {
+				this.uiDisable();
+				this.#transition('toOverview');
+				const st = this.currPiecesCache.structure;
+				this.children.forEach(in_child => {
+					const {row, col} = this.pieceToLocation(in_child);
+					last.position.set(in_child, st.locationToOverviewPosition(row, col));
+					last.quaternion.set(in_child, st.locationToOverviewQuaternion(row, col));
+				});
+				endingProcess = () => {
+					this.cache = init;
+					this.#transition('toOverview');
+				}
+			} else {
+				// do nothing
+				return;
+			}
+		} else {
+			if (this.isOverview) {
+				this.#transition('toColonyView');
+				this.children.forEach(in_child => {
+					last.position.set(in_child, this.cache.position.get(in_child));
+					last.quaternion.set(in_child, this.cache.quaternion.get(in_child));
+				});
+				endingProcess = () => {
+					delete this.cache;
+					this.uiEnable();
+					this.#transition('toColonyView');
+				};
+			} else {
+				// do nothing
+				return;
+			}
+		}
+		const ease = new cEase(init.amount, last.amount, in_duration);
+		const progress = () => {
+			const amount = ease.currentEasingOut();
+			this.children.forEach(in_child => {
+				const p0 = init.position.get(in_child);
+				const q0 = init.quaternion.get(in_child);
+				const p1 = last.position.get(in_child);
+				const q1 = last.quaternion.get(in_child);
+				in_child.position.copy(p0).lerp(p1, amount);
+				in_child.quaternion.copy(q0).slerp(q1, amount);
+				in_child.updateMatrixWorld(true);
+			});
+			if (amount === last.amount) {
+				(endingProcess)();
+				(in_ending_callback)();
+			}
+		}
+		return progress;
+	}
+}
+
+/*
+	gWorld (cSphericalWorld)
+		|
+		+-- gColony (cColonyBoard)
+			|
+			+-- gColony.children <--- gCyclicLevels[n].pieces
+
+	gController (cGameController) : knows the internal structure of the following instances
+		|
+		+-- gReversi (cReversi) : used for npc algorithm
+		|
+		+-- gColony : used for user interface
+		|
+		+-- gWorld : used for animation
+*/
+
+const gColony = new cColonyBoard();
+
+const WORLD_RADIUS = COLONY_SIZE * 10;
+const WORLD_INIT_ZOOM = WORLD_RADIUS / 2;
+
+const gWorld = new cSphericalWorld(WORLD_RADIUS);
+gWorld.add(gColony);
+gWorld.moveView(0.5, 0.5);
+gWorld.motionZoom2(WORLD_INIT_ZOOM, 1000);
+
+let gController = null;
+let gReversi = null;
+
+class cGameController {
+	static #UNUSED = -1;
+	#mapping;
+	#turnHook = () => {};
+	#curIndex = 0;
+	#pcColor;
+	enableHandler = false;
+	// cGameController knows the internal structure of cColonyBoard, cReversi and cSphericalWorld
+	constructor(in_colorArr, in_pcColor) {
+		this.#pcColor = in_pcColor;
+		this.#mapping = new Array(10).fill(cGameController.#UNUSED);
+		for (let i = 0; i < in_colorArr.length; i++) {
+			this.#mapping[i] = in_colorArr[i];
+		}
+		// 8, 9 are declared as follows in cReversi
+		this.#mapping[8] = DMZCOLOR;
+		this.#mapping[9] = EMPTYCOLOR;
+	}
+	curNPCStrategy() {
+		return gColoredArgo.get(this.#mapping[this.#curIndex]);
+	}
+	setTurnHook(in_hook) {
+		this.#turnHook = in_hook;
+	}
+	#execTurnHook() {
+		const color = this.#mapping[this.#curIndex];
+		this.enableHandler = (color === this.#pcColor);
+		(this.#turnHook)(this.#curIndex, color, this.enableHandler);
+	}
+	#incrementIndex() {
+		this.#curIndex++;
+		if (this.#mapping[this.#curIndex] === cGameController.#UNUSED) {
+			this.#curIndex = 0;
+		}
+	}
+	endTurn(in_reversi = null) {
+		this.#incrementIndex();
+		const cond = in_reversi.getCurrentCondition();
+		if (cond.finished) {
+			// all players can not do anything
+			const winner = cond.players.reduce((in_accum, in_curVal, in_curIndex, in_arr) => {
+				return in_curVal.score > in_arr[in_accum].score ? in_curIndex : in_accum;
+			}, 0);
+			return this.#mapping[winner];
+		} else {
+			while (true) {
+				const {dead, frozen, score} = cond.players[this.#curIndex];
+				if (dead || (frozen && !in_reversi.rotatableFixedCol())) {
+					// curIndex can not do anything
+					this.#incrementIndex();
+				} else {
+					break;
+				}
+			}
+			// to prevent stack overflow
+			setTimeout(() => this.#execTurnHook(), 0);
+			// in this context, no winner
+			return -1;
+		}
+	}
+	start() {
+		this.#execTurnHook();
+	}
+	end() {
+		this.setTurnHook(() => {});
+		this.#mapping.fill(cGameController.#UNUSED);
+	}
+	static #update(in_changedArr) {
+		in_changedArr.forEach(in_changed => {
+			setShellColor(in_changed.piece, in_changed.next);
+		});
+	}
+	static #updateDynamic(in_changedArr, in_world) {
+		// in_changedArr : see cColonyBoard.changedPieces()
+		in_changedArr.forEach(in_changed => {
+			// backup initial value
+			in_changed.initRotationX = in_changed.piece.rotation.x;
+		});
+		const ease = new cEase(0, Math.PI * 2, 500);
+		return new Promise(in_resolved => {
+			let updated = false;
+			const hook = () => {
+				const angle = ease.currentEasingOut();
+				if (angle === Math.PI * 2) {
+					in_world.removeAnimationHook(hook);
+					in_changedArr.forEach(in_changed => {
+						// restore initial value
+						in_changed.piece.rotation.x = in_changed.initRotationX;
+					});
+					/*
+						execute the process that follows the await (or callback defined in then),
+						which corresponds to the then block of a promise
+					*/
+					(in_resolved)();
+					return;
+				}
+				if ((angle > Math.PI) && (!updated)) {
+					SE_MOVED.play();
+					cGameController.#update(in_changedArr);
+					updated = true;
+				}
+				in_changedArr.forEach(in_changed => {
+					in_changed.piece.rotation.x = in_changed.initRotationX + angle;
+				});
+			};
+			in_world.addAnimationHook(hook);
+		});
+	}
+	#makeChangedArr(in_reversi, in_colony) {
+		const indexTable = in_reversi.getTable();
+		const colorTable = indexTable.map(in_row => in_row.map(in_cell => this.#mapping[in_cell]));
+		// this can handle smaller table than colony
+		return in_colony.changedPieces(colorTable);
+	}
+	reversiToColony(in_reversi, in_colony) {
+		const changedArr = this.#makeChangedArr(in_reversi, in_colony);
+		cGameController.#update(changedArr);
+	}
+	async reversiToColonyDynamic(in_reversi, in_colony, in_world) {
+		const changedArr = this.#makeChangedArr(in_reversi, in_colony);
+		await cGameController.#updateDynamic(changedArr, in_world);
+	}
+	convertColonyTable(in_colony) {
+		const reverse = {};
+		this.#mapping.forEach((in_value, in_ix) => {
+			reverse[in_value] = in_ix;
+		});
+		let table = in_colony.getColorTable();
+		return table.map(in_row => in_row.map(in_cell => reverse[in_cell]));
+	}
+	async moveViewTo(in_piece, in_world) {
+		const cameraPos = in_world.getCameraPos();
+		const angleX = Math.atan2(cameraPos.y, cameraPos.z) - Math.atan2(in_piece.position.y, in_piece.position.z);
+		const vec3 = cameraPos.applyMatrix4((new THREE.Matrix4()).makeRotationX(angleX));
+		await in_world.motionViewFrom(vec3, 500);
+	}
+	async #playLastAction(in_reversi, in_colony, in_world) {
+		const last = in_reversi.getLast();
+		switch (last.action) {
+		case 'choose-item' :
+			const piece = in_colony.locationToPiece(last.row, last.col);
+			await this.moveViewTo(piece, in_world);
+			// choose
+			setShellColor(piece, this.#mapping[last.who]);
+			await this.reversiToColonyDynamic(in_reversi, in_colony, in_world);
+			break;
+		case 'fixed-col-rotate' :
+			console.log('rotating', last);
+			await (async ()=> {
+				return new Promise(in_resolve => {
+					const hook = in_colony.makeRotateProgress(last.col, last.delta, () => {
+						in_world.removeAnimationHook(hook);
+						(in_resolve)();
+					});
+					in_world.addAnimationHook(hook);
+				});
+			})();
+			break;
+		default :
+			break;
+		}
+	}
+	async npc(in_reversi, in_colony, in_world) {
+		const player = this.#curIndex;
+		if (in_reversi.playAutomatically(player, this.curNPCStrategy())) {
+			const threshold = 100;
+			const max = cReversi.maximizedRecMap.get(player) ?? 0;
+			if (max > threshold) {
+				const scriptArr = ['Too easy', 'Pathetic', 'So predictable'];
+				gFigure.shortSpeak(scriptArr[arrRand]());
+				cReversi.maximizedRecMap.set(player, 0);
+			}
+			await this.#playLastAction(in_reversi, in_colony, in_world);
+			return true;
+		} else {
+			// can't do anything
+			return false;
+		}
+	}
+	async pcChoose(in_piece, in_reversi, in_colony, in_world) {
+		const resume = this.enableHandler;
+		this.enableHandler = false;
+		const {row, col} = in_colony.pieceToLocation(in_piece);
+		const result = in_reversi.playSetPosition(this.#curIndex, row, col);
+		if (result) {
+			SE_BEEP.play();
+			await this.#playLastAction(in_reversi, in_colony, in_world);
+		}
+		this.enableHandler = resume;
+		return result;
+	}
+	pcRotate(in_reversi, in_colony) {
+		const tblPrev = in_reversi.getTable();
+		const tblNext = this.convertColonyTable(in_colony);
+		// find rotated col
+		const col = tblPrev[0].findIndex((in_val, in_col) => tblPrev.some((in_arr, in_row) => in_arr[in_col] !== tblNext[in_row][in_col]));
+		const arrPrev = tblPrev.map(in_arr => in_arr[col]);
+		const arrNext = tblNext.map(in_arr => in_arr[col]);
+		// decide delta
+		const delta = (arrNext.join('') + arrNext.join('')).indexOf(arrPrev.join(''));
+		in_reversi.playRotate(this.#curIndex, 'fixed-col-rotate', col, delta);
+	}
+	async pcUndo(in_reversi, in_colony, in_world) {
+		if (!this.enableHandler) {
+			return false;
+		}
+		if (in_reversi.playUndo(this.#curIndex)) {
+			await this.reversiToColonyDynamic(in_reversi, in_colony, in_world);
+			return true;
+		} else {
+			return false;
+		}
+	}
+}
+
+class cWarpLine {
+	static #speed = 10;
+	static #gradation = 10;
+	constructor(in_canvas) {
+		const w = in_canvas.width;
+		const h = in_canvas.height;
+		this.ctx = in_canvas.getContext('2d');
+		this.box = new THREE.Box2(
+			new THREE.Vector2(0, 0),
+			new THREE.Vector2(w, h)
+		);
+		this.from = new THREE.Vector2(w / 2, h / 2);
+		this.#reset();
+	}
+	#reset() {
+		const angle = Math.random() * Math.PI * 2;
+		this.direction = new THREE.Vector2(Math.cos(angle), Math.sin(angle));
+		this.speed = Math.random() * cWarpLine.#speed + 5;
+		this.length = 0;
+	}
+	#curVec(in_scalar) {
+		return this.from.clone().add(this.direction.clone().multiplyScalar(in_scalar));
+	}
+	#drawGrayLine(in_from, in_to, in_grayScale) {
+		this.ctx.strokeStyle = COLOR.sGray(in_grayScale);
+		this.ctx.beginPath();
+		this.ctx.moveTo(in_from.x, in_from.y);
+		this.ctx.lineTo(in_to.x, in_to.y);
+		this.ctx.stroke();
+	}
+	update() {
+		this.length += this.speed;
+		const to = this.#curVec(this.length);
+		if (this.box.containsPoint(to)) {
+			const notch = this.length / cWarpLine.#gradation;
+			for (let i = 0; i < cWarpLine.#gradation; i++) {
+				this.#drawGrayLine(
+					this.#curVec(notch * i),
+					this.#curVec(notch * (i + 1)),
+					255 / cWarpLine.#gradation * (i + 1)
+				);
+			}
+		} else {
+			/*
+				*** NOTE ***
+				even if overwritung using black,
+				this.#drawGrayLine(this.from, to, 0x00);
+				smudge of white line will remain.
+			*/
+			this.#reset();
+		}
+	}
+}
+
+function warpViewProgress(in_canvas, in_lineCount) {
+	const warpLines = [];
+	for (let i = 0; i < in_lineCount; i++) {
+		warpLines.push(new cWarpLine(in_canvas));
+	}
+	return () => {
+		warpLines.forEach(in_line => {
+			in_line.update();
+		});
+	}
+}
+
+function complete(in_player) {
+	gController.end();
+	gFigure.hide();
+	gChart.hide();
+	const progress = warpViewProgress(gBackgroundCanvas, 50);
+	gWorld.addAnimationHook(progress);
+	const duration = 2000;
+	gWorld.motionZoom2(WORLD_RADIUS * 1.5, duration * 0.9);
+	setTimeout(() => {
+		const {players} = gReversi.getCurrentCondition();
+		let scores = players.filter(in_player => in_player.score > 0).map(in_player => in_player.score);
+		gWorld.removeAnimationHook(progress);
+		const dialog = document.createElement('div');
+		Object.assign(dialog.style, {
+			width : 'auto',
+			height : 'auto',
+			color : 'white',
+			background : 'black',
+			borderRadius : '1em',
+			padding : '1.5em'
+		});
+		([
+			'<div>Winner is ...</div>',
+			'<div style="text-align:center"><img src="' + FIGURES.get(in_player) + '" /></div>',
+			'<div>The result is ' + scores.join(' vs ') + '.</div>',
+			'<div>Thanks to your wisdom, peace in the universe has been preserved.</div>',
+			'<div>Click to go next stage.</div>',
+		]).forEach(in_fragment => {
+			dialog.innerHTML += in_fragment;
+		});
+		startDialog(dialog, async () => {
+			drawCosmicView(gBackgroundCanvas, 400, 50);
+			await nextLevel(false);
+			gWorld.motionZoom2(WORLD_INIT_ZOOM, 1000);
+		});
+	}, duration);
+}
+
+const gFigure = (() => {
+	const container = document.createElement('DIV');
+	document.body.appendChild(container);
+	const figure = {
+		width : 100,
+		from : {
+			r : 20,
+			b : 20
+		}
+	}
+	const maxInt = 2 ** 31 - 1;
+	Object.assign(container.style, {
+		pointerEvents : 'none',
+		visibility : 'hidden',
+		position : 'absolute',
+		right : figure.from.r + 'px',
+		bottom : figure.from.b + 'px',
+		width : figure.width + 'px',
+		height : 'auto',
+		textAlign : 'center',
+		zIndex : maxInt
+	});
+	// figure image
+	container.appendChild((() => {
+		const elem = document.createElement('IMG');
+		Object.assign(elem.style, {
+			pointerEvents : 'none',
+			width : 'auto',
+			height : '150px',
+			display : 'block',
+			margin : '0 auto'
+		});
+		return elem;
+	})());
+	// figure label
+	container.appendChild((() => {
+		const elem = document.createElement('SPAN');
+		Object.assign(elem.style, {
+			display : 'inline-block',
+			marginTop : '6px',
+			fontFamily : 'cursive',
+			color : 'silver'
+		});
+		return elem;
+	})());
+	// figure speak
+	const _speak = in_displayTime => {
+		return makeSpeaker({
+			width : figure.width + 50,
+			tail : 'br',
+			from : 'br',
+			vertical : figure.from.b + 100,
+			horizontal : figure.from.r + figure.width + 20,
+			fontSize : 'normal',
+			display : in_displayTime
+		});
+	};
+	const speak = {l : _speak(2000), s : _speak(250)};
+	return {
+		show(in_src, in_text) {
+			container.style.visibility = 'visible';
+			container.querySelector('IMG').src = in_src;
+			container.querySelector('SPAN').textContent = in_text;
+		},
+		hide() {
+			container.style.visibility = 'hidden';
+		},
+		longSpeak(in_text) {
+			speak.l(in_text);
+		},
+		shortSpeak(in_text) {
+			speak.s(in_text);
+		}
+	};
+})();
+
+const PC_COLOR = BLUE;
+
+function menu() {
+	const dialog = document.createElement('div');
+	Object.assign(dialog.style, {
+		width : 'auto',
+		height : 'auto',
+		background : 'white',
+		borderRadius : '1em',
+		padding : '1em'
+	});
+	dialog.innerHTML += "<div>information :</div>\n<br />\n";
+	let no = 1;
+	BOARD_DB.forEach(in_board => {
+		const url = location.pathname + "?type=" + in_board.type;
+		dialog.innerHTML += "<div>" + (no++) + ". <a href='" + url + "'>" + in_board.type + "</a></div>\n";
+		dialog.innerHTML += "<div style='margin-left:1em;'>" + in_board.desc + "</div>\n";
+	});
+	dialog.innerHTML += "</ul>\n";
+	startDialog(dialog);
+}
+
+function updateChart() {
+	const colorNames = {};
+	const table = gColony.getColorTable();
+	table.flat().forEach(in_colorNum => {
+		if (in_colorNum === DMZCOLOR) {
+			return;
+		}
+		const colorName = '#' + in_colorNum.toString(16).padStart(6, '0');
+		if (Object.hasOwn(colorNames, colorName)) {
+			colorNames[colorName]++;
+		} else {
+			colorNames[colorName] = 1;
+		}
+	});
+	gChart.update(colorNames);
+}
+
+function initializeByLevel() {
+	const curr = gCyclicLevels.currValue();
+	const edge = {
+		row : !(curr.loop),
+		col : true
+	};
+	gController = new cGameController(curr.colorArr, PC_COLOR);
+	gChart.initialize(curr.colorArr);
+	const pcIndex = curr.colorArr.indexOf(PC_COLOR);
+	const table = gController.convertColonyTable(gColony);
+	const st = curr.structure;
+	if (st.offset >= 0) {
+		gReversi = new cReversi(table, edge.row, edge.col, curr.format, st.offset);
+	} else {
+		gReversi = new cReversi(table, edge.row, edge.col, curr.format);
+	}
+	gController.setTurnHook(async (in_player, in_color, in_pc) => {
+		const name = gController.curNPCStrategy() ?? 'you';
+		gFigure.show(FIGURES.get(in_color), name);
+		updateChart();
+		if (in_pc) {
+			const last = gReversi.getLast({who : pcIndex, action : 'choose-item'});
+			if (last) {
+				const piece = gColony.locationToPiece(last.row, last.col);
+				await gController.moveViewTo(piece, gWorld);
+			}
+			if (!gReversi.flippable(in_player)) {
+				gFigure.longSpeak('I can rotate cylinder.');
+			}
+			return;
+		}
+		await gController.npc(gReversi, gColony, gWorld);
+		const winner = gController.endTurn(gReversi);
+		if (winner < 0) {
+			return;
+		}
+		complete(winner);
+	});
+	gController.reversiToColony(gReversi, gColony);
+	gController.start();
+	if (gTypeParamIsInvalid) {
+		menu();
+		gTypeParamIsInvalid = false;
+	}
+}
+
+(in_level => {
+	if (typeof in_level === 'number') {
+		gCyclicLevels.setCurrentIndex(in_level);
+	}
+})(getParam('level'));
+
+const ID_PREV_LEVEL = randomString();
+const ID_NEXT_LEVEL = randomString();
+
+async function updateLevel(in_curr) {
+	const color = 0x000000;
+	await gWorld.motionFog(color, 0, 100);
+	gColony.setupPieces(in_curr.pieces, in_curr.structure);
+	if (in_curr.format === 'hexFlatTopped') {
+		gColony.bobRotation = true;
+	} else {
+		gColony.bobRotation = false;
+	}
+	await gWorld.motionFog(color, 100, 0);
+	const prev = gCyclicLevels.prevValue();
+	const next = gCyclicLevels.nextValue();
+	document.getElementById(ID_PREV_LEVEL).innerText = prev.name;
+	document.getElementById(ID_NEXT_LEVEL).innerText = next.name;
+	resetFocus();
+	initializeByLevel();
+}
+
+updateLevel(gCyclicLevels.currValue());
+
+/*
+	*** NOTE ***
+	in Safari, using await to get audio will cause the process to fail.
+	I'm not sure of the reason, but top-level await might be the cause.
+	this time use then() to avoid the issue.
+*/
+
+let SE_BEEP = beep(2000);
+let SE_DUMMY = beep(10);
+let SE_MOVED = SE_BEEP;
+let SE_ERROR = SE_BEEP;
+
+SOUND.MOVED.then(in_decompress => {
+	SE_MOVED = new Audio('data:audio/mpeg;base64,' + in_decompress);
+});
+
+SOUND.ERROR.then(in_decompress => {
+	SE_ERROR = new Audio('data:audio/mpeg;base64,' + in_decompress);
+});
+
+async function uiUndo() {
+	if (await gController.pcUndo(gReversi, gColony, gWorld)) {
+		updateChart();
+		gFigure.longSpeak('I have returned.');
+	} else {
+		knock();
+	}
+}
+
+function uiOverview() {
+	if (!gColony.isColonyView) {
+		return;
+	}
+	const duration = {
+		c2o : 500,
+		camera : 1000,
+		wait : 3000,
+		o2c : 500
+	};
+	const hook = gColony.makeSwitchViewProgress(true, duration.c2o, () => {
+		gWorld.removeAnimationHook(hook);
+		gWorld.motionViewFrom(VEC3(0, 1, 0), duration.camera);
+	});
+	gWorld.addAnimationHook(hook);
+	setTimeout(() => {
+		const hook = gColony.makeSwitchViewProgress(false, duration.o2c, () => {
+			gWorld.removeAnimationHook(hook);
+		});
+		gWorld.addAnimationHook(hook);
+	}, duration.wait);
+}
+
+function uiHelp() {
+	const url = {
+		ver : './version.txt',
+		img : './side-six-reversi-help.gif',
+		src : 'https://github.com/nakayama-kazuki/202x/commit/'
+	};
+	const dialog = document.createElement('div');
+	Object.assign(dialog.style, {
+		width : 'auto',
+		height : 'auto',
+		background : 'white',
+		borderRadius : '1em',
+		padding : '1em'
+	});
+	dialog.innerHTML += '<div><img src="' + url.img + '" /></div>';
+	const verLabel = document.createElement('div');
+	Object.assign(verLabel.style, {
+		textAlign : 'right'
+	});
+	dialog.appendChild(verLabel);
+	getResource(url.ver).then(in_hash => {
+		verLabel.innerHTML = 'version : <a href="' + url.src + in_hash + '">' + in_hash.substring(0, 7) + '</a>';
+		verLabel.addEventListener('mousedown', in_e => in_e.stopPropagation());
+		verLabel.addEventListener('touchstart', in_e => in_e.stopPropagation());
+	}).catch(in_err => {
+	    console.error(in_err);
+		verLabel.innerHTML = 'version : unknown';
+	});
+	startDialog(dialog);
+}
+
+function uiRights() {
+	const dialog = document.createElement('dl');
+	Object.assign(dialog.style, {
+		width : '30%',
+		height : 'auto',
+		color : 'white',
+		background : 'black',
+		borderRadius : '1em',
+		padding : '1.5em'
+	});
+	([
+		'<dt>Rights</dt>',
+		'<dd>This software is based on MIT License.</dd>',
+		'<dd>The code can be freely modified and reused.</dd>',
+		'<dd>For full license details, please refer to :</dd>',
+		'<dd>https://opensource.org/licenses/MIT</dd>',
+		'<dt>Donations</dt>',
+		'<dd>While the use of images generated by this software is completely free, donations are welcome and greatly appreciated.</dd>',
+		'<dd>If you would like to support the development of this software, please consider making a donation using the QR code below (TBD).</dd>'
+	]).forEach(in_fragment => {
+		dialog.innerHTML += in_fragment;
+	});
+	startDialog(dialog);
+}
+
+async function prevLevel(in_sound = true) {
+	if (in_sound) {
+		SE_BEEP.play();
+	}
+	await updateLevel(gCyclicLevels.decrementedValue());
+}
+
+async function nextLevel(in_sound = true) {
+	if (in_sound) {
+		SE_BEEP.play();
+	}
+	await updateLevel(gCyclicLevels.incrementedValue());
+}
+
+class cOcupiedChart extends cChart {
+	static #r = 45;
+	#colorNamesOrder = [];
+	constructor() {
+		const w = cOcupiedChart.#r * 2, h = w;
+		super(w, h, 'circle');
+	}
+	initialize(in_playerColorNums) {
+		const chartColorNums = [...in_playerColorNums, EMPTYCOLOR];
+		this.#colorNamesOrder = chartColorNums.map(in_color => '#' + in_color.toString(16).padStart(6, '0'));
+		const empty = this.#colorNamesOrder[this.#colorNamesOrder.length - 1];
+		const initColorNames = {};
+		initColorNames[empty] = 1;
+		this.update(initColorNames);
+	}
+	hide() {
+		this.canvas.style.visibility = 'hidden';
+	}
+	show() {
+		this.canvas.style.visibility = 'visible';
+	}
+	update(in_nextColorNums) {
+		const colorNames = {};
+		this.#colorNamesOrder.forEach(in_colorName => {
+			if (Object.hasOwn(in_nextColorNums, in_colorName)) {
+				colorNames[in_colorName] = in_nextColorNums[in_colorName];
+			} else {
+				colorNames[in_colorName] = 0;
+			}
+		});
+		super.update(colorNames);
+		this.show();
+ 	}
+}
+
+const gChart = new cOcupiedChart();
+
+(in_settings => {
+	let container = document.createElement('div');
+	Object.assign(container.style, {
+		position : 'absolute',
+		left : '5%',
+		top : '5%'
+	});
+	document.body.appendChild(container);
+	in_settings.forEach(in_setting => {
+		let button = document.createElement('button');
+		if (in_setting.id) {
+			button.id = in_setting.id;
+		}
+		if (in_setting.text) {
+			button.innerText = in_setting.text;
+		}
+		button.addEventListener('click', in_setting.func);
+		Object.assign(button.style, {
+			margin : '1.5px 1.5px 1.5px 1.5px',
+			borderRadius : '3px',
+			border : '1px solid gray',
+			cursor : 'pointer'
+		});
+		container.appendChild(button);
+	});
+	Object.assign(gChart.canvas.style, {
+		pointerEvents : 'none',
+		margin : '2em 1em',
+		display : 'block'
+	});
+	container.appendChild(gChart.canvas);
+})([
+	{
+		text : 'undo',
+		func : uiUndo
+	},
+	{
+		id : ID_PREV_LEVEL,
+		text : '(Prev)',
+		func : prevLevel
+	},
+	{
+		id : ID_NEXT_LEVEL,
+		text : '(Next)',
+		func : nextLevel
+	},
+	{
+		text : 'overview',
+		func : uiOverview
+	},
+	{
+		text : 'help',
+		func : uiHelp
+	},
+	{
+		text : 'rights',
+		func : uiRights
+	},
+	{
+		text : 'corridor',
+		func : () => location.href = 'https://pj-corridor.net/'
+	}
+]);
+
+function drawCosmicView(in_canvas, in_stars, in_nebulae_patterns, in_color = 0x000064) {
+	const ctx = in_canvas.getContext('2d');
+	const w = in_canvas.width;
+	const h = in_canvas.height;
+	ctx.fillStyle = 'black';
+	ctx.fillRect(0, 0, w, h);
+	for (let i = 0; i < in_nebulae_patterns; i++) {
+		const x = Math.random() * w;
+		const y = Math.random() * h;
+		const r = Math.random() * 100 + 50;
+		const gradient = ctx.createRadialGradient(x, y, 0, x, y, r);
+		gradient.addColorStop(0, COLOR.sRGBA(in_color, 127));
+		gradient.addColorStop(1, COLOR.sRGBA(in_color, 0));
+		ctx.beginPath();
+		ctx.arc(x, y, r, 0, Math.PI * 2, false);
+		ctx.fillStyle = gradient;
+		ctx.fill();
+	}
+	for (let i = 0; i < in_stars; i++) {
+		const x = Math.random() * w;
+		const y = Math.random() * h;
+		const r = Math.random() * 1;
+		ctx.beginPath();
+		ctx.arc(x, y, r, 0, Math.PI * 2, false);
+		ctx.fillStyle = 'white';
+		ctx.fill();
+	}
+}
+
+/*
+	event handlers
+*/
+
+function drawBackground(in_canvas) {
+	Object.assign(in_canvas.style, {
+		position : 'absolute',
+		left : 0,
+		top : 0,
+		zIndex : -1
+	});
+	drawCosmicView(in_canvas, 400, 50);
+}
+
+const gBackgroundCanvas = document.createElement('CANVAS');
+
+function setupBody(in_document) {
+	if (!in_document.body) {
+		in_document.documentElement.appendChild(in_document.createElement('BODY'));
+	}
+	Object.assign(in_document.body.style, {
+		margin : '0',
+		overflow : 'hidden'
+	});
+}
+
+function createChildWindow(in_document) {
+	return new Promise(in_callback => {
+		setupBody(in_document);
+		const iframe = in_document.createElement('iframe');
+		in_document.body.appendChild(iframe);
+		Object.assign(iframe.style, {
+			width: '100%',
+			height: '100%',
+			border: 'none'
+		});
+		/*
+			*** NOTE ***
+			although Chrome can use iframe.contentDocument right after createElement,
+			Firefox can not use it ant needs to use asynchronous process.
+			by the way, if you use not timer but load event,
+			your code will not work for Chrome.
+		*/
+		setTimeout(() => {
+			setupBody(iframe.contentDocument);
+			(in_callback)(iframe.contentWindow);
+		}, 0);
+	});
+}
+
+document.addEventListener('DOMContentLoaded', (async () => {
+	/*
+		*** NOTE ***
+		without iframe (outer window),
+		geometry in event will be wrong because of google ads
+	*/
+	const outer = await createChildWindow(document);
+	let resizeWorld = in_ev => {
+		gWorld.resize(outer.innerWidth, outer.innerHeight);
+		gBackgroundCanvas.width = outer.innerWidth;
+		gBackgroundCanvas.height = outer.innerHeight;
+		drawBackground(gBackgroundCanvas);
+	};
+	outer.addEventListener('resize', debouncing(resizeWorld, 300));
+	outer.dispatchEvent(new Event('resize'));
+	outer.document.body.appendChild(gWorld.canvas);
+	outer.document.body.appendChild(gBackgroundCanvas);
+	gWorld.start();
+}));
+
+const knock = nonReentrantAsync(async () => {
+	SE_ERROR.play();
+	await gWorld.motionKnock();
+});
+
+const notifyDelta = (() => {
+	const RC = cColony.uiSetDeltaPositionRC;
+	return in_ndc => {
+		const intersects = gWorld.intersectPositive(in_ndc);
+		if (intersects.length === 0) {
+			return;
+		}
+		const result = gColony.uiNotifyDeltaPosition(intersects[0].object, intersects[0].point, ndcToAbs(in_ndc));
+		if (result === RC.UNMOVABLE) {
+			knock();
+		}
+	}
+})();
+
+const focusHere = (() => {
+	let focusedEmpty = null;
+	const HIGHLIGHT = (new THREE.Color(EMPTYCOLOR)).lerp(new THREE.Color(0xFFFFFF), 0.3).getHex();
+	return in_ndc => {
+		let current = null
+		let color = -1;
+		if (in_ndc != null) {
+			let intersects = gWorld.intersectPositive(in_ndc);
+			if (intersects.length > 0) {
+				current = intersects[0].object;
+				color = getShellColor(current);
+			}
+		}
+		if ((color === EMPTYCOLOR) || (color === HIGHLIGHT)) {
+			if (current === focusedEmpty) {
+				return;
+			}
+			setShellColor(current, HIGHLIGHT);
+			if (focusedEmpty) {
+				setShellColor(focusedEmpty, EMPTYCOLOR);
+			}
+			focusedEmpty = current;
+		} else {
+			if (focusedEmpty) {
+				setShellColor(focusedEmpty, EMPTYCOLOR);
+			}
+			focusedEmpty = null;
+		}
+	}
+})();
+
+function resetFocus() {
+	focusHere(null);
+}
+
+function rotateDone() {
+	resetFocus();
+	gController.pcRotate(gReversi, gColony);
+	gController.endTurn(gReversi);
+}
+
+async function chooseHere(in_ev) {
+	const ndc = ndcFromEvent(in_ev);
+	let intersects = gWorld.intersectPositive(ndc);
+	if (intersects.length === 0) {
+		return;
+	}
+	resetFocus();
+	const curr = intersects[0].object;
+	if (getShellColor(curr) !== EMPTYCOLOR) {
+		knock();
+	} else {
+		if (await gController.pcChoose(curr, gReversi, gColony, gWorld)) {
+			const winner = gController.endTurn(gReversi);
+			if (winner < 0) {
+				return;
+			}
+			complete(winner);
+		} else {
+			knock();
+		}
+	}
+}
+
+(() => {
+	const closure = {
+		x : -1,
+		y : -1,
+		once : false
+	};
+	const start = in_ev => {
+		if (!closure.once) {
+			/*
+				*** NOTE ***
+				Safari may restrict sound without user interaction.
+				because of this, the sound does not work without this code.
+			*/
+			SE_DUMMY.play();
+			closure.once = true;
+		}
+		const ndc = ndcFromEvent(in_ev);
+		const intersects = gWorld.intersectPositive(ndc);
+		if (intersects.length === 0) {
+			return;
+		}
+		resetFocus();
+		closure.x = in_ev.clientX;
+		closure.y = in_ev.clientY;
+		// can drag only PC_COLOR
+		const drag = intersects[0].object
+		if (gReversi.rotatableFixedCol() && (getShellColor(drag) === PC_COLOR)) {
+			gColony.uiSetInitPosition(intersects[0].point, ndcToAbs(ndc));
+		}
+	};
+	const move = thresholding(in_ev => {
+		closure.x = -1;
+		closure.y = -1;
+		const ndc = ndcFromEvent(in_ev);
+		if (gColony.uiIsMoving()) {
+			if (gColony.uiUpdatePosition(ndcToAbs(ndc))) {
+				SE_MOVED.play();
+			}
+		} else {
+			if (gColony.uiIsDragging()) {
+				notifyDelta(ndc);
+			} else {
+				if (!in_ev[isEmulated]) {
+					focusHere(ndc);
+				}
+			}
+		}
+	});
+	const stop = in_ev => {
+		const releaseProgress = gColony.uiRelease(in_changed => {
+			gWorld.removeAnimationHook(releaseProgress);
+			if (in_changed) {
+				rotateDone();
+			}
+		});
+		if (releaseProgress) {
+			gWorld.addAnimationHook(releaseProgress);
+		} else {
+			if ((closure.x !== in_ev.clientX) || (closure.y !== in_ev.clientY)) {
+				return;
+			}
+			chooseHere(in_ev);
+		}
+	};
+	let handlers = {
+		'mousedown' : start,
+		'mousemove' : move,
+		'mouseleave' : stop,
+		'mouseout' : stop,
+		'mouseup' : stop
+	};
+	for (let [eventName, handler] of Object.entries(handlers)) {
+		gWorld.canvas.addEventListener(eventName, in_ev => {
+			if (gController?.enableHandler && gColony.isColonyView) {
+				(handler)(in_ev);
+			}
+		});
+	}
+})();
+
+</script>
+</body>
+</html>
