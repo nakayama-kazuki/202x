@@ -242,8 +242,8 @@ const gMeshLevelMap = ((in_diameter) => {
 		const thickness = unitThick - radian * 2;
 		const geometry = allSharedSquareFactory.create(outerLen, innerRatio, thickness);
 		const pieces = [];
-		for (let col = 0; col < st.colsForLength; col++) {
-			for (let row = 0; row < st.rowsForCircle; row++) {
+		for (let col = 0; col < st.cols; col++) {
+			for (let row = 0; row < st.rows; row++) {
 				const materials = shellMaterials(unitSize, colors[row], BGCOLOR);
 				materials.push(edgeMaterial);
 				const piece = new THREE.Mesh(geometry, materials);
@@ -254,7 +254,7 @@ const gMeshLevelMap = ((in_diameter) => {
 		}
 		// the last piece is removed to allow sliding
 		pieces.pop();
-		const stage = LABEL_LV + st.rowsForCircle + 'x' + st.colsForLength;
+		const stage = LABEL_LV + st.rows + 'x' + st.cols;
 		map.set(stage, {structure : st, pieces : pieces});
 	});
 	return map;

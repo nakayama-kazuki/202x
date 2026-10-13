@@ -1206,9 +1206,9 @@ class cColonyBoard extends cColony {
 	getColorTable() {
 		const table = [];
 		const st = this.currPiecesCache.structure;
-		for (let row = 0; row < st.rowsForCircle; row++) {
+		for (let row = 0; row < st.rows; row++) {
 			table[row] = [];
-			for (let col = 0; col < st.colsForLength; col++) {
+			for (let col = 0; col < st.cols; col++) {
 				const piece = this.locationToPiece(row, col);
 				table[row].push(getShellColor(piece));
 			}

@@ -2765,7 +2765,7 @@ const BOARD_DB = [
 	}
 ];
 
-let gTypeIsInvalid = false;
+let gTypeParamIsInvalid = false;
 
 const gCyclicLevels = ((in_diameter) => {
 	const topologyMap = new Map([
@@ -2788,7 +2788,7 @@ const gCyclicLevels = ((in_diameter) => {
 	const levelArr = (in_type => {
 		const board = BOARD_DB.find(in_board => in_board.type === in_type);
 		if (!board) {
-			gTypeIsInvalid = true;
+			gTypeParamIsInvalid = true;
 			const defaultIndex = 0;
 			return BOARD_DB[defaultIndex].levels;
 		} else {
@@ -2877,9 +2877,9 @@ class cColonyBoard extends cColony {
 	getColorTable() {
 		const table = [];
 		const st = this.currPiecesCache.structure;
-		for (let row = 0; row < st.rowsForCircle; row++) {
+		for (let row = 0; row < st.rows; row++) {
 			table[row] = [];
-			for (let col = 0; col < st.colsForLength; col++) {
+			for (let col = 0; col < st.cols; col++) {
 				const piece = this.locationToPiece(row, col);
 				table[row].push(getShellColor(piece));
 			}
@@ -3542,9 +3542,9 @@ function initializeByLevel() {
 	});
 	gController.reversiToColony(gReversi, gColony);
 	gController.start();
-	if (gTypeIsInvalid) {
+	if (gTypeParamIsInvalid) {
 		menu();
-		gTypeIsInvalid = false;
+		gTypeParamIsInvalid = false;
 	}
 }
 

@@ -66,6 +66,12 @@ export class cCylinderStructure {
 		this.rowsAngle = Math.PI * 2 / in_rowsForCircle;
 		this.offset = in_offset;
 	}
+	get rows() {
+		return this.rowsForCircle;
+	}
+	get cols() {
+		return this.colsForLength;
+	}
 	#locationToRow(in_row, in_col) {
 		if ((this.offset >= 0) && (in_col % 2 === this.offset)) {
 			return in_row + 0.5;
@@ -97,7 +103,7 @@ export class cCylinderStructure {
 	}
 	positionToLocation(in_position) {
 		const col = Math.round((in_position.x - this.origin.x) / this.colsDelta);
-		for (let row = 0; row < this.rowsForCircle; row++) {
+		for (let row = 0; row < this.rows; row++) {
 			const pos = this.locationToPosition(row, col);
 			if (pos.distanceTo(in_position) < cCylinderStructure.error) {
 				return {row : row, col : col};
@@ -114,23 +120,29 @@ export class cTorusStructure {
 	constructor(
 		in_rowsForPoloidal,
 		in_colsForToroidal,
-		in_origin,
 		in_majorRadius,
 		in_minorRadius,
 		in_size,
 		in_offset = -1,
+		in_center = VEC3(0, 0, 0),
 		in_poloidalRotation = 0
 	) {
 		this.rowsForPoloidal = in_rowsForPoloidal;
 		this.colsForToroidal = in_colsForToroidal;
-		this.origin = in_origin.clone();
 		this.majorRadius = in_majorRadius;
 		this.minorRadius = in_minorRadius;
 		this.size = in_size;
 		this.rowsAngle = Math.PI * 2 / in_rowsForPoloidal;
 		this.colsAngle = Math.PI * 2 / in_colsForToroidal;
 		this.offset = in_offset;
+		this.center = in_center.clone();
 		this.poloidalRotation = in_poloidalRotation;
+	}
+	get rows() {
+		return this.rowsForPoloidal;
+	}
+	get cols() {
+		return this.colsForToroidal;
 	}
 	get gap() {
 		return this.size * cTorusStructure.#gapRatio;
@@ -139,7 +151,7 @@ export class cTorusStructure {
 		return this.rowsAngle * in_row + this.poloidalRotation;
 	}
 	positionByPoloidalAngle(in_angle) {
-		const pos = this.origin.clone();
+		const pos = this.center.clone();
 		pos.y += this.minorRadius * Math.sin(in_angle);
 		pos.z += this.minorRadius * Math.cos(in_angle);
 		return pos;
@@ -149,7 +161,7 @@ export class cTorusStructure {
 	}
 	position(in_poloidalAngle, in_toroidalAngle) {
 		const radius = this.majorRadius + this.minorRadius * Math.cos(in_poloidalAngle);
-		const pos = this.origin.clone();
+		const pos = this.center.clone();
 		pos.x += radius * Math.sin(in_toroidalAngle);
 		pos.y += this.minorRadius * Math.sin(in_poloidalAngle);
 		pos.z += radius * Math.cos(in_toroidalAngle);
@@ -158,8 +170,8 @@ export class cTorusStructure {
 	knowledgeByPoloidalAngle(in_angle) {
 		const tRadius = this.majorRadius + this.minorRadius * Math.cos(in_angle - this.rowsAngle / 2);
 		const bRadius = this.majorRadius + this.minorRadius * Math.cos(in_angle + this.rowsAngle / 2);
-		const tWidth = 2 * tRadius * Math.tan(this.colsAngle / 2);
-		const bWidth = 2 * bRadius * Math.tan(this.colsAngle / 2);
+		const tWidth = 2 * tRadius * Math.tan(this.colsAngle / 2) - this.gap;
+		const bWidth = 2 * bRadius * Math.tan(this.colsAngle / 2) - this.gap;
 		const height = 2 * this.minorRadius * Math.tan(this.rowsAngle / 2) - this.gap;
 		return {
 			tWidth : tWidth,
@@ -185,8 +197,8 @@ export class cTorusStructure {
 		return new THREE.Quaternion().setFromAxisAngle(VEC3(0, 1, 0), toroidalAngle);
 	}
 	positionToLocation(in_position) {
-		for (let row = 0; row < this.rowsForPoloidal; row++) {
-			for (let col = 0; col < this.colsForToroidal; col++) {
+		for (let row = 0; row < this.rows; row++) {
+			for (let col = 0; col < this.cols; col++) {
 				const pos = this.locationToPosition(row, col);
 				if (pos.distanceTo(in_position) < cTorusStructure.error) {
 					return {
@@ -493,11 +505,6 @@ export class cColony extends cPieceSet {
 			return props[0];
 		}
 	}
-	approximateChildren(in_callback, in_order = 1) {
-		const xSet = new cApproximateSet(cColony.error);
-		this.children.forEach(in_child => xSet.add(in_callback(in_child)));
-		return Array.from(xSet).sort((in_e1, in_e2) => (in_e1 - in_e2) * in_order);
-	}
 	setupGroup(in_pieces) {
 		const group = new THREE.Object3D();
 		this.add(group);
@@ -548,7 +555,7 @@ export class cColony extends cPieceSet {
 	affectedSlidePieces(in_piece, in_sign) {
 		const location = this.pieceToLocation(in_piece);
 		const affected = [in_piece];
-		for (let col = location.col + in_sign; 0 <= col && col < this.currPiecesCache.structure.colsForLength; col += in_sign) {
+		for (let col = location.col + in_sign; 0 <= col && col < this.currPiecesCache.structure.cols; col += in_sign) {
 			const piece = this.children.find(in_child => {
 				const childLocation = this.pieceToLocation(in_child);
 				return childLocation.row === location.row && childLocation.col === col;
@@ -561,13 +568,13 @@ export class cColony extends cPieceSet {
 		return affected;
 	}
 	slidableDistance(in_piece, in_sign) {
-		const xArr = this.approximateChildren(in_obj => in_obj.position.x, in_sign);
-		for (let i = 0; i < xArr.length - 1; i++) {
-			if (Math.abs(xArr[i] - in_piece.position.x) < cColony.error) {
-				return xArr[i + 1] - in_piece.position.x;
-			}
+		const location = this.pieceToLocation(in_piece);
+		const nextCol = location.col + in_sign;
+		if ((nextCol < 0) || (this.currPiecesCache.structure.cols <= nextCol)) {
+			return 0;
 		}
-		return 0;
+		const nextPosition = this.currPiecesCache.structure.locationToPosition(location.row, nextCol);
+		return nextPosition.x - in_piece.position.x;
 	}
 	// public because of customizing
 	rotate(in_group, in_axis, in_rad) {
