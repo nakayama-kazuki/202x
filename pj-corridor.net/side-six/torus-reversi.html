@@ -10,7 +10,7 @@
 		"three" : "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.min.js",
 		"utils" : "https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/utils/BufferGeometryUtils.js",
 		"basic" : "./basic-functions.js",
-		"side6" : "./side-six.js",
+		"side6" : "./side-six.js?ddsxxd",
 		"s6res" : "./side-six-reversi-res.js",
 		"sound" : "./sound-effect.js"
 	}
@@ -211,7 +211,7 @@ class cLineParser {
 		}
 		return false;
 	}
-	static parse(in_items, in_player, in_loop, in_debug = false) {
+	static parse(in_items, in_player, in_loop) {
 		const parsed = {
 			eCriticalToMe : false,
 			ePreRiskToMe : false,
@@ -410,266 +410,266 @@ const suites = [
 
 	{group : '*** 1. there is no pc ***'},
 
-		{items : [9,9,9,9,9,9,9,9], loop : false, safetyScore : 0, dp : false},
-		{items : [9,9,9,9,1,2,1,2], loop : false, safetyScore : 0, dp : false},
-		{items : [1,2,1,2,1,2,1,2], loop : false, safetyScore : 0, dp : false},
+		{items : [9,9,9,9,9,9,9,9], loop : false, safetyScore : 0},
+		{items : [9,9,9,9,1,2,1,2], loop : false, safetyScore : 0},
+		{items : [1,2,1,2,1,2,1,2], loop : false, safetyScore : 0},
 
-		{items : [9,9,9,9,9,9,9,9], loop : true, safetyScore : 0, dp : false},
-		{items : [9,9,9,9,1,2,1,2], loop : true, safetyScore : 0, dp : false},
-		{items : [1,2,1,2,1,2,1,2], loop : true, safetyScore : 0, dp : false},
+		{items : [9,9,9,9,9,9,9,9], loop : true, safetyScore : 0},
+		{items : [9,9,9,9,1,2,1,2], loop : true, safetyScore : 0},
+		{items : [1,2,1,2,1,2,1,2], loop : true, safetyScore : 0},
 
 	{group : '*** 2. no empty ***'},
 
-		{items : [0,0,0,0,0,0,0,0], loop : false, safetyScore : 0, dp : false},
-		{items : [1,2,1,2,0,0,0,0], loop : false, safetyScore : 0, dp : false},
+		{items : [0,0,0,0,0,0,0,0], loop : false, safetyScore : 0},
+		{items : [1,2,1,2,0,0,0,0], loop : false, safetyScore : 0},
 
-		{items : [0,0,0,0,0,0,0,0], loop : true, safetyScore : 0, dp : false},
-		{items : [1,2,1,2,0,0,0,0], loop : true, safetyScore : 0, dp : false},
+		{items : [0,0,0,0,0,0,0,0], loop : true, safetyScore : 0},
+		{items : [1,2,1,2,0,0,0,0], loop : true, safetyScore : 0},
 
 	{group : '*** 3. pc is on the left side ***'},
 
-		{items : [0,9,9,9,9,9,9,9], loop : false, safetyScore : 1, dp : false},
-		{items : [0,1,9,9,9,9,9,9], loop : false, safetyScore : 1, dp : false},
-		{items : [0,9,9,9,9,9,9,1], loop : false, safetyScore : 1, dp : false},
-		{items : [0,1,9,9,9,9,9,1], loop : false, safetyScore : 1, dp : false},
+		{items : [0,9,9,9,9,9,9,9], loop : false, safetyScore : 1},
+		{items : [0,1,9,9,9,9,9,9], loop : false, safetyScore : 1},
+		{items : [0,9,9,9,9,9,9,1], loop : false, safetyScore : 1},
+		{items : [0,1,9,9,9,9,9,1], loop : false, safetyScore : 1},
 
-		{items : [0,9,9,9,9,9,9,9], loop : true, safetyScore : 1, dp : false},
-		{items : [0,1,9,9,9,9,9,9], loop : true, safetyScore : -1, dp : false},
-		{items : [0,9,9,9,9,9,9,1], loop : true, safetyScore : -1, dp : false},
-		{items : [0,1,9,9,9,9,9,1], loop : true, safetyScore : 1, dp : false},
-		{items : [0,1,9,9,9,9,9,2], loop : true, safetyScore : -1, dp : false},
+		{items : [0,9,9,9,9,9,9,9], loop : true, safetyScore : 1},
+		{items : [0,1,9,9,9,9,9,9], loop : true, safetyScore : -1},
+		{items : [0,9,9,9,9,9,9,1], loop : true, safetyScore : -1},
+		{items : [0,1,9,9,9,9,9,1], loop : true, safetyScore : 1},
+		{items : [0,1,9,9,9,9,9,2], loop : true, safetyScore : -1},
 
 	{group : '*** 4. pc is on the right side ***'},
 
-		{items : [9,9,9,9,9,9,9,0], loop : false, safetyScore : 1, dp : false},
-		{items : [9,9,9,9,9,9,1,0], loop : false, safetyScore : 1, dp : false},
-		{items : [1,9,9,9,9,9,9,0], loop : false, safetyScore : 1, dp : false},
-		{items : [1,9,9,9,9,9,1,0], loop : false, safetyScore : 1, dp : false},
+		{items : [9,9,9,9,9,9,9,0], loop : false, safetyScore : 1},
+		{items : [9,9,9,9,9,9,1,0], loop : false, safetyScore : 1},
+		{items : [1,9,9,9,9,9,9,0], loop : false, safetyScore : 1},
+		{items : [1,9,9,9,9,9,1,0], loop : false, safetyScore : 1},
 
-		{items : [9,9,9,9,9,9,9,0], loop : true, safetyScore : 1, dp : false},
-		{items : [9,9,9,9,9,9,1,0], loop : true, safetyScore : -1, dp : false},
-		{items : [1,9,9,9,9,9,9,0], loop : true, safetyScore : -1, dp : false},
-		{items : [1,0,9,9,9,9,1,0], loop : true, safetyScore : 0, dp : false},
-		{items : [2,0,9,9,9,9,1,0], loop : true, safetyScore : -2, dp : false},
+		{items : [9,9,9,9,9,9,9,0], loop : true, safetyScore : 1},
+		{items : [9,9,9,9,9,9,1,0], loop : true, safetyScore : -1},
+		{items : [1,9,9,9,9,9,9,0], loop : true, safetyScore : -1},
+		{items : [1,0,9,9,9,9,1,0], loop : true, safetyScore : 0},
+		{items : [2,0,9,9,9,9,1,0], loop : true, safetyScore : -2},
 
 	{group : '*** 5. pc is on the both sides ***'},
 
-		{items : [0,9,9,9,9,9,9,0], loop : false, safetyScore : 2, dp : false},
-		{items : [0,1,9,9,9,9,9,0], loop : false, safetyScore : 2, dp : false},
-		{items : [0,9,9,9,9,9,1,0], loop : false, safetyScore : 2, dp : false},
-		{items : [0,1,9,9,9,9,1,0], loop : false, safetyScore : 2, dp : false},
+		{items : [0,9,9,9,9,9,9,0], loop : false, safetyScore : 2},
+		{items : [0,1,9,9,9,9,9,0], loop : false, safetyScore : 2},
+		{items : [0,9,9,9,9,9,1,0], loop : false, safetyScore : 2},
+		{items : [0,1,9,9,9,9,1,0], loop : false, safetyScore : 2},
 
-		{items : [0,9,9,9,9,9,9,0], loop : true, safetyScore : 1, dp : false},
-		{items : [0,1,9,9,9,9,9,0], loop : true, safetyScore : -1, dp : false},
-		{items : [0,9,9,9,9,9,1,0], loop : true, safetyScore : -1, dp : false},
-		{items : [0,1,9,9,9,9,1,0], loop : true, safetyScore : 1, dp : false},
-		{items : [0,2,9,9,9,9,1,0], loop : true, safetyScore : -1, dp : false},
+		{items : [0,9,9,9,9,9,9,0], loop : true, safetyScore : 1},
+		{items : [0,1,9,9,9,9,9,0], loop : true, safetyScore : -1},
+		{items : [0,9,9,9,9,9,1,0], loop : true, safetyScore : -1},
+		{items : [0,1,9,9,9,9,1,0], loop : true, safetyScore : 1},
+		{items : [0,2,9,9,9,9,1,0], loop : true, safetyScore : -1},
 
 	{group : '*** 6. npc is on the both sides ***'},
 
-		{items : [1,9,9,9,9,9,9,1], loop : false, safetyScore : 0, dp : false},
-		{items : [1,0,9,9,9,9,9,1], loop : false, safetyScore : -1, dp : false},
-		{items : [1,9,9,9,9,9,0,1], loop : false, safetyScore : -1, dp : false},
-		{items : [1,0,9,9,9,9,0,1], loop : false, safetyScore : -2, dp : false},
+		{items : [1,9,9,9,9,9,9,1], loop : false, safetyScore : 0},
+		{items : [1,0,9,9,9,9,9,1], loop : false, safetyScore : -1},
+		{items : [1,9,9,9,9,9,0,1], loop : false, safetyScore : -1},
+		{items : [1,0,9,9,9,9,0,1], loop : false, safetyScore : -2},
 
-		{items : [1,9,9,9,9,9,9,1], loop : true, safetyScore : 0, dp : false},
-		{items : [1,0,9,9,9,9,9,1], loop : true, safetyScore : -1, dp : false},
-		{items : [1,9,9,9,9,9,0,1], loop : true, safetyScore : -1, dp : false},
-		{items : [1,0,9,9,9,9,0,1], loop : true, safetyScore : -2, dp : false},
+		{items : [1,9,9,9,9,9,9,1], loop : true, safetyScore : 0},
+		{items : [1,0,9,9,9,9,9,1], loop : true, safetyScore : -1},
+		{items : [1,9,9,9,9,9,0,1], loop : true, safetyScore : -1},
+		{items : [1,0,9,9,9,9,0,1], loop : true, safetyScore : -2},
 
 	{group : '*** 7. bOccupiedByMe ***'},
 
-		{items : [1,1,1,1,1,1,1,1], loop : false, bOccupiedByMe : false, dp : false},
-		{items : [0,0,0,0,0,0,0,0], loop : false, bOccupiedByMe : true, dp : false},
-		{items : [0,0,0,9,0,0,0,0], loop : false, bOccupiedByMe : false, dp : false},
+		{items : [1,1,1,1,1,1,1,1], loop : false, bOccupiedByMe : false},
+		{items : [0,0,0,0,0,0,0,0], loop : false, bOccupiedByMe : true},
+		{items : [0,0,0,9,0,0,0,0], loop : false, bOccupiedByMe : false},
 
-		{items : [1,1,1,1,1,1,1,1], loop : true, bOccupiedByMe : false, dp : false},
-		{items : [0,0,0,0,0,0,0,0], loop : true, bOccupiedByMe : true, dp : false},
-		{items : [0,0,0,9,0,0,0,0], loop : true, bOccupiedByMe : false, dp : false},
+		{items : [1,1,1,1,1,1,1,1], loop : true, bOccupiedByMe : false},
+		{items : [0,0,0,0,0,0,0,0], loop : true, bOccupiedByMe : true},
+		{items : [0,0,0,9,0,0,0,0], loop : true, bOccupiedByMe : false},
 
 	{group : '*** 8. bPreOccupiedByMe ***'},
 
-		{items : [1,1,1,1,1,1,1,1], loop : false, bPreOccupiedByMe : false, dp : false},
-		{items : [0,0,0,0,0,0,0,0], loop : false, bPreOccupiedByMe : false, dp : false},
-		{items : [0,0,0,1,0,0,0,0], loop : false, bPreOccupiedByMe : false, dp : false},
-		{items : [0,0,0,9,0,0,0,0], loop : false, bPreOccupiedByMe : true, dp : false},
+		{items : [1,1,1,1,1,1,1,1], loop : false, bPreOccupiedByMe : false},
+		{items : [0,0,0,0,0,0,0,0], loop : false, bPreOccupiedByMe : false},
+		{items : [0,0,0,1,0,0,0,0], loop : false, bPreOccupiedByMe : false},
+		{items : [0,0,0,9,0,0,0,0], loop : false, bPreOccupiedByMe : true},
 
-		{items : [1,1,1,1,1,1,1,1], loop : true, bPreOccupiedByMe : false, dp : false},
-		{items : [0,0,0,0,0,0,0,0], loop : true, bPreOccupiedByMe : false, dp : false},
-		{items : [0,0,0,1,0,0,0,0], loop : true, bPreOccupiedByMe : false, dp : false},
-		{items : [0,0,0,9,0,0,0,0], loop : true, bPreOccupiedByMe : true, dp : false},
+		{items : [1,1,1,1,1,1,1,1], loop : true, bPreOccupiedByMe : false},
+		{items : [0,0,0,0,0,0,0,0], loop : true, bPreOccupiedByMe : false},
+		{items : [0,0,0,1,0,0,0,0], loop : true, bPreOccupiedByMe : false},
+		{items : [0,0,0,9,0,0,0,0], loop : true, bPreOccupiedByMe : true},
 
 	{group : '*** 9. bOccupiedByBoth ***'},
 
-		{items : [1,1,1,1,1,1,1,1], loop : false, bOccupiedByBoth : false, dp : false},
-		{items : [1,1,1,9,0,1,1,1], loop : false, bOccupiedByBoth : false, dp : false},
-		{items : [1,1,1,0,0,1,1,1], loop : false, bOccupiedByBoth : true, dp : false},
-		{items : [0,0,0,0,0,0,0,0], loop : false, bOccupiedByBoth : true, dp : false},
-		{items : [0,0,0,9,0,0,0,0], loop : false, bOccupiedByBoth : false, dp : false},
+		{items : [1,1,1,1,1,1,1,1], loop : false, bOccupiedByBoth : false},
+		{items : [1,1,1,9,0,1,1,1], loop : false, bOccupiedByBoth : false},
+		{items : [1,1,1,0,0,1,1,1], loop : false, bOccupiedByBoth : true},
+		{items : [0,0,0,0,0,0,0,0], loop : false, bOccupiedByBoth : true},
+		{items : [0,0,0,9,0,0,0,0], loop : false, bOccupiedByBoth : false},
 
-		{items : [1,1,1,1,1,1,1,1], loop : true, bOccupiedByBoth : false, dp : false},
-		{items : [1,1,1,9,0,1,1,1], loop : true, bOccupiedByBoth : false, dp : false},
-		{items : [1,1,1,0,0,1,1,1], loop : true, bOccupiedByBoth : true, dp : false},
-		{items : [0,0,0,0,0,0,0,0], loop : true, bOccupiedByBoth : true, dp : false},
-		{items : [0,0,0,9,0,0,0,0], loop : true, bOccupiedByBoth : false, dp : false},
+		{items : [1,1,1,1,1,1,1,1], loop : true, bOccupiedByBoth : false},
+		{items : [1,1,1,9,0,1,1,1], loop : true, bOccupiedByBoth : false},
+		{items : [1,1,1,0,0,1,1,1], loop : true, bOccupiedByBoth : true},
+		{items : [0,0,0,0,0,0,0,0], loop : true, bOccupiedByBoth : true},
+		{items : [0,0,0,9,0,0,0,0], loop : true, bOccupiedByBoth : false},
 
 	{group : '*** 10. bOuterByMe ***'},
 
-		{items : [0,1,0,9,9,9,9,9], loop : false, bOuterByMe : true, dp : false},
-		{items : [1,0,9,9,9,9,9,0], loop : false, bOuterByMe : false, dp : false},
-		{items : [0,9,9,9,9,9,0,1], loop : false, bOuterByMe : false, dp : false},
-		{items : [9,9,9,9,9,0,1,0], loop : false, bOuterByMe : true, dp : false},
-		{items : [9,9,0,1,2,0,9,9], loop : false, bOuterByMe : true, dp : false},
-		{items : [2,0,9,9,9,9,0,1], loop : false, bOuterByMe : false, dp : false},
+		{items : [0,1,0,9,9,9,9,9], loop : false, bOuterByMe : true},
+		{items : [1,0,9,9,9,9,9,0], loop : false, bOuterByMe : false},
+		{items : [0,9,9,9,9,9,0,1], loop : false, bOuterByMe : false},
+		{items : [9,9,9,9,9,0,1,0], loop : false, bOuterByMe : true},
+		{items : [9,9,0,1,2,0,9,9], loop : false, bOuterByMe : true},
+		{items : [2,0,9,9,9,9,0,1], loop : false, bOuterByMe : false},
 
-		{items : [0,1,0,9,9,9,9,9], loop : true, bOuterByMe : true, dp : false},
-		{items : [1,0,9,9,9,9,9,0], loop : true, bOuterByMe : true, dp : false},
-		{items : [0,9,9,9,9,9,0,1], loop : true, bOuterByMe : true, dp : false},
-		{items : [9,9,9,9,9,0,1,0], loop : true, bOuterByMe : true, dp : false},
-		{items : [9,9,0,1,2,0,9,9], loop : true, bOuterByMe : true, dp : false},
-		{items : [2,0,9,9,9,9,0,1], loop : true, bOuterByMe : true, dp : false},
+		{items : [0,1,0,9,9,9,9,9], loop : true, bOuterByMe : true},
+		{items : [1,0,9,9,9,9,9,0], loop : true, bOuterByMe : true},
+		{items : [0,9,9,9,9,9,0,1], loop : true, bOuterByMe : true},
+		{items : [9,9,9,9,9,0,1,0], loop : true, bOuterByMe : true},
+		{items : [9,9,0,1,2,0,9,9], loop : true, bOuterByMe : true},
+		{items : [2,0,9,9,9,9,0,1], loop : true, bOuterByMe : true},
 
 	{group : '*** 11. bPreOuterByMe ***'},
 
-		{items : [9,0,9,9,9,9,9,0], loop : false, bPreOuterByMe : false, dp : false},
-		{items : [0,9,0,9,9,9,9,9], loop : false, bPreOuterByMe : true, dp : false},
-		{items : [9,0,9,0,9,9,9,9], loop : false, bPreOuterByMe : true, dp : false},
-		{items : [9,0,1,0,9,9,9,9], loop : false, bPreOuterByMe : false, dp : false},
-		{items : [9,0,9,9,0,9,9,9], loop : false, bPreOuterByMe : false, dp : false},
+		{items : [9,0,9,9,9,9,9,0], loop : false, bPreOuterByMe : false},
+		{items : [0,9,0,9,9,9,9,9], loop : false, bPreOuterByMe : true},
+		{items : [9,0,9,0,9,9,9,9], loop : false, bPreOuterByMe : true},
+		{items : [9,0,1,0,9,9,9,9], loop : false, bPreOuterByMe : false},
+		{items : [9,0,9,9,0,9,9,9], loop : false, bPreOuterByMe : false},
 
-		{items : [9,0,9,9,9,9,9,0], loop : true, bPreOuterByMe : true, dp : false},
+		{items : [9,0,9,9,9,9,9,0], loop : true, bPreOuterByMe : true},
 
 	{group : '*** 12. eCriticalToMe ***'},
 
-		{items : [0,1,9,9,9,9,9,9], loop : false, eCriticalToMe : false, dp : false},
-		{items : [9,0,1,9,9,9,9,9], loop : false, eCriticalToMe : true, dp : false},
-		{items : [9,0,1,0,9,9,9,9], loop : false, eCriticalToMe : true, dp : false},
-		{items : [9,0,1,2,9,9,9,9], loop : false, eCriticalToMe : true, dp : false},
-		{items : [9,0,9,1,9,9,9,9], loop : false, eCriticalToMe : false, dp : false},
+		{items : [0,1,9,9,9,9,9,9], loop : false, eCriticalToMe : false},
+		{items : [9,0,1,9,9,9,9,9], loop : false, eCriticalToMe : true},
+		{items : [9,0,1,0,9,9,9,9], loop : false, eCriticalToMe : true},
+		{items : [9,0,1,2,9,9,9,9], loop : false, eCriticalToMe : true},
+		{items : [9,0,9,1,9,9,9,9], loop : false, eCriticalToMe : false},
 
-		{items : [9,9,9,9,9,9,1,0], loop : false, eCriticalToMe : false, dp : false},
-		{items : [9,9,9,9,9,1,0,9], loop : false, eCriticalToMe : true, dp : false},
-		{items : [9,9,9,9,0,1,0,9], loop : false, eCriticalToMe : true, dp : false},
-		{items : [9,9,9,9,2,1,0,9], loop : false, eCriticalToMe : true, dp : false},
-		{items : [9,9,9,9,1,9,0,9], loop : false, eCriticalToMe : false, dp : false},
+		{items : [9,9,9,9,9,9,1,0], loop : false, eCriticalToMe : false},
+		{items : [9,9,9,9,9,1,0,9], loop : false, eCriticalToMe : true},
+		{items : [9,9,9,9,0,1,0,9], loop : false, eCriticalToMe : true},
+		{items : [9,9,9,9,2,1,0,9], loop : false, eCriticalToMe : true},
+		{items : [9,9,9,9,1,9,0,9], loop : false, eCriticalToMe : false},
 
 	{group : '*** 13. ePreRiskToMe ***'},
 
-		{items : [9,0,9,0,9,9,9,9], loop : false, ePreRiskToMe : true, dp : false},
-		{items : [9,0,9,9,0,9,9,9], loop : false, ePreRiskToMe : false, dp : false},
-		{items : [9,9,0,9,0,9,9,9], loop : false, ePreRiskToMe : false, dp : false},
-		{items : [9,0,0,9,0,0,9,9], loop : false, ePreRiskToMe : true, dp : false},
+		{items : [9,0,9,0,9,9,9,9], loop : false, ePreRiskToMe : true},
+		{items : [9,0,9,9,0,9,9,9], loop : false, ePreRiskToMe : false},
+		{items : [9,9,0,9,0,9,9,9], loop : false, ePreRiskToMe : false},
+		{items : [9,0,0,9,0,0,9,9], loop : false, ePreRiskToMe : true},
 
-		{items : [9,9,9,9,0,9,0,9], loop : false, ePreRiskToMe : true, dp : false},
-		{items : [9,9,9,0,9,9,0,9], loop : false, ePreRiskToMe : false, dp : false},
-		{items : [9,9,9,0,9,0,9,9], loop : false, ePreRiskToMe : false, dp : false},
-		{items : [9,9,0,0,9,0,0,9], loop : false, ePreRiskToMe : true, dp : false},
+		{items : [9,9,9,9,0,9,0,9], loop : false, ePreRiskToMe : true},
+		{items : [9,9,9,0,9,9,0,9], loop : false, ePreRiskToMe : false},
+		{items : [9,9,9,0,9,0,9,9], loop : false, ePreRiskToMe : false},
+		{items : [9,9,0,0,9,0,0,9], loop : false, ePreRiskToMe : true},
 
 	{group : '*** 14. ePressureToMe ***'},
 
-		{items : [9,0,1,9,1,9,9,9], loop : false, ePressureToMe : true, dp : false},
-		{items : [9,9,0,1,9,1,9,9], loop : false, ePressureToMe : false, dp : false},
-		{items : [9,0,0,1,1,9,1,9], loop : false, ePressureToMe : true, dp : false},
-		{items : [9,0,1,9,1,9,9,9], loop : true, ePressureToMe : false, dp : false},
-		{items : [9,9,0,1,9,1,9,9], loop : true, ePressureToMe : false, dp : false},
-		{items : [9,0,0,1,1,9,1,9], loop : true, ePressureToMe : false, dp : false},
+		{items : [9,0,1,9,1,9,9,9], loop : false, ePressureToMe : true},
+		{items : [9,9,0,1,9,1,9,9], loop : false, ePressureToMe : false},
+		{items : [9,0,0,1,1,9,1,9], loop : false, ePressureToMe : true},
+		{items : [9,0,1,9,1,9,9,9], loop : true, ePressureToMe : false},
+		{items : [9,9,0,1,9,1,9,9], loop : true, ePressureToMe : false},
+		{items : [9,0,0,1,1,9,1,9], loop : true, ePressureToMe : false},
 
-		{items : [9,9,1,9,1,0,9,9], loop : false, ePressureToMe : false, dp : false},
-		{items : [9,1,9,1,1,0,0,9], loop : false, ePressureToMe : true, dp : false},
+		{items : [9,9,1,9,1,0,9,9], loop : false, ePressureToMe : false},
+		{items : [9,1,9,1,1,0,0,9], loop : false, ePressureToMe : true},
 
 	{group : '*** 15. bPressureToMe ***'},
 
-		{items : [9,0,1,9,1,9,9,9], loop : false, bPressureToMe : true, dp : false},
-		{items : [9,9,0,1,9,1,9,9], loop : false, bPressureToMe : true, dp : false},
-		{items : [9,0,0,1,1,9,1,9], loop : false, bPressureToMe : true, dp : false},
-		{items : [9,0,1,9,1,9,9,9], loop : true, bPressureToMe : true, dp : false},
-		{items : [9,9,0,1,9,1,9,9], loop : true, bPressureToMe : true, dp : false},
-		{items : [9,0,0,1,1,9,1,9], loop : true, bPressureToMe : true, dp : false},
+		{items : [9,0,1,9,1,9,9,9], loop : false, bPressureToMe : true},
+		{items : [9,9,0,1,9,1,9,9], loop : false, bPressureToMe : true},
+		{items : [9,0,0,1,1,9,1,9], loop : false, bPressureToMe : true},
+		{items : [9,0,1,9,1,9,9,9], loop : true, bPressureToMe : true},
+		{items : [9,9,0,1,9,1,9,9], loop : true, bPressureToMe : true},
+		{items : [9,0,0,1,1,9,1,9], loop : true, bPressureToMe : true},
 
-		{items : [9,9,1,9,1,0,9,9], loop : false, bPressureToMe : true, dp : false},
-		{items : [9,1,9,1,1,0,0,9], loop : false, bPressureToMe : true, dp : false},
+		{items : [9,9,1,9,1,0,9,9], loop : false, bPressureToMe : true},
+		{items : [9,1,9,1,1,0,0,9], loop : false, bPressureToMe : true},
 
 	{group : '*** 16. ePrePressureToMe ***'},
 
-		{items : [9,0,9,9,1,9,9,9], loop : false, ePrePressureToMe : true, dp : false},
-		{items : [9,9,0,9,9,1,9,9], loop : false, ePrePressureToMe : false, dp : false},
-		{items : [9,0,0,9,1,9,1,9], loop : false, ePrePressureToMe : true, dp : false},
-		{items : [9,0,9,9,1,9,9,9], loop : true, ePrePressureToMe : false, dp : false},
-		{items : [9,9,0,9,9,1,9,9], loop : true, ePrePressureToMe : false, dp : false},
-		{items : [9,0,0,9,1,9,1,9], loop : true, ePrePressureToMe : false, dp : false},
+		{items : [9,0,9,9,1,9,9,9], loop : false, ePrePressureToMe : true},
+		{items : [9,9,0,9,9,1,9,9], loop : false, ePrePressureToMe : false},
+		{items : [9,0,0,9,1,9,1,9], loop : false, ePrePressureToMe : true},
+		{items : [9,0,9,9,1,9,9,9], loop : true, ePrePressureToMe : false},
+		{items : [9,9,0,9,9,1,9,9], loop : true, ePrePressureToMe : false},
+		{items : [9,0,0,9,1,9,1,9], loop : true, ePrePressureToMe : false},
 
-		{items : [9,9,1,9,9,0,9,9], loop : false, ePrePressureToMe : false, dp : false},
-		{items : [9,1,9,1,9,0,0,9], loop : false, ePrePressureToMe : true, dp : false},
+		{items : [9,9,1,9,9,0,9,9], loop : false, ePrePressureToMe : false},
+		{items : [9,1,9,1,9,0,0,9], loop : false, ePrePressureToMe : true},
 
 	{group : '*** 17. bPrePressureToMe ***'},
 
-		{items : [9,0,9,9,1,9,9,9], loop : false, bPrePressureToMe : true, dp : false},
-		{items : [9,9,0,9,9,1,9,9], loop : false, bPrePressureToMe : true, dp : false},
-		{items : [9,0,0,9,1,9,1,9], loop : false, bPrePressureToMe : true, dp : false},
-		{items : [9,0,9,9,1,9,9,9], loop : true, bPrePressureToMe : true, dp : false},
-		{items : [9,9,0,9,9,1,9,9], loop : true, bPrePressureToMe : true, dp : false},
-		{items : [9,0,0,9,1,9,1,9], loop : true, bPrePressureToMe : true, dp : false},
+		{items : [9,0,9,9,1,9,9,9], loop : false, bPrePressureToMe : true},
+		{items : [9,9,0,9,9,1,9,9], loop : false, bPrePressureToMe : true},
+		{items : [9,0,0,9,1,9,1,9], loop : false, bPrePressureToMe : true},
+		{items : [9,0,9,9,1,9,9,9], loop : true, bPrePressureToMe : true},
+		{items : [9,9,0,9,9,1,9,9], loop : true, bPrePressureToMe : true},
+		{items : [9,0,0,9,1,9,1,9], loop : true, bPrePressureToMe : true},
 
-		{items : [9,9,1,9,9,0,9,9], loop : false, bPrePressureToMe : true, dp : false},
-		{items : [9,1,9,1,9,0,0,9], loop : false, bPrePressureToMe : true, dp : false},
+		{items : [9,9,1,9,9,0,9,9], loop : false, bPrePressureToMe : true},
+		{items : [9,1,9,1,9,0,0,9], loop : false, bPrePressureToMe : true},
 
 	{group : '*** 18. ePressureByMe ***'},
 
-		{items : [1,1,0,9,0,9,9,9], loop : false, ePressureByMe : false, dp : false},
-		{items : [9,9,1,0,9,0,9,9], loop : false, ePressureByMe : false, dp : false},
-		{items : [9,1,0,9,0,9,9,9], loop : false, ePressureByMe : true, dp : false},
-		{items : [9,1,0,0,9,0,9,9], loop : false, ePressureByMe : true, dp : false},
-		{items : [9,1,1,0,9,0,9,9], loop : false, ePressureByMe : true, dp : false},
-		{items : [9,1,1,0,9,0,9,9], loop : true, ePressureByMe : false, dp : false},
+		{items : [1,1,0,9,0,9,9,9], loop : false, ePressureByMe : false},
+		{items : [9,9,1,0,9,0,9,9], loop : false, ePressureByMe : false},
+		{items : [9,1,0,9,0,9,9,9], loop : false, ePressureByMe : true},
+		{items : [9,1,0,0,9,0,9,9], loop : false, ePressureByMe : true},
+		{items : [9,1,1,0,9,0,9,9], loop : false, ePressureByMe : true},
+		{items : [9,1,1,0,9,0,9,9], loop : true, ePressureByMe : false},
 
-		{items : [9,9,9,0,9,0,1,1], loop : false, ePressureByMe : false, dp : false},
-		{items : [9,9,0,9,0,1,9,9], loop : false, ePressureByMe : false, dp : false},
-		{items : [9,9,9,0,9,0,1,9], loop : false, ePressureByMe : true, dp : false},
-		{items : [9,9,0,9,0,0,1,9], loop : false, ePressureByMe : true, dp : false},
-		{items : [9,9,0,9,0,1,1,9], loop : false, ePressureByMe : true, dp : false},
-		{items : [9,9,0,9,0,1,1,9], loop : true, ePressureByMe : false, dp : false},
+		{items : [9,9,9,0,9,0,1,1], loop : false, ePressureByMe : false},
+		{items : [9,9,0,9,0,1,9,9], loop : false, ePressureByMe : false},
+		{items : [9,9,9,0,9,0,1,9], loop : false, ePressureByMe : true},
+		{items : [9,9,0,9,0,0,1,9], loop : false, ePressureByMe : true},
+		{items : [9,9,0,9,0,1,1,9], loop : false, ePressureByMe : true},
+		{items : [9,9,0,9,0,1,1,9], loop : true, ePressureByMe : false},
 
 	{group : '*** 19. bPressureByMe ***'},
 
-		{items : [1,1,0,9,0,9,9,9], loop : false, bPressureByMe : false, dp : false},
-		{items : [9,9,1,0,9,0,9,9], loop : false, bPressureByMe : true, dp : false},
-		{items : [9,1,0,9,0,9,9,9], loop : false, bPressureByMe : true, dp : false},
-		{items : [9,1,0,0,9,0,9,9], loop : false, bPressureByMe : true, dp : false},
-		{items : [9,1,1,0,9,0,9,9], loop : false, bPressureByMe : true, dp : false},
-		{items : [9,1,1,0,9,0,9,9], loop : true, bPressureByMe : true, dp : false},
+		{items : [1,1,0,9,0,9,9,9], loop : false, bPressureByMe : false},
+		{items : [9,9,1,0,9,0,9,9], loop : false, bPressureByMe : true},
+		{items : [9,1,0,9,0,9,9,9], loop : false, bPressureByMe : true},
+		{items : [9,1,0,0,9,0,9,9], loop : false, bPressureByMe : true},
+		{items : [9,1,1,0,9,0,9,9], loop : false, bPressureByMe : true},
+		{items : [9,1,1,0,9,0,9,9], loop : true, bPressureByMe : true},
 
-		{items : [9,9,9,0,9,0,1,1], loop : false, bPressureByMe : false, dp : false},
-		{items : [9,9,0,9,0,1,9,9], loop : false, bPressureByMe : true, dp : false},
-		{items : [9,9,9,0,9,0,1,9], loop : false, bPressureByMe : true, dp : false},
-		{items : [9,9,0,9,0,0,1,9], loop : false, bPressureByMe : true, dp : false},
-		{items : [9,9,0,9,0,1,1,9], loop : false, bPressureByMe : true, dp : false},
-		{items : [9,9,0,9,0,1,1,9], loop : true, bPressureByMe : true, dp : false},
+		{items : [9,9,9,0,9,0,1,1], loop : false, bPressureByMe : false},
+		{items : [9,9,0,9,0,1,9,9], loop : false, bPressureByMe : true},
+		{items : [9,9,9,0,9,0,1,9], loop : false, bPressureByMe : true},
+		{items : [9,9,0,9,0,0,1,9], loop : false, bPressureByMe : true},
+		{items : [9,9,0,9,0,1,1,9], loop : false, bPressureByMe : true},
+		{items : [9,9,0,9,0,1,1,9], loop : true, bPressureByMe : true},
 
 	{group : '*** 20. bInnerByMe ***'},
 
-		{items : [9,9,9,9,9,9,9,9], loop : false, bInnerByMe : false, dp : false},
+		{items : [9,9,9,9,9,9,9,9], loop : false, bInnerByMe : false},
 
-		{items : [1,0,1,9,9,9,9,9], loop : false, bInnerByMe : true, dp : false},
-		{items : [1,0,0,1,9,9,9,9], loop : false, bInnerByMe : true, dp : false},
-		{items : [2,0,0,1,9,9,9,9], loop : false, bInnerByMe : false, dp : false},
-		{items : [1,9,0,1,9,9,9,9], loop : false, bInnerByMe : false, dp : false},
+		{items : [1,0,1,9,9,9,9,9], loop : false, bInnerByMe : true},
+		{items : [1,0,0,1,9,9,9,9], loop : false, bInnerByMe : true},
+		{items : [2,0,0,1,9,9,9,9], loop : false, bInnerByMe : false},
+		{items : [1,9,0,1,9,9,9,9], loop : false, bInnerByMe : false},
 
-		{items : [0,1,9,9,9,9,9,1], loop : false, bInnerByMe : false, dp : false},
-		{items : [0,1,9,9,9,9,1,0], loop : false, bInnerByMe : false, dp : false},
-		{items : [0,1,9,9,9,9,2,0], loop : false, bInnerByMe : false, dp : false},
-		{items : [0,1,9,9,9,9,1,9], loop : false, bInnerByMe : false, dp : false},
+		{items : [0,1,9,9,9,9,9,1], loop : false, bInnerByMe : false},
+		{items : [0,1,9,9,9,9,1,0], loop : false, bInnerByMe : false},
+		{items : [0,1,9,9,9,9,2,0], loop : false, bInnerByMe : false},
+		{items : [0,1,9,9,9,9,1,9], loop : false, bInnerByMe : false},
 
-		{items : [0,1,9,9,9,9,9,1], loop : true, bInnerByMe : true, dp : false},
-		{items : [0,1,9,9,9,9,1,0], loop : true, bInnerByMe : true, dp : false},
-		{items : [0,1,9,9,9,9,2,0], loop : true, bInnerByMe : false, dp : false},
-		{items : [0,1,9,9,9,9,1,9], loop : true, bInnerByMe : false, dp : false}
+		{items : [0,1,9,9,9,9,9,1], loop : true, bInnerByMe : true},
+		{items : [0,1,9,9,9,9,1,0], loop : true, bInnerByMe : true},
+		{items : [0,1,9,9,9,9,2,0], loop : true, bInnerByMe : false},
+		{items : [0,1,9,9,9,9,1,9], loop : true, bInnerByMe : false}
 ];
 
 suites.forEach(in_suite => {
 	if (in_suite.group) {
 		console.log(in_suite.group);
 	} else {
-		const parsed = cLineParser.parse(in_suite.items, 0, in_suite.loop, in_suite.dp);
+		const parsed = cLineParser.parse(in_suite.items, 0, in_suite.loop);
 		Object.keys(parsed).forEach(in_prop => {
 			if (!in_suite.hasOwnProperty(in_prop)) {
 				return;
@@ -722,6 +722,7 @@ class cReversi {
 		}
 		return in_array.slice(shiftCnt).concat(in_array.slice(0, shiftCnt));
 	}
+	static #edge = Symbol();
 	static #dmz = 8;
 	static #empty = 9;
 	static #maxPlayers = 6;
@@ -732,22 +733,6 @@ class cReversi {
 		}
 		return arr;
 	})();
-	static #addUniqueSet(in_newSet, in_arr) {
-		const duplicated = in_arr.some(in_addedSet => {
-			if (in_newSet.size !== in_addedSet.size) {
-				return false;
-			}
-			for (const item of in_newSet) {
-				if (!in_addedSet.has(item)) {
-					return false;
-				}
-			}
-			return true;
-		});
-		if (!duplicated) {
-			in_arr.push(in_newSet);
-		}
-	}
 	static #dirStyle = {
 		square : {
 			onehand : {
@@ -881,11 +866,18 @@ class cReversi {
 	#getDirection(in_row, in_col, in_dirIx) {
 		return this.#getDirections(in_row, in_col)[in_dirIx];
 	}
-	#aroundIndexes(in_ix) {
+	#aroundIndexes(in_ix, in_keepEdge = false) {
+		// in_keepEdge : pad missing neighbors at board edges
 		const pos = this.#indexToPos(in_ix);
-		return this.#aroundPositions(pos.row, pos.col).map(([in_row, in_col]) => this.#posToIndex(in_row, in_col));
+		return this.#aroundPositions(pos.row, pos.col, in_keepEdge).map(in_pos => {
+			if (in_pos === cReversi.#edge) {
+				return cReversi.#edge;
+			}
+			return this.#posToIndex(in_pos[0], in_pos[1]);
+		});
 	}
-	#aroundPositions(in_row, in_col) {
+	#aroundPositions(in_row, in_col, in_keepEdge = false) {
+		// in_keepEdge : pad missing neighbors at board edges
 		const directions = this.#getDirections(in_row, in_col);
 		const aroundPos = [];
 		const sizeRow = this.#conf.row.size;
@@ -895,6 +887,9 @@ class cReversi {
 			let col = in_col + in_dc;
 			if ((row < 0) || (sizeRow -1 < row)) {
 				if (this.#conf.row.edge) {
+					if (in_keepEdge) {
+						aroundPos.push(cReversi.#edge);
+					}
 					return;
 				} else {
 					row = (sizeRow + row) % sizeRow;
@@ -902,6 +897,9 @@ class cReversi {
 			}
 			if ((col < 0) || (sizeCol -1 < col)) {
 				if (this.#conf.col.edge) {
+					if (in_keepEdge) {
+						aroundPos.push(cReversi.#edge);
+					}
 					return;
 				} else {
 					col = (sizeCol + col) % sizeCol;
@@ -924,6 +922,13 @@ class cReversi {
 		const sizeCol = in_table.reduce((in_maxLen, in_row) => {
 			return Math.max(in_maxLen, in_row.length);
 		}, 0);
+		if (!in_rowEdge && !in_colEdge && (sizeRow !== sizeCol || sizeRow % 2 !== 0)) {
+			const reason = [
+				'fully cyclic boards must be even-sized squares (N x N) ',
+				'to limit cyclic path lengths in #initTagIndexesRadiating()'
+			];
+			throw new Error(reason.join(''));
+		}
 		if (cReversi.#dirStyle.hasOwnProperty(in_format)) {
 			if (!in_rowEdge && (sizeRow % 2 === 1) && (in_format === 'hexPointyTopped')) {
 				throw new Error('invalid rows (' + sizeRow + ') for row-loop of ' + in_format);
@@ -947,13 +952,9 @@ class cReversi {
 			dirStyle : dirStyle,
 			// square can accommodate any offset
 			offset : (in_offset % 2),
-			rotatable : {
-				fixedCol : !in_rowEdge && dirStyle.pair.has(0),
-				fixedRow : !in_colEdge && dirStyle.pair.has(90)
-			},
 			tagIndexes : {
 				radiating : [],
-				edgeSetArr : [],
+				edgeObjArr : [],
 				cornerSet : new Set(),
 				xInsideSet : new Set()
 			}
@@ -976,13 +977,12 @@ class cReversi {
 			const {row : initRow, col : initCol} = this.#indexToPos(areaIx);
 			const radiating = tagIndexes.radiating[areaIx] = [];
 			const dirStyle = this.#getDirections(initRow, initCol);
-			// don't need radiating which starts from dmz
-			const wouldScan = (this.#getItemByIndex(areaIx) !== cReversi.#dmz);
 			for (let dirIx = 0; dirIx < dirStyle.length; dirIx++) {
-				const towards = [];
+				const ray = [];
+				let cyclic = false;
 				let currRow = initRow;
 				let currCol = initCol;
-				while (wouldScan) {
+				while (true) {
 					const [dr, dc] = this.#getDirection(currRow, currCol, dirIx);
 					currRow += dr;
 					if (this.#conf.row.edge) {
@@ -992,10 +992,6 @@ class cReversi {
 						}
 					} else {
 						currRow = (currRow + this.#conf.row.size) % this.#conf.row.size;
-						if ((currRow === initRow) && (dr !== 0)) {
-							// cyclic
-							break;
-						}
 					}
 					currCol += dc;
 					if (this.#conf.col.edge) {
@@ -1005,20 +1001,52 @@ class cReversi {
 						}
 					} else {
 						currCol = (currCol + this.#conf.col.size) % this.#conf.col.size;
-						if ((currCol === initCol) && (dc !== 0)) {
-							// cyclic
-							break;
-						}
 					}
-					towards.push(this.#posToIndex(currRow, currCol));
+					const currIx = this.#posToIndex(currRow, currCol);
+					if (currIx === areaIx) {
+						// cyclic
+						cyclic = true;
+						break;
+					}
+					ray.push(currIx);
 				}
-				radiating.push(towards);
+				radiating.push({ray, cyclic});
 			}
+		}
+	}
+	#getContiguousLine(in_areaIx, in_neg, in_pos) {
+		const radiating = this.#conf.tagIndexes.radiating[in_areaIx];
+		const P = this.#indexesUntil(radiating[in_pos].ray, cReversi.#dmz);
+		const cyclic = (P.length === radiating[in_pos].ray.length) && radiating[in_pos].cyclic;
+		let indexes;
+		if (cyclic) {
+			indexes = [in_areaIx, ...P];
+		} else {
+			const N = this.#indexesUntil(radiating[in_neg].ray, cReversi.#dmz);
+			indexes = [...N.toReversed(), in_areaIx, ...P];
+		}
+		return {indexes, cyclic};
+	}
+	#appendUniqueEdgeSet(in_newSet, in_cyclic) {
+		const tagIndexes = this.#conf.tagIndexes;
+		const duplicated = tagIndexes.edgeObjArr.some(in_edgeObj => {
+			if (in_newSet.size !== in_edgeObj.set.size) {
+				return false;
+			}
+			for (const item of in_newSet) {
+				if (!in_edgeObj.set.has(item)) {
+					return false;
+				}
+			}
+			return true;
+		});
+		if (!duplicated) {
+			tagIndexes.edgeObjArr.push({set : in_newSet, cyclic : in_cyclic});
 		}
 	}
 	#initTagIndexes() {
 		this.#initTagIndexesRadiating();
-		const pairs = Array.from(this.#conf.dirStyle.pair.values());
+		const pairs = Array.from(this.#conf.dirStyle.pair.entries());
 		const edgeAdhocMinLength = 6;
 		const tagIndexes = this.#conf.tagIndexes;
 		for (let areaIx = 0; areaIx < this.#area.items.length; areaIx++) {
@@ -1026,56 +1054,115 @@ class cReversi {
 				continue;
 			}
 			const radiating = tagIndexes.radiating[areaIx];
-			// (1) edgeSetArr
-			pairs.forEach(([in_neg, in_pos]) => {
-				const neg = this.#indexesUntil(radiating[in_neg], cReversi.#dmz);
-				const pos = this.#indexesUntil(radiating[in_pos], cReversi.#dmz);
-				const edgeSet = new Set([...neg, areaIx, ...pos]);
-				if (edgeSet.size < edgeAdhocMinLength) {
+			// (1) edgeObjArr : a structurally stable line protected against flipping from outside, even after tactical rotations
+			/*
+				Edge
+
+					Ex
+					Ex
+					Ex
+
+					Dx
+					Dx
+					Dx
+
+				NOT Edge
+
+					Dx  |
+					Dx  v
+					Dx  rotatable
+
+					Dx  -> rotatable
+					Dx
+					Dx
+			*/
+			pairs.forEach(([in_angle, [in_neg, in_pos]]) => {
+				const {indexes, cyclic} = this.#getContiguousLine(areaIx, in_neg, in_pos);
+				const lineSet = new Set(indexes);
+				if (lineSet.size < edgeAdhocMinLength) {
 					return;
 				}
-				const isEdge = Array.from(edgeSet).every(edgeIx => {
-					const aroundArr = this.#aroundIndexes(edgeIx);
-					if (aroundArr.length < pairs.length * 2) {
-						return true;
+				const rotatable = this.rotatableFixedCol(in_angle) || this.rotatableFixedRow(in_angle);
+				const aroundEdgeTest = Array(this.#aroundIndexes(areaIx, true).length).fill(true);
+				for (const lineIx of lineSet) {
+					const aroundArr = this.#aroundIndexes(lineIx, true);
+					for (let dirIx = 0; dirIx < aroundArr.length; dirIx++) {
+						const ix = aroundArr[dirIx];
+						if ((ix !== cReversi.#edge) && ((this.#getItemByIndex(ix) !== cReversi.#dmz) || rotatable)) {
+							aroundEdgeTest[dirIx] = false;
+						}
 					}
-					return aroundArr.some(in_aroundIx => {
-						return (this.#getItemByIndex(in_aroundIx) === cReversi.#dmz);
-					});
-				});
-				if (isEdge) {
-					cReversi.#addUniqueSet(edgeSet, tagIndexes.edgeSetArr);
+				}
+				if (aroundEdgeTest.some(in_test => in_test)) {
+					this.#appendUniqueEdgeSet(lineSet, cyclic);
 				}
 			});
-			// (2) corner
-			const isCorner = pairs.every(([in_neg, in_pos]) => {
-				const N = radiating[in_neg];
-				const P = radiating[in_pos];
-				if ((N.length === 0) || (this.#getItemByIndex(N[0]) === cReversi.#dmz)) {
+			// (2) corner : a structurally stable position that remains unflippable even after tactical rotations
+			/*
+				isCorner : true
+
+					EEEE
+					Ex..
+					E...
+					E...
+
+				isCorner : true
+
+					EEEE
+					Dx.. --> NOT rotatable
+					D...
+					D...
+
+				isCorner : true
+
+					EEEE
+					Dx.. --> rotatable
+					D...
+					D...
+
+				isCorner : true
+
+					DDDD
+					Dx.. --> NOT rotatable
+					D...
+					D...
+
+				isCorner : false
+
+					DDDD
+					Dx.. --> rotatable
+					D...
+					D...
+			*/
+			const isCorner = pairs.every(([in_angle, [in_neg, in_pos]]) => {
+				const N = radiating[in_neg].ray;
+				const P = radiating[in_pos].ray;
+				if ((N.length === 0) || (P.length === 0)) {
 					return true;
 				}
-				if ((P.length === 0) || (this.#getItemByIndex(P[0]) === cReversi.#dmz)) {
+				if ((this.#getItemByIndex(N[0]) === cReversi.#dmz) || (this.#getItemByIndex(P[0]) === cReversi.#dmz)) {
+					if (this.rotatableFixedCol(in_angle) || this.rotatableFixedRow(in_angle)) {
+						return false;
+					}
 					return true;
 				}
 				// both sides are available
 				return false;
 			});
-			if (!isCorner) {
-				continue;
-			} else {
+			if (isCorner) {
 				tagIndexes.cornerSet.add(areaIx);
+				// (3) xInsideSet : an inland position adjacent to a corner, with no neighboring pieces or DMZ to provide protection
+				const aroundArr = this.#aroundIndexes(areaIx);
+				aroundArr.forEach(in_aroundIx => {
+					const testArr = this.#aroundIndexes(in_aroundIx);
+					if (testArr.length < pairs.length * 2) {
+						return;
+					}
+					if (testArr.every(in_testIx => this.#getItemByIndex(in_testIx) === cReversi.#empty)) {
+						tagIndexes.xInsideSet.add(in_aroundIx);
+					}
+				});
 			}
-			// (3) xInsideSet, when areaIx is corner
-			const aroundArr = this.#aroundIndexes(areaIx);
-			aroundArr.forEach(in_aroundIx => {
-				const testArr = this.#aroundIndexes(in_aroundIx);
-				if (testArr.length < pairs.length * 2) {
-					return;
-				}
-				if (testArr.every(in_testIx => this.#getItemByIndex(in_testIx) === cReversi.#empty)) {
-					tagIndexes.xInsideSet.add(in_aroundIx);
-				}
-			});
 		}
 	}
 	#indexToPos(in_ix) {
@@ -1116,24 +1203,24 @@ class cReversi {
 		const radiating = this.#conf.tagIndexes.radiating[ix];
 		// in case of loop, neg and pos include the same indexes
 		const [neg, pos] = this.#conf.dirStyle.pair.get(90);
-		this.#rotateItems([ix, ...radiating[pos]], in_deltaCol);
+		this.#rotateItems([ix, ...radiating[pos].ray], in_deltaCol);
 	}
 	#rotateSameColItems(in_fixedCol, in_deltaRow) {
 		const ix = this.#posToIndex(0, in_fixedCol);
 		const radiating = this.#conf.tagIndexes.radiating[ix];
 		// in case of loop, neg and pos include the same indexes
 		const [neg, pos] = this.#conf.dirStyle.pair.get(0);
-		this.#rotateItems([ix, ...radiating[pos]], in_deltaRow);
+		this.#rotateItems([ix, ...radiating[pos].ray], in_deltaRow);
 	}
 	#flip(in_player, in_ix, in_dryRun = false) {
 		const radiating = this.#conf.tagIndexes.radiating[in_ix];
 		let flipped = false;
 		for (let i = 0; i < radiating.length; i++) {
-			const towards = radiating[i];
+			const ray = radiating[i].ray;
 			const ixArr = [in_ix];
 			let enemyAppears = false;
-			for (let j = 0; j < towards.length; j++) {
-				const ix = towards[j];
+			for (let j = 0; j < ray.length; j++) {
+				const ix = ray[j];
 				const item = this.#getItemByIndex(ix);
 				if (item === in_player) {
 					if (enemyAppears) {
@@ -1298,8 +1385,8 @@ class cReversi {
 	}
 	#updateScore_forPlayersEdge() {
 		const tagIndexes = this.#conf.tagIndexes;
-		tagIndexes.edgeSetArr.forEach(in_edgeSet => {
-			for (const edgeIx of in_edgeSet) {
+		tagIndexes.edgeObjArr.forEach(in_edgeObj => {
+			for (const edgeIx of in_edgeObj.set) {
 				const owner = this.#getItemByIndex(edgeIx);
 				if ((owner === cReversi.#dmz) || (owner === cReversi.#empty)) {
 					// edge is not owned
@@ -1307,8 +1394,8 @@ class cReversi {
 				}
 				const aroundArr = this.#aroundIndexes(edgeIx);
 				aroundArr.forEach(in_aroundIx => {
-					// edgeSetArr should be removed
-					if (in_edgeSet.has(in_aroundIx)) {
+					// in_edgeObj.set should be removed
+					if (in_edgeObj.set.has(in_aroundIx)) {
 						return;
 					}
 					// xInsideSet should be removed
@@ -1395,11 +1482,12 @@ class cReversi {
 		if (in_cand.type !== 'flip') {
 			return 0;
 		}
-		if (!this.#conf.row.edge && !this.#conf.col.edge) {
+		const tagIndexes = this.#conf.tagIndexes;
+		if ((tagIndexes.edgeObjArr.length === 0) && (tagIndexes.cornerSet.size === 0)) {
+			// no edge + no corner = not coastal zone
 			return 0;
 		}
 		cReversi.#registerStats('total');
-		const loop = !this.#conf.row.edge || !this.#conf.col.edge;
 		/*
 			1. e (= edge) : check if area of edge is safe
 			2. x (= xInside) : check if xInside positions will be not changed
@@ -1407,6 +1495,7 @@ class cReversi {
 		const check = {
 			e : {
 				indexes : [],
+				cyclic : false,
 				currItems : [],
 				nextItems : [],
 				currParsed : {},
@@ -1419,36 +1508,29 @@ class cReversi {
 				increased : false
 			}
 		};
-		const tagIndexes = this.#conf.tagIndexes;
 		if (tagIndexes.cornerSet.has(in_cand.ix)) {
 			cReversi.#registerStats('corner');
 			return +999;
 		}
-		const ixInEdge = tagIndexes.edgeSetArr.some(in_edgeSet => {
-			if (in_edgeSet.has(in_cand.ix)) {
-				check.e.indexes = [...in_edgeSet];
+		const ixInEdge = tagIndexes.edgeObjArr.some(in_edgeObj => {
+			if (in_edgeObj.set.has(in_cand.ix)) {
+				check.e.indexes = [...in_edgeObj.set];
+				check.e.cyclic = in_edgeObj.cyclic;
 				return true;
 			} else {
 				return false;
 			}
 		});
-		if (loop) {
-			if (!ixInEdge) {
-				cReversi.#registerStats('inside & loop = without xInside');
-				return 0;
+		const riskCornerSet = new Set();
+		for (const cornerIx of tagIndexes.cornerSet) {
+			if (this.#getItemByIndex(cornerIx) === cReversi.#empty) {
+				riskCornerSet.add(cornerIx);
 			}
-		} else {
-			const riskCornerSet = new Set();
-			for (const cornerIx of tagIndexes.cornerSet) {
-				if (this.#getItemByIndex(cornerIx) === cReversi.#empty) {
-					riskCornerSet.add(cornerIx);
-				}
-			}
-			for (const xInsideIx of tagIndexes.xInsideSet) {
-				const aroundArr = this.#aroundIndexes(xInsideIx);
-				if (aroundArr.some(in_aroundIx => riskCornerSet.has(in_aroundIx))) {
-					check.x.indexes.push(xInsideIx);
-				}
+		}
+		for (const xInsideIx of tagIndexes.xInsideSet) {
+			const aroundArr = this.#aroundIndexes(xInsideIx);
+			if (aroundArr.some(in_aroundIx => riskCornerSet.has(in_aroundIx))) {
+				check.x.indexes.push(xInsideIx);
 			}
 		}
 		if (check.e.indexes.length > 0) {
@@ -1459,17 +1541,22 @@ class cReversi {
 		}
 		const rollback = this.#createRollback();
 		this.#flip(in_player, in_cand.ix);
-		if (check.e.indexes.length > 0) {
-			check.e.nextItems = this.#items(check.e.indexes);
-			check.e.currParsed = cLineParser.parse(check.e.currItems, in_player, loop);
-			check.e.nextParsed = cLineParser.parse(check.e.nextItems, in_player, loop);
-		}
 		if (check.x.indexes.length > 0) {
 			check.x.nextItems = this.#items(check.x.indexes);
 			check.x.increased = !check.x.nextItems.every((in_item, in_ix) => in_item === check.x.currItems[in_ix]);
 		}
+		if (ixInEdge) {
+			check.e.nextItems = this.#items(check.e.indexes);
+			check.e.currParsed = cLineParser.parse(check.e.currItems, in_player, check.e.cyclic);
+			check.e.nextParsed = cLineParser.parse(check.e.nextItems, in_player, check.e.cyclic);
+		}
 		(rollback)();
-		// scaled scoreing > npc scoreing
+		// skip coastal scoring when neither edge nor xInside applies
+		if (!ixInEdge && !check.x.increased) {
+			cReversi.#registerStats('inside & without coastal targets');
+			return 0;
+		}
+		// scaled scoring > npc scoring
 		const priorityArr = [
 			// corner control strategy
 			{format : 'eCriticalToMe', positive : false},
@@ -1499,20 +1586,13 @@ class cReversi {
 		if (in_cand.type !== 'flip') {
 			return 0;
 		}
-		const loop = !this.#conf.row.edge || !this.#conf.col.edge;
-		const radiating = this.#conf.tagIndexes.radiating[in_cand.ix];
 		const pairs = Array.from(this.#conf.dirStyle.pair.values());
-		const radiatingLines = () => {
-			return pairs.map(([in_neg, in_pos]) => {
-				const n = radiating[in_neg].map(in_r_ix => this.#getItemByIndex(in_r_ix)).toReversed();
-				const p = radiating[in_pos].map(in_r_ix => this.#getItemByIndex(in_r_ix));
-				return [...n, this.#getItemByIndex(in_cand.ix), ...p];
-			});
-		};
-		const currRadiatingLines = radiatingLines();
+		const lineObjArr = pairs.map(([in_neg, in_pos]) => this.#getContiguousLine(in_cand.ix, in_neg, in_pos));
+		const lineItems = () => lineObjArr.map(in_line => this.#items(in_line.indexes));
+		const currRadiatingLines = lineItems();
 		const rollback = this.#createRollback();
 		this.#flip(in_player, in_cand.ix);
-		const nextRadiatingLines = radiatingLines();
+		const nextRadiatingLines = lineItems();
 		(rollback)();
 		let total = 0;
 		const xInside = false;
@@ -1529,8 +1609,8 @@ class cReversi {
 			{format : 'ePrePressureToMe', positive : false}
 		];
 		for (let i = 0; i < currRadiatingLines.length; i++) {
-			const currParsed = cLineParser.parse(currRadiatingLines[i], in_player, loop);
-			const nextParsed = cLineParser.parse(nextRadiatingLines[i], in_player, loop);
+			const currParsed = cLineParser.parse(currRadiatingLines[i], in_player, lineObjArr[i].cyclic);
+			const nextParsed = cLineParser.parse(nextRadiatingLines[i], in_player, lineObjArr[i].cyclic);
 			total += this.#evaluate(currParsed, nextParsed, xInside, priorityArr);
 		}
 		return total;
@@ -1564,8 +1644,8 @@ class cReversi {
 			}
 			const radiating = this.#conf.tagIndexes.radiating[ix];
 			const isSafe = pairs.every(([in_neg, in_pos])  => {
-				const N = findNeighbor(radiating[in_neg]);
-				const P = findNeighbor(radiating[in_pos]);
+				const N = findNeighbor(radiating[in_neg].ray);
+				const P = findNeighbor(radiating[in_pos].ray);
 				// player reachs all the way to the board edge, or to the DMZ
 				if ((N === null) || (N === cReversi.#dmz)) {
 					return true;
@@ -1680,7 +1760,6 @@ class cReversi {
 				} else {
 					break;
 				}
-				// this.dp();
 			}
 			let max = -Infinity;
 			let winner = -1;
@@ -1964,7 +2043,7 @@ class cReversi {
 			return true;
 		} else {
 			let action, result;
-			if (this.#conf.rotatable.fixedCol) {
+			if (this.rotatableFixedCol()) {
 				action = 'fixed-col-rotate';
 				result = this.#tryRotation(in_player, action);
 				if (result) {
@@ -1972,7 +2051,7 @@ class cReversi {
 					return true;
 				}
 			}
-			if (this.#conf.rotatable.fixedRow) {
+			if (this.rotatableFixedRow()) {
 				action = 'fixed-row-rotate';
 				result = this.#tryRotation(in_player, action);
 				if (result) {
@@ -1984,11 +2063,21 @@ class cReversi {
 			return false;
 		}
 	}
-	rotatableFixedCol() {
-		return this.#conf.rotatable.fixedCol;
+	#rotatableTable(in_cyclic, in_rotatableAngle, in_angle = null) {
+		const rotatable = in_cyclic && this.#conf.dirStyle.pair.has(in_rotatableAngle);
+		if (in_angle === null) {
+			return rotatable;
+		} else {
+			return rotatable && (in_rotatableAngle !== in_angle);
+		}
 	}
-	rotatableFixedRow() {
-		return this.#conf.rotatable.fixedRow;
+	rotatableFixedCol(in_angle = null) {
+		const rotatableAngle = 0;
+		return this.#rotatableTable(!this.#conf.row.edge, rotatableAngle, in_angle);
+	}
+	rotatableFixedRow(in_angle = null) {
+		const rotatableAngle = 90;
+		return this.#rotatableTable(!this.#conf.col.edge, rotatableAngle, in_angle);
 	}
 	getLast(in_conditions = {}) {
 		// in_conditions : {who, action, row, col, delta}
@@ -2033,7 +2122,7 @@ class cReversi {
 			finished : false,
 			players : []
 		};
-		const canRotate = this.#conf.rotatable.fixedCol || this.#conf.rotatable.fixedRow;
+		const canRotate = this.rotatableFixedCol() || this.rotatableFixedRow();
 		const cnt = {
 			activePlayer : 0,
 			frozenPlayer : 0
@@ -2176,8 +2265,7 @@ const GRAY1 = 0x222222;
 const GRAY2 = 0x444444;
 const GRAY3 = 0x666666;
 
-//★
-const BGCOLOR = GRAY3;
+const BGCOLOR = GRAY1;
 
 const ORANGE = 0xFFAA00, O = ORANGE;
 const RED = 0xFF0000, R = RED;
@@ -2446,12 +2534,15 @@ const gCyclicLevels = ((in_diameter) => {
 			topology.offset
 		);
 		const pieces = [];
+		const tubeRatio = (minorRadius - unitThick) / minorRadius;
+		const torusRatio = (majorRadius - minorRadius) / (majorRadius - minorRadius + unitThick);
+		const innerRatio = Math.min(tubeRatio, torusRatio);
 		for (let row = 0; row < st.rows; row++) {
 			for (let col = 0; col < st.cols; col++) {
 				const initialPoloidalAngle = st.locationToPoloidalAngle(row, col);
 				const geometry = topology.factory.create(
 					unitSize,
-					1,
+					innerRatio,
 					unitThick,
 					initialPoloidalAngle
 				);
@@ -2497,9 +2588,13 @@ const gCyclicLevels = ((in_diameter) => {
 		}
 		uniqueNameSet.add(name);
 		const dmzRow = in_level.table.some(in_row => in_row.every(in_color => in_color === D));
+		const dmzCol = in_level.table[0].some((in_color, in_ix) => in_level.table.every(in_row => in_row[in_ix] === D));
 		values.push({
 			name : name,
-			loop : !dmzRow,
+			loop : {
+				row : !dmzRow,
+				col : !dmzCol
+			},
 			format : in_level.format,
 			structure : st,
 			colorArr : Array.from(colorSet),
@@ -3145,8 +3240,8 @@ function updateChart() {
 function initializeByLevel() {
 	const curr = gCyclicLevels.currValue();
 	const edge = {
-		row : !(curr.loop),
-		col : true
+		row : !(curr.loop.row),
+		col : !(curr.loop.col),
 	};
 	gController = new cGameController(curr.colorArr, PC_COLOR);
 	gChart.initialize(curr.colorArr);
