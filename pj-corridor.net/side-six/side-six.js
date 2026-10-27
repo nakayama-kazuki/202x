@@ -398,6 +398,13 @@ export const angleSharedSquareFactory = factoryBuilder((in_size, in_innerRatio, 
 });
 
 export function updateChamferedGeometry(in_geometry, in_tWidth, in_bWidth, in_height, in_rotation) {
+	const next = [in_tWidth, in_bWidth, in_height, in_rotation];
+	const curr = in_geometry.userData.chamferedParams;
+	if (curr && next.every((in_v, in_ix) => in_v === curr[in_ix])) {
+		return;
+	} else {
+		in_geometry.userData.chamferedParams = next;
+	}
 	const position = in_geometry.attributes.position;
 	const requiredArr = ['position', 'vertexArr', 'size'];
 	const init = {};

@@ -1068,10 +1068,6 @@ class cReversi {
 
 				NOT Edge
 
-					Dx  |
-					Dx  v
-					Dx  rotatable
-
 					Dx  -> rotatable
 					Dx
 					Dx
@@ -2482,10 +2478,30 @@ const BOARD_DB = [
 	}
 ];
 
-//★隙間がイマイチ
-//★HEX がキモイ
-//★loop の考え方はちょい見直しが必要
-//★DB の処理修正
+function updateTorusPiece(in_structure, in_piece, in_deltaAngle, in_row, in_col) {
+	const poloidalAngle = in_structure.locationToPoloidalAngle(in_row, in_col) + in_deltaAngle;
+	const knowledge = in_structure.knowledgeByPoloidalAngle(poloidalAngle);
+	updateChamferedGeometry(
+		in_piece.geometry,
+		knowledge.tWidth,
+		knowledge.bWidth,
+		knowledge.height,
+		knowledge.rotation
+	);
+	in_piece.position.copy(in_structure.position(poloidalAngle, in_structure.toroidalAngle(in_col)));
+	in_piece.quaternion.copy(in_structure.locationToQuaternion(in_row, in_col));
+}
+
+//★
+function poloidalRotateTorus(in_structure, in_colony, in_deltaAngle) {
+    for (let row = 0; row < in_structure.rows; row++) {
+        for (let col = 0; col < in_structure.cols; col++) {
+            const piece = in_colony.locationToPiece(row, col);
+            updateTorusPiece(in_structure, piece, in_deltaAngle, row, col);
+        }
+    }
+    in_structure.poloidalRotation += in_deltaAngle;
+}
 
 let gTypeParamIsInvalid = false;
 
@@ -2546,14 +2562,6 @@ const gCyclicLevels = ((in_diameter) => {
 					unitThick,
 					initialPoloidalAngle
 				);
-				const knowledge = st.knowledgeByPoloidalAngle(initialPoloidalAngle);
-				updateChamferedGeometry(
-					geometry,
-					knowledge.tWidth,
-					knowledge.bWidth,
-					knowledge.height,
-					knowledge.rotation
-				);
 				const color = in_level.table[row][col];
 				const useTexture = (color === D) ? true : false;
 				const materials = [
@@ -2561,8 +2569,7 @@ const gCyclicLevels = ((in_diameter) => {
 					materialFactory.create(BGCOLOR, unitSize, false)
 				];
 				const piece = new THREE.Mesh(geometry, materials);
-				piece.position.copy(st.locationToPosition(row, col));
-				piece.quaternion.copy(st.locationToQuaternion(row, col));
+				updateTorusPiece(st, piece, 0, row, col);
 				pieces.push(piece);
 			}
 		}
