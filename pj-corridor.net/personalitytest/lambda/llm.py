@@ -263,7 +263,7 @@ def invoke_model(in_prompt: str) -> str:
 THRESHOLD_MIN_MINUTES = 1
 THRESHOLD_MAX_MINUTES = 30
 
-TESTCODE_HASH = 'b4a18b9f2bc4797546135b9a85d70d087f2654f7e84927798fcf377c3598cb50'
+TESTCODE_HASH = '1b3138e94f98f8c56cd9aa3e0527d94c488da2706ec42c38d3a57b23ecbe4146'
 
 def generate_fetch(in_req, in_rfc7231):
     cookies = {}
