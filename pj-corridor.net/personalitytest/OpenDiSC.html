@@ -139,7 +139,7 @@ import {
 	cControl,
 	cCard,
 	cState,
-	cLLM
+	cLLM,
 } from './OpenAssessmentLib.js';
 
 const APP = 'opendisc';
@@ -900,7 +900,7 @@ const QUESTIONS = [
 			de : 'Überzeugend',
 			es : 'Persuasivo',
 			pt : 'Persuasivo',
-			hi : 'प्रभावशाली',
+			hi : 'मनाने में कुशल',
 			ko : '설득력 있는',
 			zh : '有说服力'
 		}),
@@ -953,11 +953,11 @@ const QUESTIONS = [
 		[TYPES.S] : i18n.text({
 			en : 'Affable',
 			ja : '愛想が良い',
-			fr : 'Aimable',
-			de : 'Freundlich',
-			es : 'Amable',
+			fr : 'Affable',
+			de : 'Um­gänglich',
+			es : 'Trato agradable',
 			pt : 'Amável',
-			hi : 'मिलनसार',
+			hi : 'मृदुभाषी',
 			ko : '상냥한',
 			zh : '和蔼可亲'
 		}),
@@ -981,7 +981,7 @@ const QUESTIONS = [
 			de : 'Kühn',
 			es : 'Audaz',
 			pt : 'Ousado',
-			hi : 'साहसी',
+			hi : 'दुस्साहसी',
 			ko : '대담한',
 			zh : '大胆'
 		}),
@@ -1012,11 +1012,11 @@ const QUESTIONS = [
 			ja : '言いなり',
 			fr : 'Docile',
 			de : 'Fügsam',
-			es : 'Sumiso',
-			pt : 'Submisso',
-			hi : 'आज्ञाकारी',
+			es : 'Dócil',
+			pt : 'Dócil',
+			hi : 'दूसरों की बात आसानी से मानने वाला',
 			ko : '순응적인',
-			zh : '顺从'
+			zh : '言听计从'
 		})
 	},
 	{
@@ -1093,11 +1093,11 @@ const QUESTIONS = [
 			ja : '温和',
 			fr : 'Doux',
 			de : 'Sanft',
-			es : 'Amable',
-			pt : 'Gentil',
+			es : 'Apacible',
+			pt : 'Sereno',
 			hi : 'कोमल स्वभाव का',
-			ko : '온화한',
-			zh : '温和'
+			ko : '부드러운 성품의',
+			zh : '性格柔和'
 		}),
 		[TYPES.C] : i18n.text({
 			en : 'Meticulous',
@@ -1142,7 +1142,7 @@ const QUESTIONS = [
 			de : 'Mitfühlend',
 			es : 'Compasivo',
 			pt : 'Compassivo',
-			hi : 'दयालु',
+			hi : 'करुणाशील',
 			ko : '배려심 있는',
 			zh : '富有同情心'
 		}),
@@ -1236,7 +1236,7 @@ const QUESTIONS = [
 			pt : 'Submisso',
 			hi : 'आत्मसमर्पित',
 			ko : '복종적인',
-			zh : '顺从的'
+			zh : '服从他人'
 		}),
 		[TYPES.C] : i18n.text({
 			en : 'Timid',
@@ -1287,10 +1287,10 @@ const QUESTIONS = [
 		[TYPES.C] : i18n.text({
 			en : 'Quiet',
 			ja : 'もの静か',
-			fr : 'Réservé',
+			fr : 'Discret',
 			de : 'Still',
-			es : 'Reservado',
-			pt : 'Reservado',
+			es : 'Callado',
+			pt : 'Calado',
 			hi : 'शांत स्वभाव का',
 			ko : '조용한',
 			zh : '安静'
@@ -1348,7 +1348,7 @@ const QUESTIONS = [
 			en : 'Decisive',
 			ja : '決断力がある',
 			fr : 'Décisif',
-			de : 'Entschlossen',
+			de : 'Entscheidungsfreudig',
 			es : 'Decidido',
 			pt : 'Decidido',
 			hi : 'निर्णायक',
@@ -1369,7 +1369,7 @@ const QUESTIONS = [
 		[TYPES.S] : i18n.text({
 			en : 'Self-controlled',
 			ja : '自制心がある',
-			fr : 'Maîtrisé',
+			fr : 'Maître de soi',
 			de : 'Selbstbeherrscht',
 			es : 'Autocontrolado',
 			pt : 'Autocontrolado',
@@ -1491,7 +1491,7 @@ const QUESTIONS = [
 			pt : 'Determinado',
 			hi : 'दृढ़ निश्चयी',
 			ko : '결의가 확고한',
-			zh : '意志坚定'
+			zh : '决心坚定'
 		}),
 		[TYPES.I] : i18n.text({
 			en : 'Persuasive',
@@ -1510,10 +1510,10 @@ const QUESTIONS = [
 			fr : 'Doux',
 			de : 'Sanftmütig',
 			es : 'Apacible',
-			pt : 'Gentil',
+			pt : 'Suave',
 			hi : 'मृदु स्वभाव का',
-			ko : '온화한',
-			zh : '温厚'
+			ko : '부드러운 성품의',
+			zh : '性情温柔'
 		}),
 		[TYPES.C] : i18n.text({
 			en : 'Cautious',
@@ -1570,7 +1570,7 @@ const QUESTIONS = [
 			pt : 'Cooperativo',
 			hi : 'सहयोगी',
 			ko : '협조적인',
-			zh : '合作'
+			zh : '善于合作'
 		})
 	},
 	// 16-20
@@ -1600,10 +1600,10 @@ const QUESTIONS = [
 		[TYPES.S] : i18n.text({
 			en : 'Sympathetic',
 			ja : '同情',
-			fr : 'Compatissant',
-			de : 'Mitfühlend',
-			es : 'Compasivo',
-			pt : 'Compassivo',
+			fr : 'Empathique',
+			de : 'Anteilnehmend',
+			es : 'Empático',
+			pt : 'Empático',
 			hi : 'सहानुभूतिशील',
 			ko : '동정심 있는',
 			zh : '同情心'
@@ -1693,7 +1693,7 @@ const QUESTIONS = [
 			en : 'Kind',
 			ja : '親切',
 			fr : 'Aimable',
-			de : 'Freundlich',
+			de : 'Hilfsbereit',
 			es : 'Amable',
 			pt : 'Gentil',
 			hi : 'दयालु',
@@ -1705,8 +1705,8 @@ const QUESTIONS = [
 			ja : '忍従',
 			fr : 'Endurant',
 			de : 'Duldsam',
-			es : 'Resignado',
-			pt : 'Resignado',
+			es : 'Sufrido',
+			pt : 'Sofredor',
 			hi : 'सहनशील',
 			ko : '인내하는',
 			zh : '忍让'
@@ -1866,11 +1866,11 @@ const QUESTIONS = [
 		[TYPES.I] : i18n.text({
 			en : 'Good at socializing',
 			ja : '交際上手',
-			fr : 'Sociable',
-			de : 'Gesellig',
-			es : 'Sociable',
-			pt : 'Sociável',
-			hi : 'मिलनसार',
+			fr : 'À l’aise en société',
+			de : 'Kontaktgewandt',
+			es : 'Hábil para socializar',
+			pt : 'Hábil em socializar',
+			hi : 'सामाजिक मेलजोल में कुशल',
 			ko : '사교성이 좋은',
 			zh : '善于交际'
 		}),
@@ -1924,7 +1924,7 @@ const QUESTIONS = [
 			en : 'Self-restrained',
 			ja : '抑制',
 			fr : 'Maîtrisé',
-			de : 'Zurückhaltend',
+			de : 'Beherrscht',
 			es : 'Contenido',
 			pt : 'Contido',
 			hi : 'संयमी',
@@ -1975,7 +1975,7 @@ const QUESTIONS = [
 			pt : 'Cooperativo',
 			hi : 'सहयोगी',
 			ko : '협력적인',
-			zh : '合作'
+			zh : '善于合作'
 		}),
 		[TYPES.C] : i18n.text({
 			en : 'Devoted',

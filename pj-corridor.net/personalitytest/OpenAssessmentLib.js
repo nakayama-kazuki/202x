@@ -52,6 +52,7 @@ export class i18n {
 				const key = i18n.#fnv1a32(in_hash[i18n.#browserCode]);
 				if (Object.hasOwn(i18n.#mapping, key)) {
 					if ((i18n.#mapping[key] !== in_hash[i18n.#defaultCode]) && in_denyConflict) {
+						console.log(in_hash);
 						throw new Error(key + ' already exist');
 					}
 				}
