@@ -10,7 +10,7 @@
 		"three" : "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.min.js",
 		"utils" : "https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/utils/BufferGeometryUtils.js",
 		"basic" : "./basic-functions.js",
-		"side6" : "./side-six.js?ddsxxd",
+		"side6" : "./side-six.js",
 		"s6res" : "./side-six-reversi-res.js",
 		"sound" : "./sound-effect.js"
 	}
@@ -2492,17 +2492,6 @@ function updateTorusPiece(in_structure, in_piece, in_deltaAngle, in_row, in_col)
 	in_piece.quaternion.copy(in_structure.locationToQuaternion(in_row, in_col));
 }
 
-//★
-function poloidalRotateTorus(in_structure, in_colony, in_deltaAngle) {
-    for (let row = 0; row < in_structure.rows; row++) {
-        for (let col = 0; col < in_structure.cols; col++) {
-            const piece = in_colony.locationToPiece(row, col);
-            updateTorusPiece(in_structure, piece, in_deltaAngle, row, col);
-        }
-    }
-    in_structure.poloidalRotation += in_deltaAngle;
-}
-
 let gTypeParamIsInvalid = false;
 
 const gCyclicLevels = ((in_diameter) => {
@@ -3349,6 +3338,8 @@ async function uiUndo() {
 }
 
 function uiOverview() {
+	//★
+	return;
 	if (!gColony.isColonyView) {
 		return;
 	}
@@ -3729,6 +3720,7 @@ async function chooseHere(in_ev) {
 	const closure = {
 		x : -1,
 		y : -1,
+		poloidal : null,
 		once : false
 	};
 	const start = in_ev => {
@@ -3749,43 +3741,77 @@ async function chooseHere(in_ev) {
 		resetFocus();
 		closure.x = in_ev.clientX;
 		closure.y = in_ev.clientY;
-		// can drag only PC_COLOR
 		const drag = intersects[0].object
-		if (gReversi.rotatableFixedCol() && (getShellColor(drag) === PC_COLOR)) {
-			gColony.uiSetInitPosition(intersects[0].point, ndcToAbs(ndc));
+		if (getShellColor(drag) === PC_COLOR) {
+			// tactical rotation
+			//★
+			return;
+			if (gReversi.rotatableFixedCol()) {
+				gColony.uiSetInitPosition(intersects[0].point, ndcToAbs(ndc));
+			}
+		} else {
+			// all rotation = poloidal rotation
+			const st = gColony.currPiecesCache.structure;
+			const {row, col} = gColony.pieceToLocation(drag);
+			const origin = gColony.localToWorld(st.locationToPosition(row, col));
+			const tangent = st.poloidalTangent(row, col).transformDirection(gColony.matrixWorld);
+			closure.poloidal = {
+				projectedDir : gWorld.projectedDir(origin, tangent).normalize(),
+				startPos : ndcToAbs(ndc),
+				currAngle : 0
+			};
 		}
 	};
 	const move = thresholding(in_ev => {
 		closure.x = -1;
 		closure.y = -1;
-		const ndc = ndcFromEvent(in_ev);
-		if (gColony.uiIsMoving()) {
-			if (gColony.uiUpdatePosition(ndcToAbs(ndc))) {
-				SE_MOVED.play();
+		if (closure.poloidal) {
+			const st = gColony.currPiecesCache.structure;
+			const delta = ndcToAbs(ndcFromEvent(in_ev)).sub(closure.poloidal.startPos);
+			const sensitivity = 2.0;
+			const angle = delta.dot(closure.poloidal.projectedDir) * sensitivity;
+			const deltaAngle = angle - closure.poloidal.currAngle;
+			for (let row = 0; row < st.rows; row++) {
+				for (let col = 0; col < st.cols; col++) {
+					const piece = gColony.locationToPiece(row, col);
+					updateTorusPiece(st, piece, deltaAngle, row, col);
+				}
 			}
+			st.poloidalRotation += deltaAngle;
+			closure.poloidal.currAngle = angle;
 		} else {
-			if (gColony.uiIsDragging()) {
-				notifyDelta(ndc);
+			const ndc = ndcFromEvent(in_ev);
+			if (gColony.uiIsMoving()) {
+				if (gColony.uiUpdatePosition(ndcToAbs(ndc))) {
+					SE_MOVED.play();
+				}
 			} else {
-				if (!in_ev[isEmulated]) {
-					focusHere(ndc);
+				if (gColony.uiIsDragging()) {
+					notifyDelta(ndc);
+				} else {
+					if (!in_ev[isEmulated]) {
+						focusHere(ndc);
+					}
 				}
 			}
 		}
 	});
 	const stop = in_ev => {
-		const releaseProgress = gColony.uiRelease(in_changed => {
-			gWorld.removeAnimationHook(releaseProgress);
-			if (in_changed) {
-				rotateDone();
-			}
-		});
-		if (releaseProgress) {
-			gWorld.addAnimationHook(releaseProgress);
+		if (closure.poloidal) {
+			closure.poloidal = null;
 		} else {
-			if ((closure.x !== in_ev.clientX) || (closure.y !== in_ev.clientY)) {
+			const releaseProgress = gColony.uiRelease(in_changed => {
+				gWorld.removeAnimationHook(releaseProgress);
+				if (in_changed) {
+					rotateDone();
+				}
+			});
+			if (releaseProgress) {
+				gWorld.addAnimationHook(releaseProgress);
 				return;
 			}
+		}
+		if ((closure.x === in_ev.clientX) && (closure.y === in_ev.clientY)) {
 			chooseHere(in_ev);
 		}
 	};

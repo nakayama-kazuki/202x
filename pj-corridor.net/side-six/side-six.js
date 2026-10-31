@@ -180,6 +180,15 @@ export class cTorusStructure {
 			rotation : -in_angle + Math.PI / 2
 		};
 	}
+	poloidalTangent(in_row, in_col) {
+		const angle = this.locationToPoloidalAngle(in_row, in_col);
+		const toroidalAngle = this.toroidalAngle(in_col);
+		return VEC3(
+			Math.sin(angle) * Math.sin(toroidalAngle) * -1,
+			Math.cos(angle),
+			Math.sin(angle) * Math.cos(toroidalAngle) * -1
+		);
+	}
 	locationToPoloidalAngle(in_row, in_col) {
 		let row = in_row;
 		if ((this.offset >= 0) && (in_col % 2 === this.offset)) {
