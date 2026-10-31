@@ -1758,6 +1758,18 @@ export class cSphericalWorld {
 			return vec2.normalize();
 		}
 	}
+	projectedDir(in_origin, in_direction) {
+		/*
+			*** NOTE ***
+			perspective projection depends on the origin of the vector.
+			the same 3D direction can appear differently on screen
+			depending on its position relative to the camera.
+		*/
+		this.#camera.updateWorldMatrix(true, false);
+		const ndc1 = in_origin.clone().project(this.#camera);
+		const ndc2 = in_origin.clone().add(in_direction).project(this.#camera);
+		return new THREE.Vector2(ndc2.x - ndc1.x, ndc2.y - ndc1.y);
+	}
 	static #encode = false;
 	getViewCode() {
 		const wrapper = cSphericalWorld.#encode ? btoa : in_data => in_data;
