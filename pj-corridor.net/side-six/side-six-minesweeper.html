@@ -2008,15 +2008,19 @@ async function rotateDone(in_changed) {
 
 function rotateTexture() {
 	const {y, z} = gWorld.getCameraPos();
-	const plane = VEC3(0, y, z).normalize();
-	const initUp = VEC3(0, z, -y);
-	const currUp = gWorld.getCameraUp().projectOnPlane(plane);
-	let angle = initUp.angleTo(currUp);
-	const vec2 = gWorld.getScreenDirXP();
-	let screenAngle = Math.atan2(vec2.y * gWorld.canvas.height, vec2.x * gWorld.canvas.width);
-	if ((screenAngle < Math.PI / 4 * -1) || (Math.PI * 3 / 4 < screenAngle)) {
-		angle = Math.min(angle, Math.PI - angle) + Math.PI;
+	const normal = VEC3(0, y, z).normalize();
+	if (normal.lengthSq() < 1e-6) {
+		return;
 	}
+	const axisX = VEC3(1, 0, 0);
+	const tangent = VEC3(0, z, -y).normalize();
+	const cameraUp = gWorld.getCameraUp();
+	const x = cameraUp.dot(axisX);
+	const t = cameraUp.dot(tangent);
+	if (x * x + t * t < 1e-6) {
+		return;
+	}
+	let angle = Math.atan2(x, t);
 	if (gCyclicLevels.currValue().options.format === 'square') {
 		angle += Math.PI / 4;
 	}
