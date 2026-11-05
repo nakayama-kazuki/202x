@@ -1,0 +1,72 @@
+<html>
+<head>
+<!-- MIT License Copyright (c) 2024 pj-corridor.net -->
+<meta name='viewport' content='width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1' />
+<meta charset='utf-8' />
+<script async src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7863584801355594' crossorigin='anonymous'></script>
+<script type='importmap'>
+{
+	"imports" : {
+		"rever" : "./reversi.js"
+	}
+}
+</script>
+</head>
+<body>
+<script type='module'>
+
+import {cReversi} from 'rever';
+
+const TABLE = [
+	[9, 9, 9, 9, 9, 9, 9, 9],
+	[9, 9, 9, 9, 9, 9, 9, 9],
+	[9, 9, 9, 9, 9, 9, 9, 9],
+	[9, 9, 9, 0, 1, 9, 9, 9],
+	[9, 9, 9, 1, 0, 9, 9, 9],
+	[9, 9, 9, 9, 9, 9, 9, 9],
+	[9, 9, 9, 9, 9, 9, 9, 9],
+	[9, 9, 9, 9, 9, 9, 9, 9]
+];
+
+//const game = new cReversi(TABLE, true, true);
+//const game = new cReversi(TABLE, true, false);
+//const game = new cReversi(TABLE, false, true);
+const game = new cReversi(TABLE, false, false);
+//const game = new cReversi(TABLE, true, true, 'hexFlatTopped', 0);
+//const game = new cReversi(TABLE, true, true, 'hexFlatTopped', 1);
+//const game = new cReversi(TABLE, true, true, 'hexPointyTopped', 0);
+//const game = new cReversi(TABLE, true, true, 'hexPointyTopped', 1);
+
+let BATCHTEST = false;
+//BATCHTEST = true;
+
+if (BATCHTEST) {
+	console.time('_simulation');
+	const container = game._simulation();
+	document.body.appendChild(container);
+	console.timeEnd('_simulation');
+} else {
+	let turnCnt = 40;
+	const ms = 1000;
+	let container = null;
+	const turnProc = () => {
+		const player = turnCnt % 2;
+		game.playAutomatically(player);
+		if (container) {
+			game._snapshot(container);
+		} else {
+			container = game._snapshot();
+			document.body.appendChild(container);
+		}
+		if (turnCnt-- > 0) {
+			setTimeout(turnProc, ms);
+		} else {
+			console.log(game.getCurrentCondition());
+		}
+	};
+	(turnProc)();
+}
+
+</script>
+</body>
+

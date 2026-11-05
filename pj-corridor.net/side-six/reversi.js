@@ -1,0 +1,2074 @@
+const arrRand = Symbol();
+
+Object.defineProperty(Array.prototype, arrRand, {
+	value : function () {
+		return this[Math.floor(Math.random() * this.length)];
+	},
+	writable : true,
+	configurable : true,
+	enumerable : false
+});
+
+class cLineParser {
+	static #border = -1;
+	static #empty = 9;
+	static #cntEmpty(in_arr) {
+		return in_arr.filter(in_el => in_el === cLineParser.#empty).length;
+	}
+	static #findOneInnerEmpty(in_arr) {
+		let emptyAppear = false;
+		for (let i = 1; i < in_arr.length - 1; i++) {
+			if (emptyAppear) {
+				if (in_arr[i] === cLineParser.#empty) {
+					return false;
+				} else {
+					return true;
+				}
+			}
+			if (in_arr[i] === cLineParser.#empty) {
+				emptyAppear = true;
+			}
+		}
+		return false;
+	}
+	/*
+		fmt_eXXXXX is for edge
+	*/
+	static #fmt_eCriticalToMe(in_l, in_r) {
+		// B90011 ---> [B9][11]
+		if ((in_l.length === 2) &&
+			(in_l[0] === cLineParser.#border) &&
+			(in_l[1] === cLineParser.#empty)) {
+			if (in_r[0] !== cLineParser.#empty) {
+				return true;
+			}
+		}
+		return false;
+	}
+	static #fmt_ePreRiskToMe(in_l, in_r) {
+		// B90090 ---> [B9][9]
+		if ((in_l.length === 2) &&
+			(in_l[0] === cLineParser.#border) &&
+			(in_l[1] === cLineParser.#empty)) {
+			if ((in_r.length === 1) &&
+				(in_r[0] === cLineParser.#empty)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	static #fmt_ePressureToMe(in_l, in_r) {
+		// B900191 ---> [B9][191]
+		if ((in_l.length === 2) &&
+			(in_l[0] === cLineParser.#border)) {
+			return cLineParser.#fmt_bPressureToMe(in_l, in_r);
+		}
+		return false;
+	}
+	static #fmt_ePrePressureToMe(in_l, in_r) {
+		// B909191 ---> [B9][9191]
+		if ((in_l.length === 2) &&
+			(in_l[0] === cLineParser.#border)) {
+			return cLineParser.#fmt_bPrePressureToMe(in_l, in_r);
+		}
+		return false;
+	}
+	static #fmt_ePressureByMe(in_l, in_r) {
+		// B911090 ---> [B911][9]
+		if ((in_l.length >= 3) &&
+			(in_l[0] === cLineParser.#border) &&
+			(in_l[1] === cLineParser.#empty) &&
+			(cLineParser.#cntEmpty(in_l) === 1)) {
+			return cLineParser.#fmt_bPressureByMe(in_l, in_r);
+		}
+		return false;
+	}
+	/*
+		fmt_bXXXXX is for both edge and inner
+	*/
+	static #fmt_bPressureToMe(in_l, in_r) {
+		// 9900191 ---> [99][191]
+		if (in_l[in_l.length - 1] === cLineParser.#empty) {
+			if ((in_r.length >= 3) &&
+				(in_r[0] !== cLineParser.#empty)) {
+				return cLineParser.#findOneInnerEmpty(in_r);
+			}
+		}
+		return false;
+	}
+	static #fmt_bPrePressureToMe(in_l, in_r) {
+		// 9909191 ---> [99][9191]
+		if (in_l[in_l.length - 1] === cLineParser.#empty) {
+			if ((in_r.length >= 3) &&
+				(in_r[0] === cLineParser.#empty)) {
+				return cLineParser.#findOneInnerEmpty(in_r);
+			}
+		}
+		return false;
+	}
+	static #fmt_bPressureByMe(in_l, in_r) {
+		// 9911090 ---> [9911][9]
+		if ((in_l[in_l.length - 1] !== cLineParser.#empty) &&
+			(cLineParser.#cntEmpty(in_l) >= 1)) {
+			if ((in_r.length === 1) &&
+				(in_r[0] === cLineParser.#empty)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	static #fmt_bInnerByMe(in_l, in_r) {
+		// 110199 --> [11][199]
+		if ((in_l[in_l.length - 1] === in_r[0]) &&
+			(in_r[0] !== cLineParser.#empty)) {
+			return true;
+		}
+		return false;
+	}
+	static parse(in_items, in_player, in_loop) {
+		const parsed = {
+			eCriticalToMe : false,
+			ePreRiskToMe : false,
+			ePressureToMe : false,
+			ePrePressureToMe : false,
+			ePressureByMe : false,
+			bOccupiedByMe : false,
+			bPreOccupiedByMe : false,
+			bOccupiedByBoth : false,
+			bPressureToMe : false,
+			bPrePressureToMe : false,
+			bPressureByMe : false,
+			bPreOuterByMe : false,
+			bOuterByMe : false,
+			bInnerByMe : false,
+			safetyScore : 0
+		};
+		let items;
+		if (in_loop) {
+			items = [...in_items];
+		} else {
+			items = [cLineParser.#border, ...in_items, cLineParser.#border];
+		}
+		/*
+			(1) as in_player should be exist from here, split array using in_player
+
+				from ...
+
+				ex1 : [12*34]
+				ex2 : [12*34*]
+				ex3 : [*12*34*]
+
+				to ...
+
+				ex1 (loop) : [12],[34]
+				ex2 (loop) : [12],[34],[]
+				ex3 (loop) : [],[12],[34],[]
+
+				ex1 (non-loop) : [B12],[45B]
+				ex2 (non-loop) : [B12],[34],[B]
+				ex3 (non-loop) : [B],[12],[34],[B]
+		*/
+		let meCnt = 0;
+		let meMaxIx = 0;
+		let meStart = false;
+		let emptyInLine = false;
+		// the 1st item may be empty
+		const subsets = [[]];
+		for (let i = 0; i < items.length; i++) {
+			if (items[i] === in_player) {
+				meCnt++;
+				if (meStart) {
+					continue;
+				} else {
+					meStart = true;
+					// the last item may be empty
+					subsets[++meMaxIx] = [];
+				}
+			} else {
+				meStart = false;
+				if (items[i] === cLineParser.#empty) {
+					emptyInLine = true;
+				}
+				subsets[meMaxIx].push(items[i]);
+			}
+		}
+		if (emptyInLine) {
+			parsed.bPreOccupiedByMe = (meCnt === in_items.length - 1);
+		} else {
+			parsed.bOccupiedByMe = (meCnt === in_items.length);
+			parsed.bOccupiedByBoth = (meCnt > 0);
+		}
+		if (parsed.bOccupiedByMe || parsed.bPreOccupiedByMe || parsed.bOccupiedByBoth || (meCnt === 0)) {
+			return parsed;
+		}
+		/*
+			(2) relate left side / right side to in_player
+
+				from ...
+
+				ex1 : [12*34]
+				ex2 : [12*34*]
+				ex3 : [*12*34*]
+
+				to ...
+
+				ex1 (loop) : L[12]+R[34]
+				ex2 (loop) : L[12]+R[34], L[34]+R[]
+				ex3 (loop) : L[]+R[12],L[12]+R[34],L[34]+R[]
+
+				ex1 (non-loop) : L[B12]+R[45B]
+				ex2 (non-loop) : L[B12]+R[34],L[34]+R[B]
+				ex3 (non-loop) : L[B]+R[12],L[12]+R[34],L[34]+R[B]
+		*/
+		const meNodes = [];
+		for (let i = 0; i < meMaxIx; i++) {
+			meNodes[i] = {
+				L : subsets[i],
+				R : subsets[i + 1]
+			};
+		}
+		/*
+			(3) normalize
+
+				from ...
+
+				ex1 : [12*34]
+				ex2 : [12*34*]
+				ex3 : [*12*34*]
+
+				to ...
+
+				ex1 (loop) : L[3412]+R[3412]
+				ex2 (loop) : L[12]+R[34],L[34]+R[12]
+				ex3 (loop) : L[34]+R[12],L[12]+R[34]
+
+				ex1 (non-loop) : L[B12]+R[45B]
+				ex2 (non-loop) : L[B12]+R[34],L[34]+R[B]
+				ex3 (non-loop) : L[B]+R[12],L[12]+R[34],L[34]+R[B]
+		*/
+		const meFirst = meNodes[0];
+		const meLast = meNodes[meNodes.length - 1];
+		if (in_loop) {
+			if ((meFirst.L.length === 0) && (meLast.R.length === 0)) {
+				meFirst.L = [...meLast.L];
+				meNodes.pop();
+			} else {
+				meFirst.L = [...meLast.R, ...meFirst.L];
+				meLast.R = meFirst.L;
+			}
+		}
+		/*
+			(4) bPreOuterByMe, bOuterByMe
+		*/
+		if (in_loop) {
+			for (let i = 0; i < meNodes.length; i++) {
+				const cnt = cLineParser.#cntEmpty(meNodes[i].L);
+				parsed['bPreOuterByMe'] ||= (cnt === 1);
+				parsed['bOuterByMe'] ||= (cnt === 0);
+			}
+		} else {
+			// except for both edges
+			for (let i = 1; i < subsets.length - 1; i++) {
+				const cnt = cLineParser.#cntEmpty(subsets[i]);
+				parsed['bPreOuterByMe'] ||= (cnt === 1);
+				parsed['bOuterByMe'] ||= (cnt === 0);
+			}
+		}
+		/*
+			(5) calculate score + check format
+		*/
+		const formatArr = [
+			['eCriticalToMe', cLineParser.#fmt_eCriticalToMe],
+			['ePreRiskToMe', cLineParser.#fmt_ePreRiskToMe],
+			['ePressureToMe', cLineParser.#fmt_ePressureToMe],
+			['ePrePressureToMe', cLineParser.#fmt_ePrePressureToMe],
+			['ePressureByMe', cLineParser.#fmt_ePressureByMe],
+			['bPressureToMe', cLineParser.#fmt_bPressureToMe],
+			['bPrePressureToMe', cLineParser.#fmt_bPrePressureToMe],
+			['bPressureByMe', cLineParser.#fmt_bPressureByMe],
+			['bInnerByMe', cLineParser.#fmt_bInnerByMe]
+		];
+		for (let i = 0; i < meNodes.length; i++) {
+			const curr = meNodes[i];
+			const neighborL = curr.L[curr.L.length - 1];
+			const neighborR = curr.R[0];
+			if ((neighborL === neighborR) ||
+				(neighborL === cLineParser.#border) ||
+				(neighborR === cLineParser.#border)) {
+				parsed.safetyScore += 1;
+			} else {
+				parsed.safetyScore -= 1;
+			}
+			const reversedR = curr.R.toReversed();
+			const reversedL = curr.L.toReversed()
+			formatArr.forEach(([in_format, in_checker]) => {
+				if (parsed[in_format]) {
+					return;
+				}
+				const toL = (in_checker)(curr.L, curr.R);
+				const toR = (in_checker)(reversedR, reversedL);
+				parsed[in_format] = toL || toR;
+			});
+		}
+		return parsed;
+	}
+}
+
+(in_test => {
+
+if (!in_test) {
+	return;
+}
+
+const suites = [
+
+	{group : '*** 1. there is no pc ***'},
+
+		{items : [9,9,9,9,9,9,9,9], loop : false, safetyScore : 0},
+		{items : [9,9,9,9,1,2,1,2], loop : false, safetyScore : 0},
+		{items : [1,2,1,2,1,2,1,2], loop : false, safetyScore : 0},
+
+		{items : [9,9,9,9,9,9,9,9], loop : true, safetyScore : 0},
+		{items : [9,9,9,9,1,2,1,2], loop : true, safetyScore : 0},
+		{items : [1,2,1,2,1,2,1,2], loop : true, safetyScore : 0},
+
+	{group : '*** 2. no empty ***'},
+
+		{items : [0,0,0,0,0,0,0,0], loop : false, safetyScore : 0},
+		{items : [1,2,1,2,0,0,0,0], loop : false, safetyScore : 0},
+
+		{items : [0,0,0,0,0,0,0,0], loop : true, safetyScore : 0},
+		{items : [1,2,1,2,0,0,0,0], loop : true, safetyScore : 0},
+
+	{group : '*** 3. pc is on the left side ***'},
+
+		{items : [0,9,9,9,9,9,9,9], loop : false, safetyScore : 1},
+		{items : [0,1,9,9,9,9,9,9], loop : false, safetyScore : 1},
+		{items : [0,9,9,9,9,9,9,1], loop : false, safetyScore : 1},
+		{items : [0,1,9,9,9,9,9,1], loop : false, safetyScore : 1},
+
+		{items : [0,9,9,9,9,9,9,9], loop : true, safetyScore : 1},
+		{items : [0,1,9,9,9,9,9,9], loop : true, safetyScore : -1},
+		{items : [0,9,9,9,9,9,9,1], loop : true, safetyScore : -1},
+		{items : [0,1,9,9,9,9,9,1], loop : true, safetyScore : 1},
+		{items : [0,1,9,9,9,9,9,2], loop : true, safetyScore : -1},
+
+	{group : '*** 4. pc is on the right side ***'},
+
+		{items : [9,9,9,9,9,9,9,0], loop : false, safetyScore : 1},
+		{items : [9,9,9,9,9,9,1,0], loop : false, safetyScore : 1},
+		{items : [1,9,9,9,9,9,9,0], loop : false, safetyScore : 1},
+		{items : [1,9,9,9,9,9,1,0], loop : false, safetyScore : 1},
+
+		{items : [9,9,9,9,9,9,9,0], loop : true, safetyScore : 1},
+		{items : [9,9,9,9,9,9,1,0], loop : true, safetyScore : -1},
+		{items : [1,9,9,9,9,9,9,0], loop : true, safetyScore : -1},
+		{items : [1,0,9,9,9,9,1,0], loop : true, safetyScore : 0},
+		{items : [2,0,9,9,9,9,1,0], loop : true, safetyScore : -2},
+
+	{group : '*** 5. pc is on the both sides ***'},
+
+		{items : [0,9,9,9,9,9,9,0], loop : false, safetyScore : 2},
+		{items : [0,1,9,9,9,9,9,0], loop : false, safetyScore : 2},
+		{items : [0,9,9,9,9,9,1,0], loop : false, safetyScore : 2},
+		{items : [0,1,9,9,9,9,1,0], loop : false, safetyScore : 2},
+
+		{items : [0,9,9,9,9,9,9,0], loop : true, safetyScore : 1},
+		{items : [0,1,9,9,9,9,9,0], loop : true, safetyScore : -1},
+		{items : [0,9,9,9,9,9,1,0], loop : true, safetyScore : -1},
+		{items : [0,1,9,9,9,9,1,0], loop : true, safetyScore : 1},
+		{items : [0,2,9,9,9,9,1,0], loop : true, safetyScore : -1},
+
+	{group : '*** 6. npc is on the both sides ***'},
+
+		{items : [1,9,9,9,9,9,9,1], loop : false, safetyScore : 0},
+		{items : [1,0,9,9,9,9,9,1], loop : false, safetyScore : -1},
+		{items : [1,9,9,9,9,9,0,1], loop : false, safetyScore : -1},
+		{items : [1,0,9,9,9,9,0,1], loop : false, safetyScore : -2},
+
+		{items : [1,9,9,9,9,9,9,1], loop : true, safetyScore : 0},
+		{items : [1,0,9,9,9,9,9,1], loop : true, safetyScore : -1},
+		{items : [1,9,9,9,9,9,0,1], loop : true, safetyScore : -1},
+		{items : [1,0,9,9,9,9,0,1], loop : true, safetyScore : -2},
+
+	{group : '*** 7. bOccupiedByMe ***'},
+
+		{items : [1,1,1,1,1,1,1,1], loop : false, bOccupiedByMe : false},
+		{items : [0,0,0,0,0,0,0,0], loop : false, bOccupiedByMe : true},
+		{items : [0,0,0,9,0,0,0,0], loop : false, bOccupiedByMe : false},
+
+		{items : [1,1,1,1,1,1,1,1], loop : true, bOccupiedByMe : false},
+		{items : [0,0,0,0,0,0,0,0], loop : true, bOccupiedByMe : true},
+		{items : [0,0,0,9,0,0,0,0], loop : true, bOccupiedByMe : false},
+
+	{group : '*** 8. bPreOccupiedByMe ***'},
+
+		{items : [1,1,1,1,1,1,1,1], loop : false, bPreOccupiedByMe : false},
+		{items : [0,0,0,0,0,0,0,0], loop : false, bPreOccupiedByMe : false},
+		{items : [0,0,0,1,0,0,0,0], loop : false, bPreOccupiedByMe : false},
+		{items : [0,0,0,9,0,0,0,0], loop : false, bPreOccupiedByMe : true},
+
+		{items : [1,1,1,1,1,1,1,1], loop : true, bPreOccupiedByMe : false},
+		{items : [0,0,0,0,0,0,0,0], loop : true, bPreOccupiedByMe : false},
+		{items : [0,0,0,1,0,0,0,0], loop : true, bPreOccupiedByMe : false},
+		{items : [0,0,0,9,0,0,0,0], loop : true, bPreOccupiedByMe : true},
+
+	{group : '*** 9. bOccupiedByBoth ***'},
+
+		{items : [1,1,1,1,1,1,1,1], loop : false, bOccupiedByBoth : false},
+		{items : [1,1,1,9,0,1,1,1], loop : false, bOccupiedByBoth : false},
+		{items : [1,1,1,0,0,1,1,1], loop : false, bOccupiedByBoth : true},
+		{items : [0,0,0,0,0,0,0,0], loop : false, bOccupiedByBoth : true},
+		{items : [0,0,0,9,0,0,0,0], loop : false, bOccupiedByBoth : false},
+
+		{items : [1,1,1,1,1,1,1,1], loop : true, bOccupiedByBoth : false},
+		{items : [1,1,1,9,0,1,1,1], loop : true, bOccupiedByBoth : false},
+		{items : [1,1,1,0,0,1,1,1], loop : true, bOccupiedByBoth : true},
+		{items : [0,0,0,0,0,0,0,0], loop : true, bOccupiedByBoth : true},
+		{items : [0,0,0,9,0,0,0,0], loop : true, bOccupiedByBoth : false},
+
+	{group : '*** 10. bOuterByMe ***'},
+
+		{items : [0,1,0,9,9,9,9,9], loop : false, bOuterByMe : true},
+		{items : [1,0,9,9,9,9,9,0], loop : false, bOuterByMe : false},
+		{items : [0,9,9,9,9,9,0,1], loop : false, bOuterByMe : false},
+		{items : [9,9,9,9,9,0,1,0], loop : false, bOuterByMe : true},
+		{items : [9,9,0,1,2,0,9,9], loop : false, bOuterByMe : true},
+		{items : [2,0,9,9,9,9,0,1], loop : false, bOuterByMe : false},
+
+		{items : [0,1,0,9,9,9,9,9], loop : true, bOuterByMe : true},
+		{items : [1,0,9,9,9,9,9,0], loop : true, bOuterByMe : true},
+		{items : [0,9,9,9,9,9,0,1], loop : true, bOuterByMe : true},
+		{items : [9,9,9,9,9,0,1,0], loop : true, bOuterByMe : true},
+		{items : [9,9,0,1,2,0,9,9], loop : true, bOuterByMe : true},
+		{items : [2,0,9,9,9,9,0,1], loop : true, bOuterByMe : true},
+
+	{group : '*** 11. bPreOuterByMe ***'},
+
+		{items : [9,0,9,9,9,9,9,0], loop : false, bPreOuterByMe : false},
+		{items : [0,9,0,9,9,9,9,9], loop : false, bPreOuterByMe : true},
+		{items : [9,0,9,0,9,9,9,9], loop : false, bPreOuterByMe : true},
+		{items : [9,0,1,0,9,9,9,9], loop : false, bPreOuterByMe : false},
+		{items : [9,0,9,9,0,9,9,9], loop : false, bPreOuterByMe : false},
+
+		{items : [9,0,9,9,9,9,9,0], loop : true, bPreOuterByMe : true},
+
+	{group : '*** 12. eCriticalToMe ***'},
+
+		{items : [0,1,9,9,9,9,9,9], loop : false, eCriticalToMe : false},
+		{items : [9,0,1,9,9,9,9,9], loop : false, eCriticalToMe : true},
+		{items : [9,0,1,0,9,9,9,9], loop : false, eCriticalToMe : true},
+		{items : [9,0,1,2,9,9,9,9], loop : false, eCriticalToMe : true},
+		{items : [9,0,9,1,9,9,9,9], loop : false, eCriticalToMe : false},
+
+		{items : [9,9,9,9,9,9,1,0], loop : false, eCriticalToMe : false},
+		{items : [9,9,9,9,9,1,0,9], loop : false, eCriticalToMe : true},
+		{items : [9,9,9,9,0,1,0,9], loop : false, eCriticalToMe : true},
+		{items : [9,9,9,9,2,1,0,9], loop : false, eCriticalToMe : true},
+		{items : [9,9,9,9,1,9,0,9], loop : false, eCriticalToMe : false},
+
+	{group : '*** 13. ePreRiskToMe ***'},
+
+		{items : [9,0,9,0,9,9,9,9], loop : false, ePreRiskToMe : true},
+		{items : [9,0,9,9,0,9,9,9], loop : false, ePreRiskToMe : false},
+		{items : [9,9,0,9,0,9,9,9], loop : false, ePreRiskToMe : false},
+		{items : [9,0,0,9,0,0,9,9], loop : false, ePreRiskToMe : true},
+
+		{items : [9,9,9,9,0,9,0,9], loop : false, ePreRiskToMe : true},
+		{items : [9,9,9,0,9,9,0,9], loop : false, ePreRiskToMe : false},
+		{items : [9,9,9,0,9,0,9,9], loop : false, ePreRiskToMe : false},
+		{items : [9,9,0,0,9,0,0,9], loop : false, ePreRiskToMe : true},
+
+	{group : '*** 14. ePressureToMe ***'},
+
+		{items : [9,0,1,9,1,9,9,9], loop : false, ePressureToMe : true},
+		{items : [9,9,0,1,9,1,9,9], loop : false, ePressureToMe : false},
+		{items : [9,0,0,1,1,9,1,9], loop : false, ePressureToMe : true},
+		{items : [9,0,1,9,1,9,9,9], loop : true, ePressureToMe : false},
+		{items : [9,9,0,1,9,1,9,9], loop : true, ePressureToMe : false},
+		{items : [9,0,0,1,1,9,1,9], loop : true, ePressureToMe : false},
+
+		{items : [9,9,1,9,1,0,9,9], loop : false, ePressureToMe : false},
+		{items : [9,1,9,1,1,0,0,9], loop : false, ePressureToMe : true},
+
+	{group : '*** 15. bPressureToMe ***'},
+
+		{items : [9,0,1,9,1,9,9,9], loop : false, bPressureToMe : true},
+		{items : [9,9,0,1,9,1,9,9], loop : false, bPressureToMe : true},
+		{items : [9,0,0,1,1,9,1,9], loop : false, bPressureToMe : true},
+		{items : [9,0,1,9,1,9,9,9], loop : true, bPressureToMe : true},
+		{items : [9,9,0,1,9,1,9,9], loop : true, bPressureToMe : true},
+		{items : [9,0,0,1,1,9,1,9], loop : true, bPressureToMe : true},
+
+		{items : [9,9,1,9,1,0,9,9], loop : false, bPressureToMe : true},
+		{items : [9,1,9,1,1,0,0,9], loop : false, bPressureToMe : true},
+
+	{group : '*** 16. ePrePressureToMe ***'},
+
+		{items : [9,0,9,9,1,9,9,9], loop : false, ePrePressureToMe : true},
+		{items : [9,9,0,9,9,1,9,9], loop : false, ePrePressureToMe : false},
+		{items : [9,0,0,9,1,9,1,9], loop : false, ePrePressureToMe : true},
+		{items : [9,0,9,9,1,9,9,9], loop : true, ePrePressureToMe : false},
+		{items : [9,9,0,9,9,1,9,9], loop : true, ePrePressureToMe : false},
+		{items : [9,0,0,9,1,9,1,9], loop : true, ePrePressureToMe : false},
+
+		{items : [9,9,1,9,9,0,9,9], loop : false, ePrePressureToMe : false},
+		{items : [9,1,9,1,9,0,0,9], loop : false, ePrePressureToMe : true},
+
+	{group : '*** 17. bPrePressureToMe ***'},
+
+		{items : [9,0,9,9,1,9,9,9], loop : false, bPrePressureToMe : true},
+		{items : [9,9,0,9,9,1,9,9], loop : false, bPrePressureToMe : true},
+		{items : [9,0,0,9,1,9,1,9], loop : false, bPrePressureToMe : true},
+		{items : [9,0,9,9,1,9,9,9], loop : true, bPrePressureToMe : true},
+		{items : [9,9,0,9,9,1,9,9], loop : true, bPrePressureToMe : true},
+		{items : [9,0,0,9,1,9,1,9], loop : true, bPrePressureToMe : true},
+
+		{items : [9,9,1,9,9,0,9,9], loop : false, bPrePressureToMe : true},
+		{items : [9,1,9,1,9,0,0,9], loop : false, bPrePressureToMe : true},
+
+	{group : '*** 18. ePressureByMe ***'},
+
+		{items : [1,1,0,9,0,9,9,9], loop : false, ePressureByMe : false},
+		{items : [9,9,1,0,9,0,9,9], loop : false, ePressureByMe : false},
+		{items : [9,1,0,9,0,9,9,9], loop : false, ePressureByMe : true},
+		{items : [9,1,0,0,9,0,9,9], loop : false, ePressureByMe : true},
+		{items : [9,1,1,0,9,0,9,9], loop : false, ePressureByMe : true},
+		{items : [9,1,1,0,9,0,9,9], loop : true, ePressureByMe : false},
+
+		{items : [9,9,9,0,9,0,1,1], loop : false, ePressureByMe : false},
+		{items : [9,9,0,9,0,1,9,9], loop : false, ePressureByMe : false},
+		{items : [9,9,9,0,9,0,1,9], loop : false, ePressureByMe : true},
+		{items : [9,9,0,9,0,0,1,9], loop : false, ePressureByMe : true},
+		{items : [9,9,0,9,0,1,1,9], loop : false, ePressureByMe : true},
+		{items : [9,9,0,9,0,1,1,9], loop : true, ePressureByMe : false},
+
+	{group : '*** 19. bPressureByMe ***'},
+
+		{items : [1,1,0,9,0,9,9,9], loop : false, bPressureByMe : false},
+		{items : [9,9,1,0,9,0,9,9], loop : false, bPressureByMe : true},
+		{items : [9,1,0,9,0,9,9,9], loop : false, bPressureByMe : true},
+		{items : [9,1,0,0,9,0,9,9], loop : false, bPressureByMe : true},
+		{items : [9,1,1,0,9,0,9,9], loop : false, bPressureByMe : true},
+		{items : [9,1,1,0,9,0,9,9], loop : true, bPressureByMe : true},
+
+		{items : [9,9,9,0,9,0,1,1], loop : false, bPressureByMe : false},
+		{items : [9,9,0,9,0,1,9,9], loop : false, bPressureByMe : true},
+		{items : [9,9,9,0,9,0,1,9], loop : false, bPressureByMe : true},
+		{items : [9,9,0,9,0,0,1,9], loop : false, bPressureByMe : true},
+		{items : [9,9,0,9,0,1,1,9], loop : false, bPressureByMe : true},
+		{items : [9,9,0,9,0,1,1,9], loop : true, bPressureByMe : true},
+
+	{group : '*** 20. bInnerByMe ***'},
+
+		{items : [9,9,9,9,9,9,9,9], loop : false, bInnerByMe : false},
+
+		{items : [1,0,1,9,9,9,9,9], loop : false, bInnerByMe : true},
+		{items : [1,0,0,1,9,9,9,9], loop : false, bInnerByMe : true},
+		{items : [2,0,0,1,9,9,9,9], loop : false, bInnerByMe : false},
+		{items : [1,9,0,1,9,9,9,9], loop : false, bInnerByMe : false},
+
+		{items : [0,1,9,9,9,9,9,1], loop : false, bInnerByMe : false},
+		{items : [0,1,9,9,9,9,1,0], loop : false, bInnerByMe : false},
+		{items : [0,1,9,9,9,9,2,0], loop : false, bInnerByMe : false},
+		{items : [0,1,9,9,9,9,1,9], loop : false, bInnerByMe : false},
+
+		{items : [0,1,9,9,9,9,9,1], loop : true, bInnerByMe : true},
+		{items : [0,1,9,9,9,9,1,0], loop : true, bInnerByMe : true},
+		{items : [0,1,9,9,9,9,2,0], loop : true, bInnerByMe : false},
+		{items : [0,1,9,9,9,9,1,9], loop : true, bInnerByMe : false}
+];
+
+suites.forEach(in_suite => {
+	if (in_suite.group) {
+		console.log(in_suite.group);
+	} else {
+		const parsed = cLineParser.parse(in_suite.items, 0, in_suite.loop);
+		Object.keys(parsed).forEach(in_prop => {
+			if (!in_suite.hasOwnProperty(in_prop)) {
+				return;
+			}
+			if (in_suite[in_prop] !== parsed[in_prop]) {
+				const loop = in_suite.loop ? ' (loop)' : '';
+				console.log('failed : ' + in_suite.items.join() + loop + ' is ' + parsed[in_prop]);
+			}
+		});
+	}
+});
+
+})(false);
+
+export class cReversi {
+	static maximizedRecMap = new Map();
+	static #maximize(in_evaluator, in_player, in_candArr) {
+		const evaluated = new Map();
+		in_candArr.forEach(in_cand => evaluated.set(in_cand, (in_evaluator)(in_player, in_cand)));
+		const max = {
+			current : -Infinity,
+			candArr : []
+		};
+		for (const [cand, score] of evaluated.entries()) {
+			if (score > max.current) {
+				max.current = score;
+				max.candArr = [cand];
+			} else {
+				if (score === max.current) {
+					// tie-break
+					max.candArr.push(cand);
+				}
+			}
+		}
+		if (max.candArr.length === 0) {
+			throw new Error('can not maximize');
+		}
+		const rec = cReversi.maximizedRecMap.get(in_player) ?? 0;
+		if (rec < max.current) {
+			cReversi.maximizedRecMap.set(in_player, max.current);
+		}
+		return max.candArr;
+	}
+	static #rotateArray(in_array, in_shiftCnt, in_shiftRight = true) {
+		const len = in_array.length;
+		let shiftCnt = ((in_shiftCnt % len) + len) % len;
+		if (in_shiftRight) {
+			// reverse
+			shiftCnt = (len - shiftCnt) % len;
+		}
+		return in_array.slice(shiftCnt).concat(in_array.slice(0, shiftCnt));
+	}
+	static #edge = Symbol();
+	static #dmz = 8;
+	static #empty = 9;
+	static #maxPlayers = 6;
+	static #validData = (() => {
+		const arr = [cReversi.#dmz, cReversi.#empty];
+		for (let player = 0; player < cReversi.#maxPlayers; player++) {
+			arr.push(player);
+		}
+		return arr;
+	})();
+	static #dirStyle = {
+		square : {
+			onehand : {
+				regular : [
+					[-1, -1],
+					[-1,  0],
+					[-1, +1],
+					[ 0, -1],
+					[ 0, +1],
+					[+1, -1],
+					[+1,  0],
+					[+1, +1]
+				],
+				offset : [
+					[-1, -1],
+					[-1,  0],
+					[-1, +1],
+					[ 0, -1],
+					[ 0, +1],
+					[+1, -1],
+					[+1,  0],
+					[+1, +1]
+				]
+			},
+			pair : new Map([
+				[  0, [1, 6]],
+				[ 45, [2, 5]],
+				[ 90, [3, 4]],
+				[135, [0, 7]]
+			])
+		},
+		hexPointyTopped : {
+			onehand : {
+				/*
+					@@
+					@+@
+					@@
+				*/
+				regular : [
+					[-1, -1],
+					[-1,  0],
+					[ 0, +1],
+					[+1,  0],
+					[+1, -1],
+					[ 0, -1]
+				],
+				/*
+					 @@
+					@+@
+					 @@
+				*/
+				offset : [
+					[-1,  0],
+					[-1, +1],
+					[ 0, +1],
+					[+1, +1],
+					[+1,  0],
+					[ 0, -1]
+				]
+			},
+			pair : new Map([
+				[ 30, [1, 4]],
+				[ 90, [2, 5]],
+				[150, [0, 3]]
+			])
+		},
+		hexFlatTopped : {
+			onehand : {
+				/*
+					@@@
+					@+@
+					 @
+				*/
+				regular : [
+					[-1, -1],
+					[-1,  0],
+					[-1, +1],
+					[ 0, +1],
+					[+1,  0],
+					[ 0, -1]
+				],
+				/*
+					 @
+					@+@
+					@@@
+				*/
+				offset : [
+					[ 0, -1],
+					[-1,  0],
+					[ 0, +1],
+					[+1, +1],
+					[+1,  0],
+					[+1, -1]
+				]
+			},
+			pair : new Map([
+				[  0, [1, 4]],
+				[ 60, [2, 5]],
+				[120, [0, 3]]
+			])
+		}
+	};
+	#area = {
+		items : [],
+		initialItems : [],
+		options : new Set(),
+		scores : {
+			default : [],
+			players : []
+		}
+	};
+	#npcArgoPriority = [];
+	#history = [];
+	#conf = null;
+	#getDirections(in_row, in_col) {
+		const dirStyle = this.#conf.dirStyle;
+		let useOffset = false;
+		if (dirStyle.pair.get(0)) {
+			// square or hexFlatTopped
+			useOffset = (in_col % 2 === this.#conf.offset);
+		} else {
+			// hexPointyTopped
+			useOffset = (in_row % 2 === this.#conf.offset);
+		}
+		if (useOffset) {
+			return dirStyle.onehand.offset;
+		} else {
+			return dirStyle.onehand.regular;
+		}
+	}
+	#getDirection(in_row, in_col, in_dirIx) {
+		return this.#getDirections(in_row, in_col)[in_dirIx];
+	}
+	#aroundIndexes(in_ix, in_keepEdge = false) {
+		// in_keepEdge : pad missing neighbors at board edges
+		const pos = this.#indexToPos(in_ix);
+		return this.#aroundPositions(pos.row, pos.col, in_keepEdge).map(in_pos => {
+			if (in_pos === cReversi.#edge) {
+				return cReversi.#edge;
+			}
+			return this.#posToIndex(in_pos[0], in_pos[1]);
+		});
+	}
+	#aroundPositions(in_row, in_col, in_keepEdge = false) {
+		// in_keepEdge : pad missing neighbors at board edges
+		const directions = this.#getDirections(in_row, in_col);
+		const aroundPos = [];
+		const sizeRow = this.#conf.row.size;
+		const sizeCol = this.#conf.col.size;
+		directions.forEach(([in_dr, in_dc]) => {
+			let row = in_row + in_dr;
+			let col = in_col + in_dc;
+			if ((row < 0) || (sizeRow -1 < row)) {
+				if (this.#conf.row.edge) {
+					if (in_keepEdge) {
+						aroundPos.push(cReversi.#edge);
+					}
+					return;
+				} else {
+					row = (sizeRow + row) % sizeRow;
+				}
+			}
+			if ((col < 0) || (sizeCol -1 < col)) {
+				if (this.#conf.col.edge) {
+					if (in_keepEdge) {
+						aroundPos.push(cReversi.#edge);
+					}
+					return;
+				} else {
+					col = (sizeCol + col) % sizeCol;
+				}
+			}
+			aroundPos.push([row, col]);
+		});
+		return aroundPos;
+	}
+	#indexesUntil(in_indexes, in_item) {
+		const toItem = in_indexes.findIndex(in_ix => this.#getItemByIndex(in_ix) === in_item);
+		if (toItem < 0) {
+			return in_indexes;
+		} else {
+			return in_indexes.slice(0, toItem);
+		}
+	}
+	constructor(in_table, in_rowEdge, in_colEdge, in_format = 'square', in_offset = 1) {
+		const sizeRow = in_table.length;
+		const sizeCol = in_table.reduce((in_maxLen, in_row) => {
+			return Math.max(in_maxLen, in_row.length);
+		}, 0);
+		if (!in_rowEdge && !in_colEdge && (sizeRow !== sizeCol || sizeRow % 2 !== 0)) {
+			const reason = [
+				'fully cyclic boards must be even-sized squares (N x N) ',
+				'to limit cyclic path lengths in #initTagIndexesRadiating()'
+			];
+			throw new Error(reason.join(''));
+		}
+		if (cReversi.#dirStyle.hasOwnProperty(in_format)) {
+			if (!in_rowEdge && (sizeRow % 2 === 1) && (in_format === 'hexPointyTopped')) {
+				throw new Error('invalid rows (' + sizeRow + ') for row-loop of ' + in_format);
+			}
+			if (!in_colEdge && (sizeCol % 2 === 1) && (in_format === 'hexFlatTopped')) {
+				throw new Error('invalid cols (' + sizeRow + ') for col-loop of ' + in_format);
+			}
+		} else {
+			throw new Error('invalid input');
+		}
+		const dirStyle = cReversi.#dirStyle[in_format];
+		this.#conf = {
+			row : {
+				size : sizeRow,
+				edge : in_rowEdge
+			},
+			col : {
+				size : sizeCol,
+				edge : in_colEdge
+			},
+			dirStyle : dirStyle,
+			// square can accommodate any offset
+			offset : (in_offset % 2),
+			tagIndexes : {
+				radiating : [],
+				edgeObjArr : [],
+				cornerSet : new Set(),
+				xInsideSet : new Set()
+			}
+		};
+		this.#setTable(in_table);
+		this.#area.initialItems = [...this.#area.items];
+		this.#initTagIndexes();
+		this.#initScore();
+		const argoArr = ['spiteful', 'safety', 'greedy', 'rational', 'classic', 'monkey'];
+		for (let i = 0; i < argoArr.length; i++) {
+			this.#npcArgoPriority.push((argoArr.slice(0, i + 1))[arrRand]());
+		}
+		this.#updateOptionsAll();
+		cReversi.maximizedRecMap.clear();
+		// console.log(this.#conf.tagIndexes);
+	}
+	#initTagIndexesRadiating() {
+		const tagIndexes = this.#conf.tagIndexes;
+		for (let areaIx = 0; areaIx < this.#area.items.length; areaIx++) {
+			const {row : initRow, col : initCol} = this.#indexToPos(areaIx);
+			const radiating = tagIndexes.radiating[areaIx] = [];
+			const dirStyle = this.#getDirections(initRow, initCol);
+			for (let dirIx = 0; dirIx < dirStyle.length; dirIx++) {
+				const ray = [];
+				let cyclic = false;
+				let currRow = initRow;
+				let currCol = initCol;
+				while (true) {
+					const [dr, dc] = this.#getDirection(currRow, currCol, dirIx);
+					currRow += dr;
+					if (this.#conf.row.edge) {
+						if ((currRow < 0) || (this.#conf.row.size - 1 < currRow)) {
+							// out of range
+							break;
+						}
+					} else {
+						currRow = (currRow + this.#conf.row.size) % this.#conf.row.size;
+					}
+					currCol += dc;
+					if (this.#conf.col.edge) {
+						if ((currCol < 0) || (this.#conf.col.size - 1 < currCol)) {
+							// out of range
+							break;
+						}
+					} else {
+						currCol = (currCol + this.#conf.col.size) % this.#conf.col.size;
+					}
+					const currIx = this.#posToIndex(currRow, currCol);
+					if (currIx === areaIx) {
+						// cyclic
+						cyclic = true;
+						break;
+					}
+					ray.push(currIx);
+				}
+				radiating.push({ray, cyclic});
+			}
+		}
+	}
+	#getContiguousLine(in_areaIx, in_neg, in_pos) {
+		const radiating = this.#conf.tagIndexes.radiating[in_areaIx];
+		const P = this.#indexesUntil(radiating[in_pos].ray, cReversi.#dmz);
+		const cyclic = (P.length === radiating[in_pos].ray.length) && radiating[in_pos].cyclic;
+		let indexes;
+		if (cyclic) {
+			indexes = [in_areaIx, ...P];
+		} else {
+			const N = this.#indexesUntil(radiating[in_neg].ray, cReversi.#dmz);
+			indexes = [...N.toReversed(), in_areaIx, ...P];
+		}
+		return {indexes, cyclic};
+	}
+	#appendUniqueEdgeSet(in_newSet, in_cyclic) {
+		const tagIndexes = this.#conf.tagIndexes;
+		const duplicated = tagIndexes.edgeObjArr.some(in_edgeObj => {
+			if (in_newSet.size !== in_edgeObj.set.size) {
+				return false;
+			}
+			for (const item of in_newSet) {
+				if (!in_edgeObj.set.has(item)) {
+					return false;
+				}
+			}
+			return true;
+		});
+		if (!duplicated) {
+			tagIndexes.edgeObjArr.push({set : in_newSet, cyclic : in_cyclic});
+		}
+	}
+	#initTagIndexes() {
+		this.#initTagIndexesRadiating();
+		const pairs = Array.from(this.#conf.dirStyle.pair.entries());
+		const edgeAdhocMinLength = 6;
+		const tagIndexes = this.#conf.tagIndexes;
+		for (let areaIx = 0; areaIx < this.#area.items.length; areaIx++) {
+			if (this.#getItemByIndex(areaIx) === cReversi.#dmz) {
+				continue;
+			}
+			const radiating = tagIndexes.radiating[areaIx];
+			// (1) edgeObjArr : a structurally stable line protected against flipping from outside, even after tactical rotations
+			/*
+				Edge
+
+					Ex
+					Ex
+					Ex
+
+					Dx
+					Dx
+					Dx
+
+				NOT Edge
+
+					Dx  -> rotatable
+					Dx
+					Dx
+			*/
+			pairs.forEach(([in_angle, [in_neg, in_pos]]) => {
+				const {indexes, cyclic} = this.#getContiguousLine(areaIx, in_neg, in_pos);
+				const lineSet = new Set(indexes);
+				if (lineSet.size < edgeAdhocMinLength) {
+					return;
+				}
+				const rotatable = this.rotatableFixedCol(in_angle) || this.rotatableFixedRow(in_angle);
+				const aroundEdgeTest = Array(this.#aroundIndexes(areaIx, true).length).fill(true);
+				for (const lineIx of lineSet) {
+					const aroundArr = this.#aroundIndexes(lineIx, true);
+					for (let dirIx = 0; dirIx < aroundArr.length; dirIx++) {
+						const ix = aroundArr[dirIx];
+						if ((ix !== cReversi.#edge) && ((this.#getItemByIndex(ix) !== cReversi.#dmz) || rotatable)) {
+							aroundEdgeTest[dirIx] = false;
+						}
+					}
+				}
+				if (aroundEdgeTest.some(in_test => in_test)) {
+					this.#appendUniqueEdgeSet(lineSet, cyclic);
+				}
+			});
+			// (2) corner : a structurally stable position that remains unflippable even after tactical rotations
+			/*
+				isCorner : true
+
+					EEEE
+					Ex..
+					E...
+					E...
+
+				isCorner : true
+
+					EEEE
+					Dx.. --> NOT rotatable
+					D...
+					D...
+
+				isCorner : true
+
+					EEEE
+					Dx.. --> rotatable
+					D...
+					D...
+
+				isCorner : true
+
+					DDDD
+					Dx.. --> NOT rotatable
+					D...
+					D...
+
+				isCorner : false
+
+					DDDD
+					Dx.. --> rotatable
+					D...
+					D...
+			*/
+			const isCorner = pairs.every(([in_angle, [in_neg, in_pos]]) => {
+				const N = radiating[in_neg].ray;
+				const P = radiating[in_pos].ray;
+				if ((N.length === 0) || (P.length === 0)) {
+					return true;
+				}
+				if ((this.#getItemByIndex(N[0]) === cReversi.#dmz) || (this.#getItemByIndex(P[0]) === cReversi.#dmz)) {
+					if (this.rotatableFixedCol(in_angle) || this.rotatableFixedRow(in_angle)) {
+						return false;
+					}
+					return true;
+				}
+				// both sides are available
+				return false;
+			});
+			if (isCorner) {
+				tagIndexes.cornerSet.add(areaIx);
+				// (3) xInsideSet : an inland position adjacent to a corner, with no neighboring pieces or DMZ to provide protection
+				const aroundArr = this.#aroundIndexes(areaIx);
+				aroundArr.forEach(in_aroundIx => {
+					const testArr = this.#aroundIndexes(in_aroundIx);
+					if (testArr.length < pairs.length * 2) {
+						return;
+					}
+					if (testArr.every(in_testIx => this.#getItemByIndex(in_testIx) === cReversi.#empty)) {
+						tagIndexes.xInsideSet.add(in_aroundIx);
+					}
+				});
+			}
+		}
+	}
+	#indexToPos(in_ix) {
+		return {
+			row : Math.floor(in_ix / this.#conf.col.size),
+			col : in_ix % this.#conf.col.size
+		};
+	}
+	#posToIndex(in_row, in_col) {
+		return in_row * this.#conf.col.size + in_col;
+	}
+	#setItemByIndex(in_ix, in_item) {
+		this.#area.items[in_ix] = in_item;
+	}
+	#setItemByPos(in_row, in_col, in_item) {
+		this.#setItemByIndex(this.#posToIndex(in_row, in_col), in_item);
+	}
+	#getItemByIndex(in_ix) {
+		return this.#area.items[in_ix];
+	}
+	#getItemByPos(in_row, in_col) {
+		return this.#getItemByIndex(this.#posToIndex(in_row, in_col));
+	}
+	#items(in_indexes) {
+		const items = [];
+		in_indexes.forEach(in_ix => {
+			items.push(this.#getItemByIndex(in_ix));
+		});
+		return items;
+	}
+	#rotateItems(in_indexes, in_rightShiftCnt) {
+		const initialItems = in_indexes.map(in_ix => this.#getItemByIndex(in_ix));
+		const rotatedItems = cReversi.#rotateArray(initialItems, in_rightShiftCnt);
+		rotatedItems.forEach((in_item, in_order) => this.#setItemByIndex(in_indexes[in_order], in_item));
+	}
+	#rotateSameRowItems(in_fixedRow, in_deltaCol) {
+		const ix = this.#posToIndex(in_fixedRow, 0);
+		const radiating = this.#conf.tagIndexes.radiating[ix];
+		// in case of loop, neg and pos include the same indexes
+		const [neg, pos] = this.#conf.dirStyle.pair.get(90);
+		this.#rotateItems([ix, ...radiating[pos].ray], in_deltaCol);
+	}
+	#rotateSameColItems(in_fixedCol, in_deltaRow) {
+		const ix = this.#posToIndex(0, in_fixedCol);
+		const radiating = this.#conf.tagIndexes.radiating[ix];
+		// in case of loop, neg and pos include the same indexes
+		const [neg, pos] = this.#conf.dirStyle.pair.get(0);
+		this.#rotateItems([ix, ...radiating[pos].ray], in_deltaRow);
+	}
+	#flip(in_player, in_ix, in_dryRun = false) {
+		const radiating = this.#conf.tagIndexes.radiating[in_ix];
+		let flipped = false;
+		for (let i = 0; i < radiating.length; i++) {
+			const ray = radiating[i].ray;
+			const ixArr = [in_ix];
+			let enemyAppears = false;
+			for (let j = 0; j < ray.length; j++) {
+				const ix = ray[j];
+				const item = this.#getItemByIndex(ix);
+				if (item === in_player) {
+					if (enemyAppears) {
+						if (in_dryRun) {
+							// the same as Array.some() for dry run
+							return true;
+						} else {
+							flipped = true;
+							ixArr.forEach(in_flipped_ix => this.#setItemByIndex(in_flipped_ix, in_player));
+						}
+					}
+					break;
+				} else {
+					if ((item === cReversi.#dmz) || (item === cReversi.#empty)) {
+						break;
+					} else {
+						ixArr.push(ix);
+						enemyAppears = true;
+					}
+				}
+			}
+		}
+		return flipped;
+	}
+	#tryRotation(in_player, in_action) {
+		// step1 : find rows/cols where in_player owns at least one cell
+		const rowSet = new Set();
+		const colSet = new Set();
+		for (let ix = 0; ix < this.#area.items.length; ix++) {
+			if (this.#getItemByIndex(ix) !== in_player) {
+				continue;
+			}
+			const col = ix % this.#conf.col.size;
+			const row = (ix - col) / this.#conf.col.size;
+			rowSet.add(row);
+			colSet.add(col);
+		}
+		// step2 : test for in_action. this algorithm can be improved
+		const setting = {
+			'fixed-row-rotate' : {
+				targetArr : Array.from(rowSet),
+				rotateFunc : this.#rotateSameRowItems,
+				maxCnt : this.#conf.col.size
+			},
+			'fixed-col-rotate' : {
+				targetArr : Array.from(colSet),
+				rotateFunc : this.#rotateSameColItems,
+				maxCnt : this.#conf.row.size
+			}
+		}
+		const {targetArr, rotateFunc, maxCnt} = setting[in_action];
+		const result = {target : -1, delta : -1};
+		const rollback = this.#createRollback();
+		const rotated = targetArr.some(in_target => {
+			result.target = in_target;
+			let rest = maxCnt;
+			while (--rest > 0) {
+				// rotate +1 (maxCnt - 1) times
+				rotateFunc.call(this, in_target, 1);
+				if (this.flippable(in_player)) {
+					result.delta = maxCnt - rest;
+					return true;
+				}
+			}
+			(rollback)();
+			return false;
+		});
+		if (rotated) {
+			return result;
+		} else {
+			return null;
+		}
+	}
+	#count(in_player) {
+		const items = this.#area.items.filter(in_el => in_el === in_player);
+		return items.length;
+	}
+	#emptyCnt() {
+		return this.#count(cReversi.#empty);
+	}
+	#flippableIxArr(in_player) {
+		const ixArr = [];
+		const asDryRun = true;
+		this.#area.options.forEach(in_empty_ix => {
+			if (this.#flip(in_player, in_empty_ix, asDryRun)) {
+				ixArr.push(in_empty_ix);
+			}
+		});
+		return ixArr;
+	}
+	#updateOptions(in_ix) {
+		const aroundArr = this.#aroundIndexes(in_ix);
+		aroundArr.forEach(in_aroundIx => {
+			if (this.#getItemByIndex(in_aroundIx) === cReversi.#empty) {
+				this.#area.options.add(in_aroundIx);
+			}
+		});
+		// in_ix should be new occupied position
+		this.#area.options.delete(in_ix);
+	}
+	#updateOptionsAll() {
+		this.#area.options.clear();
+		for (let ix = 0; ix < this.#area.items.length; ix++) {
+			const item = this.#getItemByIndex(ix);
+			if ((item === cReversi.#empty) || (item === cReversi.#dmz)) {
+				continue;
+			}
+			this.#updateOptions(ix);
+		}
+	}
+	#getAreaScore(in_player, in_ix) {
+		return this.#area.scores.players[in_player][in_ix];
+	}
+	#initScore() {
+		this.#initScore_forDefault();
+		this.#initScore_forPlayers();
+	}
+	#initScore_forDefault() {
+		const attenuation = 5;
+		this.#area.scores.default = new Array(this.#area.items.length).fill(0);
+		let loopCnt = 3;
+		while (loopCnt-- > 0) {
+			const buff = [];
+			for (let areaIx = 0; areaIx < this.#area.items.length; areaIx++) {
+				const aroundArr = this.#aroundIndexes(areaIx);
+				let score = this.#conf.dirStyle.pair.size * 2 - aroundArr.length;
+				aroundArr.forEach(in_aroundIx => {
+					if (this.#area.items[in_aroundIx] === cReversi.#dmz) {
+						score++;
+					} else {
+						// a cell adjacent to a high-score cell should have its score reduced
+						score -= Math.floor(this.#area.scores.default[in_aroundIx] / attenuation);
+					}
+				});
+				buff[areaIx] = score;
+			}
+			for (let areaIx = 0; areaIx < this.#area.scores.default.length; areaIx++) {
+				this.#area.scores.default[areaIx] += buff[areaIx];
+			}
+		}
+	}
+	#initScore_forPlayers() {
+		// each player has own score based on owned area
+		for (let player = 0; player < cReversi.#maxPlayers; player++) {
+			this.#area.scores.players[player] = [...this.#area.scores.default];
+		}
+	}
+	#updateScore() {
+		this.#updateScore_forPlayersCorner();
+		this.#updateScore_forPlayersEdge();
+	}
+	#updateScore_forPlayersCorner() {
+		for (const cornerIx of this.#conf.tagIndexes.cornerSet) {
+			const owner = this.#getItemByIndex(cornerIx);
+			if ((owner === cReversi.#empty) || (owner === cReversi.#dmz)) {
+				continue;
+			}
+			const aroundArr = this.#aroundIndexes(cornerIx);
+			const newScore = this.#area.scores.default[cornerIx];
+			aroundArr.forEach(in_aroundIx => this.#area.scores.players[owner][in_aroundIx] = newScore);
+		}
+	}
+	#updateScore_forPlayersEdge() {
+		const tagIndexes = this.#conf.tagIndexes;
+		tagIndexes.edgeObjArr.forEach(in_edgeObj => {
+			for (const edgeIx of in_edgeObj.set) {
+				const owner = this.#getItemByIndex(edgeIx);
+				if ((owner === cReversi.#dmz) || (owner === cReversi.#empty)) {
+					// edge is not owned
+					continue;
+				}
+				const aroundArr = this.#aroundIndexes(edgeIx);
+				aroundArr.forEach(in_aroundIx => {
+					// in_edgeObj.set should be removed
+					if (in_edgeObj.set.has(in_aroundIx)) {
+						return;
+					}
+					// xInsideSet should be removed
+					if (tagIndexes.xInsideSet.has(in_aroundIx)) {
+						return;
+					}
+					for (let player = 0; player < cReversi.#maxPlayers; player++) {
+						let update = this.#area.scores.default[in_aroundIx];
+						if (player === owner) {
+							update = this.#area.scores.default[edgeIx];
+						}
+						this.#area.scores.players[player][in_aroundIx] = update;
+					}
+				});
+			}
+		});
+	}
+	#createRollback() {
+		const backup = {
+			items : [...this.#area.items],
+			options : [...this.#area.options],
+			players : this.#area.scores.players.map(in_arr => [...in_arr]) 
+		};
+		return () => {
+			const area = this.#area;
+			area.items = [...backup.items];
+			area.options = new Set(backup.options);
+			area.scores.players = backup.players.map(in_arr => [...in_arr]);
+		};
+	}
+	static #evaluateStats = {};
+	static #registerStats(in_key) {
+		if (cReversi.#evaluateStats[in_key]) {
+			cReversi.#evaluateStats[in_key]++;
+		} else {
+			cReversi.#evaluateStats[in_key] = 1;
+		}
+	}
+	#evaluate(in_curr, in_next, in_xInside, in_priorityArr) {
+		for (let i = 0; i < in_priorityArr.length; i++) {
+			const {format, positive} = in_priorityArr[i];
+			let score = (in_priorityArr.length - i - 1) * (positive ? +1 : -1);
+			if (format === 'xInside') {
+				// 1. special case (xInside)
+				if (in_xInside) {
+					cReversi.#registerStats(format);
+					return score;
+				} else {
+					continue;
+				}
+			}
+			if (in_curr[format] === in_next[format]) {
+				// 2. special case (bOuterByMe)
+				if ((format === 'bOuterByMe') && (in_next[format])) {
+					cReversi.#registerStats(format);
+					return score;
+				} else {
+					continue;
+				}
+			} else {
+				// 3. generic cases
+				if (typeof in_next[format] === 'number') {
+					const delta = in_next[format] - in_curr[format];
+					cReversi.#registerStats(format);
+					return (delta > 0) ? score * +1 : score * -1;
+				} else {
+					let statsKey;
+					if (in_next[format]) {
+						statsKey = format + '-false-to-true';
+						score *= +1;
+					} else {
+						statsKey = format + '-true-to-false';
+						score *= -1;
+					}
+					cReversi.#registerStats(statsKey);
+					return score;
+				}
+			}
+		}
+		cReversi.#registerStats('can not evaluate');
+		return 0;
+	}
+	#scoringCoastalZone(in_player, in_cand) {
+		if (in_cand.type !== 'flip') {
+			return 0;
+		}
+		const tagIndexes = this.#conf.tagIndexes;
+		if ((tagIndexes.edgeObjArr.length === 0) && (tagIndexes.cornerSet.size === 0)) {
+			// no edge + no corner = not coastal zone
+			return 0;
+		}
+		cReversi.#registerStats('total');
+		/*
+			1. e (= edge) : check if area of edge is safe
+			2. x (= xInside) : check if xInside positions will be not changed
+		*/
+		const check = {
+			e : {
+				indexes : [],
+				cyclic : false,
+				currItems : [],
+				nextItems : [],
+				currParsed : {},
+				nextParsed : {}
+			},
+			x : {
+				indexes : [],
+				currItems : [],
+				nextItems : [],
+				increased : false
+			}
+		};
+		if (tagIndexes.cornerSet.has(in_cand.ix)) {
+			cReversi.#registerStats('corner');
+			return +999;
+		}
+		const ixInEdge = tagIndexes.edgeObjArr.some(in_edgeObj => {
+			if (in_edgeObj.set.has(in_cand.ix)) {
+				check.e.indexes = [...in_edgeObj.set];
+				check.e.cyclic = in_edgeObj.cyclic;
+				return true;
+			} else {
+				return false;
+			}
+		});
+		const riskCornerSet = new Set();
+		for (const cornerIx of tagIndexes.cornerSet) {
+			if (this.#getItemByIndex(cornerIx) === cReversi.#empty) {
+				riskCornerSet.add(cornerIx);
+			}
+		}
+		for (const xInsideIx of tagIndexes.xInsideSet) {
+			const aroundArr = this.#aroundIndexes(xInsideIx);
+			if (aroundArr.some(in_aroundIx => riskCornerSet.has(in_aroundIx))) {
+				check.x.indexes.push(xInsideIx);
+			}
+		}
+		if (check.e.indexes.length > 0) {
+			check.e.currItems = this.#items(check.e.indexes);
+		}
+		if (check.x.indexes.length > 0) {
+			check.x.currItems = this.#items(check.x.indexes);
+		}
+		const rollback = this.#createRollback();
+		this.#flip(in_player, in_cand.ix);
+		if (check.x.indexes.length > 0) {
+			check.x.nextItems = this.#items(check.x.indexes);
+			check.x.increased = !check.x.nextItems.every((in_item, in_ix) => in_item === check.x.currItems[in_ix]);
+		}
+		if (ixInEdge) {
+			check.e.nextItems = this.#items(check.e.indexes);
+			check.e.currParsed = cLineParser.parse(check.e.currItems, in_player, check.e.cyclic);
+			check.e.nextParsed = cLineParser.parse(check.e.nextItems, in_player, check.e.cyclic);
+		}
+		(rollback)();
+		// skip coastal scoring when neither edge nor xInside applies
+		if (!ixInEdge && !check.x.increased) {
+			cReversi.#registerStats('inside & without coastal targets');
+			return 0;
+		}
+		// scaled scoring > npc scoring
+		const priorityArr = [
+			// corner control strategy
+			{format : 'eCriticalToMe', positive : false},
+			{format : 'ePreRiskToMe', positive : false},
+			{format : 'xInside', positive : false},
+			{format : 'ePressureByMe', positive : true},
+			{format : 'ePressureToMe', positive : false},
+			{format : 'ePrePressureToMe', positive : false},
+			// safe zone strategy
+			{format : 'bOccupiedByMe', positive : true},
+			{format : 'bPreOccupiedByMe', positive : true},
+			{format : 'bOccupiedByBoth', positive : true},
+			// secondary corner control strategy
+			{format : 'bPressureByMe', positive : true},
+			{format : 'bPressureToMe', positive : false},
+			{format : 'bPrePressureToMe', positive : false},
+			// secondary safe zone strategy
+			{format : 'bInnerByMe', positive : true},
+			{format : 'bPreOuterByMe', positive : false},
+			{format : 'bOuterByMe', positive : true},
+			// slightly better
+			{format : 'safetyScore', positive : true}
+		];
+		return this.#evaluate(check.e.currParsed, check.e.nextParsed, check.x.increased, priorityArr);
+	}
+	#scoringInlandZone(in_player, in_cand) {
+		if (in_cand.type !== 'flip') {
+			return 0;
+		}
+		const pairs = Array.from(this.#conf.dirStyle.pair.values());
+		const lineObjArr = pairs.map(([in_neg, in_pos]) => this.#getContiguousLine(in_cand.ix, in_neg, in_pos));
+		const lineItems = () => lineObjArr.map(in_line => this.#items(in_line.indexes));
+		const currRadiatingLines = lineItems();
+		const rollback = this.#createRollback();
+		this.#flip(in_player, in_cand.ix);
+		const nextRadiatingLines = lineItems();
+		(rollback)();
+		let total = 0;
+		const xInside = false;
+		const priorityArr = [
+			// safe zone (= controlled line) strategy
+			{format : 'bOccupiedByMe', positive : true},
+			{format : 'bPreOccupiedByMe', positive : true},
+			{format : 'bOccupiedByBoth', positive : true},
+			// edge control strategy
+			{format : 'eCriticalToMe', positive : false},
+			{format : 'ePreRiskToMe', positive : false},
+			{format : 'ePressureByMe', positive : true},
+			{format : 'ePressureToMe', positive : false},
+			{format : 'ePrePressureToMe', positive : false}
+		];
+		for (let i = 0; i < currRadiatingLines.length; i++) {
+			const currParsed = cLineParser.parse(currRadiatingLines[i], in_player, lineObjArr[i].cyclic);
+			const nextParsed = cLineParser.parse(nextRadiatingLines[i], in_player, lineObjArr[i].cyclic);
+			total += this.#evaluate(currParsed, nextParsed, xInside, priorityArr);
+		}
+		return total;
+	}
+	#scoringRuleDriven(in_player, in_cand, in_callback) {
+		const rollback = this.#createRollback();
+		(in_cand.apply)();
+		const score = in_callback.call(this, in_player); 
+		(rollback)();
+		return score;
+	}
+	#countNextEnemyOption(in_player) {
+		const player = (in_player + 1 + cReversi.#maxPlayers) % cReversi.#maxPlayers;
+		return this.#flippableIxArr(player).length;
+	}
+	#countNextOwnedSafeArea(in_player) {
+		let count = 0;
+		const findNeighbor = in_arr => {
+			for (let i = 0; i < in_arr.length; i++) {
+				const neighbor = this.#getItemByIndex(in_arr[i]);
+				if (neighbor !== in_player) {
+					return neighbor;
+				}
+			}
+			return null;
+		}
+		const pairs = Array.from(this.#conf.dirStyle.pair.values());
+		for (let ix = 0; ix < this.#area.items.length; ix++) {
+			if (this.#getItemByIndex(ix) !== in_player) {
+				continue;
+			}
+			const radiating = this.#conf.tagIndexes.radiating[ix];
+			const isSafe = pairs.every(([in_neg, in_pos])  => {
+				const N = findNeighbor(radiating[in_neg].ray);
+				const P = findNeighbor(radiating[in_pos].ray);
+				// player reachs all the way to the board edge, or to the DMZ
+				if ((N === null) || (N === cReversi.#dmz)) {
+					return true;
+				}
+				if ((P === null) || (P === cReversi.#dmz)) {
+					return true;
+				}
+				// both sides are bordered by the same object
+				if (P === N) {
+					return true;
+				}
+				return false;
+			});
+			count += isSafe ? 1 : 0;
+		}
+		return count;
+	}
+	#countNextOwnedArea(in_player) {
+		return this.#count(in_player);
+	}
+	#calculateNextScore(in_player) {
+		let score = 0;
+		for (let ix = 0; ix < this.#area.items.length; ix++) {
+			if (this.#getItemByIndex(ix) === in_player) {
+				score += this.#getAreaScore(in_player, ix);
+			}
+		}
+		return score;
+	}
+	#smartFilter(in_player, in_candArr, in_callback) {
+		const randomizeCnt = 5;
+		if (this.#history.length < randomizeCnt) {
+			return this.#npc_random(in_player, in_candArr);
+		}
+		let evaluator;
+		let narrowedArr = in_candArr;
+		// (1)
+		evaluator = (in_player, in_cand) => {
+			return this.#scoringCoastalZone(in_player, in_cand);
+		};
+		narrowedArr = cReversi.#maximize(evaluator, in_player, narrowedArr);
+		if (narrowedArr.length === 1) {
+			return narrowedArr[0];
+		}
+		// (2)
+		evaluator = (in_player, in_cand) => {
+			return this.#scoringRuleDriven(in_player, in_cand, in_callback);
+		};
+		narrowedArr = cReversi.#maximize(evaluator, in_player, narrowedArr);
+		if (narrowedArr.length === 1) {
+			return narrowedArr[0];
+		}
+		// (3)
+		evaluator = (in_player, in_cand) => {
+			return this.#scoringInlandZone(in_player, in_cand);
+		};
+		narrowedArr = cReversi.#maximize(evaluator, in_player, narrowedArr);
+		if (narrowedArr.length === 1) {
+			return narrowedArr[0];
+		}
+		// (4)
+		return this.#npc_random(in_player, narrowedArr);
+	}
+	#npc_min_enemy_option(in_player, in_candArr) {
+		return this.#smartFilter(in_player, in_candArr, in_player => this.#countNextEnemyOption(in_player) * -1);
+	}
+	#npc_max_owned_safe_area(in_player, in_candArr) {
+		return this.#smartFilter(in_player, in_candArr, this.#countNextOwnedSafeArea);
+	}
+	#npc_max_owned_area(in_player, in_candArr) {
+		return this.#smartFilter(in_player, in_candArr, this.#countNextOwnedArea);
+	}
+	#npc_only_evaluate(in_player, in_candArr) {
+		return this.#smartFilter(in_player, in_candArr, in_player => 0);
+	}
+	#npc_score_total(in_player, in_candArr) {
+		let evaluator, narrowedArr;
+		evaluator = (in_player, in_cand) => {
+			const score = this.#scoringRuleDriven(in_player, in_cand, this.#calculateNextScore);
+			return score;
+		};
+		narrowedArr = cReversi.#maximize(evaluator, in_player, in_candArr);
+		return this.#npc_random(in_player, narrowedArr);
+	}
+	#npc_random(in_player, in_candArr) {
+		return in_candArr[arrRand]();
+	}
+	#npcSet = {
+		spiteful : this.#npc_min_enemy_option,
+		safety : this.#npc_max_owned_safe_area,
+		greedy : this.#npc_max_owned_area,
+		rational : this.#npc_only_evaluate,
+		classic : this.#npc_score_total,
+		monkey : this.#npc_random
+	}
+	_simulation(in_repeat = 17) {
+		const truncateDecimal = (in_value, in_digit) => {
+			const order = 10 ** in_digit;
+			return Math.floor(in_value * order) / order;
+		};
+		const test = (in_argoArr) => {
+			let infiniteGuardCnt = 100;
+			while (true) {
+				const resultArr = [];
+				for (let i = 0; i < in_argoArr.length; i++) {
+					resultArr[i] = this.playAutomatically(i, in_argoArr[i]);
+				}
+				if (resultArr.some(in_result => in_result)) {
+					if (infiniteGuardCnt-- === 0) {
+						break;
+					}
+				} else {
+					break;
+				}
+			}
+			let max = -Infinity;
+			let winner = -1;
+			const cond = this.getCurrentCondition();
+			for (let i = 0; i < cond.players.length; i++) {
+				if (cond.players[i].score > max) {
+					max = cond.players[i].score;
+					winner = i;
+				}
+			}
+			return winner;
+		};
+		const rollback = this.#createRollback();
+		// start simulation
+		const table = [];
+		table.push(['(vs)', ...Object.keys(this.#npcSet)]);
+		Object.keys(this.#npcSet).forEach(p1 => {
+			const row = [p1];
+			Object.keys(this.#npcSet).forEach(p2 => {
+				const players = [p1, p2];
+				if (p1 === p2) {
+					row.push('-');
+					return;
+				}
+				let cnt = in_repeat;
+				let win = 0;
+				while (true) {
+					if (cnt-- > 0) {
+						if (test(players) === 0) {
+							win++;
+						}
+						this.#initScore();
+						this.#history.length = 0;
+						(rollback)();
+					} else {
+						break;
+					}
+				}
+				row.push(truncateDecimal(win / in_repeat, 2));
+				this.#initScore();
+				this.#history.length = 0;
+				(rollback)();
+			});
+			table.push(row);
+		});
+		const container = (in_table => {
+			const ret = document.createElement('TABLE');
+			in_table.forEach(in_row => {
+				const row = document.createElement('TR');
+				in_row.forEach(in_cell => {
+					const cell = document.createElement('TD');
+					cell.innerText = in_cell;
+					let color = 'eeeeee';
+					if (typeof in_cell === 'boolean') {
+						if (in_cell) {
+							color = 'ccccff';
+						} else {
+							color = 'ffcccc';
+						}
+					} else {
+						if (typeof in_cell === 'number') {
+							if (in_cell > 0.5) {
+								color = 'ccccff';
+							} else {
+								color = 'ffcccc';
+							}
+						}
+					}
+					cell.style.backgroundColor = color;
+					cell.style.textAlign = 'center';
+					cell.style.border = '1px solid black';
+					cell.style.padding = '3px';
+					cell.style.width = '5em';
+					row.appendChild(cell);
+				});
+				ret.appendChild(row);
+			});
+			ret.style.borderCollapse = 'collapse';
+			return ret;
+		})(table);
+		let total = 1;
+		Object.keys(cReversi.#evaluateStats).forEach(in_key => {
+			if (in_key === 'total') {
+				total = cReversi.#evaluateStats[in_key];
+				return;
+			}
+			const taking = truncateDecimal(cReversi.#evaluateStats[in_key] / total, 4);
+			console.log(in_key + ' : ' + taking);
+		});
+		return container;
+	}
+	_snapshot(in_container = null) {
+		const bg = new Map([
+			[0, 'red'],
+			[1, 'blue'],
+			[2, 'green'],
+			[3, 'yellow'],
+			[cReversi.#empty, 'silver']
+		]);
+		const rightMargin = 10;
+		const cellSize = 20;
+		const cellMargin = 5;
+		let container;
+		if (in_container) {
+			container = in_container;
+		} else {
+			container = document.createElement('DIV');
+			// use the parent container as the positioning reference for absolutely positioned cells
+			container.style.position = 'relative';
+		}
+		for (let row = 0; row < this.#conf.row.size; row++) {
+			for (let col = 0; col < this.#conf.col.size; col++) {
+				const color = bg.get(this.#getItemByPos(row, col));
+				const id = '_' + row + 'x' + col;
+				let cell = container.querySelector('#' + id);
+				if (cell) {
+					cell.style.backgroundColor = color;
+					continue;
+				} else {
+					cell = document.createElement('DIV');
+				}
+				let l = rightMargin + (cellSize + cellMargin) * col;
+				let t = rightMargin + (cellSize + cellMargin) * row;
+				const pair = this.#conf.dirStyle.pair;
+				if (pair.has(90) && !pair.has(0)) {
+					l += (row % 2 === this.#conf.offset ? (cellSize + cellMargin) / 2 : 0);
+				}
+				if (!pair.has(90) && pair.has(0)) {
+					t += (col % 2 === this.#conf.offset ? (cellSize + cellMargin) / 2 : 0);
+				}
+				Object.assign(cell.style, {
+					id : id,
+					width : cellSize + 'px',
+					height : cellSize + 'px',
+					backgroundColor : color,
+					border : 'solid gray 1px',
+					position : 'absolute',
+					left : l + 'px',
+					top : t + 'px'
+				});
+				container.appendChild(cell);
+			}
+		}
+		return container;
+	}
+	_debug(in_stop = true) {
+		const sources = {
+			default : this.#area.scores.default,
+			occupied : this.#area.items
+		};
+		for (let player = 0; player < cReversi.#maxPlayers; player++) {
+			sources['p-' + player] = this.#area.scores.players[player];
+		}
+		Object.keys(sources).forEach(in_key => {
+			console.log('*** ' + in_key + ' ***');
+			const data = sources[in_key];
+			for (let row = 0; row < this.#conf.row.size; row++) {
+				const items = [];
+				for (let col = 0; col < this.#conf.col.size; col++) {
+					const ix = this.#posToIndex(row, col);
+					items.push(data[ix]);
+				}
+				console.log(items);
+			}
+		});
+		if (in_stop) {
+			throw new Error();
+		}
+	}
+	#commit(in_player, in_action, in_ix, in_row, in_col, in_delta) {
+		let row, col;
+		if (in_ix < 0) {
+			this.#updateOptionsAll();
+			row = in_row;
+			col = in_col;
+		} else {
+			this.#updateOptions(in_ix);
+			const pos = this.#indexToPos(in_ix);
+			row = pos.row;
+			col = pos.col;
+		}
+		this.#history.push({
+			who : in_player,
+			action : in_action,
+			row : row,
+			col : col,
+			delta : in_delta
+		});
+		this.#updateScore();
+	}
+	playUndo(in_player) {
+		const last = this.getLast({who : in_player});
+		if (!last) {
+			return false;
+		}
+		const history = [...this.#history];
+		this.#history.length = 0;
+		this.#area.items = [...this.#area.initialItems];
+		this.#initScore();
+		this.#updateOptionsAll();
+		for (let i = 0; i < history.length - 1; i++) {
+			const curr = history[i];
+			if (curr === last) {
+				break;
+			}
+			switch (curr.action) {
+			case 'choose-item':
+				this.playSetPosition(curr.who, curr.row, curr.col);
+				break;
+			case 'fixed-col-rotate':
+				this.playRotate(curr.who, curr.action, curr.col, curr.delta);
+				break;
+			case 'fixed-row-rotate':
+				this.playRotate(curr.who, curr.action, curr.row, curr.delta);
+				break;
+			default :
+				throw new Error('invalid history');
+				break;
+			}
+		}
+		return true;
+	}
+	playRotate(in_player, in_action, in_target, in_delta) {
+		switch (in_action) {
+		case 'fixed-col-rotate' :
+			this.#rotateSameColItems(in_target, in_delta);
+			this.#commit(in_player, in_action, -1, -1, in_target, in_delta);
+			break;
+		case 'fixed-row-rotate' :
+			this.#rotateSameRowItems(in_target, in_delta);
+			this.#commit(in_player, in_action, -1, in_target, -1, in_delta);
+			break;
+		default :
+			throw new Error('invalid history');
+			break;
+		}
+	}
+	playSetPosition(in_player, in_row, in_col) {
+		const ix = this.#posToIndex(in_row, in_col);
+		if (this.#getItemByIndex(ix) !== cReversi.#empty) {
+			return false;
+		}
+		const flipped = this.#flip(in_player, ix);
+		if (flipped) {
+			this.#commit(in_player, 'choose-item', ix, -1, -1, -1);
+		}
+		return flipped;
+	}
+	playAutomatically(in_player, in_argo = null) {
+		let npcAlive = false;
+		let playerCnt = 0;
+		for (let player = 0; player < cReversi.#maxPlayers; player++) {
+			if (this.#area.items.indexOf(player) >= 0) {
+				playerCnt++;
+				if (player === in_player) {
+					npcAlive = true;
+				}
+			}
+		}
+		if (npcAlive) {
+			if (playerCnt === 1) {
+				// only in_player
+				return false;
+			}
+		} else {
+			// in_player is died
+			return false;
+		}
+		if (this.#area.items.indexOf(cReversi.#empty) === -1) {
+			// fulfilled
+			return false;
+		}
+		let npcArgo;
+		if (in_argo) {
+			npcArgo = in_argo;
+		} else {
+			npcArgo = this.#npcArgoPriority[in_player];
+		}
+		// console.log(in_player, npcAlive, playerCnt, npcArgo);
+		let candArr = this.#flippableIxArr(in_player).map(in_ix => ({
+			ix : in_ix,
+			type : 'flip',
+			apply : () => this.#flip(in_player, in_ix)
+		}));
+		if (candArr.length > 0) {
+			const cand = this.#npcSet[npcArgo].call(this, in_player, candArr); 
+			(cand.apply)();
+			this.#commit(in_player, 'choose-item', cand.ix, -1, -1, -1);
+			return true;
+		} else {
+			let action, result;
+			if (this.rotatableFixedCol()) {
+				action = 'fixed-col-rotate';
+				result = this.#tryRotation(in_player, action);
+				if (result) {
+					this.#commit(in_player, action, -1, -1, result.target, result.delta);
+					return true;
+				}
+			}
+			if (this.rotatableFixedRow()) {
+				action = 'fixed-row-rotate';
+				result = this.#tryRotation(in_player, action);
+				if (result) {
+					this.#commit(in_player, action, -1, result.target, -1, result.delta);
+					return true;
+				}
+			}
+			// can not do anything
+			return false;
+		}
+	}
+	#rotatableTable(in_cyclic, in_rotatableAngle, in_angle = null) {
+		const rotatable = in_cyclic && this.#conf.dirStyle.pair.has(in_rotatableAngle);
+		if (in_angle === null) {
+			return rotatable;
+		} else {
+			return rotatable && (in_rotatableAngle !== in_angle);
+		}
+	}
+	rotatableFixedCol(in_angle = null) {
+		const rotatableAngle = 0;
+		return this.#rotatableTable(!this.#conf.row.edge, rotatableAngle, in_angle);
+	}
+	rotatableFixedRow(in_angle = null) {
+		const rotatableAngle = 90;
+		return this.#rotatableTable(!this.#conf.col.edge, rotatableAngle, in_angle);
+	}
+	getLast(in_conditions = {}) {
+		// in_conditions : {who, action, row, col, delta}
+		for (let i = this.#history.length - 1; i >= 0; i--) {
+			const last = this.#history[i];
+			if (Object.keys(in_conditions).some(in_key => in_conditions[in_key] !== last[in_key])) {
+				continue;
+			} else {
+				return last;
+			}
+		}
+		return null;
+	}
+	#setTable(in_table) {
+		for (let row = 0; row < in_table.length; row++) {
+			for (let col = 0; col < in_table[row].length; col++) {
+				const item = in_table[row][col];
+				if (cReversi.#validData.indexOf(item) < 0) {
+					throw new Error('invalid input');
+				} else {
+					this.#setItemByPos(row, col, item);
+				}
+			}
+		}
+	}
+	getTable() {
+		const table = [];
+		for (let ix = 0; ix < this.#area.items.length; ix++) {
+			const pos = this.#indexToPos(ix);
+			if (!table[pos.row]) {
+				table[pos.row] = [];
+			}
+			table[pos.row][pos.col] = parseInt(this.#getItemByIndex(ix));
+		}
+		return table;
+	}
+	flippable(in_player) {
+		return ((this.#flippableIxArr(in_player)).length > 0);
+	}
+	getCurrentCondition() {
+		const condition = {
+			finished : false,
+			players : []
+		};
+		const canRotate = this.rotatableFixedCol() || this.rotatableFixedRow();
+		const cnt = {
+			activePlayer : 0,
+			frozenPlayer : 0
+		};
+		for (let player = 0; player < cReversi.#maxPlayers; player++) {
+			let score, dead, frozen;
+			score = this.#count(player);
+			dead = (score === 0);
+			if (dead) {
+				frozen = true;
+			} else {
+				if (this.flippable(player) || canRotate) {
+					cnt.activePlayer++;
+					frozen = false;
+				} else {
+					cnt.frozenPlayer++;
+					frozen = true;
+				}
+			}
+			condition.players[player] = {score : score, dead : dead, frozen : frozen};
+		}
+		condition.finished =
+			// only 1 player is active
+			(cnt.activePlayer + cnt.frozenPlayer === 1) ||
+			// all players are frozen
+			(cnt.activePlayer === 0) ||
+			// there is no emply
+			(this.#emptyCnt() === 0);
+		return condition;
+	}
+}
