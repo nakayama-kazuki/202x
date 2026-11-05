@@ -56,39 +56,81 @@ import {
 	cSphericalWorld
 } from 'basic';
 
-export class cCylinderStructure {
-	static error = 0.01;
-	constructor(in_rowsForCircle, in_colsForLength, in_origin, in_colsDelta, in_offset = -1) {
-		this.rowsForCircle = in_rowsForCircle;
-		this.colsForLength = in_colsForLength;
-		this.origin = in_origin.clone();
-		this.colsDelta = in_colsDelta;
-		this.rowsAngle = Math.PI * 2 / in_rowsForCircle;
+class cBaseStructure {
+	static #error = 0.01;
+	#rowsForCrossSection;
+	#colsForLongitudinal;
+	constructor(in_rowsForCrossSection, in_colsForLongitudinal, in_offset = -1, in_crossSectionRotation = 0) {
+		this.rowsAngle = Math.PI * 2 / in_rowsForCrossSection;
 		this.offset = in_offset;
+		this.crossSectionRotation = in_crossSectionRotation;
+		// number of rows arranged around a circular cross-section 
+		this.#rowsForCrossSection = in_rowsForCrossSection;
+		// number of columns along the shape-dependent longitudinal direction
+		this.#colsForLongitudinal = in_colsForLongitudinal;
 	}
 	get rows() {
-		return this.rowsForCircle;
+		return this.#rowsForCrossSection;
 	}
 	get cols() {
-		return this.colsForLength;
+		return this.#colsForLongitudinal;
+	}
+	rowAngle(in_row) {
+		return this.rowsAngle * in_row + this.crossSectionRotation;
 	}
 	#locationToRow(in_row, in_col) {
+		// apply a half-row offset to alternating columns
 		if ((this.offset >= 0) && (in_col % 2 === this.offset)) {
 			return in_row + 0.5;
 		}
 		return in_row;
 	}
+	locationToRowAngle(in_row, in_col) {
+		return this.rowAngle(this.#locationToRow(in_row, in_col));
+	}
 	locationToPosition(in_row, in_col) {
-		const row = this.#locationToRow(in_row, in_col);
-		const pos = this.origin.clone();
+		throw new Error('locationToPosition() must be implemented by subclass');
+	}
+	positionToLocation(in_position, in_col = null) {
+		// search all columns or a specified column
+		const s_col = in_col === null ? 0 : in_col;
+		const e_col = in_col === null ? this.cols : in_col + 1;
+		for (let row = 0; row < this.rows; row++) {
+			for (let col = s_col; col < e_col; col++) {
+				const pos = this.locationToPosition(row, col);
+				if (pos.distanceTo(in_position) < cBaseStructure.#error) {
+					return {row : row, col : col};
+				}
+			}
+		}
+		console.log('positionToLocation failed : ', in_position);
+		throw new Error('');
+	}
+}
+
+export class cCylinderStructure extends cBaseStructure {
+	#origin;
+	constructor(
+		in_rowsForCircle,
+		in_colsForLength,
+		in_origin,
+		in_colsDelta,
+		in_offset = -1,
+		in_crossSectionRotation = 0
+	) {
+		super(in_rowsForCircle, in_colsForLength, in_offset, in_crossSectionRotation);
+		this.#origin = in_origin.clone();
+		this.colsDelta = in_colsDelta;
+	}
+	locationToPosition(in_row, in_col) {
+		const pos = this.#origin.clone();
 		pos.x += this.colsDelta * in_col;
-		pos.applyAxisAngle(cColony.axes.x, this.rowsAngle * row);
+		pos.applyAxisAngle(cColony.axes.x, this.locationToRowAngle(in_row, in_col));
 		return pos;
 	}
 	locationToQuaternion(in_row, in_col) {
 		// determine rotation based on geometry and placement
-		const row = this.#locationToRow(in_row, in_col);
-		return new THREE.Quaternion().setFromAxisAngle(cColony.axes.x, this.rowsAngle * row);
+		return new THREE.Quaternion().setFromAxisAngle(cColony.axes.x, this.locationToRowAngle(in_row, in_col));
 	}
 	locationToOverviewPosition(in_row, in_col) {
 		const pos = this.locationToPosition(in_row, in_col);
@@ -102,21 +144,14 @@ export class cCylinderStructure {
 		return new THREE.Quaternion();
 	}
 	positionToLocation(in_position) {
-		const col = Math.round((in_position.x - this.origin.x) / this.colsDelta);
-		for (let row = 0; row < this.rows; row++) {
-			const pos = this.locationToPosition(row, col);
-			if (pos.distanceTo(in_position) < cCylinderStructure.error) {
-				return {row : row, col : col};
-			}
-		}
-		console.log('positionToLocation failed : ', in_position);
-		throw new Error('');
+		const col = Math.round((in_position.x - this.#origin.x) / this.colsDelta);
+		return super.positionToLocation(in_position, col);
 	}
 }
 
-export class cTorusStructure {
-	static error = 0.01;
+export class cTorusStructure extends cBaseStructure {
 	static #gapRatio = 0.05;
+	#size;
 	constructor(
 		in_rowsForPoloidal,
 		in_colsForToroidal,
@@ -127,28 +162,15 @@ export class cTorusStructure {
 		in_center = VEC3(0, 0, 0),
 		in_poloidalRotation = 0
 	) {
-		this.rowsForPoloidal = in_rowsForPoloidal;
-		this.colsForToroidal = in_colsForToroidal;
+		super(in_rowsForPoloidal, in_colsForToroidal, in_offset, in_poloidalRotation);
 		this.majorRadius = in_majorRadius;
 		this.minorRadius = in_minorRadius;
-		this.size = in_size;
-		this.rowsAngle = Math.PI * 2 / in_rowsForPoloidal;
+		this.#size = in_size;
 		this.colsAngle = Math.PI * 2 / in_colsForToroidal;
-		this.offset = in_offset;
 		this.center = in_center.clone();
-		this.poloidalRotation = in_poloidalRotation;
-	}
-	get rows() {
-		return this.rowsForPoloidal;
-	}
-	get cols() {
-		return this.colsForToroidal;
 	}
 	get gap() {
-		return this.size * cTorusStructure.#gapRatio;
-	}
-	poloidalAngle(in_row) {
-		return this.rowsAngle * in_row + this.poloidalRotation;
+		return this.#size * cTorusStructure.#gapRatio;
 	}
 	positionByPoloidalAngle(in_angle) {
 		const pos = this.center.clone();
@@ -181,7 +203,7 @@ export class cTorusStructure {
 		};
 	}
 	poloidalTangent(in_row, in_col) {
-		const angle = this.locationToPoloidalAngle(in_row, in_col);
+		const angle = this.locationToRowAngle(in_row, in_col);
 		const toroidalAngle = this.toroidalAngle(in_col);
 		return VEC3(
 			Math.sin(angle) * Math.sin(toroidalAngle) * -1,
@@ -189,36 +211,14 @@ export class cTorusStructure {
 			Math.sin(angle) * Math.cos(toroidalAngle) * -1
 		);
 	}
-	locationToPoloidalAngle(in_row, in_col) {
-		let row = in_row;
-		if ((this.offset >= 0) && (in_col % 2 === this.offset)) {
-			row += 0.5;
-		}
-		return this.poloidalAngle(row);
-	}
 	locationToPosition(in_row, in_col) {
-		const poloidalAngle = this.locationToPoloidalAngle(in_row, in_col);
+		const poloidalAngle = this.locationToRowAngle(in_row, in_col);
 		const toroidalAngle = this.toroidalAngle(in_col);
 		return this.position(poloidalAngle, toroidalAngle);
 	}
 	locationToQuaternion(in_row, in_col) {
 		const toroidalAngle = this.toroidalAngle(in_col);
 		return new THREE.Quaternion().setFromAxisAngle(VEC3(0, 1, 0), toroidalAngle);
-	}
-	positionToLocation(in_position) {
-		for (let row = 0; row < this.rows; row++) {
-			for (let col = 0; col < this.cols; col++) {
-				const pos = this.locationToPosition(row, col);
-				if (pos.distanceTo(in_position) < cTorusStructure.error) {
-					return {
-						row : row,
-						col : col
-					};
-				}
-			}
-		}
-		console.log('positionToLocation failed : ', in_position);
-		throw new Error('');
 	}
 }
 
