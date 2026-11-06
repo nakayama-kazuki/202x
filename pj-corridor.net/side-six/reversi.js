@@ -1800,8 +1800,8 @@ export class cReversi {
 				if (!pair.has(90) && pair.has(0)) {
 					t += (col % 2 === this.#conf.offset ? (cellSize + cellMargin) / 2 : 0);
 				}
+				cell.id = id;
 				Object.assign(cell.style, {
-					id : id,
 					width : cellSize + 'px',
 					height : cellSize + 'px',
 					backgroundColor : color,
