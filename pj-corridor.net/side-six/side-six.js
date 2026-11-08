@@ -873,3 +873,7 @@ export class cColony extends cPieceSet {
 		});
 	}
 }
+
+export function hexColMargin(in_edgeLength, in_rowMargin) {
+	return 2 * in_rowMargin / Math.sqrt(3) - (3 - Math.sqrt(3)) / 4 * in_edgeLength;
+}

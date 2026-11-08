@@ -88,7 +88,8 @@ import {
 	angleSharedHexmapFactory,
 	angleSharedSquareFactory,
 	updateChamferedGeometry,
-	cColony
+	cColony,
+	hexColMargin
 } from 'side6';
 import {FIGURES} from 's6res';
 import * as SOUND from 'sound';
@@ -798,7 +799,7 @@ const gCyclicLevels = ((in_diameter) => {
 	const topologyMap = new Map([
 		['hexFlatTopped', {
 			factory : allSharedHexmapFactory,
-			marginCol : (in_size, in_margin) => 2 * in_margin / 3 ** 0.5 - (3 ** 0.5 - 1) / 4 * in_size,
+			marginCol : (in_size, in_margin) => hexColMargin(in_size / Math.sqrt(3), in_margin),
 			offset : 1
 		}],
 		['square', {

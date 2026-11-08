@@ -88,7 +88,8 @@ import {
 	angleSharedHexmapFactory,
 	angleSharedSquareFactory,
 	updateChamferedGeometry,
-	cColony
+	cColony,
+	hexColMargin
 } from 'side6';
 import {FIGURES} from 's6res';
 import * as SOUND from 'sound';
@@ -608,42 +609,6 @@ class cColonyBoard extends cColony {
 			(in_ending_callback)();
 		});
 	}
-/*
-	static #views  = {
-		COLONYVIEW : Symbol(),
-		TRNSFORMING : Symbol(),
-		OVERVIEW : Symbol()
-	};
-	static #viewTransitions = {
-		[cColonyBoard.#views.COLONYVIEW] : {
-			toOverview : cColonyBoard.#views.TRNSFORMING
-		},
-		[cColonyBoard.#views.TRNSFORMING] : {
-			toColonyView : cColonyBoard.#views.COLONYVIEW,
-			toOverview : cColonyBoard.#views.OVERVIEW
-		},
-		[cColonyBoard.#views.OVERVIEW] : {
-			toColonyView : cColonyBoard.#views.TRNSFORMING
-		}
-	};
-	#state = cColonyBoard.#views.COLONYVIEW;
-	#transition(in_action) {
-		const state = cColonyBoard.#viewTransitions[this.#state][in_action];
-		if (state) {
-			this.#state = state;
-		} else {
-			throw new Error('invalid transition : ' + in_action);
-		}
-	}
-	get isColonyView() {
-		return (this.#state === cColonyBoard.#views.COLONYVIEW);
-	}
-	get isOverview() {
-		return (this.#state === cColonyBoard.#views.OVERVIEW);
-	}
-*/
-//★
-
 	static #views = {
 		TORUSVIEW : Symbol(),
 		T_TO_C : Symbol(),
@@ -692,236 +657,138 @@ class cColonyBoard extends cColony {
 	get isPlaneView() {
 		return (this.#state === cColonyBoard.#views.PLANEVIEW);
 	}
-/*
-	makeSwitchViewProgress(in_t_to_p, in_duration, in_ending_callback) {
-		const views = cColonyBoard.#views;
-		const {noop, action, stageArr} = (() => {
-			if (in_t_to_p) {
-				return {
-					noop : !this.isTorusView,
-					action : 'toPlaneView',
-					stageArr : [
-						views.TORUSVIEW,
-						views.CYLINDERVIEW,
-						views.PLANEVIEW
-					]
-				};
-			} else {
-				return {
-					noop : !this.isPlaneView,
-					action : 'toTorusView',
-					stageArr : [
-						views.PLANEVIEW,
-						views.CYLINDERVIEW,
-						views.TORUSVIEW
-					]
-				};
-			}
-		})();
-		if (noop) {
-			return;
-		}
-	}
-*/
 //★
-// 1. まずは現状処理の理解と可能ならリファクタリング
-// 2. 次いでそれをベースに torus to/from cylinder の実装
-// 3. plane も含めて実装
-
-
-
-
-
-setupCylinderMorph() {
-	const st = this.currPiecesCache.structure;
-	const width = 2 * st.majorRadius * Math.tan(st.colsAngle / 2) - st.gap;
-	const rotation = new THREE.Quaternion()
-		.setFromAxisAngle(VEC3(0, 1, 0), -Math.PI / 2);
-	this.restore = new Map();
-
-	this.children.forEach(in_piece => {
-		const {row, col} = this.pieceToLocation(in_piece);
-		const angle = st.locationToRowAngle(row, col);
-		const knowledge = st.knowledgeByPoloidalAngle(angle);
-		const original = in_piece.geometry;
-		const geometry = original.clone();
-		const cylinder = original.clone();
-
-		updateChamferedGeometry(
-			cylinder, width, width, knowledge.height, knowledge.rotation
+	#createCylinderPieces() {
+		const torus = this.currPiecesCache.structure;
+		const rows = torus.rows;
+		const cols = torus.cols;
+		const radius = torus.minorRadius;
+		const conf = {
+			mWeight : 0.1,
+			tWeight : 0.5
+		};
+		const circumference = 2 * Math.PI * radius;
+		const marginRow = circumference / rows * conf.mWeight;
+		const unitSize = circumference / rows - marginRow;
+		const unitThick = unitSize * conf.tWeight;
+		const source = this.locationToPiece(0, 0);
+		const isHex = source.geometry.userData.cornerCnt === 6;
+		const marginCol = isHex ? hexColMargin(unitSize / Math.sqrt(3), marginRow) : marginRow;
+		const colsDelta = unitSize + marginCol;
+		const cylinder = new cCylinderStructure(
+			rows,
+			cols,
+			VEC3(colsDelta * (cols - 1) / 2 * -1, radius, 0),
+			colsDelta,
+			torus.offset,
+			//torus.crossSectionRotation - Math.PI / 2
+			torus.crossSectionRotation
 		);
-
-		const pos = VEC3(
-			st.center.x - st.majorRadius - st.minorRadius * Math.cos(angle),
-			st.center.y + st.minorRadius * Math.sin(angle),
-			st.center.z + st.majorRadius * (Math.PI - st.toroidalAngle(col))
-		);
-
-		const source = geometry.attributes.position;
-		const target = cylinder.attributes.position;
-		if (source.count !== target.count) {
-			throw new Error('morph vertex count mismatch');
+		const geometryFactory = isHex ? allSharedHexmapFactory : allSharedSquareFactory;
+		const geometry = geometryFactory.create(unitSize, (radius - unitThick) / radius, unitThick);
+		const pieces = [];
+		for (let row = 0; row < rows; row++) {
+			for (let col = 0; col < cols; col++) {
+				//const original = this.locationToPiece(row, cols - 1 - col);
+				const original = this.locationToPiece(row, col);
+				const piece = new THREE.Mesh(geometry, original.material);
+				piece.position.copy(cylinder.locationToPosition(row, col));
+				piece.quaternion.copy(cylinder.locationToQuaternion(row, col));
+				pieces.push(piece);
+			}
 		}
-
-		// ★ ローカル座標を盤面座標へ変換
-		for (let i = 0; i < source.count; i++) {
-			const v = VEC3().fromBufferAttribute(source, i);
-			v.applyQuaternion(in_piece.quaternion).add(in_piece.position);
-			source.setXYZ(i, v.x, v.y, v.z);
-
-			v.fromBufferAttribute(target, i);
-			v.applyQuaternion(rotation).add(pos);
-			target.setXYZ(i, v.x, v.y, v.z);
-		}
-
-		// ★ Three.js 標準モーフターゲット
-		geometry.morphAttributes.position = [target.clone()];
-		geometry.morphTargetsRelative = false;
-
-		this.restore.set(in_piece, {
-			geometry : original,
-			position : in_piece.position.clone(),
-			quaternion : in_piece.quaternion.clone()
+		return pieces;
+	}
+	setupCylinderMorph() {
+		const cylinderPieces = this.#createCylinderPieces();
+		this.restore = new Map();
+		this.children.forEach((in_piece, in_ix) => {
+			const targetPiece = cylinderPieces[in_ix];
+			const original = in_piece.geometry;
+			const geometry = original.clone();
+			const source = geometry.attributes.position;
+			const target = targetPiece.geometry.attributes.position.clone();
+			if (source.count !== target.count) {
+				throw new Error('morph vertex count mismatch');
+			}
+			for (let i = 0; i < source.count; i++) {
+				const v = VEC3().fromBufferAttribute(source, i);
+				v.applyQuaternion(in_piece.quaternion).add(in_piece.position);
+				source.setXYZ(i, v.x, v.y, v.z);
+				v.fromBufferAttribute(target, i);
+				v.applyQuaternion(targetPiece.quaternion).add(targetPiece.position);
+				target.setXYZ(i, v.x, v.y, v.z);
+			}
+			source.needsUpdate = true;
+			target.needsUpdate = true;
+			geometry.morphAttributes.position = [target];
+			geometry.morphTargetsRelative = false;
+			this.restore.set(in_piece, {
+				geometry : original,
+				position : in_piece.position.clone(),
+				quaternion : in_piece.quaternion.clone()
+			});
+			in_piece.geometry = geometry;
+			in_piece.position.set(0, 0, 0);
+			in_piece.quaternion.identity();
+			in_piece.updateMorphTargets();
+			in_piece.morphTargetInfluences[0] = 0;
 		});
-
-		in_piece.geometry = geometry;
-		in_piece.position.set(0, 0, 0);
-		in_piece.quaternion.identity();
-		in_piece.updateMorphTargets();
-		in_piece.morphTargetInfluences[0] = 0;
-
-		cylinder.dispose();
-	});
-}
-
-
-
-makeSwitchViewProgress(in_t_to_c, in_duration, in_ending_callback) {
-	const views = cColonyBoard.#views;
-	const action = in_t_to_c ? 'toPlaneView' : 'toTorusView';
-
-	if (in_t_to_c && !this.isTorusView) {
-		return;
-	}
-	if (!in_t_to_c && this.#state !== views.CYLINDERVIEW) {
-		return;
 	}
 
-	if (in_t_to_c) {
-		this.setupCylinderMorph();
-		this.uiDisable();
-	}
-	this.#transition(action);
 
-	const ease = new cEase(0, 1, in_duration);
-	let completed = false;
 
-	return () => {
-		if (completed) {
+	makeSwitchViewProgress(in_t_to_c, in_duration, in_ending_callback) {
+		const views = cColonyBoard.#views;
+		const action = in_t_to_c ? 'toPlaneView' : 'toTorusView';
+
+		if (in_t_to_c && !this.isTorusView) {
 			return;
 		}
-		const amount = ease.currentEasingOut();
-		const ratio = in_t_to_c ? amount : 1 - amount;
-
-		this.children.forEach(in_piece => {
-			in_piece.morphTargetInfluences[0] = ratio;
-		});
-
-		if (amount === 1) {
-			completed = true;
-			this.#transition(action);
-
-			if (!in_t_to_c) {
-				this.children.forEach(in_piece => {
-					const data = this.restore.get(in_piece);
-					in_piece.geometry.dispose();
-					in_piece.geometry = data.geometry;
-					in_piece.position.copy(data.position);
-					in_piece.quaternion.copy(data.quaternion);
-					in_piece.updateMatrixWorld(true);
-				});
-				delete this.restore;
-				this.uiEnable();
-			}
-			(in_ending_callback)();
+		if (!in_t_to_c && this.#state !== views.CYLINDERVIEW) {
+			return;
 		}
-	};
-}
 
+		if (in_t_to_c) {
+			this.setupCylinderMorph();
+			this.uiDisable();
+		}
+		this.#transition(action);
 
+		const ease = new cEase(0, 1, in_duration);
+		let completed = false;
 
-/*
+		return () => {
+			if (completed) {
+				return;
+			}
+			const amount = ease.currentEasingOut();
+			const ratio = in_t_to_c ? amount : 1 - amount;
 
-1. トーラスと XZ 平面の交面の -Z 側の円を通るシリンダを作る（シリンダストラクチャで作る）
+			this.children.forEach(in_piece => {
+				in_piece.morphTargetInfluences[0] = ratio;
+			});
 
+			if (amount === 1) {
+				completed = true;
+				this.#transition(action);
 
-トーラスを -X（もしくは +X）から見た図。四角だが丸だと思え
-
-    +---------+
-    | +-----+ |
-    | |     | |
-    | |     | |
-    | |     | |
-    | +-----+ |
-    +---------+
-
-
-これを XZ 平面でちょんぎる
-
-    +---------+
-    | +-----+ |
-    | |     | |
--------------------
-    | |     | |
-    | +-----+ |
-    +---------+
-
-最後はこういうシリンダになる
-
-
-    | | ※ ここが移動
-    | |
-    + +
-    | |
-    | |
-    + +
-    | |
-    | |
--------------------
-    | |
-    | |
-    + +
-    | |
-    | |
-    + +
-    | |
-    | | ※ ここが移動
-
-
-ちなにいまはこうなってる。
-
-
--------------------
-    | | ※ ここが固定
-    | |
-    + +
-    | |
-    | |
-    + +
-    | |
-    | |
-    + +
-    | |
-    | |
-    + +
-    | |
-    | |
-    + +
-    | |
-    | | ※ ここが激しく移動
-
-
-*/
+				if (!in_t_to_c) {
+					this.children.forEach(in_piece => {
+						const data = this.restore.get(in_piece);
+						in_piece.geometry.dispose();
+						in_piece.geometry = data.geometry;
+						in_piece.position.copy(data.position);
+						in_piece.quaternion.copy(data.quaternion);
+						in_piece.updateMatrixWorld(true);
+					});
+					delete this.restore;
+					this.uiEnable();
+				}
+				(in_ending_callback)();
+			}
+		};
+	}
 
 
 	XXmakeSwitchViewProgress(in_t_to_p, in_duration, in_ending_callback) {
@@ -1592,6 +1459,15 @@ async function uiUndo() {
 }
 
 function uiOverview() {
+
+/*
+	const {structure, pieces} = gColony.createCylinderPieces(); // 変更：シリンダ生成
+	const cylinder = new THREE.Group(); // 追加：シリンダ用グループ
+	pieces.forEach(in_piece => cylinder.add(in_piece)); // 追加
+	gWorld.add(cylinder); // 追加：ワールドに配置
+	return;
+*/
+
 	//★
 	//return;
 	if (!gColony.isTorusView) {
