@@ -657,7 +657,6 @@ class cColonyBoard extends cColony {
 	get isPlaneView() {
 		return (this.#state === cColonyBoard.#views.PLANEVIEW);
 	}
-//★
 	#createCylinderPieces() {
 		const torus = this.currPiecesCache.structure;
 		const rows = torus.rows;
@@ -678,18 +677,16 @@ class cColonyBoard extends cColony {
 		const cylinder = new cCylinderStructure(
 			rows,
 			cols,
-			VEC3(colsDelta * (cols - 1) / 2 * -1, radius, 0),
-			colsDelta,
+			VEC3(colsDelta * (cols - 1) / 2, radius, 0),
+			colsDelta * -1,
 			torus.offset,
-			//torus.crossSectionRotation - Math.PI / 2
-			torus.crossSectionRotation
+			torus.crossSectionRotation - Math.PI / 2
 		);
 		const geometryFactory = isHex ? allSharedHexmapFactory : allSharedSquareFactory;
 		const geometry = geometryFactory.create(unitSize, (radius - unitThick) / radius, unitThick);
 		const pieces = [];
 		for (let row = 0; row < rows; row++) {
 			for (let col = 0; col < cols; col++) {
-				//const original = this.locationToPiece(row, cols - 1 - col);
 				const original = this.locationToPiece(row, col);
 				const piece = new THREE.Mesh(geometry, original.material);
 				piece.position.copy(cylinder.locationToPosition(row, col));
@@ -697,20 +694,17 @@ class cColonyBoard extends cColony {
 				pieces.push(piece);
 			}
 		}
-		return pieces;
+		return {structure : cylinder, pieces : pieces};
 	}
-	setupCylinderMorph() {
-		const cylinderPieces = this.#createCylinderPieces();
+	#setupCylinderMorph() {
+		this.cylinder = this.#createCylinderPieces();
 		this.restore = new Map();
 		this.children.forEach((in_piece, in_ix) => {
-			const targetPiece = cylinderPieces[in_ix];
+			const targetPiece = this.cylinder.pieces[in_ix];
 			const original = in_piece.geometry;
 			const geometry = original.clone();
 			const source = geometry.attributes.position;
 			const target = targetPiece.geometry.attributes.position.clone();
-			if (source.count !== target.count) {
-				throw new Error('morph vertex count mismatch');
-			}
 			for (let i = 0; i < source.count; i++) {
 				const v = VEC3().fromBufferAttribute(source, i);
 				v.applyQuaternion(in_piece.quaternion).add(in_piece.position);
@@ -735,45 +729,48 @@ class cColonyBoard extends cColony {
 			in_piece.morphTargetInfluences[0] = 0;
 		});
 	}
-
-
-
-	makeSwitchViewProgress(in_t_to_c, in_duration, in_ending_callback) {
+	#makeTorusProgress(in_toOverview, in_duration, in_ending_callback) {
 		const views = cColonyBoard.#views;
-		const action = in_t_to_c ? 'toPlaneView' : 'toTorusView';
-
-		if (in_t_to_c && !this.isTorusView) {
-			return;
-		}
-		if (!in_t_to_c && this.#state !== views.CYLINDERVIEW) {
-			return;
-		}
-
-		if (in_t_to_c) {
-			this.setupCylinderMorph();
+		const action = in_toOverview ? 'toPlaneView' : 'toTorusView';
+		if (in_toOverview) {
+			this.#setupCylinderMorph();
 			this.uiDisable();
+		} else {
+			this.children.forEach(in_piece => {
+				const data = this.restore.get(in_piece);
+				in_piece.geometry = data.morphGeometry;
+				in_piece.position.set(0, 0, 0);
+				in_piece.quaternion.identity();
+				in_piece.updateMorphTargets();
+				in_piece.morphTargetInfluences[0] = 1;
+			});
 		}
 		this.#transition(action);
-
 		const ease = new cEase(0, 1, in_duration);
 		let completed = false;
-
 		return () => {
 			if (completed) {
 				return;
 			}
 			const amount = ease.currentEasingOut();
-			const ratio = in_t_to_c ? amount : 1 - amount;
-
+			const ratio = in_toOverview ? amount : 1 - amount;
 			this.children.forEach(in_piece => {
 				in_piece.morphTargetInfluences[0] = ratio;
 			});
-
 			if (amount === 1) {
 				completed = true;
 				this.#transition(action);
-
-				if (!in_t_to_c) {
+				if (in_toOverview) {
+					this.children.forEach((in_piece, in_ix) => {
+						const data = this.restore.get(in_piece);
+						const target = this.cylinder.pieces[in_ix];
+						data.morphGeometry = in_piece.geometry;
+						in_piece.geometry = target.geometry;
+						in_piece.position.copy(target.position);
+						in_piece.quaternion.copy(target.quaternion);
+						in_piece.updateMatrixWorld(true);
+					});
+				} else {
 					this.children.forEach(in_piece => {
 						const data = this.restore.get(in_piece);
 						in_piece.geometry.dispose();
@@ -783,15 +780,15 @@ class cColonyBoard extends cColony {
 						in_piece.updateMatrixWorld(true);
 					});
 					delete this.restore;
+					delete this.cylinder;
 					this.uiEnable();
 				}
 				(in_ending_callback)();
 			}
 		};
 	}
-
-
-	XXmakeSwitchViewProgress(in_t_to_p, in_duration, in_ending_callback) {
+	#makePlaneProgress(in_toOverview, in_duration, in_ending_callback) {
+		const action = in_toOverview ? 'toPlaneView' : 'toTorusView';
 		const init = {
 			amount : 0,
 			position : new Map(),
@@ -807,43 +804,36 @@ class cColonyBoard extends cColony {
 			init.quaternion.set(in_child, in_child.quaternion.clone());
 		});
 		let endingProcess;
-		if (in_t_to_p) {
-			if (this.isTorusView) {
-				this.uiDisable();
-				this.#transition('toPlaneView');
-				const st = this.currPiecesCache.structure;
-				this.children.forEach(in_child => {
-					const {row, col} = this.pieceToLocation(in_child);
-					last.position.set(in_child, st.locationToOverviewPosition(row, col));
-					last.quaternion.set(in_child, st.locationToOverviewQuaternion(row, col));
-				});
-				endingProcess = () => {
-					this.cache = init;
-					this.#transition('toPlaneView');
-				}
-			} else {
-				// do nothing
-				return;
-			}
+		if (in_toOverview) {
+			this.#transition(action);
+			const st = this.cylinder.structure;
+			this.children.forEach((in_child, in_ix) => {
+				const row = Math.floor(in_ix / st.cols);
+				const col = in_ix % st.cols;
+				last.position.set(in_child, st.locationToOverviewPosition(row, col));
+				last.quaternion.set(in_child, st.locationToOverviewQuaternion(row, col));
+			});
+			endingProcess = () => {
+				this.cache = init;
+				this.#transition(action);
+			};
 		} else {
-			if (this.isPlaneView) {
-				this.#transition('toTorusView');
-				this.children.forEach(in_child => {
-					last.position.set(in_child, this.cache.position.get(in_child));
-					last.quaternion.set(in_child, this.cache.quaternion.get(in_child));
-				});
-				endingProcess = () => {
-					delete this.cache;
-					this.uiEnable();
-					this.#transition('toTorusView');
-				};
-			} else {
-				// do nothing
-				return;
-			}
+			this.#transition(action);
+			this.children.forEach(in_child => {
+				last.position.set(in_child, this.cache.position.get(in_child));
+				last.quaternion.set(in_child, this.cache.quaternion.get(in_child));
+			});
+			endingProcess = () => {
+				delete this.cache;
+				this.#transition(action);
+			};
 		}
 		const ease = new cEase(init.amount, last.amount, in_duration);
-		const progress = () => {
+		let completed = false;
+		return () => {
+			if (completed) {
+				return;
+			}
 			const amount = ease.currentEasingOut();
 			this.children.forEach(in_child => {
 				const p0 = init.position.get(in_child);
@@ -855,11 +845,40 @@ class cColonyBoard extends cColony {
 				in_child.updateMatrixWorld(true);
 			});
 			if (amount === last.amount) {
+				completed = true;
 				(endingProcess)();
 				(in_ending_callback)();
 			}
+		};
+	}
+	makeSwitchViewProgress(in_toOverview, in_duration, in_ending_callback) {
+		let func1st, func2nd;
+		if (in_toOverview) {
+			if (this.isTorusView) {
+				func1st = this.#makeTorusProgress;
+				func2nd = this.#makePlaneProgress;
+			} else {
+				return;
+			}
+		} else {
+			if (this.isPlaneView) {
+				func1st = this.#makePlaneProgress;
+				func2nd = this.#makeTorusProgress;
+			} else {
+				return;
+			}
 		}
-		return progress;
+		let transforming = true;
+		let progress = func1st.call(this, in_toOverview, in_duration, () => {
+			progress = func2nd.call(this, in_toOverview, in_duration, () => transforming = false);
+		});
+		return () => {
+			if (transforming) {
+				(progress)();
+			} else {
+				(in_ending_callback)();
+			}
+		};
 	}
 }
 
@@ -1459,17 +1478,6 @@ async function uiUndo() {
 }
 
 function uiOverview() {
-
-/*
-	const {structure, pieces} = gColony.createCylinderPieces(); // 変更：シリンダ生成
-	const cylinder = new THREE.Group(); // 追加：シリンダ用グループ
-	pieces.forEach(in_piece => cylinder.add(in_piece)); // 追加
-	gWorld.add(cylinder); // 追加：ワールドに配置
-	return;
-*/
-
-	//★
-	//return;
 	if (!gColony.isTorusView) {
 		return;
 	}
