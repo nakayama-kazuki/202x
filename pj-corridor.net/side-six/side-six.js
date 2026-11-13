@@ -61,6 +61,9 @@ class cBaseStructure {
 	#rowsForCrossSection;
 	#colsForLongitudinal;
 	constructor(in_rowsForCrossSection, in_colsForLongitudinal, in_offset = -1, in_crossSectionRotation = 0) {
+		if (typeof this.locationToPosition !== 'function') {
+			throw new Error('locationToPosition() must be implemented by subclass');
+		}
 		this.rowsAngle = Math.PI * 2 / in_rowsForCrossSection;
 		this.offset = in_offset;
 		this.crossSectionRotation = in_crossSectionRotation;
@@ -78,23 +81,18 @@ class cBaseStructure {
 	rowAngle(in_row) {
 		return this.rowsAngle * in_row + this.crossSectionRotation;
 	}
-	#locationToRow(in_row, in_col) {
-		// apply a half-row offset to alternating columns
-		if ((this.offset >= 0) && (in_col % 2 === this.offset)) {
-			return in_row + 0.5;
-		}
-		return in_row;
-	}
 	locationToRowAngle(in_row, in_col) {
-		return this.rowAngle(this.#locationToRow(in_row, in_col));
+		// apply a half-row offset to alternating columns
+		const offset = ((this.offset >= 0) && (in_col % 2 === this.offset)) ? 0.5 : 0;
+		return this.rowAngle(in_row + offset);
 	}
-	locationToPosition(in_row, in_col) {
-		throw new Error('locationToPosition() must be implemented by subclass');
+	quaternion(in_axis, in_angle) {
+		return new THREE.Quaternion().setFromAxisAngle(in_axis, in_angle);
 	}
-	positionToLocation(in_position, in_col = null) {
+	positionToLocation(in_position, in_col) {
 		// search all columns or a specified column
-		const s_col = in_col === null ? 0 : in_col;
-		const e_col = in_col === null ? this.cols : in_col + 1;
+		const s_col = in_col < 0 ? 0 : in_col;
+		const e_col = in_col < 0 ? this.cols : in_col + 1;
 		for (let row = 0; row < this.rows; row++) {
 			for (let col = s_col; col < e_col; col++) {
 				const pos = this.locationToPosition(row, col);
@@ -122,6 +120,14 @@ export class cCylinderStructure extends cBaseStructure {
 		this.#origin = in_origin.clone();
 		this.colsDelta = in_colsDelta;
 	}
+	rotateDelta(in_srcPos, in_dstPos) {
+		const srcYZ = new THREE.Vector2(in_srcPos.y, in_srcPos.z);
+		const dstYZ = new THREE.Vector2(in_dstPos.y, in_dstPos.z);
+		return {
+			fixedColDelta : srcYZ.distanceTo(dstYZ),
+			fixedRowDelta : Math.abs(in_dstPos.x - in_srcPos.x)
+		};
+	}
 	locationToPosition(in_row, in_col) {
 		const pos = this.#origin.clone();
 		pos.x += this.colsDelta * in_col;
@@ -129,8 +135,12 @@ export class cCylinderStructure extends cBaseStructure {
 		return pos;
 	}
 	locationToQuaternion(in_row, in_col) {
-		// determine rotation based on geometry and placement
-		return new THREE.Quaternion().setFromAxisAngle(cColony.axes.x, this.locationToRowAngle(in_row, in_col));
+		// align the tile with the cylinder surface
+		return this.quaternion(cColony.axes.x, this.locationToRowAngle(in_row, in_col));
+	}
+	positionToLocation(in_position) {
+		const col = Math.round((in_position.x - this.#origin.x) / this.colsDelta);
+		return super.positionToLocation(in_position, col);
 	}
 	locationToOverviewPosition(in_row, in_col) {
 		const pos = this.locationToPosition(in_row, in_col);
@@ -138,14 +148,6 @@ export class cCylinderStructure extends cBaseStructure {
 		const y = 0;
 		const z = Math.hypot(pos.y, pos.z) * Math.atan2(pos.z, pos.y);
 		return VEC3(x, y, z);
-	}
-	locationToOverviewQuaternion(in_row, in_col) {
-		// in_row and in_col are unused for cylinder, but may be required by other structures
-		return new THREE.Quaternion();
-	}
-	positionToLocation(in_position) {
-		const col = Math.round((in_position.x - this.#origin.x) / this.colsDelta);
-		return super.positionToLocation(in_position, col);
 	}
 }
 
@@ -172,11 +174,31 @@ export class cTorusStructure extends cBaseStructure {
 	get gap() {
 		return this.#size * cTorusStructure.#gapRatio;
 	}
-	positionByPoloidalAngle(in_angle) {
-		const pos = this.center.clone();
-		pos.y += this.minorRadius * Math.sin(in_angle);
-		pos.z += this.minorRadius * Math.cos(in_angle);
-		return pos;
+	rotateDelta(in_srcPos, in_dstPos) {
+		const src = in_srcPos.clone().sub(this.center);
+		const dst = in_dstPos.clone().sub(this.center);
+		const srcToroidalAngle = Math.atan2(src.x, src.z);
+		const dstToroidalAngle = Math.atan2(dst.x, dst.z);
+		const srcPoloidalAngle = Math.atan2(src.y, Math.hypot(src.x, src.z) - this.majorRadius);
+		const dstPoloidalAngle = Math.atan2(dst.y, Math.hypot(dst.x, dst.z) - this.majorRadius);
+		const angleDelta = (in_a, in_b) => Math.atan2(Math.sin(in_b - in_a), Math.cos(in_b - in_a));
+		const poloidalDelta = angleDelta(srcPoloidalAngle, dstPoloidalAngle);
+		const toroidalDelta = angleDelta(srcToroidalAngle, dstToroidalAngle);
+		return {
+			fixedColDelta : Math.abs(poloidalDelta) * this.minorRadius,
+			fixedRowDelta : Math.abs(toroidalDelta) * (this.majorRadius + this.minorRadius * Math.cos(srcPoloidalAngle))
+		};
+	}
+	locationToPosition(in_row, in_col) {
+		const poloidalAngle = this.locationToRowAngle(in_row, in_col);
+		const toroidalAngle = this.toroidalAngle(in_col);
+		return this.position(poloidalAngle, toroidalAngle);
+	}
+	locationToQuaternion(in_row, in_col) {
+		return this.quaternion(cColony.axes.y, this.toroidalAngle(in_col));
+	}
+	positionToLocation(in_position) {
+		return super.positionToLocation(in_position, -1);
 	}
 	toroidalAngle(in_col) {
 		return this.colsAngle * in_col;
@@ -188,6 +210,21 @@ export class cTorusStructure extends cBaseStructure {
 		pos.y += this.minorRadius * Math.sin(in_poloidalAngle);
 		pos.z += radius * Math.cos(in_toroidalAngle);
 		return pos;
+	}
+	positionByPoloidalAngle(in_angle) {
+		const pos = this.center.clone();
+		pos.y += this.minorRadius * Math.sin(in_angle);
+		pos.z += this.minorRadius * Math.cos(in_angle);
+		return pos;
+	}
+	poloidalTangent(in_row, in_col) {
+		const angle = this.locationToRowAngle(in_row, in_col);
+		const toroidalAngle = this.toroidalAngle(in_col);
+		return VEC3(
+			-Math.sin(angle) * Math.sin(toroidalAngle),
+			Math.cos(angle),
+			-Math.sin(angle) * Math.cos(toroidalAngle)
+		);
 	}
 	knowledgeByPoloidalAngle(in_angle) {
 		const tRadius = this.majorRadius + this.minorRadius * Math.cos(in_angle - this.rowsAngle / 2);
@@ -201,24 +238,6 @@ export class cTorusStructure extends cBaseStructure {
 			height : height,
 			rotation : -in_angle + Math.PI / 2
 		};
-	}
-	poloidalTangent(in_row, in_col) {
-		const angle = this.locationToRowAngle(in_row, in_col);
-		const toroidalAngle = this.toroidalAngle(in_col);
-		return VEC3(
-			Math.sin(angle) * Math.sin(toroidalAngle) * -1,
-			Math.cos(angle),
-			Math.sin(angle) * Math.cos(toroidalAngle) * -1
-		);
-	}
-	locationToPosition(in_row, in_col) {
-		const poloidalAngle = this.locationToRowAngle(in_row, in_col);
-		const toroidalAngle = this.toroidalAngle(in_col);
-		return this.position(poloidalAngle, toroidalAngle);
-	}
-	locationToQuaternion(in_row, in_col) {
-		const toroidalAngle = this.toroidalAngle(in_col);
-		return new THREE.Quaternion().setFromAxisAngle(VEC3(0, 1, 0), toroidalAngle);
 	}
 }
 
@@ -745,6 +764,7 @@ export class cColony extends cPieceSet {
 		// as delta is enough, can call uiUpdatePosition
 		MOVABLE : Symbol()
 	};
+//★
 	uiNotifyDeltaPosition(in_piece, in_posV3, in_posV2) {
 		const RC = cColony.uiSetDeltaPositionRC;
 		if (this.#uiSession.state !== cColony.#uiStates.DRAGGING) {
@@ -754,18 +774,18 @@ export class cColony extends cPieceSet {
 		const ctx = this.#uiSession.ctx;
 		const srcYZ = new THREE.Vector2(ctx.initPosV3.y, ctx.initPosV3.z);
 		const dstYZ = new THREE.Vector2(in_posV3.y, in_posV3.z);
-		const rotateDelta = srcYZ.distanceTo(dstYZ);
-		const movingDelta = Math.abs(in_posV3.x - ctx.initPosV3.x);
+		const fixedColDelta = srcYZ.distanceTo(dstYZ);
+		const fixedRowDelta = Math.abs(in_posV3.x - ctx.initPosV3.x);
 		const notEnough = (in_threshold => {
 			return (in_a, in_b) => {
 				return (in_a < in_threshold * in_b) && (in_b < in_threshold * in_a);
 			};
 		})(1.5);
-		if (notEnough(rotateDelta, movingDelta)) {
+		if (notEnough(fixedColDelta, fixedRowDelta)) {
 			return RC.NOTENOUGH;
 		}
 		let pieces, direction, axis, range;
-		if (rotateDelta > movingDelta) {
+		if (fixedColDelta > fixedRowDelta) {
 			pieces = this.affectedRotatePieces(in_piece, cColony.axes.x);
 			if (pieces.length < this.children.length) {
 				direction = srcYZ.cross(dstYZ) > 0 ? 1 : -1;

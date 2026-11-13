@@ -228,7 +228,7 @@ const gColoredArgo = new Map([
 
 const BOARD_DB = [
 	{
-		type : 'traditional',
+		type : 'square',
 		desc : '2 players reversi using 8x8 square',
 		levels : [
 			{
@@ -811,7 +811,7 @@ class cColonyBoard extends cColony {
 				const row = Math.floor(in_ix / st.cols);
 				const col = in_ix % st.cols;
 				last.position.set(in_child, st.locationToOverviewPosition(row, col));
-				last.quaternion.set(in_child, st.locationToOverviewQuaternion(row, col));
+				last.quaternion.set(in_child, new THREE.Quaternion());
 			});
 			endingProcess = () => {
 				this.cache = init;
@@ -1414,8 +1414,11 @@ function initializeByLevel() {
 	gController.reversiToColony(gReversi, gColony);
 	gController.start();
 	if (gTypeParamIsInvalid) {
+		// delayed initialPoloidalRotation
 		menu();
 		gTypeParamIsInvalid = false;
+	} else {
+		initialPoloidalRotation();
 	}
 }
 
@@ -1478,7 +1481,7 @@ async function uiUndo() {
 }
 
 function uiOverview() {
-	if (!gColony.isTorusView) {
+	if (!gColony.isTorusView || !gController?.enableHandler) {
 		return;
 	}
 	const duration = {
@@ -1882,9 +1885,7 @@ async function chooseHere(in_ev) {
 		const drag = intersects[0].object
 		if (getShellColor(drag) === PC_COLOR) {
 			// tactical rotation
-			//★
-			return;
-			if (gReversi.rotatableFixedCol()) {
+			if (gReversi.rotatableFixedCol() || gReversi.rotatableFixedRow()) {
 				gColony.uiSetInitPosition(intersects[0].point, ndcToAbs(ndc));
 			}
 		} else {

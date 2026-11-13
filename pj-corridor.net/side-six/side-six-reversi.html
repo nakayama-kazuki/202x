@@ -1019,7 +1019,7 @@ class cColonyBoard extends cColony {
 				this.children.forEach(in_child => {
 					const {row, col} = this.pieceToLocation(in_child);
 					last.position.set(in_child, st.locationToOverviewPosition(row, col));
-					last.quaternion.set(in_child, st.locationToOverviewQuaternion(row, col));
+					last.quaternion.set(in_child, new THREE.Quaternion());
 				});
 				endingProcess = () => {
 					this.cache = init;
