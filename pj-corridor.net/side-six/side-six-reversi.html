@@ -937,18 +937,27 @@ class cColonyBoard extends cColony {
 		return 0;
 	}
 	bobRotation = false;
-	rotate(in_group, in_axis, in_rad) {
-		super.rotate(in_group, in_axis, in_rad);
-		if (!this.bobRotation) {
-			return;
+	move(in_group, in_moveType, in_amount) {
+		switch (in_moveType) {
+		case cColony.moveTypes.CYLINDER_ROTATE :
+			in_group.rotation.x = in_amount;
+			if (this.bobRotation) {
+				const max = 1.2;
+				const st = this.currPiecesCache.structure;
+				const scalar = (createPeriodicCos(st.rowsAngle, 1, max, true))(in_amount);
+				in_group.children.forEach(in_child => {
+					const basePos = in_child.userData.tmpCache.position;
+					in_child.position.copy(basePos.clone().multiplyScalar(scalar));
+					in_child.position.x = basePos.x;
+				});
+			}
+			break;
+		case cColony.moveTypes.CYLINDER_SLIDE :
+			in_group.position.x = in_amount;
+			break;
+		default :
+			throw new Error('unsupported moveType');
 		}
-		const max = 1.2;
-		const scalar = (createPeriodicCos(this.currPiecesCache.structure.rowsAngle, 1, max, true))(in_rad);
-		in_group.children.forEach(in_child => {
-			const basePos = in_child.userData.tmpCache.position;
-			in_child.position.copy(basePos.clone().multiplyScalar(scalar));
-			in_child.position.x = basePos.x;
-		});
 	}
 	makeRotateProgress(in_col, in_delta, in_ending_callback) {
 		this.uiDisable();

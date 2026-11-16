@@ -319,8 +319,20 @@ class cColonyPuzzle extends cColony {
 		return results.some(in_result => in_result);
 	}
 	static #oneByOne = Symbol();
+	move(in_group, in_moveType, in_amount) {
+		switch (in_moveType) {
+		case cColony.moveTypes.CYLINDER_ROTATE :
+			in_group.rotation.x = in_amount;
+			break;
+		case cColony.moveTypes.CYLINDER_SLIDE :
+			in_group.position.x = in_amount;
+			break;
+		default :
+			throw new Error('unsupported moveType');
+		}
+	}
 	makeRandomAnimationProgress(in_callback) {
-		let axis, pieces, last;
+		let moveType, pieces, last;
 		let maxLoopCount = 100;
 		if (!this.hasOwnProperty(cColonyPuzzle.#oneByOne)) {
 			// to repeatedly rotate and slide one by one
@@ -328,11 +340,11 @@ class cColonyPuzzle extends cColony {
 		}
 		while (true) {
 			if (--maxLoopCount === 0) {
-				throw new Error('maxLoopCount'); 
+				throw new Error('maxLoopCount');
 			}
 			const _piece = (this.children)[arrRand]();
 			if (this[cColonyPuzzle.#oneByOne]) {
-				axis = null;
+				moveType = cColony.moveTypes.CYLINDER_SLIDE;
 				let _amount = 0;
 				pieces = this.affectedSlidePieces(_piece, +1);
 				_amount = this.slidableDistance(pieces[pieces.length - 1], +1);
@@ -347,8 +359,8 @@ class cColonyPuzzle extends cColony {
 					break;
 				}
 			} else {
-				axis = cColony.axes.x;
-				pieces = this.affectedRotatePieces(_piece, axis);
+				moveType = cColony.moveTypes.CYLINDER_ROTATE;
+				pieces = this.affectedFixedColPieces(_piece);
 				if (pieces.length < this.children.length) {
 					last = this.currPiecesCache.structure.rowsAngle * [1, 2, 3][arrRand]();
 					break;
@@ -359,7 +371,7 @@ class cColonyPuzzle extends cColony {
 		const group = this.setupGroup(pieces);
 		// calling this method means shuffling
 		this.currPiecesCache.shuffled = true;
-		return this.makeAnimationProgress(group, axis, 0, last, in_callback);
+		return this.makeAnimationProgress(group, moveType, 0, last, in_callback);
 	}
 	uiRelease(in_ending_callback) {
 		const callback = () => {

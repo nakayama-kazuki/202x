@@ -120,12 +120,14 @@ export class cCylinderStructure extends cBaseStructure {
 		this.#origin = in_origin.clone();
 		this.colsDelta = in_colsDelta;
 	}
-	rotateDelta(in_srcPos, in_dstPos) {
+	getDelta(in_srcPos, in_dstPos) {
 		const srcYZ = new THREE.Vector2(in_srcPos.y, in_srcPos.z);
 		const dstYZ = new THREE.Vector2(in_dstPos.y, in_dstPos.z);
 		return {
 			fixedColDelta : srcYZ.distanceTo(dstYZ),
-			fixedRowDelta : Math.abs(in_dstPos.x - in_srcPos.x)
+			fixedRowDelta : Math.abs(in_dstPos.x - in_srcPos.x),
+			rowDirection : srcYZ.cross(dstYZ) > 0 ? 1 : -1,
+			colDirection : Math.sign(in_dstPos.x - in_srcPos.x)
 		};
 	}
 	locationToPosition(in_row, in_col) {
@@ -174,7 +176,7 @@ export class cTorusStructure extends cBaseStructure {
 	get gap() {
 		return this.#size * cTorusStructure.#gapRatio;
 	}
-	rotateDelta(in_srcPos, in_dstPos) {
+	getDelta(in_srcPos, in_dstPos) {
 		const src = in_srcPos.clone().sub(this.center);
 		const dst = in_dstPos.clone().sub(this.center);
 		const srcToroidalAngle = Math.atan2(src.x, src.z);
@@ -186,7 +188,9 @@ export class cTorusStructure extends cBaseStructure {
 		const toroidalDelta = angleDelta(srcToroidalAngle, dstToroidalAngle);
 		return {
 			fixedColDelta : Math.abs(poloidalDelta) * this.minorRadius,
-			fixedRowDelta : Math.abs(toroidalDelta) * (this.majorRadius + this.minorRadius * Math.cos(srcPoloidalAngle))
+			fixedRowDelta : Math.abs(toroidalDelta) * (this.majorRadius + this.minorRadius * Math.cos(srcPoloidalAngle)),
+			rowDirection : Math.sign(poloidalDelta),
+			colDirection : Math.sign(toroidalDelta)
 		};
 	}
 	locationToPosition(in_row, in_col) {
@@ -517,6 +521,12 @@ export class cColony extends cPieceSet {
 		this.activatePiecesCache(in_pieces);
 		this.currPiecesCache.structure = in_structure;
 	}
+	constructor() {
+		super();
+		if (typeof this.move !== 'function') {
+			throw new Error('move() must be implemented by subclass');
+		}
+	}
 	locationToPiece(in_row, in_col) {
 		const pos = this.currPiecesCache.structure.locationToPosition(in_row, in_col);
 		const piece = this.children.find(in_child => XYZ.every(in_xyz => Math.abs(in_child.position[in_xyz] - pos[in_xyz]) < cColony.error));
@@ -568,24 +578,13 @@ export class cColony extends cPieceSet {
 		});
 		this.remove(in_group);
 	}
-	affectedRotatePieces(in_piece, in_axis) {
-		if (in_axis.equals(cColony.axes.x)) {
-			const col = this.pieceToLocation(in_piece).col;
-			return this.children.filter(in_child => this.pieceToLocation(in_child).col === col);
-		} else {
-			// do not infer logical groups from physical positions when adding other axes.
-			throw new Error('unsupported rotation axis');
-			/*
-			const pieces = [];
-			const component = in_piece.position.dot(in_axis);
-			this.children.forEach(in_child => {
-				if (Math.abs(component - in_child.position.dot(in_axis)) < cColony.error) {
-					pieces.push(in_child);
-				}
-			});
-			return pieces;
-			*/
-		}
+	affectedFixedColPieces(in_piece) {
+		const col = this.pieceToLocation(in_piece).col;
+		return this.children.filter(in_child => this.pieceToLocation(in_child).col === col);
+	}
+	affectedFixedRowPieces(in_piece) {
+		const row = this.pieceToLocation(in_piece).row;
+		return this.children.filter(in_child => this.pieceToLocation(in_child).row === row);
 	}
 	affectedSlidePieces(in_piece, in_sign) {
 		const location = this.pieceToLocation(in_piece);
@@ -611,26 +610,31 @@ export class cColony extends cPieceSet {
 		const nextPosition = this.currPiecesCache.structure.locationToPosition(location.row, nextCol);
 		return nextPosition.x - in_piece.position.x;
 	}
-	// public because of customizing
-	rotate(in_group, in_axis, in_rad) {
-		in_group.rotation[cColony.axisComponent(in_axis)] = in_rad;
-	}
-	makeAnimationProgress(in_group, in_axis, in_startAmount, in_finalAmount, in_callback) {
+	static moveTypes = {
+		CYLINDER_ROTATE : Symbol(),
+		CYLINDER_SLIDE : Symbol(),
+		TORUS_POLOIDAL : Symbol(),
+		TORUS_TOROIDAL : Symbol()
+	};
+	makeAnimationProgress(in_group, in_moveType, in_startAmount, in_finalAmount, in_callback) {
 		const amount = Math.abs(in_finalAmount - in_startAmount);
 		let duration;
-		if (in_axis) {
+		switch (in_moveType) {
+		case cColony.moveTypes.CYLINDER_ROTATE :
+		case cColony.moveTypes.TORUS_POLOIDAL :
+		case cColony.moveTypes.TORUS_TOROIDAL :
 			duration = amount / (Math.PI / 2) * 500;
-		} else {
+			break;
+		case cColony.moveTypes.CYLINDER_SLIDE :
 			duration = 100;
+			break;
+		default :
+			throw new Error('unsupported moveType');
 		}
 		const ease = new cEase(in_startAmount, in_finalAmount, duration);
 		const progress = () => {
 			const currAmount = ease.currentEasingIn();
-			if (in_axis) {
-				this.rotate(in_group, in_axis, currAmount);
-			} else {
-				in_group.position.x = currAmount;
-			}
+			this.move(in_group, in_moveType, currAmount);
 			let ratio = Math.abs(currAmount - in_startAmount) / amount;
 			if (currAmount === in_finalAmount) {
 				this.#releaseGroup(in_group);
@@ -647,7 +651,7 @@ export class cColony extends cPieceSet {
 		DRAGGING : Symbol(),
 		MOVING : Symbol(),
 		MOMENTUM : Symbol()
-	}
+	};
 	/*
 		ENABLED <-------------------+
 		|                           |
@@ -742,8 +746,8 @@ export class cColony extends cPieceSet {
 			currAmount : 0,
 			// sign which show the direction for animation
 			direction : 0,
-			// rotating animation uses this axis
-			rotationAxis : null,
+			// type of movement determined by the structure and drag direction
+			moveType : null,
 			// array of [min, max]
 			movableRange : null,
 		};
@@ -764,7 +768,6 @@ export class cColony extends cPieceSet {
 		// as delta is enough, can call uiUpdatePosition
 		MOVABLE : Symbol()
 	};
-//★
 	uiNotifyDeltaPosition(in_piece, in_posV3, in_posV2) {
 		const RC = cColony.uiSetDeltaPositionRC;
 		if (this.#uiSession.state !== cColony.#uiStates.DRAGGING) {
@@ -772,10 +775,8 @@ export class cColony extends cPieceSet {
 			return RC.NOOP;
 		}
 		const ctx = this.#uiSession.ctx;
-		const srcYZ = new THREE.Vector2(ctx.initPosV3.y, ctx.initPosV3.z);
-		const dstYZ = new THREE.Vector2(in_posV3.y, in_posV3.z);
-		const fixedColDelta = srcYZ.distanceTo(dstYZ);
-		const fixedRowDelta = Math.abs(in_posV3.x - ctx.initPosV3.x);
+		const st = this.currPiecesCache.structure;
+		const {fixedColDelta, fixedRowDelta, rowDirection, colDirection} = st.getDelta(ctx.initPosV3, in_posV3);
 		const notEnough = (in_threshold => {
 			return (in_a, in_b) => {
 				return (in_a < in_threshold * in_b) && (in_b < in_threshold * in_a);
@@ -784,72 +785,126 @@ export class cColony extends cPieceSet {
 		if (notEnough(fixedColDelta, fixedRowDelta)) {
 			return RC.NOTENOUGH;
 		}
-		let pieces, direction, axis, range;
+		let pieces, direction, moveType, range;
+		/*
+			viewed along the Y-axis (XZ plane) ...
+
+			1. cylinder
+			1.1. fixedColDelta : movement within a logical col, rotation around the X-axis
+			1.2. fixedRowDelta : movement within a logical row, translation along the X-axis, if possible
+
+			           -z
+			            |
+			            |
+			            |
+			            |
+			     +------+------+
+			 -x -+#############+- +x
+			     +------+------+
+			            |
+			            |
+			            |
+			            |
+			           +z
+
+			2. torus
+			2.1. fixedColDelta : movement within a logical col, poloidal rotation around the tube centerline
+			2.2. fixedRowDelta : movement within a logical row, rotation around the Y-axis
+
+			           -z
+			            |
+			        +---+---+
+			        |#######|
+			        |#+-+-+#|
+			        |#| | |#|
+			 -x ----+#+-+-+#+---- +x
+			        |#| | |#|
+			        |#+-+-+#|
+			        |#######|
+			        +---+---+
+			            |
+			           +z
+		*/
 		if (fixedColDelta > fixedRowDelta) {
-			pieces = this.affectedRotatePieces(in_piece, cColony.axes.x);
+			pieces = this.affectedFixedColPieces(in_piece);
 			if (pieces.length < this.children.length) {
-				direction = srcYZ.cross(dstYZ) > 0 ? 1 : -1;
-				axis = cColony.axes.x;
+				direction = rowDirection;
+				if (st instanceof cCylinderStructure) {
+					moveType = cColony.moveTypes.CYLINDER_ROTATE;
+				} else {
+					moveType = cColony.moveTypes.TORUS_POLOIDAL;
+				}
 				range = null;
 			} else {
 				return RC.UNMOVABLE;
 			}
 		} else {
-			direction = Math.sign(in_posV3.x - ctx.initPosV3.x);
-			pieces = this.affectedSlidePieces(in_piece, direction);
-			const amount = this.slidableDistance(pieces[pieces.length - 1], direction);
-			if (amount !== 0) {
-				axis = null;
+			direction = colDirection;
+			if (st instanceof cCylinderStructure) {
+				pieces = this.affectedSlidePieces(in_piece, direction);
+				const amount = this.slidableDistance(pieces[pieces.length - 1], direction);
+				if (amount === 0) {
+					return RC.UNMOVABLE;
+				}
+				moveType = cColony.moveTypes.CYLINDER_SLIDE;
 				range = {min : Math.min(0, amount), max : Math.max(0, amount)};
 			} else {
-				return RC.UNMOVABLE;
+				// toroidal rotation of a fixed row
+				pieces = this.affectedFixedRowPieces(in_piece);
+				if (pieces.length === this.children.length) {
+					return RC.UNMOVABLE;
+				}
+				moveType = cColony.moveTypes.TORUS_TOROIDAL;
+				range = null;
 			}
 		}
 		this.#transition('movable');
 		ctx.initDirV2 = in_posV2.clone().sub(ctx.initPosV2);
 		ctx.group = this.setupGroup(pieces);
 		ctx.direction = direction;
-		ctx.rotationAxis = axis;
+		ctx.moveType = moveType;
 		ctx.movableRange = range;
 		return RC.MOVABLE;
 	}
+//★
 	uiUpdatePosition(in_posV2) {
 		if (this.#uiSession.state !== cColony.#uiStates.MOVING) {
 			return;
 		}
 		const ctx = this.#uiSession.ctx;
+		const st = this.currPiecesCache.structure;
 		const currentDirV2 = in_posV2.clone().sub(ctx.initPosV2);
-		let prev, next;
-		let amount, notch;
-		if (ctx.rotationAxis) {
-			amount = in_posV2.distanceTo(ctx.initPosV2) * ctx.direction;
-			if (ctx.initDirV2.dot(currentDirV2) > 0) {
-				// currentDirV2 & initDirV2 --> SAME direction
-				amount *= +1;
-			} else {
-				// currentDirV2 & initDirV2 --> OPPOSITE direction
+		let amount = in_posV2.distanceTo(ctx.initPosV2) * ctx.direction;
+		if (ctx.moveType === cColony.moveTypes.CYLINDER_SLIDE) {
+			amount *= 250;
+			amount = Math.max(ctx.movableRange.min, Math.min(ctx.movableRange.max, amount));
+		} else {
+			if (ctx.initDirV2.dot(currentDirV2) <= 0) {
 				const thresholdToStopWarp = Math.PI / 8;
 				if (Math.abs(ctx.currAmount + amount) < thresholdToStopWarp) {
 					amount *= -1;
 				}
 			}
-			this.rotate(ctx.group, ctx.rotationAxis, amount);
-			notch = this.currPiecesCache.structure.rowsAngle;
-		} else {
-			amount = in_posV2.distanceTo(ctx.initPosV2) * ctx.direction * 250;
-			if (amount < ctx.movableRange.min) {
-				amount = ctx.movableRange.min;
-			}
-			if (amount > ctx.movableRange.max) {
-				amount = ctx.movableRange.max;
-			}
-			ctx.group.position.x = amount;
-			notch = Math.abs(ctx.movableRange.min + ctx.movableRange.max);
 		}
-		prev = snapToNotch(ctx.currAmount, notch);
-		next = snapToNotch(amount, notch);
+		let notch;
+		switch (ctx.moveType) {
+		case cColony.moveTypes.CYLINDER_ROTATE :
+		case cColony.moveTypes.TORUS_POLOIDAL :
+			notch = st.rowsAngle;
+			break;
+		case cColony.moveTypes.TORUS_TOROIDAL :
+			notch = st.colsAngle;
+			break;
+		case cColony.moveTypes.CYLINDER_SLIDE :
+			notch = Math.abs(ctx.movableRange.min + ctx.movableRange.max);
+			break;
+		default :
+			throw new Error('unsupported moveType');
+		}
+		const prev = snapToNotch(ctx.currAmount, notch);
+		const next = snapToNotch(amount, notch);
+		this.move(ctx.group, ctx.moveType, amount);
 		ctx.currAmount = amount;
-		// over the top
 		return (prev !== next);
 	}
 	uiRelease(in_ending_callback) {
@@ -865,19 +920,27 @@ export class cColony extends cPieceSet {
 		const ctx = this.#uiSession.ctx;
 		const st = this.currPiecesCache.structure;
 		let type, notch, last, delta;
-		if (ctx.rotationAxis) {
+		switch (ctx.moveType) {
+		case cColony.moveTypes.CYLINDER_ROTATE :
+		case cColony.moveTypes.TORUS_POLOIDAL :
 			type = 'rotate';
 			notch = st.rowsAngle;
-			last = snapToNotch(ctx.currAmount, notch);
-			delta = Math.round(last / st.rowsAngle);
-		} else {
+			break;
+		case cColony.moveTypes.TORUS_TOROIDAL :
+			type = 'rotate';
+			notch = st.colsAngle;
+			break;
+		case cColony.moveTypes.CYLINDER_SLIDE :
 			type = 'slide';
 			notch = Math.abs(ctx.movableRange.min + ctx.movableRange.max);
-			last = snapToNotch(ctx.currAmount, notch);
-			delta = Math.round(last / st.colsDelta);
+			break;
+		default :
+			throw new Error('unsupported moveType');
 		}
+		last = snapToNotch(ctx.currAmount, notch);
+		delta = Math.round(last / (ctx.moveType === cColony.moveTypes.CYLINDER_SLIDE ? st.colsDelta : notch));
 		const piece = ctx.group.children[0];
-		return this.makeAnimationProgress(ctx.group, ctx.rotationAxis, ctx.currAmount, last, (in_ratio) => {
+		return this.makeAnimationProgress(ctx.group, ctx.moveType, ctx.currAmount, last, (in_ratio) => {
 			if (in_ratio < 1) {
 				return;
 			}

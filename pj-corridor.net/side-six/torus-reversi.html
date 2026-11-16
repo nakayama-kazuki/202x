@@ -583,18 +583,39 @@ class cColonyBoard extends cColony {
 		return 0;
 	}
 	bobRotation = false;
-	rotate(in_group, in_axis, in_rad) {
-		super.rotate(in_group, in_axis, in_rad);
-		if (!this.bobRotation) {
-			return;
-		}
+	#movePoloidal(in_group, in_amount) {
+		const st = this.currPiecesCache.structure;
 		const max = 1.2;
-		const scalar = (createPeriodicCos(this.currPiecesCache.structure.rowsAngle, 1, max, true))(in_rad);
-		in_group.children.forEach(in_child => {
-			const basePos = in_child.userData.tmpCache.position;
-			in_child.position.copy(basePos.clone().multiplyScalar(scalar));
-			in_child.position.x = basePos.x;
+		const scalar = this.bobRotation ? (createPeriodicCos(st.rowsAngle, 1, max, true))(in_amount) : 1;
+		in_group.children.forEach(in_piece => {
+			const basePos = in_piece.userData.tmpCache.position;
+			const {row, col} = st.positionToLocation(basePos);
+			const angle = st.locationToRowAngle(row, col) + in_amount;
+			const knowledge = st.knowledgeByPoloidalAngle(angle);
+			updateChamferedGeometry(
+				in_piece.geometry,
+				knowledge.tWidth,
+				knowledge.bWidth,
+				knowledge.height,
+				knowledge.rotation
+			);
+			const pos = st.position(angle, st.toroidalAngle(col));
+			const tubeCenter = st.position(0, st.toroidalAngle(col));
+			const lifted = tubeCenter.add(pos.clone().sub(tubeCenter).multiplyScalar(scalar));
+			in_piece.position.copy(lifted);
 		});
+	}
+	move(in_group, in_moveType, in_amount) {
+		switch (in_moveType) {
+		case cColony.moveTypes.TORUS_POLOIDAL :
+			this.#movePoloidal(in_group, in_amount);
+			break;
+		case cColony.moveTypes.TORUS_TOROIDAL :
+			in_group.rotation.y = in_amount;
+			break;
+		default :
+			throw new Error('unsupported moveType');
+		}
 	}
 	makeRotateProgress(in_col, in_delta, in_ending_callback) {
 		this.uiDisable();
@@ -691,6 +712,7 @@ class cColonyBoard extends cColony {
 				const piece = new THREE.Mesh(geometry, original.material);
 				piece.position.copy(cylinder.locationToPosition(row, col));
 				piece.quaternion.copy(cylinder.locationToQuaternion(row, col));
+				piece.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI));
 				pieces.push(piece);
 			}
 		}
@@ -811,7 +833,7 @@ class cColonyBoard extends cColony {
 				const row = Math.floor(in_ix / st.cols);
 				const col = in_ix % st.cols;
 				last.position.set(in_child, st.locationToOverviewPosition(row, col));
-				last.quaternion.set(in_child, new THREE.Quaternion());
+				last.quaternion.set(in_child, new THREE.Quaternion().setFromAxisAngle(cColony.axes.y, Math.PI));
 			});
 			endingProcess = () => {
 				this.cache = init;
