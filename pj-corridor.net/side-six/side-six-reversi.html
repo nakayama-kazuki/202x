@@ -963,7 +963,7 @@ class cColonyBoard extends cColony {
 		this.uiDisable();
 		const last = this.currPiecesCache.structure.rowsAngle * in_delta;
 		const pieces = this.children.filter(in_child => this.pieceToLocation(in_child).col === in_col);
-		const group = this.setupGroup(pieces);
+		const group = this.setupAnimationGroup(pieces);
 		return this.makeAnimationProgress(group, cColony.axes.x, 0, last, in_ratio => {
 			if (in_ratio < 1) {
 				return;
@@ -1949,7 +1949,11 @@ const notifyDelta = (() => {
 		if (intersects.length === 0) {
 			return;
 		}
-		const result = gColony.uiNotifyDeltaPosition(intersects[0].object, intersects[0].point, ndcToAbs(in_ndc));
+		const rotatable = {
+			fixedCol : gReversi.rotatableFixedCol(),
+			fixedRow : gReversi.rotatableFixedRow()
+		};
+		const result = gColony.uiNotifyDeltaPosition(intersects[0].object, intersects[0].point, ndcToAbs(in_ndc), rotatable);
 		if (result === RC.UNMOVABLE) {
 			knock();
 		}
@@ -2046,7 +2050,7 @@ async function chooseHere(in_ev) {
 		closure.y = in_ev.clientY;
 		// can drag only PC_COLOR
 		const drag = intersects[0].object
-		if (gReversi.rotatableFixedCol() && (getShellColor(drag) === PC_COLOR)) {
+		if (getShellColor(drag) === PC_COLOR) {
 			gColony.uiSetInitPosition(intersects[0].point, ndcToAbs(ndc));
 		}
 	};

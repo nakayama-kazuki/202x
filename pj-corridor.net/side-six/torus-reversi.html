@@ -621,7 +621,7 @@ class cColonyBoard extends cColony {
 		this.uiDisable();
 		const last = this.currPiecesCache.structure.rowsAngle * in_delta;
 		const pieces = this.children.filter(in_child => this.pieceToLocation(in_child).col === in_col);
-		const group = this.setupGroup(pieces);
+		const group = this.setupAnimationGroup(pieces);
 		return this.makeAnimationProgress(group, cColony.axes.x, 0, last, in_ratio => {
 			if (in_ratio < 1) {
 				return;
@@ -1808,7 +1808,11 @@ const notifyDelta = (() => {
 		if (intersects.length === 0) {
 			return;
 		}
-		const result = gColony.uiNotifyDeltaPosition(intersects[0].object, intersects[0].point, ndcToAbs(in_ndc));
+		const rotatable = {
+			fixedCol : gReversi.rotatableFixedCol(),
+			fixedRow : gReversi.rotatableFixedRow()
+		};
+		const result = gColony.uiNotifyDeltaPosition(intersects[0].object, intersects[0].point, ndcToAbs(in_ndc), rotatable);
 		if (result === RC.UNMOVABLE) {
 			knock();
 		}
@@ -1907,9 +1911,7 @@ async function chooseHere(in_ev) {
 		const drag = intersects[0].object
 		if (getShellColor(drag) === PC_COLOR) {
 			// tactical rotation
-			if (gReversi.rotatableFixedCol() || gReversi.rotatableFixedRow()) {
-				gColony.uiSetInitPosition(intersects[0].point, ndcToAbs(ndc));
-			}
+			gColony.uiSetInitPosition(intersects[0].point, ndcToAbs(ndc));
 		} else {
 			// all rotation = poloidal rotation
 			const st = gColony.currPiecesCache.structure;

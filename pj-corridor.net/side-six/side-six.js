@@ -127,7 +127,7 @@ export class cCylinderStructure extends cBaseStructure {
 			fixedColDelta : srcYZ.distanceTo(dstYZ),
 			fixedRowDelta : Math.abs(in_dstPos.x - in_srcPos.x),
 			rowDirection : srcYZ.cross(dstYZ) > 0 ? 1 : -1,
-			colDirection : Math.sign(in_dstPos.x - in_srcPos.x)
+			colDirection : in_dstPos.x > in_srcPos.x ? 1 : -1
 		};
 	}
 	locationToPosition(in_row, in_col) {
@@ -476,6 +476,7 @@ export function updateChamferedGeometry(in_geometry, in_tWidth, in_bWidth, in_he
 }
 
 class cPieceSet extends THREE.Object3D {
+	static error = 0.01;
 	set #currPiecesCacheKey(in_key) {
 		if (!this.userData.cache) {
 			this.userData.cache = {};
@@ -491,6 +492,11 @@ class cPieceSet extends THREE.Object3D {
 		} else {
 			throw new Error('no cacheKey');
 		}
+	}
+	approximateChildren(in_callback, in_order = 1) {
+		const xSet = new cApproximateSet(cPieceSet.error);
+		this.children.forEach(in_child => xSet.add(in_callback(in_child)));
+		return Array.from(xSet).sort((in_e1, in_e2) => (in_e1 - in_e2) * in_order);
 	}
 	removePieces() {
 		const pieces = this.children.slice();
@@ -511,7 +517,6 @@ class cPieceSet extends THREE.Object3D {
 }
 
 export class cColony extends cPieceSet {
-	static error = 0.01;
 	static axes = {
 		x : VEC3(1, 0, 0),
 		y : VEC3(0, 1, 0),
@@ -550,22 +555,30 @@ export class cColony extends cPieceSet {
 			return props[0];
 		}
 	}
-	setupGroup(in_pieces) {
+	setupAnimationGroup(in_pieces) {
 		const group = new THREE.Object3D();
 		this.add(group);
 		in_pieces.forEach(in_piece => {
 			group.attach(in_piece);
-			// tmpCache may be used for customizing animations
 			in_piece.userData.tmpCache = {
 				position : in_piece.position.clone(),
-				rotation : in_piece.rotation.clone()
+				rotation : in_piece.rotation.clone(),
+				geometry : in_piece.geometry
 			};
+			in_piece.geometry = in_piece.geometry.clone();
 		});
 		// group position is (0, 0, 0)
 		return group;
 	}
-	#releaseGroup(in_group) {
+	#releaseAnimationGroup(in_group) {
 		const copiedPieces = [...in_group.children];
+		// map original geometries to their initial locations
+		const geometryMap = new Map();
+		copiedPieces.forEach(in_piece => {
+			const pos = in_piece.userData.tmpCache.position;
+			const {row, col} = this.currPiecesCache.structure.positionToLocation(pos);
+			geometryMap.set(row + ',' + col, in_piece.userData.tmpCache.geometry);
+		});
 		copiedPieces.forEach(in_piece => {
 			/*
 				*** NOTE ***
@@ -573,6 +586,10 @@ export class cColony extends cPieceSet {
 				"attach" keeps world position.
 				in addition, both of them internally call "remove" from other object.
 			*/
+			const {row, col} = this.currPiecesCache.structure.positionToLocation(in_piece.position);
+			const geometry = geometryMap.get(row + ',' + col);
+			in_piece.geometry.dispose();
+			in_piece.geometry = geometry;
 			this.attach(in_piece);
 			delete in_piece.userData.tmpCache;
 		});
@@ -637,7 +654,7 @@ export class cColony extends cPieceSet {
 			this.move(in_group, in_moveType, currAmount);
 			let ratio = Math.abs(currAmount - in_startAmount) / amount;
 			if (currAmount === in_finalAmount) {
-				this.#releaseGroup(in_group);
+				this.#releaseAnimationGroup(in_group);
 				// in this case, progress function should be stopped (in in_callback)
 				ratio = 1.0;
 			}
@@ -724,7 +741,7 @@ export class cColony extends cPieceSet {
 	}
 	#uiInitSession() {
 		if (this.#uiSession.ctx.group) {
-			this.#releaseGroup(this.#uiSession.ctx.group);
+			this.#releaseAnimationGroup(this.#uiSession.ctx.group);
 		}
 		this.#uiSession.ctx = {};
 	}
@@ -768,7 +785,72 @@ export class cColony extends cPieceSet {
 		// as delta is enough, can call uiUpdatePosition
 		MOVABLE : Symbol()
 	};
-	uiNotifyDeltaPosition(in_piece, in_posV3, in_posV2) {
+	#decideMoveType(in_fixedColDelta, in_fixedRowDelta, in_rotatable) {
+		const st = this.currPiecesCache.structure;
+		if (st instanceof cTorusStructure) {
+			/*
+				fixedColDelta : movement within a logical col, poloidal rotation around the tube centerline
+				fixedRowDelta : movement within a logical row, rotation around the Y-axis
+
+				           -z
+				            |
+				        +---+---+
+				        |#######|
+				        |#+-+-+#|
+				        |#| | |#|
+				 -x ----+#+-+-+#+---- +x
+				        |#| | |#|
+				        |#+-+-+#|
+				        |#######|
+				        +---+---+
+				            |
+				           +z
+			*/
+			if (in_rotatable.fixedCol && in_rotatable.fixedRow) {
+				if (in_fixedColDelta > in_fixedRowDelta) {
+					return cColony.moveTypes.TORUS_POLOIDAL;
+				} else {
+					return cColony.moveTypes.TORUS_TOROIDAL;
+				}
+			}
+			if (in_rotatable.fixedCol) {
+				return cColony.moveTypes.TORUS_POLOIDAL;
+			}
+			if (in_rotatable.fixedRow) {
+				return cColony.moveTypes.TORUS_TOROIDAL;
+			}
+		} else {
+			/*
+				fixedColDelta : movement within a logical col, rotation around the X-axis
+				fixedRowDelta : movement within a logical row, translation along the X-axis, if possible
+
+				           -z
+				            |
+				            |
+				            |
+				            |
+				     +------+------+
+				 -x -+#############+- +x
+				     +------+------+
+				            |
+				            |
+				            |
+				            |
+				           +z
+			*/
+			if (in_rotatable.fixedCol) {
+				if (in_fixedColDelta > in_fixedRowDelta) {
+					return cColony.moveTypes.CYLINDER_ROTATE;
+				} else {
+					return cColony.moveTypes.CYLINDER_SLIDE;
+				}
+			} else {
+				return cColony.moveTypes.CYLINDER_SLIDE;
+			}
+		}
+		return null;
+	}
+	uiNotifyDeltaPosition(in_piece, in_posV3, in_posV2, in_rotatable) {
 		const RC = cColony.uiSetDeltaPositionRC;
 		if (this.#uiSession.state !== cColony.#uiStates.DRAGGING) {
 			console.log('state is not DRAGGING');
@@ -785,88 +867,49 @@ export class cColony extends cPieceSet {
 		if (notEnough(fixedColDelta, fixedRowDelta)) {
 			return RC.NOTENOUGH;
 		}
-		let pieces, direction, moveType, range;
-		/*
-			viewed along the Y-axis (XZ plane) ...
-
-			1. cylinder
-			1.1. fixedColDelta : movement within a logical col, rotation around the X-axis
-			1.2. fixedRowDelta : movement within a logical row, translation along the X-axis, if possible
-
-			           -z
-			            |
-			            |
-			            |
-			            |
-			     +------+------+
-			 -x -+#############+- +x
-			     +------+------+
-			            |
-			            |
-			            |
-			            |
-			           +z
-
-			2. torus
-			2.1. fixedColDelta : movement within a logical col, poloidal rotation around the tube centerline
-			2.2. fixedRowDelta : movement within a logical row, rotation around the Y-axis
-
-			           -z
-			            |
-			        +---+---+
-			        |#######|
-			        |#+-+-+#|
-			        |#| | |#|
-			 -x ----+#+-+-+#+---- +x
-			        |#| | |#|
-			        |#+-+-+#|
-			        |#######|
-			        +---+---+
-			            |
-			           +z
-		*/
-		if (fixedColDelta > fixedRowDelta) {
+		const moveType = this.#decideMoveType(fixedColDelta, fixedRowDelta, in_rotatable);
+		if (moveType === null) {
+			return RC.UNMOVABLE;
+		}
+		let pieces, direction, range;
+		switch (moveType) {
+		case cColony.moveTypes.CYLINDER_ROTATE :
+		case cColony.moveTypes.TORUS_POLOIDAL :
 			pieces = this.affectedFixedColPieces(in_piece);
-			if (pieces.length < this.children.length) {
-				direction = rowDirection;
-				if (st instanceof cCylinderStructure) {
-					moveType = cColony.moveTypes.CYLINDER_ROTATE;
-				} else {
-					moveType = cColony.moveTypes.TORUS_POLOIDAL;
-				}
-				range = null;
-			} else {
+			if (pieces.length === this.children.length) {
 				return RC.UNMOVABLE;
 			}
-		} else {
+			direction = rowDirection;
+			range = null;
+			break;
+		case cColony.moveTypes.CYLINDER_SLIDE :
 			direction = colDirection;
-			if (st instanceof cCylinderStructure) {
-				pieces = this.affectedSlidePieces(in_piece, direction);
-				const amount = this.slidableDistance(pieces[pieces.length - 1], direction);
-				if (amount === 0) {
-					return RC.UNMOVABLE;
-				}
-				moveType = cColony.moveTypes.CYLINDER_SLIDE;
-				range = {min : Math.min(0, amount), max : Math.max(0, amount)};
-			} else {
-				// toroidal rotation of a fixed row
-				pieces = this.affectedFixedRowPieces(in_piece);
-				if (pieces.length === this.children.length) {
-					return RC.UNMOVABLE;
-				}
-				moveType = cColony.moveTypes.TORUS_TOROIDAL;
-				range = null;
+			pieces = this.affectedSlidePieces(in_piece, direction);
+			const amount = this.slidableDistance(pieces[pieces.length - 1], direction);
+			if (amount === 0) {
+				return RC.UNMOVABLE;
 			}
+			range = {min : Math.min(0, amount), max : Math.max(0, amount)};
+			break;
+		case cColony.moveTypes.TORUS_TOROIDAL :
+			pieces = this.affectedFixedRowPieces(in_piece);
+			if (pieces.length === this.children.length) {
+				return RC.UNMOVABLE;
+			}
+			direction = colDirection;
+			range = null;
+			break;
+		default :
+			throw new Error('unsupported moveType');
 		}
 		this.#transition('movable');
 		ctx.initDirV2 = in_posV2.clone().sub(ctx.initPosV2);
-		ctx.group = this.setupGroup(pieces);
+		ctx.group = this.setupAnimationGroup(pieces);
 		ctx.direction = direction;
 		ctx.moveType = moveType;
 		ctx.movableRange = range;
 		return RC.MOVABLE;
 	}
-//★
 	uiUpdatePosition(in_posV2) {
 		if (this.#uiSession.state !== cColony.#uiStates.MOVING) {
 			return;

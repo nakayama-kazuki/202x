@@ -368,7 +368,7 @@ class cColonyPuzzle extends cColony {
 			}
 		}
 		this[cColonyPuzzle.#oneByOne] = !this[cColonyPuzzle.#oneByOne];
-		const group = this.setupGroup(pieces);
+		const group = this.setupAnimationGroup(pieces);
 		// calling this method means shuffling
 		this.currPiecesCache.shuffled = true;
 		return this.makeAnimationProgress(group, moveType, 0, last, in_callback);
@@ -831,7 +831,11 @@ const notifyDelta = (() => {
 		if (intersects.length === 0) {
 			return;
 		}
-		const result = gColony.uiNotifyDeltaPosition(intersects[0].object, intersects[0].point, ndcToAbs(in_ndc));
+		const rotatable = {
+			fixedCol : true,
+			fixedRow : false
+		};
+		const result = gColony.uiNotifyDeltaPosition(intersects[0].object, intersects[0].point, ndcToAbs(in_ndc), rotatable);
 		if (result === RC.UNMOVABLE) {
 			knock();
 		}

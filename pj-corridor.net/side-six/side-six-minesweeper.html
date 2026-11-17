@@ -1265,7 +1265,7 @@ class cColonyBoard extends cColony {
 		this.uiDisable();
 		const last = this.currPiecesCache.structure.rowsAngle * in_delta;
 		const pieces = this.children.filter(in_child => this.pieceToLocation(in_child).col === in_col);
-		const group = this.setupGroup(pieces);
+		const group = this.setupAnimationGroup(pieces);
 		return this.makeAnimationProgress(group, cColony.axes.x, 0, last, in_ratio => {
 			if (in_ratio < 1) {
 				return;
@@ -1965,7 +1965,11 @@ const notifyDelta = (() => {
 		if (intersects.length === 0) {
 			return;
 		}
-		const result = gColony.uiNotifyDeltaPosition(intersects[0].object, intersects[0].point, ndcToAbs(in_ndc));
+		const rotatable = {
+			fixedCol : true,
+			fixedRow : false
+		};
+		const result = gColony.uiNotifyDeltaPosition(intersects[0].object, intersects[0].point, ndcToAbs(in_ndc), rotatable);
 		if (result === RC.UNMOVABLE) {
 			effectError();
 		}
@@ -2147,9 +2151,7 @@ async function chooseHere(in_ev) {
 		closure.x = in_ev.clientX;
 		closure.y = in_ev.clientY;
 		const drag = intersects[0].object;
-		if (gMinesweeper.rotatableFixedCol()) {
-			gColony.uiSetInitPosition(intersects[0].point, ndcToAbs(ndc));
-		}
+		gColony.uiSetInitPosition(intersects[0].point, ndcToAbs(ndc));
 	};
 	const move = thresholding(in_ev => {
 		closure.x = -1;
