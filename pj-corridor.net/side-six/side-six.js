@@ -56,6 +56,12 @@ import {
 	cSphericalWorld
 } from 'basic';
 
+const AXES = {
+	x : VEC3(1, 0, 0),
+	y : VEC3(0, 1, 0),
+	z : VEC3(0, 0, 1)
+};
+
 class cBaseStructure {
 	static #error = 0.01;
 	#rowsForCrossSection;
@@ -133,12 +139,12 @@ export class cCylinderStructure extends cBaseStructure {
 	locationToPosition(in_row, in_col) {
 		const pos = this.#origin.clone();
 		pos.x += this.colsDelta * in_col;
-		pos.applyAxisAngle(cColony.axes.x, this.locationToRowAngle(in_row, in_col));
+		pos.applyAxisAngle(AXES.x, this.locationToRowAngle(in_row, in_col));
 		return pos;
 	}
 	locationToQuaternion(in_row, in_col) {
 		// align the tile with the cylinder surface
-		return this.quaternion(cColony.axes.x, this.locationToRowAngle(in_row, in_col));
+		return this.quaternion(AXES.x, this.locationToRowAngle(in_row, in_col));
 	}
 	positionToLocation(in_position) {
 		const col = Math.round((in_position.x - this.#origin.x) / this.colsDelta);
@@ -199,7 +205,7 @@ export class cTorusStructure extends cBaseStructure {
 		return this.position(poloidalAngle, toroidalAngle);
 	}
 	locationToQuaternion(in_row, in_col) {
-		return this.quaternion(cColony.axes.y, this.toroidalAngle(in_col));
+		return this.quaternion(AXES.y, this.toroidalAngle(in_col));
 	}
 	positionToLocation(in_position) {
 		return super.positionToLocation(in_position, -1);
@@ -475,8 +481,40 @@ export function updateChamferedGeometry(in_geometry, in_tWidth, in_bWidth, in_he
 	in_geometry.computeVertexNormals();
 }
 
-class cPieceSet extends THREE.Object3D {
-	static error = 0.01;
+/*
+	cColony
+		|
+		+- cCylinderColony
+		|	|
+		|	+- cCylinderColonyBoard (+ cBoardBehavior)
+		|	|
+		|	+- cCylinderColonyPuzzle (+ cPuzzleBehavior)
+		|
+		+- cTorusColony
+			|
+			+- cTorusColonyBoard (+ cBoardBehavior)
+			|
+			+- cTorusColonyPuzzle (+ cPuzzleBehavior)
+*/
+
+class cColony extends THREE.Object3D {
+	static #error = 0.01;
+	constructor() {
+		super();
+		const requiredArr = [
+			'move',
+			'moveTypeToCtx',
+			'moveTypeToAdjustAmount',
+			'moveTypeToDuration',
+			'moveTypeToNotch',
+			'moveTypeToResult'
+		];
+		requiredArr.forEach(in_method => {
+			if (typeof this[in_method] !== 'function') {
+				throw new Error(in_method + '() must be implemented by subclass');
+			}
+		});
+	}
 	set #currPiecesCacheKey(in_key) {
 		if (!this.userData.cache) {
 			this.userData.cache = {};
@@ -493,11 +531,6 @@ class cPieceSet extends THREE.Object3D {
 			throw new Error('no cacheKey');
 		}
 	}
-	approximateChildren(in_callback, in_order = 1) {
-		const xSet = new cApproximateSet(cPieceSet.error);
-		this.children.forEach(in_child => xSet.add(in_callback(in_child)));
-		return Array.from(xSet).sort((in_e1, in_e2) => (in_e1 - in_e2) * in_order);
-	}
 	removePieces() {
 		const pieces = this.children.slice();
 		pieces.forEach(in_piece => {
@@ -505,7 +538,7 @@ class cPieceSet extends THREE.Object3D {
 		});
 		this.userData.cacheKey = null;
 	}
-	activatePiecesCache(in_pieces) {
+	setupPieces(in_pieces, in_structure) {
 		this.removePieces();
 		const uuids = [];
 		in_pieces.forEach(in_piece => {
@@ -513,28 +546,11 @@ class cPieceSet extends THREE.Object3D {
 			this.add(in_piece);
 		});
 		this.#currPiecesCacheKey = pseudoMessageDigest1(uuids);
-	}
-}
-
-export class cColony extends cPieceSet {
-	static axes = {
-		x : VEC3(1, 0, 0),
-		y : VEC3(0, 1, 0),
-		z : VEC3(0, 0, 1)
-	};
-	setupPieces(in_pieces, in_structure) {
-		this.activatePiecesCache(in_pieces);
 		this.currPiecesCache.structure = in_structure;
-	}
-	constructor() {
-		super();
-		if (typeof this.move !== 'function') {
-			throw new Error('move() must be implemented by subclass');
-		}
 	}
 	locationToPiece(in_row, in_col) {
 		const pos = this.currPiecesCache.structure.locationToPosition(in_row, in_col);
-		const piece = this.children.find(in_child => XYZ.every(in_xyz => Math.abs(in_child.position[in_xyz] - pos[in_xyz]) < cColony.error));
+		const piece = this.children.find(in_child => XYZ.every(in_xyz => Math.abs(in_child.position[in_xyz] - pos[in_xyz]) < cColony.#error));
 		if (!piece) {
 			console.log('locationToPiece failed : ', in_row, in_col);
 			throw new Error('');
@@ -543,17 +559,6 @@ export class cColony extends cPieceSet {
 	}
 	pieceToLocation(in_piece) {
 		return this.currPiecesCache.structure.positionToLocation(in_piece.position);
-	}
-	static axisComponent(in_axis, in_match = true) {
-		const props = Object.keys(cColony.axes).filter(in_key => {
-			const equal = cColony.axes[in_key].equals(in_axis);
-			return in_match ? equal : !equal;
-		});
-		if (props.length > 1) {
-			return props;
-		} else {
-			return props[0];
-		}
 	}
 	setupAnimationGroup(in_pieces) {
 		const group = new THREE.Object3D();
@@ -603,64 +608,69 @@ export class cColony extends cPieceSet {
 		const row = this.pieceToLocation(in_piece).row;
 		return this.children.filter(in_child => this.pieceToLocation(in_child).row === row);
 	}
-	affectedSlidePieces(in_piece, in_sign) {
-		const location = this.pieceToLocation(in_piece);
-		const affected = [in_piece];
-		for (let col = location.col + in_sign; 0 <= col && col < this.currPiecesCache.structure.cols; col += in_sign) {
-			const piece = this.children.find(in_child => {
-				const childLocation = this.pieceToLocation(in_child);
-				return childLocation.row === location.row && childLocation.col === col;
-			});
-			if (!piece) {
-				break;
+	#decideMoveType(in_fixedColDelta, in_fixedRowDelta, in_movable) {
+		if (in_movable.fixedCol && in_movable.fixedRow) {
+			if (in_fixedColDelta > in_fixedRowDelta) {
+				return cColony.moveTypes.FIXED_COL;
+			} else {
+				return cColony.moveTypes.FIXED_ROW;
 			}
-			affected.push(piece);
 		}
-		return affected;
-	}
-	slidableDistance(in_piece, in_sign) {
-		const location = this.pieceToLocation(in_piece);
-		const nextCol = location.col + in_sign;
-		if ((nextCol < 0) || (this.currPiecesCache.structure.cols <= nextCol)) {
-			return 0;
+		if (in_movable.fixedCol) {
+			return cColony.moveTypes.FIXED_COL;
 		}
-		const nextPosition = this.currPiecesCache.structure.locationToPosition(location.row, nextCol);
-		return nextPosition.x - in_piece.position.x;
+		if (in_movable.fixedRow) {
+			return cColony.moveTypes.FIXED_ROW;
+		}
+		return null;
 	}
 	static moveTypes = {
-		CYLINDER_ROTATE : Symbol(),
-		CYLINDER_SLIDE : Symbol(),
-		TORUS_POLOIDAL : Symbol(),
-		TORUS_TOROIDAL : Symbol()
+		FIXED_COL : Symbol(),
+		FIXED_ROW : Symbol()
 	};
-	makeAnimationProgress(in_group, in_moveType, in_startAmount, in_finalAmount, in_callback) {
-		const amount = Math.abs(in_finalAmount - in_startAmount);
-		let duration;
-		switch (in_moveType) {
-		case cColony.moveTypes.CYLINDER_ROTATE :
-		case cColony.moveTypes.TORUS_POLOIDAL :
-		case cColony.moveTypes.TORUS_TOROIDAL :
-			duration = amount / (Math.PI / 2) * 500;
-			break;
-		case cColony.moveTypes.CYLINDER_SLIDE :
-			duration = 100;
-			break;
-		default :
-			throw new Error('unsupported moveType');
-		}
-		const ease = new cEase(in_startAmount, in_finalAmount, duration);
+	makeAnimationProgress(in_group, in_moveType, in_startAmount, in_lastAmount, in_callback) {
+		const amount = Math.abs(in_lastAmount - in_startAmount);
+		const duration = this.moveTypeToDuration(in_moveType, amount);
+		const ease = new cEase(in_startAmount, in_lastAmount, duration);
 		const progress = () => {
-			const currAmount = ease.currentEasingIn();
-			this.move(in_group, in_moveType, currAmount);
-			let ratio = Math.abs(currAmount - in_startAmount) / amount;
-			if (currAmount === in_finalAmount) {
-				this.#releaseAnimationGroup(in_group);
-				// in this case, progress function should be stopped (in in_callback)
+			let ratio;
+			if (amount > 0) {
+				// currAmount reaches in_lastAmount when the animation completes
+				const currAmount = ease.currentEasingIn();
+				this.move(in_group, in_moveType, currAmount);
+				ratio = Math.abs(currAmount - in_startAmount) / amount; 
+			} else {
 				ratio = 1.0;
+			}
+			if (ratio === 1.0) {
+				// in this case, progress function should be stopped (in in_callback)
+				this.#releaseAnimationGroup(in_group);
 			}
 			(in_callback)(ratio);
 		};
 		return progress;
+	}
+	makeRotateProgress(in_moveType, in_index, in_delta, in_ending_callback) {
+		let group;
+		switch (in_moveType) {
+		case cColony.moveTypes.FIXED_COL :
+			group = this.setupAnimationGroup(this.affectedFixedColPieces(this.locationToPiece(0, in_index)));
+			break;
+		case cColony.moveTypes.FIXED_ROW :
+			group = this.setupAnimationGroup(this.affectedFixedRowPieces(this.locationToPiece(in_index, 0)));
+			break;
+		default :
+			throw new Error('unsupported moveType');
+		}
+		const notch = this.moveTypeToNotch({moveType : in_moveType});
+		this.uiDisable();
+		return this.makeAnimationProgress(group, in_moveType, 0, notch * in_delta, in_ratio => {
+			if (in_ratio < 1) {
+				return;
+			}
+			this.uiEnable();
+			(in_ending_callback)();
+		});
 	}
 	static #uiStates  = {
 		DISABLED : Symbol(),
@@ -785,72 +795,7 @@ export class cColony extends cPieceSet {
 		// as delta is enough, can call uiUpdatePosition
 		MOVABLE : Symbol()
 	};
-	#decideMoveType(in_fixedColDelta, in_fixedRowDelta, in_rotatable) {
-		const st = this.currPiecesCache.structure;
-		if (st instanceof cTorusStructure) {
-			/*
-				fixedColDelta : movement within a logical col, poloidal rotation around the tube centerline
-				fixedRowDelta : movement within a logical row, rotation around the Y-axis
-
-				           -z
-				            |
-				        +---+---+
-				        |#######|
-				        |#+-+-+#|
-				        |#| | |#|
-				 -x ----+#+-+-+#+---- +x
-				        |#| | |#|
-				        |#+-+-+#|
-				        |#######|
-				        +---+---+
-				            |
-				           +z
-			*/
-			if (in_rotatable.fixedCol && in_rotatable.fixedRow) {
-				if (in_fixedColDelta > in_fixedRowDelta) {
-					return cColony.moveTypes.TORUS_POLOIDAL;
-				} else {
-					return cColony.moveTypes.TORUS_TOROIDAL;
-				}
-			}
-			if (in_rotatable.fixedCol) {
-				return cColony.moveTypes.TORUS_POLOIDAL;
-			}
-			if (in_rotatable.fixedRow) {
-				return cColony.moveTypes.TORUS_TOROIDAL;
-			}
-		} else {
-			/*
-				fixedColDelta : movement within a logical col, rotation around the X-axis
-				fixedRowDelta : movement within a logical row, translation along the X-axis, if possible
-
-				           -z
-				            |
-				            |
-				            |
-				            |
-				     +------+------+
-				 -x -+#############+- +x
-				     +------+------+
-				            |
-				            |
-				            |
-				            |
-				           +z
-			*/
-			if (in_rotatable.fixedCol) {
-				if (in_fixedColDelta > in_fixedRowDelta) {
-					return cColony.moveTypes.CYLINDER_ROTATE;
-				} else {
-					return cColony.moveTypes.CYLINDER_SLIDE;
-				}
-			} else {
-				return cColony.moveTypes.CYLINDER_SLIDE;
-			}
-		}
-		return null;
-	}
-	uiNotifyDeltaPosition(in_piece, in_posV3, in_posV2, in_rotatable) {
+	uiNotifyDeltaPosition(in_piece, in_posV3, in_posV2, in_movable) {
 		const RC = cColony.uiSetDeltaPositionRC;
 		if (this.#uiSession.state !== cColony.#uiStates.DRAGGING) {
 			console.log('state is not DRAGGING');
@@ -867,47 +812,20 @@ export class cColony extends cPieceSet {
 		if (notEnough(fixedColDelta, fixedRowDelta)) {
 			return RC.NOTENOUGH;
 		}
-		const moveType = this.#decideMoveType(fixedColDelta, fixedRowDelta, in_rotatable);
+		const moveType = this.#decideMoveType(fixedColDelta, fixedRowDelta, in_movable);
 		if (moveType === null) {
 			return RC.UNMOVABLE;
 		}
-		let pieces, direction, range;
-		switch (moveType) {
-		case cColony.moveTypes.CYLINDER_ROTATE :
-		case cColony.moveTypes.TORUS_POLOIDAL :
-			pieces = this.affectedFixedColPieces(in_piece);
-			if (pieces.length === this.children.length) {
-				return RC.UNMOVABLE;
-			}
-			direction = rowDirection;
-			range = null;
-			break;
-		case cColony.moveTypes.CYLINDER_SLIDE :
-			direction = colDirection;
-			pieces = this.affectedSlidePieces(in_piece, direction);
-			const amount = this.slidableDistance(pieces[pieces.length - 1], direction);
-			if (amount === 0) {
-				return RC.UNMOVABLE;
-			}
-			range = {min : Math.min(0, amount), max : Math.max(0, amount)};
-			break;
-		case cColony.moveTypes.TORUS_TOROIDAL :
-			pieces = this.affectedFixedRowPieces(in_piece);
-			if (pieces.length === this.children.length) {
-				return RC.UNMOVABLE;
-			}
-			direction = colDirection;
-			range = null;
-			break;
-		default :
-			throw new Error('unsupported moveType');
+		const ret = this.moveTypeToCtx(in_piece, moveType, rowDirection, colDirection);
+		if (!ret.movable) {
+			return RC.UNMOVABLE;
 		}
 		this.#transition('movable');
 		ctx.initDirV2 = in_posV2.clone().sub(ctx.initPosV2);
-		ctx.group = this.setupAnimationGroup(pieces);
-		ctx.direction = direction;
+		ctx.group = this.setupAnimationGroup(ret.pieces);
+		ctx.direction = ret.direction;
 		ctx.moveType = moveType;
-		ctx.movableRange = range;
+		ctx.movableRange = ret.range;
 		return RC.MOVABLE;
 	}
 	uiUpdatePosition(in_posV2) {
@@ -915,35 +833,16 @@ export class cColony extends cPieceSet {
 			return;
 		}
 		const ctx = this.#uiSession.ctx;
-		const st = this.currPiecesCache.structure;
-		const currentDirV2 = in_posV2.clone().sub(ctx.initPosV2);
 		let amount = in_posV2.distanceTo(ctx.initPosV2) * ctx.direction;
-		if (ctx.moveType === cColony.moveTypes.CYLINDER_SLIDE) {
-			amount *= 250;
-			amount = Math.max(ctx.movableRange.min, Math.min(ctx.movableRange.max, amount));
-		} else {
-			if (ctx.initDirV2.dot(currentDirV2) <= 0) {
-				const thresholdToStopWarp = Math.PI / 8;
-				if (Math.abs(ctx.currAmount + amount) < thresholdToStopWarp) {
-					amount *= -1;
-				}
+		const reversed = ctx.initDirV2.dot(in_posV2.clone().sub(ctx.initPosV2)) <= 0;
+		if (reversed) {
+			const thresholdToStopWarp = Math.PI / 8;
+			if (Math.abs(ctx.currAmount + amount) < thresholdToStopWarp) {
+				amount *= -1;
 			}
 		}
-		let notch;
-		switch (ctx.moveType) {
-		case cColony.moveTypes.CYLINDER_ROTATE :
-		case cColony.moveTypes.TORUS_POLOIDAL :
-			notch = st.rowsAngle;
-			break;
-		case cColony.moveTypes.TORUS_TOROIDAL :
-			notch = st.colsAngle;
-			break;
-		case cColony.moveTypes.CYLINDER_SLIDE :
-			notch = Math.abs(ctx.movableRange.min + ctx.movableRange.max);
-			break;
-		default :
-			throw new Error('unsupported moveType');
-		}
+		amount = this.moveTypeToAdjustAmount(ctx, amount);
+		const notch = this.moveTypeToNotch(ctx);
 		const prev = snapToNotch(ctx.currAmount, notch);
 		const next = snapToNotch(amount, notch);
 		this.move(ctx.group, ctx.moveType, amount);
@@ -961,27 +860,7 @@ export class cColony extends cPieceSet {
 		}
 		this.#transition('release');
 		const ctx = this.#uiSession.ctx;
-		const st = this.currPiecesCache.structure;
-		let type, notch, last, delta;
-		switch (ctx.moveType) {
-		case cColony.moveTypes.CYLINDER_ROTATE :
-		case cColony.moveTypes.TORUS_POLOIDAL :
-			type = 'rotate';
-			notch = st.rowsAngle;
-			break;
-		case cColony.moveTypes.TORUS_TOROIDAL :
-			type = 'rotate';
-			notch = st.colsAngle;
-			break;
-		case cColony.moveTypes.CYLINDER_SLIDE :
-			type = 'slide';
-			notch = Math.abs(ctx.movableRange.min + ctx.movableRange.max);
-			break;
-		default :
-			throw new Error('unsupported moveType');
-		}
-		last = snapToNotch(ctx.currAmount, notch);
-		delta = Math.round(last / (ctx.moveType === cColony.moveTypes.CYLINDER_SLIDE ? st.colsDelta : notch));
+		const {type, delta, last} = this.moveTypeToResult(ctx);
 		const piece = ctx.group.children[0];
 		return this.makeAnimationProgress(ctx.group, ctx.moveType, ctx.currAmount, last, (in_ratio) => {
 			if (in_ratio < 1) {
@@ -997,6 +876,983 @@ export class cColony extends cPieceSet {
 			this.#transition('stop');
 			(in_ending_callback)(changed);
 		});
+	}
+}
+
+class cCylinderColony extends cColony {
+	/*
+		fixedCol : movement within a logical col, rotation around the X-axis
+		fixedRow : movement within a logical row, translation along the X-axis, if possible
+
+		           -z
+		            |
+		            |
+		            |
+		            |
+		     +------+------+
+		 -x -+#############+- +x
+		     +------+------+
+		            |
+		            |
+		            |
+		            |
+		           +z
+	*/
+	#bobRotation = {};
+	setupPieces(in_pieces, in_structure) {
+		if (!this.isColonyView) {
+			throw new Error('setupPieces requires COLONYVIEW');
+		}
+		super.setupPieces(in_pieces, in_structure);
+		const cornerCnt = in_pieces[0].geometry.userData.cornerCnt;
+		if (cornerCnt === 4) {
+			this.#bobRotation.fixedCol = false;
+			this.#bobRotation.fixedRow = false;
+		} else {
+			if (cornerCnt === 6) {
+				this.#bobRotation.fixedCol = true;
+				this.#bobRotation.fixedRow = true;
+			} else {
+				throw new Error('invalid cornerCnt : ' + cornerCnt);
+			}
+		}
+	}
+	affectedSlidePieces(in_piece, in_sign) {
+		const location = this.pieceToLocation(in_piece);
+		const affected = [in_piece];
+		for (let col = location.col + in_sign; 0 <= col && col < this.currPiecesCache.structure.cols; col += in_sign) {
+			const piece = this.children.find(in_child => {
+				const childLocation = this.pieceToLocation(in_child);
+				return childLocation.row === location.row && childLocation.col === col;
+			});
+			if (!piece) {
+				break;
+			}
+			affected.push(piece);
+		}
+		return affected;
+	}
+	slidableDistance(in_piece, in_sign) {
+		const location = this.pieceToLocation(in_piece);
+		const nextCol = location.col + in_sign;
+		if ((nextCol < 0) || (this.currPiecesCache.structure.cols <= nextCol)) {
+			return 0;
+		}
+		const nextPosition = this.currPiecesCache.structure.locationToPosition(location.row, nextCol);
+		return nextPosition.x - in_piece.position.x;
+	}
+	moveTypeToCtx(in_piece, in_moveType, in_rowDirection, in_colDirection) {
+		const ret = {movable : false, pieces : null, direction : 0, range : null};
+		switch (in_moveType) {
+		case cColony.moveTypes.FIXED_COL :
+			ret.pieces = this.affectedFixedColPieces(in_piece);
+			if (ret.pieces.length !== this.children.length) {
+				ret.movable = true;
+			}
+			ret.direction = in_rowDirection;
+			break;
+		case cColony.moveTypes.FIXED_ROW :
+			ret.direction = in_colDirection;
+			ret.pieces = this.affectedSlidePieces(in_piece, ret.direction);
+			const amount = this.slidableDistance(ret.pieces[ret.pieces.length - 1], ret.direction);
+			if (amount !== 0) {
+				ret.movable = true;
+			}
+			ret.range = {min : Math.min(0, amount), max : Math.max(0, amount)};
+			break;
+		default :
+			throw new Error('unsupported moveType');
+		}
+		return ret;
+	}
+	moveTypeToAdjustAmount(in_ctx, in_amount) {
+		if (in_ctx.moveType === cColony.moveTypes.FIXED_ROW) {
+			in_amount *= 250;
+			in_amount = Math.max(in_ctx.movableRange.min, Math.min(in_ctx.movableRange.max, in_amount));
+		}
+		return in_amount;
+	}
+	moveTypeToDuration(in_moveType, in_amount) {
+		switch (in_moveType) {
+		case cColony.moveTypes.FIXED_COL :
+			return in_amount / (Math.PI / 2) * 500;
+		case cColony.moveTypes.FIXED_ROW :
+			return 100;
+		default :
+			throw new Error('unsupported moveType');
+		}
+	}
+	moveTypeToNotch(in_ctx) {
+		const st = this.currPiecesCache.structure;
+		switch (in_ctx.moveType) {
+		case cColony.moveTypes.FIXED_COL :
+			return st.rowsAngle;
+		case cColony.moveTypes.FIXED_ROW :
+			if (in_ctx.movableRange) {
+				return Math.abs(in_ctx.movableRange.min + in_ctx.movableRange.max);
+			}
+			return Math.abs(st.colsDelta);
+		default :
+			throw new Error('unsupported moveType');
+		}
+	}
+	moveTypeToResult(in_ctx) {
+		const st = this.currPiecesCache.structure;
+		const notch = this.moveTypeToNotch(in_ctx);
+		const last = snapToNotch(in_ctx.currAmount, notch);
+		let type, delta;
+		switch (in_ctx.moveType) {
+		case cColony.moveTypes.FIXED_COL :
+			type = 'rotate';
+			delta = Math.round(last / notch);
+			break;
+		case cColony.moveTypes.FIXED_ROW :
+			type = 'slide';
+			delta = Math.round(last / st.colsDelta);
+			break;
+		default :
+			throw new Error('unsupported moveType');
+		}
+		return {type, delta, last};
+	}
+	static #bobPosition(in_group, in_amount, in_period, in_fixedAxes = ['x'], in_bobMax = 1.2) {
+		const scalar = (createPeriodicCos(in_period, 1, in_bobMax, true))(in_amount);
+		in_group.children.forEach(in_child => {
+			const basePos = in_child.userData.tmpCache.position;
+			in_child.position.copy(basePos).multiplyScalar(scalar);
+			in_fixedAxes.forEach(in_fixedAxis => {
+				in_child.position[in_fixedAxis] = basePos[in_fixedAxis];
+			});
+		});
+	}
+	move(in_group, in_moveType, in_amount) {
+		const st = this.currPiecesCache.structure;
+		switch (in_moveType) {
+		case cColony.moveTypes.FIXED_COL :
+			in_group.rotation.x = in_amount;
+			if (this.#bobRotation.fixedCol) {
+				cCylinderColony.#bobPosition(in_group, in_amount, st.rowsAngle);
+			}
+			break;
+		case cColony.moveTypes.FIXED_ROW :
+			in_group.position.x = in_amount;
+			if (this.#bobRotation.fixedRow) {
+				cCylinderColony.#bobPosition(in_group, in_amount, Math.abs(st.colsDelta));
+			}
+			break;
+		default :
+			throw new Error('unsupported moveType');
+		}
+	}
+	randomMoveTarget(in_moveType) {
+		let pieces, amount;
+		let maxLoopCount = 100;
+		const st = this.currPiecesCache.structure;
+		while (true) {
+			if (--maxLoopCount === 0) {
+				throw new Error('maxLoopCount');
+			}
+			const piece = this.children[arrRand]();
+			switch (in_moveType) {
+			case cColony.moveTypes.FIXED_COL :
+				pieces = this.affectedFixedColPieces(piece);
+				if (pieces.length < this.children.length) {
+					const delta = Math.floor(Math.random() * (st.rows - 1)) + 1;
+					amount = st.rowsAngle * delta;
+					return {pieces, amount};
+				}
+				break;
+			case cColony.moveTypes.FIXED_ROW :
+				pieces = this.affectedSlidePieces(piece, +1);
+				amount = this.slidableDistance(pieces[pieces.length - 1], +1);
+				if (amount !== 0) {
+					return {pieces, amount};
+				}
+				pieces = this.affectedSlidePieces(piece, -1);
+				amount = this.slidableDistance(pieces[pieces.length - 1], -1);
+				if (amount !== 0) {
+					return {pieces, amount};
+				}
+				break;
+			default :
+				throw new Error('unsupported moveType');
+			}
+		}
+	}
+	static #views  = {
+		COLONYVIEW : Symbol(),
+		TRNSFORMING : Symbol(),
+		OVERVIEW : Symbol()
+	};
+	static #viewTransitions = {
+		[cCylinderColony.#views.COLONYVIEW] : {
+			toOverview : cCylinderColony.#views.TRNSFORMING
+		},
+		[cCylinderColony.#views.TRNSFORMING] : {
+			toColonyView : cCylinderColony.#views.COLONYVIEW,
+			toOverview : cCylinderColony.#views.OVERVIEW
+		},
+		[cCylinderColony.#views.OVERVIEW] : {
+			toColonyView : cCylinderColony.#views.TRNSFORMING
+		}
+	};
+	#state = cCylinderColony.#views.COLONYVIEW;
+	#transition(in_action) {
+		const state = cCylinderColony.#viewTransitions[this.#state][in_action];
+		if (state) {
+			this.#state = state;
+		} else {
+			throw new Error('invalid transition : ' + in_action);
+		}
+	}
+	get isColonyView() {
+		return (this.#state === cCylinderColony.#views.COLONYVIEW);
+	}
+	get isOverview() {
+		return (this.#state === cCylinderColony.#views.OVERVIEW);
+	}
+	makeSwitchViewProgress(in_c_to_o, in_duration, in_ending_callback) {
+		const init = {
+			amount : 0,
+			position : new Map(),
+			quaternion : new Map()
+		};
+		const last = {
+			amount : 1,
+			position : new Map(),
+			quaternion : new Map()
+		};
+		this.children.forEach(in_child => {
+			init.position.set(in_child, in_child.position.clone());
+			init.quaternion.set(in_child, in_child.quaternion.clone());
+		});
+		let endingProcess;
+		if (in_c_to_o) {
+			if (this.isColonyView) {
+				this.uiDisable();
+				this.#transition('toOverview');
+				const st = this.currPiecesCache.structure;
+				this.children.forEach(in_child => {
+					const {row, col} = this.pieceToLocation(in_child);
+					last.position.set(in_child, st.locationToOverviewPosition(row, col));
+					last.quaternion.set(in_child, new THREE.Quaternion());
+				});
+				endingProcess = () => {
+					this.cache = init;
+					this.#transition('toOverview');
+				}
+			} else {
+				// do nothing
+				return;
+			}
+		} else {
+			if (this.isOverview) {
+				this.#transition('toColonyView');
+				this.children.forEach(in_child => {
+					last.position.set(in_child, this.cache.position.get(in_child));
+					last.quaternion.set(in_child, this.cache.quaternion.get(in_child));
+				});
+				endingProcess = () => {
+					delete this.cache;
+					this.uiEnable();
+					this.#transition('toColonyView');
+				};
+			} else {
+				// do nothing
+				return;
+			}
+		}
+		const ease = new cEase(init.amount, last.amount, in_duration);
+		const progress = () => {
+			const amount = ease.currentEasingOut();
+			this.children.forEach(in_child => {
+				const p0 = init.position.get(in_child);
+				const q0 = init.quaternion.get(in_child);
+				const p1 = last.position.get(in_child);
+				const q1 = last.quaternion.get(in_child);
+				in_child.position.copy(p0).lerp(p1, amount);
+				in_child.quaternion.copy(q0).slerp(q1, amount);
+				in_child.updateMatrixWorld(true);
+			});
+			if (amount === last.amount) {
+				(endingProcess)();
+				(in_ending_callback)();
+			}
+		}
+		return progress;
+	}
+}
+
+class cTorusColony extends cColony {
+	/*
+		fixedCol : movement within a logical col, poloidal rotation around the tube centerline
+		fixedRow : movement within a logical row, rotation around the Y-axis
+
+		           -z
+		            |
+		        +---+---+
+		        |#######|
+		        |#+-+-+#|
+		        |#| | |#|
+		 -x ----+#+-+-+#+---- +x
+		        |#| | |#|
+		        |#+-+-+#|
+		        |#######|
+		        +---+---+
+		            |
+		           +z
+	*/
+	#bobRotation = {};
+	setupPieces(in_pieces, in_structure) {
+		if (!this.isTorusView) {
+			throw new Error('setupPieces requires TORUSVIEW');
+		}
+		super.setupPieces(in_pieces, in_structure);
+		const cornerCnt = in_pieces[0].geometry.userData.cornerCnt;
+		if (cornerCnt === 4) {
+			this.#bobRotation.fixedCol = false;
+			this.#bobRotation.fixedRow = true;
+		} else {
+			if (cornerCnt === 6) {
+				this.#bobRotation.fixedCol = true;
+				this.#bobRotation.fixedRow = true;
+			} else {
+				throw new Error('invalid cornerCnt : ' + cornerCnt);
+			}
+		}
+	}
+	moveTypeToCtx(in_piece, in_moveType, in_rowDirection, in_colDirection) {
+		const ret = {movable : false, pieces : null, direction : 0, range : null};
+		switch (in_moveType) {
+		case cColony.moveTypes.FIXED_COL :
+			ret.pieces = this.affectedFixedColPieces(in_piece);
+			if (ret.pieces.length !== this.children.length) {
+				ret.movable = true;
+			}
+			ret.direction = in_rowDirection;
+			break;
+		case cColony.moveTypes.FIXED_ROW :
+			ret.pieces = this.affectedFixedRowPieces(in_piece);
+			if (ret.pieces.length !== this.children.length) {
+				ret.movable = true;
+			}
+			ret.direction = in_colDirection;
+			break;
+		default :
+			throw new Error('unsupported moveType');
+		}
+		return ret;
+	}
+	moveTypeToAdjustAmount(in_ctx, in_amount) {
+		return in_amount;
+	}
+	moveTypeToDuration(in_moveType, in_amount) {
+		switch (in_moveType) {
+		case cColony.moveTypes.FIXED_COL :
+		case cColony.moveTypes.FIXED_ROW :
+			return in_amount / (Math.PI / 2) * 500;
+		default :
+			throw new Error('unsupported moveType');
+		}
+	}
+	moveTypeToNotch(in_ctx) {
+		const st = this.currPiecesCache.structure;
+		switch (in_ctx.moveType) {
+		case cColony.moveTypes.FIXED_COL :
+			return st.rowsAngle;
+		case cColony.moveTypes.FIXED_ROW :
+			return st.colsAngle;
+		default :
+			throw new Error('unsupported moveType');
+		}
+	}
+	moveTypeToResult(in_ctx) {
+		const notch = this.moveTypeToNotch(in_ctx);
+		const last = snapToNotch(in_ctx.currAmount, notch);
+		let type, delta;
+		switch (in_ctx.moveType) {
+		case cColony.moveTypes.FIXED_COL :
+		case cColony.moveTypes.FIXED_ROW :
+			type = 'rotate';
+			delta = Math.round(last / notch);
+			break;
+		default :
+			throw new Error('unsupported moveType');
+		}
+		return {type, delta, last};
+	}
+	#movePoloidal(in_group, in_amount) {
+		const st = this.currPiecesCache.structure;
+		let scalar = 1;
+		if (this.#bobRotation.fixedCol) {
+			const max = 1.2;
+			scalar = (createPeriodicCos(st.rowsAngle, 1, max, true))(in_amount);
+		}
+		in_group.children.forEach(in_piece => {
+			const basePos = in_piece.userData.tmpCache.position;
+			const {row, col} = st.positionToLocation(basePos);
+			const angle = st.locationToRowAngle(row, col) + in_amount;
+			const knowledge = st.knowledgeByPoloidalAngle(angle);
+			updateChamferedGeometry(
+				in_piece.geometry,
+				knowledge.tWidth,
+				knowledge.bWidth,
+				knowledge.height,
+				knowledge.rotation
+			);
+			//const pos = st.position(angle, st.toroidalAngle(col));
+			//const tubeCenter = st.position(0, st.toroidalAngle(col));
+			const toroidalAngle = st.toroidalAngle(col);
+			const pos = st.position(angle, toroidalAngle);
+			const tubeCenter = st.center.clone().add(VEC3(
+				st.majorRadius * Math.sin(toroidalAngle),
+				0,
+				st.majorRadius * Math.cos(toroidalAngle)
+			));
+			const lifted = tubeCenter.add(pos.clone().sub(tubeCenter).multiplyScalar(scalar));
+			in_piece.position.copy(lifted);
+		});
+	}
+	#moveToroidal(in_group, in_amount) {
+		in_group.rotation.y = in_amount;
+		if (!this.#bobRotation.fixedRow) {
+			return;
+		}
+		const st = this.currPiecesCache.structure;
+		const scalar = createPeriodicCos(st.colsAngle, 0, 1, true)(in_amount);
+		in_group.children.forEach(in_piece => {
+			const basePos = in_piece.userData.tmpCache.position;
+			const {row, col} = st.positionToLocation(basePos);
+			const angle = st.locationToRowAngle(row, col);
+			const toroidalAngle = st.toroidalAngle(col);
+			const tubeCenter = st.center.clone().add(VEC3(
+				st.majorRadius * Math.sin(toroidalAngle),
+				0,
+				st.majorRadius * Math.cos(toroidalAngle)
+			));
+			const bob = 1 + 0.2 * scalar;
+			in_piece.position.copy(tubeCenter).add(
+				basePos.clone().sub(tubeCenter).multiplyScalar(bob)
+			);
+			const radius = st.majorRadius + st.minorRadius * Math.cos(angle);
+			const outerRadius = st.majorRadius + st.minorRadius;
+			const minRatio = radius / outerRadius;
+			const scale = 1 - (1 - minRatio) * scalar;
+			const geometry = in_piece.geometry;
+			const original = in_piece.userData.tmpCache.geometry.attributes.position;
+			const current = geometry.attributes.position;
+			for (let i = 0; i < current.count; i++) {
+				current.setXYZ(
+					i,
+					original.getX(i) * scale,
+					original.getY(i),
+					original.getZ(i)
+				);
+			}
+			current.needsUpdate = true;
+			geometry.computeVertexNormals();
+		});
+	}
+	move(in_group, in_moveType, in_amount) {
+		switch (in_moveType) {
+		case cColony.moveTypes.FIXED_COL :
+			this.#movePoloidal(in_group, in_amount);
+			break;
+		case cColony.moveTypes.FIXED_ROW :
+			this.#moveToroidal(in_group, in_amount);
+			break;
+		default :
+			throw new Error('unsupported moveType');
+		}
+	}
+	randomMoveTarget(in_moveType) {
+		let pieces, amount;
+		let maxLoopCount = 100;
+		const st = this.currPiecesCache.structure;
+		while (true) {
+			if (--maxLoopCount === 0) {
+				throw new Error('maxLoopCount');
+			}
+			const piece = this.children[arrRand]();
+			switch (in_moveType) {
+			case cColony.moveTypes.FIXED_COL :
+				pieces = this.affectedFixedColPieces(piece);
+				if (pieces.length < this.children.length) {
+					const delta = Math.floor(Math.random() * (st.rows - 1)) + 1;
+					amount = st.rowsAngle * delta;
+					return {pieces, amount};
+				}
+				break;
+			case cColony.moveTypes.FIXED_ROW :
+				pieces = this.affectedFixedRowPieces(piece);
+				if (pieces.length < this.children.length) {
+					const delta = Math.floor(Math.random() * (st.cols - 1)) + 1;
+					amount = st.colsAngle * delta;
+					return {pieces, amount};
+				}
+				break;
+			default :
+				throw new Error('unsupported moveType');
+			}
+		}
+	}
+	static #views = {
+		TORUSVIEW : Symbol(),
+		T_TO_C : Symbol(),
+		C_TO_T : Symbol(),
+		CYLINDERVIEW : Symbol(),
+		C_TO_P : Symbol(),
+		P_TO_C : Symbol(),
+		PLANEVIEW : Symbol()
+	};
+	static #viewTransitions = {
+		[cTorusColony.#views.TORUSVIEW] : {
+			toPlaneView : cTorusColony.#views.T_TO_C
+		},
+		[cTorusColony.#views.T_TO_C] : {
+			toPlaneView : cTorusColony.#views.CYLINDERVIEW
+		},
+		[cTorusColony.#views.C_TO_T] : {
+			toTorusView : cTorusColony.#views.TORUSVIEW
+		},
+		[cTorusColony.#views.CYLINDERVIEW] : {
+			toPlaneView : cTorusColony.#views.C_TO_P,
+			toTorusView : cTorusColony.#views.C_TO_T
+		},
+		[cTorusColony.#views.C_TO_P] : {
+			toPlaneView : cTorusColony.#views.PLANEVIEW
+		},
+		[cTorusColony.#views.P_TO_C] : {
+			toTorusView : cTorusColony.#views.CYLINDERVIEW
+		},
+		[cTorusColony.#views.PLANEVIEW] : {
+			toTorusView : cTorusColony.#views.P_TO_C
+		}
+	};
+	#state = cTorusColony.#views.TORUSVIEW;
+	#transition(in_action) {
+		const state = cTorusColony.#viewTransitions[this.#state][in_action];
+		if (state) {
+			this.#state = state;
+		} else {
+			throw new Error('invalid transition : ' + in_action);
+		}
+	}
+	get isTorusView() {
+		return (this.#state === cTorusColony.#views.TORUSVIEW);
+	}
+	get isPlaneView() {
+		return (this.#state === cTorusColony.#views.PLANEVIEW);
+	}
+	#createCylinderPieces() {
+		const torus = this.currPiecesCache.structure;
+		const rows = torus.rows;
+		const cols = torus.cols;
+		const radius = torus.minorRadius;
+		const conf = {
+			mWeight : 0.1,
+			tWeight : 0.5
+		};
+		const circumference = 2 * Math.PI * radius;
+		const marginRow = circumference / rows * conf.mWeight;
+		const unitSize = circumference / rows - marginRow;
+		const unitThick = unitSize * conf.tWeight;
+		const source = this.locationToPiece(0, 0);
+		const isHex = source.geometry.userData.cornerCnt === 6;
+		const marginCol = isHex ? hexColMargin(unitSize / Math.sqrt(3), marginRow) : marginRow;
+		const colsDelta = unitSize + marginCol;
+		const cylinder = new cCylinderStructure(
+			rows,
+			cols,
+			VEC3(colsDelta * (cols - 1) / 2, radius, 0),
+			colsDelta * -1,
+			torus.offset,
+			torus.crossSectionRotation - Math.PI / 2
+		);
+		const geometryFactory = isHex ? allSharedHexmapFactory : allSharedSquareFactory;
+		const geometry = geometryFactory.create(unitSize, (radius - unitThick) / radius, unitThick);
+		const pieces = [];
+		for (let row = 0; row < rows; row++) {
+			for (let col = 0; col < cols; col++) {
+				const original = this.locationToPiece(row, col);
+				const piece = new THREE.Mesh(geometry, original.material);
+				piece.position.copy(cylinder.locationToPosition(row, col));
+				piece.quaternion.copy(cylinder.locationToQuaternion(row, col));
+				piece.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI));
+				pieces.push(piece);
+			}
+		}
+		return {structure : cylinder, pieces : pieces};
+	}
+	#setupCylinderMorph() {
+		this.cylinder = this.#createCylinderPieces();
+		this.restore = new Map();
+		this.children.forEach((in_piece, in_ix) => {
+			const targetPiece = this.cylinder.pieces[in_ix];
+			const original = in_piece.geometry;
+			const geometry = original.clone();
+			const source = geometry.attributes.position;
+			const target = targetPiece.geometry.attributes.position.clone();
+			for (let i = 0; i < source.count; i++) {
+				const v = VEC3().fromBufferAttribute(source, i);
+				v.applyQuaternion(in_piece.quaternion).add(in_piece.position);
+				source.setXYZ(i, v.x, v.y, v.z);
+				v.fromBufferAttribute(target, i);
+				v.applyQuaternion(targetPiece.quaternion).add(targetPiece.position);
+				target.setXYZ(i, v.x, v.y, v.z);
+			}
+			source.needsUpdate = true;
+			target.needsUpdate = true;
+			geometry.morphAttributes.position = [target];
+			geometry.morphTargetsRelative = false;
+			this.restore.set(in_piece, {
+				geometry : original,
+				position : in_piece.position.clone(),
+				quaternion : in_piece.quaternion.clone()
+			});
+			in_piece.geometry = geometry;
+			in_piece.position.set(0, 0, 0);
+			in_piece.quaternion.identity();
+			in_piece.updateMorphTargets();
+			in_piece.morphTargetInfluences[0] = 0;
+		});
+	}
+	#makeTorusProgress(in_toOverview, in_duration, in_ending_callback) {
+		const action = in_toOverview ? 'toPlaneView' : 'toTorusView';
+		if (in_toOverview) {
+			this.#setupCylinderMorph();
+			this.uiDisable();
+		} else {
+			this.children.forEach(in_piece => {
+				const data = this.restore.get(in_piece);
+				in_piece.geometry = data.morphGeometry;
+				in_piece.position.set(0, 0, 0);
+				in_piece.quaternion.identity();
+				in_piece.updateMorphTargets();
+				in_piece.morphTargetInfluences[0] = 1;
+			});
+		}
+		this.#transition(action);
+		const ease = new cEase(0, 1, in_duration);
+		let completed = false;
+		return () => {
+			if (completed) {
+				return;
+			}
+			const amount = ease.currentEasingOut();
+			const ratio = in_toOverview ? amount : 1 - amount;
+			this.children.forEach(in_piece => {
+				in_piece.morphTargetInfluences[0] = ratio;
+			});
+			if (amount === 1) {
+				completed = true;
+				this.#transition(action);
+				if (in_toOverview) {
+					this.children.forEach((in_piece, in_ix) => {
+						const data = this.restore.get(in_piece);
+						const target = this.cylinder.pieces[in_ix];
+						data.morphGeometry = in_piece.geometry;
+						in_piece.geometry = target.geometry;
+						in_piece.position.copy(target.position);
+						in_piece.quaternion.copy(target.quaternion);
+						in_piece.updateMatrixWorld(true);
+					});
+				} else {
+					this.children.forEach(in_piece => {
+						const data = this.restore.get(in_piece);
+						in_piece.geometry.dispose();
+						in_piece.geometry = data.geometry;
+						in_piece.position.copy(data.position);
+						in_piece.quaternion.copy(data.quaternion);
+						in_piece.updateMatrixWorld(true);
+					});
+					delete this.restore;
+					delete this.cylinder;
+					this.uiEnable();
+				}
+				(in_ending_callback)();
+			}
+		};
+	}
+	#makePlaneProgress(in_toOverview, in_duration, in_ending_callback) {
+		const action = in_toOverview ? 'toPlaneView' : 'toTorusView';
+		const init = {
+			amount : 0,
+			position : new Map(),
+			quaternion : new Map()
+		};
+		const last = {
+			amount : 1,
+			position : new Map(),
+			quaternion : new Map()
+		};
+		this.children.forEach(in_child => {
+			init.position.set(in_child, in_child.position.clone());
+			init.quaternion.set(in_child, in_child.quaternion.clone());
+		});
+		let endingProcess;
+		if (in_toOverview) {
+			this.#transition(action);
+			const st = this.cylinder.structure;
+			this.children.forEach((in_child, in_ix) => {
+				const row = Math.floor(in_ix / st.cols);
+				const col = in_ix % st.cols;
+				last.position.set(in_child, st.locationToOverviewPosition(row, col));
+				last.quaternion.set(in_child, new THREE.Quaternion().setFromAxisAngle(AXES.y, Math.PI));
+			});
+			endingProcess = () => {
+				this.cache = init;
+				this.#transition(action);
+			};
+		} else {
+			this.#transition(action);
+			this.children.forEach(in_child => {
+				last.position.set(in_child, this.cache.position.get(in_child));
+				last.quaternion.set(in_child, this.cache.quaternion.get(in_child));
+			});
+			endingProcess = () => {
+				delete this.cache;
+				this.#transition(action);
+			};
+		}
+		const ease = new cEase(init.amount, last.amount, in_duration);
+		let completed = false;
+		return () => {
+			if (completed) {
+				return;
+			}
+			const amount = ease.currentEasingOut();
+			this.children.forEach(in_child => {
+				const p0 = init.position.get(in_child);
+				const q0 = init.quaternion.get(in_child);
+				const p1 = last.position.get(in_child);
+				const q1 = last.quaternion.get(in_child);
+				in_child.position.copy(p0).lerp(p1, amount);
+				in_child.quaternion.copy(q0).slerp(q1, amount);
+				in_child.updateMatrixWorld(true);
+			});
+			if (amount === last.amount) {
+				completed = true;
+				(endingProcess)();
+				(in_ending_callback)();
+			}
+		};
+	}
+	makeSwitchViewProgress(in_toOverview, in_duration, in_ending_callback) {
+		let func1st, func2nd;
+		if (in_toOverview) {
+			if (this.isTorusView) {
+				func1st = this.#makeTorusProgress;
+				func2nd = this.#makePlaneProgress;
+			} else {
+				return;
+			}
+		} else {
+			if (this.isPlaneView) {
+				func1st = this.#makePlaneProgress;
+				func2nd = this.#makeTorusProgress;
+			} else {
+				return;
+			}
+		}
+		let transforming = true;
+		let progress = func1st.call(this, in_toOverview, in_duration, () => {
+			progress = func2nd.call(this, in_toOverview, in_duration, () => transforming = false);
+		});
+		return () => {
+			if (transforming) {
+				(progress)();
+			} else {
+				(in_ending_callback)();
+			}
+		};
+	}
+}
+
+class cBoardBehavior {
+	#colony;
+	#pieceToColor;
+	constructor(in_colony, in_pieceToColor) {
+		this.#colony = in_colony;
+		this.#pieceToColor = in_pieceToColor;
+	}
+	getColorTable() {
+		const table = [];
+		const st = this.#colony.currPiecesCache.structure;
+		for (let row = 0; row < st.rows; row++) {
+			table[row] = [];
+			for (let col = 0; col < st.cols; col++) {
+				const piece = this.#colony.locationToPiece(row, col);
+				table[row].push(this.#pieceToColor(piece));
+			}
+		}
+		return table;
+	}
+	changedPieces(in_table) {
+		const changedArr = [];
+		for (let row = 0; row < in_table.length; row++) {
+			for (let col = 0; col < in_table[row].length; col++) {
+				const piece = this.#colony.locationToPiece(row, col);
+				const currColor = this.#pieceToColor(piece);
+				const nextColor = in_table[row][col];
+				if (currColor !== nextColor) {
+					changedArr.push({
+						piece : piece,
+						curr : currColor,
+						next : nextColor
+					});
+				}
+			}
+		}
+		return changedArr;
+	}
+}
+
+class cPuzzleBehavior {
+	#colony;
+	#pieceToColor;
+	constructor(in_colony, in_pieceToColor) {
+		this.#colony = in_colony;
+		this.#pieceToColor = in_pieceToColor;
+	}
+	isComplete() {
+		const evaluators = [
+			in_piece => this.#colony.pieceToLocation(in_piece).row,
+			in_piece => this.#colony.pieceToLocation(in_piece).col
+		];
+		const results = [];
+		evaluators.forEach(in_evaluator => {
+			const arr = [...new Set(this.#colony.children.map(in_evaluator))].sort((a, b) => a - b);
+			// for all variations
+			results.push(arr.every(in_e => {
+				let firstColor;
+				// for all pieces
+				return this.#colony.children.every(in_child => {
+					const currentColor = this.#pieceToColor(in_child);
+					if (in_e === in_evaluator(in_child)) { 
+						if (typeof firstColor === 'undefined') {
+							firstColor = currentColor;
+						} else {
+							if (firstColor === currentColor) {
+								return true;
+							} else {
+								return false;
+							}
+						}
+					}
+					return true;
+				});
+			}));
+		});
+		return results.some(in_result => in_result);
+	}
+	initialize() {
+		const cache = this.#colony.currPiecesCache;
+		if (!cache.initialized) {
+			cache.completeCallback = null;
+			cache.operationCount = 0;
+			cache.shuffled = false;
+			cache.lastRandomMoveType = null;
+			cache.initialized = true;
+		}
+	}
+	registerCompleteCallback(in_callback) {
+		this.#colony.currPiecesCache.completeCallback = in_callback;
+	}
+	removeCompleteCallback() {
+		this.#colony.currPiecesCache.completeCallback = null;
+	}
+	getScore() {
+		const max = 100;
+		return Math.max(Math.ceil((max - this.#colony.currPiecesCache.operationCount) / 10) * 10, 0);
+	}
+	onRelease(in_ending_callback, in_changed) {
+		const cache = this.#colony.currPiecesCache;
+		(in_ending_callback)(in_changed);
+		if (cache.shuffled) {
+			cache.operationCount++;
+			if (cache.completeCallback && this.isComplete()) {
+				(cache.completeCallback)(cache.operationCount);
+			}
+		}
+	}
+	makeRandomAnimationProgress(in_callback) {
+		const cache = this.#colony.currPiecesCache;
+		let moveType;
+		if (cache.lastRandomMoveType === cColony.moveTypes.FIXED_COL) {
+			moveType = cColony.moveTypes.FIXED_ROW;
+		} else {
+			moveType = cColony.moveTypes.FIXED_COL;
+		}
+		const {pieces, amount} = this.#colony.randomMoveTarget(moveType);
+		const group = this.#colony.setupAnimationGroup(pieces);
+		cache.lastRandomMoveType = moveType;
+		cache.shuffled = true;
+		return this.#colony.makeAnimationProgress(group, moveType, 0, amount, in_callback);
+	}
+}
+
+function delegate(in_self, in_class, in_pieceToColor) {
+	const delegateObject = new in_class(in_self, in_pieceToColor);
+	const propArr = Object.getOwnPropertyNames(in_class.prototype);
+	const delegateArr = propArr.filter(in_name => {
+		if (in_name === 'constructor') {
+			return false;
+		} else {
+			return (typeof in_class.prototype[in_name] === 'function');
+		}
+	});
+	delegateArr.forEach(in_method => {
+		if (in_method in in_self) {
+			throw new Error('delegate method collision : ' + in_method);
+		}
+		in_self[in_method] = (...in_args) => delegateObject[in_method](...in_args);
+	});
+}
+
+export class cCylinderColonyBoard extends cCylinderColony {
+	constructor(in_pieceToColor) {
+		super();
+		delegate(this, cBoardBehavior, in_pieceToColor);
+	}
+	slidableDistance(in_piece, in_sign) {
+		// can not slide in cCylinderColonyBoard
+		return 0;
+	}
+}
+
+export class cCylinderColonyPuzzle extends cCylinderColony {
+	constructor(in_pieceToColor) {
+		super();
+		delegate(this, cPuzzleBehavior, in_pieceToColor);
+	}
+	setupPieces(in_pieces, in_structure) {
+		super.setupPieces(in_pieces, in_structure);
+		this.initialize();
+	}
+	uiRelease(in_ending_callback) {
+		return super.uiRelease(in_changed => this.onRelease(in_ending_callback, in_changed));
+	}
+}
+
+export class cTorusColonyBoard extends cTorusColony {
+	constructor(in_pieceToColor) {
+		super();
+		delegate(this, cBoardBehavior, in_pieceToColor);
+	}
+}
+
+export class cTorusColonyPuzzle extends cTorusColony {
+	constructor(in_pieceToColor) {
+		super();
+		delegate(this, cPuzzleBehavior, in_pieceToColor);
+	}
+	setupPieces(in_pieces, in_structure) {
+		super.setupPieces(in_pieces, in_structure);
+		this.initialize();
+	}
+	uiRelease(in_ending_callback) {
+		return super.uiRelease(in_changed => this.onRelease(in_ending_callback, in_changed));
 	}
 }
 

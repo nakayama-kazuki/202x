@@ -85,13 +85,13 @@ import {
 	angleSharedHexmapFactory,
 	angleSharedSquareFactory,
 	updateChamferedGeometry,
-	cColony
+	cCylinderColonyBoard,
+	cCylinderColonyPuzzle,
+	cTorusColonyBoard,
+	cTorusColonyPuzzle,
+	hexColMargin
 } from 'side6';
 import * as SOUND from 'sound';
-
-/*
-	the cColony class related functions provide the ability to create cylinder-shaped threejs objects.
-*/
 
 const textureFactory = factoryBuilder((in_w, in_h) => {
 	const gradation = 4
@@ -261,141 +261,14 @@ const gMeshLevelMap = ((in_diameter) => {
 })(COLONY_SIZE);
 
 /*
-	the cPuzzle is designed to check if the puzzle is complete,
-	meaning it returns to its starting configuration after shuffling.
-*/
-
-class cColonyPuzzle extends cColony {
-	setupPieces(in_pieces, in_structure) {
-		super.setupPieces(in_pieces, in_structure);
-		if (!this.currPiecesCache.initialized) {
-			this.currPiecesCache.completeCallback = null;
-			this.currPiecesCache.operationCount = 0;
-			this.currPiecesCache.shuffled = false;
-			this.currPiecesCache.initialized = true;
-		}
-	}
-	registerCompleteCallback(in_callback) {
-		this.currPiecesCache.completeCallback = in_callback;
-	}
-	removeCompleteCallback() {
-		this.currPiecesCache.completeCallback = null;
-	}
-	getScore() {
-		const max = 100;
-		return Math.max(Math.ceil((max - this.currPiecesCache.operationCount) / 10) * 10, 0);
-	}
-	#isComplete() {
-		const evaluators = [
-			// the same color appears at the same angle
-			in_obj => Math.atan2(in_obj.position.z, in_obj.position.y),
-			// the same color appears at the same position-x
-			in_obj => in_obj.position.x
-		];
-		const results = [];
-		evaluators.forEach(in_evaluator => {
-			const arr = this.approximateChildren(in_evaluator);
-			// for all variations
-			results.push(arr.every(in_e => {
-				let firstColor;
-				// for all pieces
-				return this.children.every(in_child => {
-					const currentColor = getShellColor(in_child);
-					if (Math.abs(in_e - in_evaluator(in_child)) < cColony.error) {
-						if (typeof firstColor === 'undefined') {
-							firstColor = currentColor;
-						} else {
-							if (firstColor === currentColor) {
-								return true;
-							} else {
-								return false;
-							}
-						}
-					}
-					return true;
-				});
-			}));
-		});
-		return results.some(in_result => in_result);
-	}
-	static #oneByOne = Symbol();
-	move(in_group, in_moveType, in_amount) {
-		switch (in_moveType) {
-		case cColony.moveTypes.CYLINDER_ROTATE :
-			in_group.rotation.x = in_amount;
-			break;
-		case cColony.moveTypes.CYLINDER_SLIDE :
-			in_group.position.x = in_amount;
-			break;
-		default :
-			throw new Error('unsupported moveType');
-		}
-	}
-	makeRandomAnimationProgress(in_callback) {
-		let moveType, pieces, last;
-		let maxLoopCount = 100;
-		if (!this.hasOwnProperty(cColonyPuzzle.#oneByOne)) {
-			// to repeatedly rotate and slide one by one
-			this[cColonyPuzzle.#oneByOne] = true;
-		}
-		while (true) {
-			if (--maxLoopCount === 0) {
-				throw new Error('maxLoopCount');
-			}
-			const _piece = (this.children)[arrRand]();
-			if (this[cColonyPuzzle.#oneByOne]) {
-				moveType = cColony.moveTypes.CYLINDER_SLIDE;
-				let _amount = 0;
-				pieces = this.affectedSlidePieces(_piece, +1);
-				_amount = this.slidableDistance(pieces[pieces.length - 1], +1);
-				if (_amount !== 0) {
-					last = _amount;
-					break;
-				}
-				pieces = this.affectedSlidePieces(_piece, -1);
-				_amount = this.slidableDistance(pieces[pieces.length - 1], -1);
-				if (_amount !== 0) {
-					last = _amount;
-					break;
-				}
-			} else {
-				moveType = cColony.moveTypes.CYLINDER_ROTATE;
-				pieces = this.affectedFixedColPieces(_piece);
-				if (pieces.length < this.children.length) {
-					last = this.currPiecesCache.structure.rowsAngle * [1, 2, 3][arrRand]();
-					break;
-				}
-			}
-		}
-		this[cColonyPuzzle.#oneByOne] = !this[cColonyPuzzle.#oneByOne];
-		const group = this.setupAnimationGroup(pieces);
-		// calling this method means shuffling
-		this.currPiecesCache.shuffled = true;
-		return this.makeAnimationProgress(group, moveType, 0, last, in_callback);
-	}
-	uiRelease(in_ending_callback) {
-		const callback = () => {
-			(in_ending_callback)();
-			if (this.currPiecesCache.shuffled) {
-				this.currPiecesCache.operationCount++;
-				if (this.currPiecesCache.completeCallback && this.#isComplete()) {
-					(this.currPiecesCache.completeCallback)(this.currPiecesCache.operationCount);
-				}
-			}
-		};
-		return super.uiRelease(callback);
-	}
-}
-
-/*
 	gWorld (cSphericalWorld)
 		|
-		+-- gColony (cColonyPuzzle)
+		+-- gColony (cCylinderColonyPuzzle)
 			|
 			+-- gColony.children <--- gMeshLevelMap
 */
 
-const gColony = new cColonyPuzzle();
+const gColony = new cCylinderColonyPuzzle(getShellColor);
 
 const WORLD_RADIUS = COLONY_SIZE * 10;
 const WORLD_INIT_ZOOM = WORLD_RADIUS / 2;
@@ -521,7 +394,6 @@ const ID_NEXT_LEVEL = randomString();
 async function updateLevel() {
 	const color = 0x000000;
 	await gWorld.motionFog(color, 0, 100);
-	gColony.removePieces();
 	const current = gMeshLevelMap.currItemByOrder();
 	gColony.setupPieces(current.v.pieces, current.v.structure);
 	await gWorld.motionFog(color, 100, 0);
@@ -825,17 +697,17 @@ const knock = nonReentrantAsync(async () => {
 });
 
 const notifyDelta = (() => {
-	const RC = cColony.uiSetDeltaPositionRC;
+	const RC = cCylinderColonyPuzzle.uiSetDeltaPositionRC;
 	return in_ndc => {
 		const intersects = gWorld.intersectPositive(in_ndc);
 		if (intersects.length === 0) {
 			return;
 		}
-		const rotatable = {
+		const movable = {
 			fixedCol : true,
-			fixedRow : false
+			fixedRow : true
 		};
-		const result = gColony.uiNotifyDeltaPosition(intersects[0].object, intersects[0].point, ndcToAbs(in_ndc), rotatable);
+		const result = gColony.uiNotifyDeltaPosition(intersects[0].object, intersects[0].point, ndcToAbs(in_ndc), movable);
 		if (result === RC.UNMOVABLE) {
 			knock();
 		}

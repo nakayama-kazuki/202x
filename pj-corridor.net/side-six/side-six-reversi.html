@@ -88,15 +88,14 @@ import {
 	angleSharedHexmapFactory,
 	angleSharedSquareFactory,
 	updateChamferedGeometry,
-	cColony,
+	cCylinderColonyBoard,
+	cCylinderColonyPuzzle,
+	cTorusColonyBoard,
+	cTorusColonyPuzzle,
 	hexColMargin
 } from 'side6';
 import {FIGURES} from 's6res';
 import * as SOUND from 'sound';
-
-/*
-	the cColony class related functions provide the ability to create cylinder-shaped threejs objects.
-*/
 
 function drawCross(in_ctx, in_length, in_width, in_color, in_angle) {
 	const drawLine = () => {
@@ -898,188 +897,9 @@ const gCyclicLevels = ((in_diameter) => {
 })(COLONY_SIZE);
 
 /*
-	the cColonyBoard represents a game-specific board.
-*/
-
-class cColonyBoard extends cColony {
-	getColorTable() {
-		const table = [];
-		const st = this.currPiecesCache.structure;
-		for (let row = 0; row < st.rows; row++) {
-			table[row] = [];
-			for (let col = 0; col < st.cols; col++) {
-				const piece = this.locationToPiece(row, col);
-				table[row].push(getShellColor(piece));
-			}
-		}
-		return table;
-	}
-	changedPieces(in_table) {
-		const changedArr = [];
-		for (let row = 0; row < in_table.length; row++) {
-			for (let col = 0; col < in_table[row].length; col++) {
-				const piece = this.locationToPiece(row, col);
-				const currColor = getShellColor(piece);
-				const nextColor = in_table[row][col];
-				if (currColor !== nextColor) {
-					changedArr.push({
-						piece : piece,
-						curr : currColor,
-						next : nextColor
-					});
-				}
-			}
-		}
-		return changedArr;
-	}
-	slidableDistance(in_piece, in_sign) {
-		// can not slide in cColonyBoard
-		return 0;
-	}
-	bobRotation = false;
-	move(in_group, in_moveType, in_amount) {
-		switch (in_moveType) {
-		case cColony.moveTypes.CYLINDER_ROTATE :
-			in_group.rotation.x = in_amount;
-			if (this.bobRotation) {
-				const max = 1.2;
-				const st = this.currPiecesCache.structure;
-				const scalar = (createPeriodicCos(st.rowsAngle, 1, max, true))(in_amount);
-				in_group.children.forEach(in_child => {
-					const basePos = in_child.userData.tmpCache.position;
-					in_child.position.copy(basePos.clone().multiplyScalar(scalar));
-					in_child.position.x = basePos.x;
-				});
-			}
-			break;
-		case cColony.moveTypes.CYLINDER_SLIDE :
-			in_group.position.x = in_amount;
-			break;
-		default :
-			throw new Error('unsupported moveType');
-		}
-	}
-	makeRotateProgress(in_col, in_delta, in_ending_callback) {
-		this.uiDisable();
-		const last = this.currPiecesCache.structure.rowsAngle * in_delta;
-		const pieces = this.children.filter(in_child => this.pieceToLocation(in_child).col === in_col);
-		const group = this.setupAnimationGroup(pieces);
-		return this.makeAnimationProgress(group, cColony.axes.x, 0, last, in_ratio => {
-			if (in_ratio < 1) {
-				return;
-			}
-			this.uiEnable();
-			(in_ending_callback)();
-		});
-	}
-	static #views  = {
-		COLONYVIEW : Symbol(),
-		TRNSFORMING : Symbol(),
-		OVERVIEW : Symbol()
-	};
-	static #viewTransitions = {
-		[cColonyBoard.#views.COLONYVIEW] : {
-			toOverview : cColonyBoard.#views.TRNSFORMING
-		},
-		[cColonyBoard.#views.TRNSFORMING] : {
-			toColonyView : cColonyBoard.#views.COLONYVIEW,
-			toOverview : cColonyBoard.#views.OVERVIEW
-		},
-		[cColonyBoard.#views.OVERVIEW] : {
-			toColonyView : cColonyBoard.#views.TRNSFORMING
-		}
-	};
-	#state = cColonyBoard.#views.COLONYVIEW;
-	#transition(in_action) {
-		const state = cColonyBoard.#viewTransitions[this.#state][in_action];
-		if (state) {
-			this.#state = state;
-		} else {
-			throw new Error('invalid transition : ' + in_action);
-		}
-	}
-	get isColonyView() {
-		return (this.#state === cColonyBoard.#views.COLONYVIEW);
-	}
-	get isOverview() {
-		return (this.#state === cColonyBoard.#views.OVERVIEW);
-	}
-	makeSwitchViewProgress(in_c_to_o, in_duration, in_ending_callback) {
-		const init = {
-			amount : 0,
-			position : new Map(),
-			quaternion : new Map()
-		};
-		const last = {
-			amount : 1,
-			position : new Map(),
-			quaternion : new Map()
-		};
-		this.children.forEach(in_child => {
-			init.position.set(in_child, in_child.position.clone());
-			init.quaternion.set(in_child, in_child.quaternion.clone());
-		});
-		let endingProcess;
-		if (in_c_to_o) {
-			if (this.isColonyView) {
-				this.uiDisable();
-				this.#transition('toOverview');
-				const st = this.currPiecesCache.structure;
-				this.children.forEach(in_child => {
-					const {row, col} = this.pieceToLocation(in_child);
-					last.position.set(in_child, st.locationToOverviewPosition(row, col));
-					last.quaternion.set(in_child, new THREE.Quaternion());
-				});
-				endingProcess = () => {
-					this.cache = init;
-					this.#transition('toOverview');
-				}
-			} else {
-				// do nothing
-				return;
-			}
-		} else {
-			if (this.isOverview) {
-				this.#transition('toColonyView');
-				this.children.forEach(in_child => {
-					last.position.set(in_child, this.cache.position.get(in_child));
-					last.quaternion.set(in_child, this.cache.quaternion.get(in_child));
-				});
-				endingProcess = () => {
-					delete this.cache;
-					this.uiEnable();
-					this.#transition('toColonyView');
-				};
-			} else {
-				// do nothing
-				return;
-			}
-		}
-		const ease = new cEase(init.amount, last.amount, in_duration);
-		const progress = () => {
-			const amount = ease.currentEasingOut();
-			this.children.forEach(in_child => {
-				const p0 = init.position.get(in_child);
-				const q0 = init.quaternion.get(in_child);
-				const p1 = last.position.get(in_child);
-				const q1 = last.quaternion.get(in_child);
-				in_child.position.copy(p0).lerp(p1, amount);
-				in_child.quaternion.copy(q0).slerp(q1, amount);
-				in_child.updateMatrixWorld(true);
-			});
-			if (amount === last.amount) {
-				(endingProcess)();
-				(in_ending_callback)();
-			}
-		}
-		return progress;
-	}
-}
-
-/*
 	gWorld (cSphericalWorld)
 		|
-		+-- gColony (cColonyBoard)
+		+-- gColony (cCylinderColonyBoard)
 			|
 			+-- gColony.children <--- gCyclicLevels[n].pieces
 
@@ -1092,7 +912,7 @@ class cColonyBoard extends cColony {
 		+-- gWorld : used for animation
 */
 
-const gColony = new cColonyBoard();
+const gColony = new cCylinderColonyBoard(getShellColor);
 
 const WORLD_RADIUS = COLONY_SIZE * 10;
 const WORLD_INIT_ZOOM = WORLD_RADIUS / 2;
@@ -1112,7 +932,7 @@ class cGameController {
 	#curIndex = 0;
 	#pcColor;
 	enableHandler = false;
-	// cGameController knows the internal structure of cColonyBoard, cReversi and cSphericalWorld
+	// cGameController knows the internal structure of cCylinderColonyBoard, cReversi and cSphericalWorld
 	constructor(in_colorArr, in_pcColor) {
 		this.#pcColor = in_pcColor;
 		this.#mapping = new Array(10).fill(cGameController.#UNUSED);
@@ -1178,7 +998,7 @@ class cGameController {
 		});
 	}
 	static #updateDynamic(in_changedArr, in_world) {
-		// in_changedArr : see cColonyBoard.changedPieces()
+		// in_changedArr : see cBoardBehavior.changedPieces()
 		in_changedArr.forEach(in_changed => {
 			// backup initial value
 			in_changed.initRotationX = in_changed.piece.rotation.x;
@@ -1255,10 +1075,15 @@ class cGameController {
 			console.log('rotating', last);
 			await (async ()=> {
 				return new Promise(in_resolve => {
-					const hook = in_colony.makeRotateProgress(last.col, last.delta, () => {
-						in_world.removeAnimationHook(hook);
-						(in_resolve)();
-					});
+					const hook = in_colony.makeRotateProgress(
+						cCylinderColonyBoard.moveTypes.FIXED_COL,
+						last.col,
+						last.delta,
+						() => {
+							in_world.removeAnimationHook(hook);
+							(in_resolve)();
+						}
+					);
 					in_world.addAnimationHook(hook);
 				});
 			})();
@@ -1598,11 +1423,6 @@ async function updateLevel(in_curr) {
 	const color = 0x000000;
 	await gWorld.motionFog(color, 0, 100);
 	gColony.setupPieces(in_curr.pieces, in_curr.structure);
-	if (in_curr.format === 'hexFlatTopped') {
-		gColony.bobRotation = true;
-	} else {
-		gColony.bobRotation = false;
-	}
 	await gWorld.motionFog(color, 100, 0);
 	const prev = gCyclicLevels.prevValue();
 	const next = gCyclicLevels.nextValue();
@@ -1943,17 +1763,17 @@ const knock = nonReentrantAsync(async () => {
 });
 
 const notifyDelta = (() => {
-	const RC = cColony.uiSetDeltaPositionRC;
+	const RC = cCylinderColonyBoard.uiSetDeltaPositionRC; 
 	return in_ndc => {
 		const intersects = gWorld.intersectPositive(in_ndc);
 		if (intersects.length === 0) {
 			return;
 		}
-		const rotatable = {
+		const movable = {
 			fixedCol : gReversi.rotatableFixedCol(),
-			fixedRow : gReversi.rotatableFixedRow()
+			fixedRow : false
 		};
-		const result = gColony.uiNotifyDeltaPosition(intersects[0].object, intersects[0].point, ndcToAbs(in_ndc), rotatable);
+		const result = gColony.uiNotifyDeltaPosition(intersects[0].object, intersects[0].point, ndcToAbs(in_ndc), movable);
 		if (result === RC.UNMOVABLE) {
 			knock();
 		}
