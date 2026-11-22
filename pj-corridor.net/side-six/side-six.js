@@ -900,8 +900,8 @@ class cCylinderColony extends cColony {
 	*/
 	#bobRotation = {};
 	setupPieces(in_pieces, in_structure) {
-		if (!this.isColonyView) {
-			throw new Error('setupPieces requires COLONYVIEW');
+		if (!this.#isCylinderView) {
+			throw new Error('setupPieces requires CYLINDERVIEW');
 		}
 		super.setupPieces(in_pieces, in_structure);
 		const cornerCnt = in_pieces[0].geometry.userData.cornerCnt;
@@ -1080,23 +1080,23 @@ class cCylinderColony extends cColony {
 		}
 	}
 	static #views  = {
-		COLONYVIEW : Symbol(),
+		CYLINDERVIEW : Symbol(),
 		TRNSFORMING : Symbol(),
-		OVERVIEW : Symbol()
+		PLANEVIEW : Symbol()
 	};
 	static #viewTransitions = {
-		[cCylinderColony.#views.COLONYVIEW] : {
+		[cCylinderColony.#views.CYLINDERVIEW] : {
 			toOverview : cCylinderColony.#views.TRNSFORMING
 		},
 		[cCylinderColony.#views.TRNSFORMING] : {
-			toColonyView : cCylinderColony.#views.COLONYVIEW,
-			toOverview : cCylinderColony.#views.OVERVIEW
+			toColonyView : cCylinderColony.#views.CYLINDERVIEW,
+			toOverview : cCylinderColony.#views.PLANEVIEW
 		},
-		[cCylinderColony.#views.OVERVIEW] : {
+		[cCylinderColony.#views.PLANEVIEW] : {
 			toColonyView : cCylinderColony.#views.TRNSFORMING
 		}
 	};
-	#state = cCylinderColony.#views.COLONYVIEW;
+	#state = cCylinderColony.#views.CYLINDERVIEW;
 	#transition(in_action) {
 		const state = cCylinderColony.#viewTransitions[this.#state][in_action];
 		if (state) {
@@ -1105,11 +1105,14 @@ class cCylinderColony extends cColony {
 			throw new Error('invalid transition : ' + in_action);
 		}
 	}
-	get isColonyView() {
-		return (this.#state === cCylinderColony.#views.COLONYVIEW);
+	get isOperatable() {
+		return this.#isCylinderView;
 	}
-	get isOverview() {
-		return (this.#state === cCylinderColony.#views.OVERVIEW);
+	get #isCylinderView() {
+		return (this.#state === cCylinderColony.#views.CYLINDERVIEW);
+	}
+	get #isPlaneView() {
+		return (this.#state === cCylinderColony.#views.PLANEVIEW);
 	}
 	makeSwitchViewProgress(in_c_to_o, in_duration, in_ending_callback) {
 		const init = {
@@ -1128,7 +1131,7 @@ class cCylinderColony extends cColony {
 		});
 		let endingProcess;
 		if (in_c_to_o) {
-			if (this.isColonyView) {
+			if (this.#isCylinderView) {
 				this.uiDisable();
 				this.#transition('toOverview');
 				const st = this.currPiecesCache.structure;
@@ -1146,7 +1149,7 @@ class cCylinderColony extends cColony {
 				return;
 			}
 		} else {
-			if (this.isOverview) {
+			if (this.#isPlaneView) {
 				this.#transition('toColonyView');
 				this.children.forEach(in_child => {
 					last.position.set(in_child, this.cache.position.get(in_child));
@@ -1204,7 +1207,7 @@ class cTorusColony extends cColony {
 	*/
 	#bobRotation = {};
 	setupPieces(in_pieces, in_structure) {
-		if (!this.isTorusView) {
+		if (!this.#isTorusView) {
 			throw new Error('setupPieces requires TORUSVIEW');
 		}
 		super.setupPieces(in_pieces, in_structure);
@@ -1438,10 +1441,13 @@ class cTorusColony extends cColony {
 			throw new Error('invalid transition : ' + in_action);
 		}
 	}
-	get isTorusView() {
+	get isOperatable() {
+		return this.#isTorusView;
+	}
+	get #isTorusView() {
 		return (this.#state === cTorusColony.#views.TORUSVIEW);
 	}
-	get isPlaneView() {
+	get #isPlaneView() {
 		return (this.#state === cTorusColony.#views.PLANEVIEW);
 	}
 	#createCylinderPieces() {
@@ -1641,14 +1647,14 @@ class cTorusColony extends cColony {
 	makeSwitchViewProgress(in_toOverview, in_duration, in_ending_callback) {
 		let func1st, func2nd;
 		if (in_toOverview) {
-			if (this.isTorusView) {
+			if (this.#isTorusView) {
 				func1st = this.#makeTorusProgress;
 				func2nd = this.#makePlaneProgress;
 			} else {
 				return;
 			}
 		} else {
-			if (this.isPlaneView) {
+			if (this.#isPlaneView) {
 				func1st = this.#makePlaneProgress;
 				func2nd = this.#makeTorusProgress;
 			} else {

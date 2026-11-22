@@ -10,8 +10,8 @@
 		"three" : "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.min.js",
 		"utils" : "https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/utils/BufferGeometryUtils.js",
 		"basic" : "./basic-functions.js",
-		"rever" : "./reversi.js",
 		"side6" : "./side-six.js",
+		"rever" : "./reversi.js",
 		"s6res" : "./side-six-reversi-res.js",
 		"sound" : "./sound-effect.js"
 	}
@@ -78,7 +78,6 @@ import {
 	customCapsuleGeometry,
 	cSphericalWorld
 } from 'basic';
-import {cReversi} from 'rever';
 import {
 	cCylinderStructure,
 	cTorusStructure,
@@ -94,6 +93,7 @@ import {
 	cTorusColonyPuzzle,
 	hexColMargin
 } from 'side6';
+import {cReversi} from 'rever';
 import {FIGURES} from 's6res';
 import * as SOUND from 'sound';
 
@@ -545,7 +545,7 @@ const gCyclicLevels = ((in_diameter) => {
 /*
 	gWorld (cSphericalWorld)
 		|
-		+-- gColony (cTorusColonyBoard)
+		+-- gColony (cXxxxxColonyBoard)
 			|
 			+-- gColony.children <--- gCyclicLevels[n].pieces
 
@@ -558,7 +558,8 @@ const gCyclicLevels = ((in_diameter) => {
 		+-- gWorld : used for animation
 */
 
-const gColony = new cTorusColonyBoard(getShellColor);
+const gColonyClass = cTorusColonyBoard;
+const gColony = new gColonyClass(getShellColor);
 
 const WORLD_RADIUS = COLONY_SIZE * 10;
 const WORLD_INIT_ZOOM = WORLD_RADIUS / 2;
@@ -578,7 +579,7 @@ class cGameController {
 	#curIndex = 0;
 	#pcColor;
 	enableHandler = false;
-	// cGameController knows the internal structure of cTorusColonyBoard, cReversi and cSphericalWorld
+	// cGameController knows the internal structure of cXxxxxColonyBoard, cReversi and cSphericalWorld
 	constructor(in_colorArr, in_pcColor) {
 		this.#pcColor = in_pcColor;
 		this.#mapping = new Array(10).fill(cGameController.#UNUSED);
@@ -722,7 +723,7 @@ class cGameController {
 			await (async ()=> {
 				return new Promise(in_resolve => {
 					const hook = in_colony.makeRotateProgress(
-						cTorusColonyBoard.moveTypes.FIXED_COL,
+						gColonyClass.moveTypes.FIXED_COL,
 						last.col,
 						last.delta,
 						() => {
@@ -1136,6 +1137,10 @@ SOUND.ERROR.then(in_decompress => {
 	SE_ERROR = new Audio('data:audio/mpeg;base64,' + in_decompress);
 });
 
+function uiIsOperatable() {
+	return gColony.isOperatable && gController?.enableHandler;
+}
+
 async function uiUndo() {
 	if (await gController.pcUndo(gReversi, gColony, gWorld)) {
 		updateChart();
@@ -1146,7 +1151,7 @@ async function uiUndo() {
 }
 
 function uiOverview() {
-	if (!gColony.isTorusView || !gController?.enableHandler) {
+	if (!uiIsOperatable()) {
 		return;
 	}
 	const duration = {
@@ -1445,7 +1450,7 @@ const knock = nonReentrantAsync(async () => {
 });
 
 const notifyDelta = (() => {
-	const RC = cTorusColonyBoard.uiSetDeltaPositionRC;
+	const RC = gColonyClass.uiSetDeltaPositionRC;
 	return in_ndc => {
 		const intersects = gWorld.intersectPositive(in_ndc);
 		if (intersects.length === 0) {
@@ -1624,7 +1629,7 @@ async function chooseHere(in_ev) {
 	};
 	for (let [eventName, handler] of Object.entries(handlers)) {
 		gWorld.canvas.addEventListener(eventName, in_ev => {
-			if (gController?.enableHandler && gColony.isTorusView) {
+			if (uiIsOperatable()) {
 				(handler)(in_ev);
 			}
 		});

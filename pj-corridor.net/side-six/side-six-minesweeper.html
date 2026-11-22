@@ -1201,12 +1201,13 @@ const gCyclicLevels = ((in_diameter) => {
 /*
 	gWorld (cSphericalWorld)
 		|
-		+-- gColony (cCylinderColonyBoard)
+		+-- gColony (cXxxxxColonyBoard)
 			|
 			+-- gColony.children <--- gCyclicLevels[n].pieces
 */
 
-const gColony = new cCylinderColonyBoard(getShellColor);
+const gColonyClass = cCylinderColonyBoard;
+const gColony = new gColonyClass(getShellColor);
 
 const WORLD_RADIUS = COLONY_SIZE * 10;
 const WORLD_INIT_ZOOM = WORLD_RADIUS / 2;
@@ -1501,8 +1502,12 @@ SOUND.RELEASE.then(in_decompress => {
 	SE_BOMBED = new Audio('data:audio/mpeg;base64,' + in_decompress);
 });
 
+function uiIsOperatable() {
+	return gColony.isOperatable;
+}
+
 function uiOverview() {
-	if (!gColony.isColonyView) {
+	if (!uiIsOperatable()) {
 		return;
 	}
 	const duration = {
@@ -1774,7 +1779,7 @@ function effectBombed() {
 }
 
 const notifyDelta = (() => {
-	const RC = cCylinderColonyBoard.uiSetDeltaPositionRC;
+	const RC = gColonyClass.uiSetDeltaPositionRC;
 	return in_ndc => {
 		const intersects = gWorld.intersectPositive(in_ndc);
 		if (intersects.length === 0) {
@@ -2025,7 +2030,7 @@ async function chooseHere(in_ev) {
 	};
 	for (let [eventName, handler] of Object.entries(handlers)) {
 		gWorld.canvas.addEventListener(eventName, in_ev => {
-			if (gColony.isColonyView) {
+			if (uiIsOperatable()) {
 				(handler)(in_ev);
 			}
 		});
