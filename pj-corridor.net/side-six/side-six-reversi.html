@@ -886,7 +886,10 @@ const gCyclicLevels = ((in_diameter) => {
 		const dmzRow = in_level.table.some(in_row => in_row.every(in_color => in_color === D));
 		values.push({
 			name : name,
-			loop : !dmzRow,
+			loop : {
+				row : !dmzRow,
+				col : false
+			},
 			format : in_level.format,
 			structure : st,
 			colorArr : Array.from(colorSet),
@@ -1122,16 +1125,21 @@ class cGameController {
 		this.enableHandler = resume;
 		return result;
 	}
-	pcRotate(in_reversi, in_colony) {
-		const tblPrev = in_reversi.getTable();
-		const tblNext = this.convertColonyTable(in_colony);
-		// find rotated col
-		const col = tblPrev[0].findIndex((in_val, in_col) => tblPrev.some((in_arr, in_row) => in_arr[in_col] !== tblNext[in_row][in_col]));
-		const arrPrev = tblPrev.map(in_arr => in_arr[col]);
-		const arrNext = tblNext.map(in_arr => in_arr[col]);
-		// decide delta
-		const delta = (arrNext.join('') + arrNext.join('')).indexOf(arrPrev.join(''));
-		in_reversi.playRotate(this.#curIndex, 'fixed-col-rotate', col, delta);
+	pcRotate(in_reversi, in_colony, in_changed) {
+		const {row, col} = in_colony.pieceToLocation(in_changed.piece);
+		let fixedIndex;
+		switch (in_changed.type) {
+		case 'fixed-col-rotate' :
+			fixedIndex = col;
+			break;
+		case 'fixed-row-rotate' :
+			fixedIndex = row;
+			break;
+		case 'fixed-row-slide' :
+		default :
+			throw new Error('unsupported type : ' + in_changed.type);
+		}
+		in_reversi.playRotate(this.#curIndex, in_changed.type, fixedIndex, in_changed.delta);
 	}
 	async pcUndo(in_reversi, in_colony, in_world) {
 		if (!this.enableHandler) {
@@ -1328,6 +1336,10 @@ const gFigure = (() => {
 
 const PC_COLOR = BLUE;
 
+function initialRotation() {
+	// do nothing
+}
+
 function menu() {
 	const dialog = document.createElement('div');
 	Object.assign(dialog.style, {
@@ -1345,7 +1357,7 @@ function menu() {
 		dialog.innerHTML += "<div style='margin-left:1em;'>" + in_board.desc + "</div>\n";
 	});
 	dialog.innerHTML += "</ul>\n";
-	startDialog(dialog);
+	startDialog(dialog, () => initialRotation());
 }
 
 function updateChart() {
@@ -1368,8 +1380,8 @@ function updateChart() {
 function initializeByLevel() {
 	const curr = gCyclicLevels.currValue();
 	const edge = {
-		row : !(curr.loop),
-		col : true
+		row : !(curr.loop.row),
+		col : !(curr.loop.col)
 	};
 	gController = new cGameController(curr.colorArr, PC_COLOR);
 	gChart.initialize(curr.colorArr);
@@ -1406,8 +1418,11 @@ function initializeByLevel() {
 	gController.reversiToColony(gReversi, gColony);
 	gController.start();
 	if (gTypeParamIsInvalid) {
+		// delayed initialRotation
 		menu();
 		gTypeParamIsInvalid = false;
+	} else {
+		initialRotation();
 	}
 }
 
@@ -1820,9 +1835,9 @@ function resetFocus() {
 	focusHere(null);
 }
 
-function rotateDone() {
+function rotateDone(in_changed) {
 	resetFocus();
-	gController.pcRotate(gReversi, gColony);
+	gController.pcRotate(gReversi, gColony, in_changed);
 	gController.endTurn(gReversi);
 }
 
@@ -1901,7 +1916,7 @@ async function chooseHere(in_ev) {
 		const releaseProgress = gColony.uiRelease(in_changed => {
 			gWorld.removeAnimationHook(releaseProgress);
 			if (in_changed) {
-				rotateDone();
+				rotateDone(in_changed);
 			}
 		});
 		if (releaseProgress) {

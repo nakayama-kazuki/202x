@@ -1,0 +1,36 @@
+<html>
+<head>
+<!-- MIT License Copyright (c) 2024 pj-corridor.net -->
+<meta name='viewport' content='width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1' />
+<meta charset='utf-8' />
+<script type='importmap'>
+{
+	"imports" : {
+		"mine" : "./minesweeper.js"
+	}
+}
+</script>
+</head>
+<body>
+<script type='module'>
+
+import {cMinesweeper} from 'mine';
+
+const ROWS = 8;
+const COLS = 8;
+const BOMBS = 10;
+
+//const game = new cMinesweeper(ROWS, COLS, BOMBS, {edgeRow : true, edgeCol : true});
+//const game = new cMinesweeper(ROWS, COLS, BOMBS, {edgeRow : false, edgeCol : true});
+//const game = new cMinesweeper(ROWS, COLS, BOMBS, {edgeRow : true, edgeCol : false});
+const game = new cMinesweeper(ROWS, COLS, BOMBS, {edgeRow : false, edgeCol : false});
+//const game = new cMinesweeper(ROWS, COLS, BOMBS, {format : 'hexFlatTopped', offset : 0});
+//const game = new cMinesweeper(ROWS, COLS, BOMBS, {format : 'hexFlatTopped', offset : 1});
+//const game = new cMinesweeper(ROWS, COLS, BOMBS, {format : 'hexPointyTopped', offset : 0});
+//const game = new cMinesweeper(ROWS, COLS, BOMBS, {format : 'hexPointyTopped', offset : 1});
+
+game._snapshot();
+
+</script>
+</body>
+</html>

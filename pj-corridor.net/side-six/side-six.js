@@ -1003,11 +1003,11 @@ class cCylinderColony extends cColony {
 		let type, delta;
 		switch (in_ctx.moveType) {
 		case cColony.moveTypes.FIXED_COL :
-			type = 'rotate';
+			type = 'fixed-col-rotate';
 			delta = Math.round(last / notch);
 			break;
 		case cColony.moveTypes.FIXED_ROW :
-			type = 'slide';
+			type = 'fixed-row-slide';
 			delta = Math.round(last / st.colsDelta);
 			break;
 		default :
@@ -1275,8 +1275,11 @@ class cTorusColony extends cColony {
 		let type, delta;
 		switch (in_ctx.moveType) {
 		case cColony.moveTypes.FIXED_COL :
+			type = 'fixed-col-rotate';
+			delta = Math.round(last / notch);
+			break;
 		case cColony.moveTypes.FIXED_ROW :
-			type = 'rotate';
+			type = 'fixed-row-rotate';
 			delta = Math.round(last / notch);
 			break;
 		default :
