@@ -98,10 +98,10 @@ import {FIGURES} from 's6res';
 import * as SOUND from 'sound';
 
 function drawCross(in_ctx, in_length, in_width, in_color, in_angle) {
-	const drawLine = () => {
+	const drawLine = in_y => {
 		in_ctx.beginPath();
-		in_ctx.moveTo(in_length / 2 * -1, 0);
-		in_ctx.lineTo(in_length / 2 * +1, 0);
+		in_ctx.moveTo(in_length / 4 * -1, in_y);
+		in_ctx.lineTo(in_length / 4 * +1, in_y);
 		in_ctx.stroke();
 	};
 	const w = in_ctx.canvas.width / 2;
@@ -110,16 +110,13 @@ function drawCross(in_ctx, in_length, in_width, in_color, in_angle) {
 	in_ctx.lineCap = 'round';
 	in_ctx.lineWidth = in_width;
 	in_ctx.strokeStyle = in_color;
-	// 1st line
 	in_ctx.save();
 	in_ctx.translate(w, h);
 	in_ctx.rotate(in_angle);
-	drawLine();
+	// 1st line
+	drawLine(h * 0.4 * -1);
 	// 2nd line
-	in_ctx.save();
-	in_ctx.rotate(Math.PI / 2);
-	drawLine();
-	in_ctx.restore();
+	drawLine(h * 0.4 * +1);
 	in_ctx.restore();
 }
 

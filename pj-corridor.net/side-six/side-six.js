@@ -78,6 +78,15 @@ class cBaseStructure {
 		// number of columns along the shape-dependent longitudinal direction
 		this.#colsForLongitudinal = in_colsForLongitudinal;
 	}
+	locationToSequence(in_row, in_col) {
+	    return in_row * this.cols + in_col;
+	}
+	sequenceToLocation(in_sequence) {
+	    return {
+	        row : Math.floor(in_sequence / this.cols),
+	        col : in_sequence % this.cols
+	    };
+	}
 	get rows() {
 		return this.#rowsForCrossSection;
 	}
@@ -1497,8 +1506,17 @@ class cTorusColony extends cColony {
 	#setupCylinderMorph() {
 		this.cylinder = this.#createCylinderPieces();
 		this.restore = new Map();
-		this.children.forEach((in_piece, in_ix) => {
-			const targetPiece = this.cylinder.pieces[in_ix];
+		this.children.forEach(in_piece => {
+			const {row, col} = this.pieceToLocation(in_piece);
+			/*
+				Tactical rotations change the mapping between pieces and locations,
+				so use the current location instead of the children's array order.
+
+				x : const targetPiece = this.cylinder.pieces[index of this.children];
+				o : const targetPiece = this.cylinder.pieces[sequence];
+            */
+			const sequence = this.cylinder.structure.locationToSequence(row, col);
+			const targetPiece = this.cylinder.pieces[sequence];
 			const original = in_piece.geometry;
 			const geometry = original.clone();
 			const source = geometry.attributes.position;
@@ -1518,7 +1536,8 @@ class cTorusColony extends cColony {
 			this.restore.set(in_piece, {
 				geometry : original,
 				position : in_piece.position.clone(),
-				quaternion : in_piece.quaternion.clone()
+				quaternion : in_piece.quaternion.clone(),
+				targetPiece : targetPiece
 			});
 			in_piece.geometry = geometry;
 			in_piece.position.set(0, 0, 0);
@@ -1558,9 +1577,9 @@ class cTorusColony extends cColony {
 				completed = true;
 				this.#transition(action);
 				if (in_toOverview) {
-					this.children.forEach((in_piece, in_ix) => {
+					this.children.forEach(in_piece => {
 						const data = this.restore.get(in_piece);
-						const target = this.cylinder.pieces[in_ix];
+						const target = data.targetPiece;
 						data.morphGeometry = in_piece.geometry;
 						in_piece.geometry = target.geometry;
 						in_piece.position.copy(target.position);
@@ -1604,11 +1623,10 @@ class cTorusColony extends cColony {
 		if (in_toOverview) {
 			this.#transition(action);
 			const st = this.cylinder.structure;
-			this.children.forEach((in_child, in_ix) => {
-				const row = Math.floor(in_ix / st.cols);
-				const col = in_ix % st.cols;
-				last.position.set(in_child, st.locationToOverviewPosition(row, col));
-				last.quaternion.set(in_child, new THREE.Quaternion().setFromAxisAngle(AXES.y, Math.PI));
+			this.children.forEach(in_child => {
+			    const {row, col} = st.positionToLocation(in_child.position);
+			    last.position.set(in_child, st.locationToOverviewPosition(row, col));
+			    last.quaternion.set(in_child, new THREE.Quaternion().setFromAxisAngle(AXES.y, Math.PI));
 			});
 			endingProcess = () => {
 				this.cache = init;
