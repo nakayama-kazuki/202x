@@ -1150,7 +1150,7 @@ async function rotateDone(in_changed) {
 	resetFocus();
 	const {col} = gColony.pieceToLocation(in_changed.piece);
 	const rc = gMinesweeper.rotate(col, in_changed.delta);
-	if (rc === cMinesweeperModel.RC.SUCCESS) {
+	if (rc === cMinesweeper.RC.SUCCESS) {
 		await dynamicUpdate(gMinesweeper.getRiskTable(), true);
 		gScore.addScore('rotation', 1);
 	}

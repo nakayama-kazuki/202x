@@ -112,7 +112,7 @@ class cMinesweeperModel {
 	};
 	#itemArr = [];
 	#conf = null;
-	get #gemeIsOver() {
+	get #gameIsOver() {
 		return this.#itemArr.filter(in_item => in_item.opened && in_item.isBomb).length > 0;
 	}
 	constructor(in_sizeRow, in_sizeCol, in_bomb, in_options = {}) {
@@ -332,7 +332,7 @@ class cMinesweeperModel {
 		return cnt;
 	}
 	openPos(in_row, in_col) {
-		if (this.#gemeIsOver) {
+		if (this.#gameIsOver) {
 			return cMinesweeperModel.RC.CANNOT;
 		}
 		const ix = this.#posToIndex(in_row, in_col);
@@ -353,7 +353,7 @@ class cMinesweeperModel {
 		}
 	}
 	rotate(in_fixedCol, in_deltaRow)  {
-		if (this.#gemeIsOver) {
+		if (this.#gameIsOver) {
 			return cMinesweeperModel.RC.CANNOT;
 		}
 		if (this.#rotateSameColItems(in_fixedCol, in_deltaRow)) {
@@ -372,7 +372,7 @@ class cMinesweeperModel {
 	static CLOSED = Symbol();
 	static DMZ = Symbol();
 	getOverTable() {
-		if (!this.#gemeIsOver) {
+		if (!this.#gameIsOver) {
 			return;
 		}
 		const table = [];
