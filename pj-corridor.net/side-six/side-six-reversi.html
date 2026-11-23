@@ -1066,6 +1066,20 @@ class cGameController {
 		await in_world.motionViewFrom(vec3, 500);
 	}
 	async #playLastAction(in_reversi, in_colony, in_world) {
+		const rotateColony = (in_moveType, in_index, in_delta) => {
+			return new Promise(in_resolve => {
+				const hook = in_colony.makeRotateProgress(
+					in_moveType,
+					in_index,
+					in_delta,
+					() => {
+						in_world.removeAnimationHook(hook);
+						(in_resolve)();
+					}
+				);
+				in_world.addAnimationHook(hook);
+			});
+		};
 		const last = in_reversi.getLast();
 		switch (last.action) {
 		case 'choose-item' :
@@ -1076,21 +1090,10 @@ class cGameController {
 			await this.reversiToColonyDynamic(in_reversi, in_colony, in_world);
 			break;
 		case 'fixed-col-rotate' :
-			console.log('rotating', last);
-			await (async ()=> {
-				return new Promise(in_resolve => {
-					const hook = in_colony.makeRotateProgress(
-						gColonyClass.moveTypes.FIXED_COL,
-						last.col,
-						last.delta,
-						() => {
-							in_world.removeAnimationHook(hook);
-							(in_resolve)();
-						}
-					);
-					in_world.addAnimationHook(hook);
-				});
-			})();
+			await rotateColony(gColonyClass.moveTypes.FIXED_COL, last.col, last.delta);
+			break;
+		case 'fixed-row-rotate' :
+			await rotateColony(gColonyClass.moveTypes.FIXED_ROW, last.row, last.delta);
 			break;
 		default :
 			break;

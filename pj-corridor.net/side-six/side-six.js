@@ -1343,7 +1343,8 @@ class cTorusColony extends cColony {
 			const radius = st.majorRadius + st.minorRadius * Math.cos(angle);
 			const outerRadius = st.majorRadius + st.minorRadius;
 			const minRatio = radius / outerRadius;
-			const scale = 1 - (1 - minRatio) * scalar;
+			const shrinkWeight = 0.5;
+			const scale = 1 - (1 - minRatio) * scalar * shrinkWeight;
 			const geometry = in_piece.geometry;
 			const original = in_piece.userData.tmpCache.geometry.attributes.position;
 			const current = geometry.attributes.position;
