@@ -66,6 +66,12 @@ class cBaseStructure {
 	static #error = 0.01;
 	#rowsForCrossSection;
 	#colsForLongitudinal;
+	static #cyclicSequenceDistance(in_a, in_b, in_length) {
+		const a = ((in_a % in_length) + in_length) % in_length;
+		const b = ((in_b % in_length) + in_length) % in_length;
+		const delta = Math.abs(a - b);
+		return Math.min(delta, in_length - delta);
+	}
 	constructor(in_rowsForCrossSection, in_colsForLongitudinal, in_offset = -1, in_crossSectionRotation = 0) {
 		if (typeof this.locationToPosition !== 'function') {
 			throw new Error('locationToPosition() must be implemented by subclass');
@@ -118,6 +124,12 @@ class cBaseStructure {
 		}
 		console.log('positionToLocation failed : ', in_position);
 		throw new Error('');
+	}
+	rowDistance(in_a, in_b) {
+		return cBaseStructure.#cyclicSequenceDistance(in_a, in_b, this.rows);
+	}
+	colDistance(in_a, in_b) {
+		return cBaseStructure.#cyclicSequenceDistance(in_a, in_b, this.cols);
 	}
 }
 
@@ -609,13 +621,21 @@ class cColony extends THREE.Object3D {
 		});
 		this.remove(in_group);
 	}
+	alignedPieces(in_piece, in_fixedCol, in_fixedRow, in_margin = 0) {
+		const {row, col} = this.pieceToLocation(in_piece);
+		const st = this.currPiecesCache.structure;
+		return this.children.filter(in_child => {
+			const loc = this.pieceToLocation(in_child);
+			return (in_child === in_piece)
+				|| (in_fixedCol && st.colDistance(loc.col, col) <= in_margin)
+				|| (in_fixedRow && st.rowDistance(loc.row, row) <= in_margin);
+		});
+	}
 	affectedFixedColPieces(in_piece) {
-		const col = this.pieceToLocation(in_piece).col;
-		return this.children.filter(in_child => this.pieceToLocation(in_child).col === col);
+		return this.alignedPieces(in_piece, true, false);
 	}
 	affectedFixedRowPieces(in_piece) {
-		const row = this.pieceToLocation(in_piece).row;
-		return this.children.filter(in_child => this.pieceToLocation(in_child).row === row);
+		return this.alignedPieces(in_piece, false, true);
 	}
 	#decideMoveType(in_fixedColDelta, in_fixedRowDelta, in_movable) {
 		if (in_movable.fixedCol && in_movable.fixedRow) {

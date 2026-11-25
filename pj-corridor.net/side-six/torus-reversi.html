@@ -170,6 +170,14 @@ function setShellColor(in_object, in_color) {
 	in_object.material[CHAMFERED_SURFACE_IX] = materialFactory.create(in_color, in_object.geometry.userData.size);
 }
 
+function getShellNormal(in_piece) {
+	const geometry = in_piece.geometry;
+	const group = geometry.groups.find(in_group => in_group.materialIndex === CHAMFERED_SURFACE_IX);
+	const normal = new THREE.Vector3().fromBufferAttribute(geometry.attributes.normal, geometry.index.getX(group.start));
+	in_piece.updateWorldMatrix(true, false);
+	return normal.transformDirection(in_piece.matrixWorld);
+}
+
 const COLONY_SIZE = 400;
 
 /*
@@ -699,11 +707,58 @@ class cGameController {
 		let table = in_colony.getColorTable();
 		return table.map(in_row => in_row.map(in_cell => reverse[in_cell]));
 	}
-	async moveViewTo(in_piece, in_world) {
+	async moveViewTo(in_piece, in_colony, in_world, in_effect = {transparent : false, delay : -1}) {
+		const normal = getShellNormal(in_piece);
 		const cameraPos = in_world.getCameraPos();
-		const angleX = Math.atan2(cameraPos.y, cameraPos.z) - Math.atan2(in_piece.position.y, in_piece.position.z);
-		const vec3 = cameraPos.applyMatrix4((new THREE.Matrix4()).makeRotationX(angleX));
+		const vec3 = normal.clone().normalize().multiplyScalar(cameraPos.length());
 		await in_world.motionViewFrom(vec3, 500);
+		if (!in_effect.transparent) {
+			return () => {};
+		}
+		const objectArr = in_world.interruptedObjects(in_piece, in_colony.children);
+		const transparentSet = new Set();
+		for (const piece of objectArr) {
+			const alignedArr = in_colony.alignedPieces(piece, true, false, 1);
+			alignedArr.forEach(in_target => transparentSet.add(in_target));
+		}
+		const restoredArr = [];
+		for (const piece of transparentSet) {
+			const materials = piece.material;
+			piece.material = materials.map(in_material => {
+				const material = in_material.clone();
+				material.transparent = true;
+				material.depthWrite = false;
+				return material;
+			});
+			restoredArr.push({piece, materials});
+		}
+		const fadeAnimation = (in_from, in_to) => {
+			if (restoredArr.length === 0) {
+				return Promise.resolve();
+			}
+			const ease = new cEase(in_from, in_to, in_effect.delay);
+			return new Promise(in_resolve => {
+				const hook = () => {
+					const opacity = ease.currentEasingOut();
+					restoredArr.forEach(in_item => {
+						in_item.piece.material.forEach(in_material => in_material.opacity = opacity);
+					});
+					if (opacity === in_to) {
+						in_world.removeAnimationHook(hook);
+						(in_resolve)();
+					}
+				};
+				in_world.addAnimationHook(hook);
+			});
+		};
+		await fadeAnimation(1, 0);
+		return async () => {
+			await fadeAnimation(0, 1);
+			restoredArr.forEach(in_item => {
+				in_item.piece.material.forEach(in_material => in_material.dispose());
+				in_item.piece.material = in_item.materials;
+			});
+		};
 	}
 	async #playLastAction(in_reversi, in_colony, in_world) {
 		const rotateColony = (in_moveType, in_index, in_delta) => {
@@ -724,10 +779,11 @@ class cGameController {
 		switch (last.action) {
 		case 'choose-item' :
 			const piece = in_colony.locationToPiece(last.row, last.col);
-			await this.moveViewTo(piece, in_world);
+			const rollback = await this.moveViewTo(piece, in_colony, in_world, {transparent : true, delay : 250});
 			// choose
 			setShellColor(piece, this.#mapping[last.who]);
 			await this.reversiToColonyDynamic(in_reversi, in_colony, in_world);
+			await rollback();
 			break;
 		case 'fixed-col-rotate' :
 			await rotateColony(gColonyClass.moveTypes.FIXED_COL, last.col, last.delta);
@@ -1077,7 +1133,8 @@ function initializeByLevel() {
 			const last = gReversi.getLast({who : pcIndex, action : 'choose-item'});
 			if (last) {
 				const piece = gColony.locationToPiece(last.row, last.col);
-				await gController.moveViewTo(piece, gWorld);
+				const rollback = await gController.moveViewTo(piece, gColony, gWorld);
+				await rollback();
 			}
 			if (!gReversi.flippable(in_player)) {
 				gFigure.longSpeak('I can rotate cylinder.');

@@ -1816,6 +1816,23 @@ export class cSphericalWorld {
 	intersectNegative(in_ndc, in_layer = 0) {
 		return this.#intersectObjects(in_ndc, false, in_layer);
 	}
+	interruptedObjects(in_target, in_objects) {
+		const from = this.getCameraPos();
+		const to = in_target.getWorldPosition(new THREE.Vector3());
+		const direction = to.clone().sub(from);
+		const raycaster = new THREE.Raycaster(from, direction.clone().normalize(), 0, direction.length());
+		const intersects = raycaster.intersectObjects(in_objects, false);
+		const objectArr = [];
+		for (const hit of intersects) {
+			if (hit.object === in_target) {
+				break;
+			}
+			if (!objectArr.includes(hit.object)) {
+				objectArr.push(hit.object);
+			}
+		}
+		return objectArr;
+	}
 	#easing(in_initValue, in_stopValue, in_duration, in_progressCallback, in_method) {
 		return new Promise(resolve => {
 			if (_nearlyEqual(in_initValue, in_stopValue)) {
