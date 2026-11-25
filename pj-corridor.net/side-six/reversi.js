@@ -836,10 +836,10 @@ export class cReversi {
 		const sizeCol = in_table.reduce((in_maxLen, in_row) => {
 			return Math.max(in_maxLen, in_row.length);
 		}, 0);
-		if (!in_rowEdge && !in_colEdge && (sizeRow !== sizeCol || sizeRow % 2 !== 0)) {
+		if (!in_rowEdge && !in_colEdge && (sizeRow % 2 !== 0 || sizeCol % sizeRow !== 0)) {
 			const reason = [
-				'fully cyclic boards must be even-sized squares (N x N) ',
-				'to limit cyclic path lengths in #initTagIndexesRadiating()'
+				'fully cyclic boards require even-sized rows and columns, ',
+				'with columns being a multiple of rows to limit cyclic path lengths in #initTagIndexesRadiating().'
 			];
 			throw new Error(reason.join(''));
 		}

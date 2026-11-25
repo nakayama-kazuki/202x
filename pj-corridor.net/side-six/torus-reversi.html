@@ -232,193 +232,421 @@ const gColoredArgo = new Map([
 
 const BOARD_DB = [
 	{
-		type : 'square',
-		desc : '2 players reversi using 8x8 square',
+		type : 'square-vs-1',
+		desc : '2 players reversi using square',
 		levels : [
 			{
 				format : 'square',
 				table : [
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,B,G,E,E,E,E],
-					[E,E,E,E,G,B,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E]
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,B,G,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,G,B,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E]
 				]
 			},
 			{
 				format : 'square',
 				table : [
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,G,B,E,E,E,E],
-					[E,E,E,E,B,G,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E]
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,G,B,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,B,G,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E]
 				]
 			},
 			{
 				format : 'square',
 				table : [
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,B,Y,E,E,E,E],
-					[E,E,E,E,Y,B,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E]
+					[E,E,E,D,D,E,E,E,E,E,E,G,B,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,B,G,E,E,E,E,E,E,D,D,E,E,E],
+					[E,E,E,G,B,E,E,E,E,E,E,D,D,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,D,D,E,E,E,E,E,E,B,G,E,E,E]
 				]
 			},
 			{
 				format : 'square',
 				table : [
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,Y,B,E,E,E,E],
-					[E,E,E,E,B,Y,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E]
+					[E,E,D,D,E,E,E,E,G,B,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,B,G,E,E,E,E,D,D,E,E],
+					[E,E,G,B,E,E,E,E,D,D,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,D,D,E,E,E,E,B,G,E,E]
 				]
 			},
 			{
 				format : 'square',
 				table : [
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,B,R,E,E,E,E],
-					[E,E,E,E,R,B,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E]
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,Y,G,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,G,Y,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E]
 				]
 			},
 			{
 				format : 'square',
 				table : [
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,R,B,E,E,E,E],
-					[E,E,E,E,B,R,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E]
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,G,Y,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,Y,G,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E]
+				]
+			},
+			{
+				format : 'square',
+				table : [
+					[E,E,E,D,D,E,E,E,E,E,E,G,Y,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,Y,G,E,E,E,E,E,E,D,D,E,E,E],
+					[E,E,E,G,Y,E,E,E,E,E,E,D,D,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,D,D,E,E,E,E,E,E,Y,G,E,E,E]
+				]
+			},
+			{
+				format : 'square',
+				table : [
+					[E,E,D,D,E,E,E,E,G,Y,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,Y,G,E,E,E,E,D,D,E,E],
+					[E,E,G,Y,E,E,E,E,D,D,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,D,D,E,E,E,E,Y,G,E,E]
+				]
+			},
+			{
+				format : 'square',
+				table : [
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,R,G,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,G,R,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E]
+				]
+			},
+			{
+				format : 'square',
+				table : [
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,G,R,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,R,G,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E]
+				]
+			},
+			{
+				format : 'square',
+				table : [
+					[E,E,E,D,D,E,E,E,E,E,E,G,R,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,R,G,E,E,E,E,E,E,D,D,E,E,E],
+					[E,E,E,G,R,E,E,E,E,E,E,D,D,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,D,D,E,E,E,E,E,E,R,G,E,E,E]
+				]
+			},
+			{
+				format : 'square',
+				table : [
+					[E,E,D,D,E,E,E,E,G,R,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,R,G,E,E,E,E,D,D,E,E],
+					[E,E,G,R,E,E,E,E,D,D,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,D,D,E,E,E,E,R,G,E,E]
+				]
+			},
+		]
+	},
+	{
+		type : 'square-vs-N',
+		desc : 'multiplayers reversi using square',
+		levels : [
+			{
+				format : 'square',
+				table : [
+					[E,E,E,D,D,E,E,E,E,E,E,R,Y,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,B,G,E,E,E,E,E,E,D,D,E,E,E],
+					[E,E,E,G,B,E,E,E,E,E,E,D,D,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,D,D,E,E,E,E,E,E,Y,R,E,E,E]
+				]
+			},
+			{
+				format : 'square',
+				table : [
+					[B,E,E,E,E,E,E,E,E,E,E,O],
+					[E,B,G,E,E,E,E,E,E,E,E,E],
+					[E,E,E,G,R,E,E,E,E,E,E,E],
+					[E,E,E,E,E,R,Y,E,E,E,E,E],
+					[E,E,E,E,E,E,E,Y,S,E,E,E],
+					[E,E,E,E,E,E,E,E,E,S,O,E],
+					[B,E,E,E,E,E,E,E,E,E,E,O],
+					[E,B,G,E,E,E,E,E,E,E,E,E],
+					[E,E,E,G,R,E,E,E,E,E,E,E],
+					[E,E,E,E,E,R,Y,E,E,E,E,E],
+					[E,E,E,E,E,E,E,Y,S,E,E,E],
+					[E,E,E,E,E,E,E,E,E,S,O,E]
 				]
 			}
 		]
 	},
 	{
-		type : 'hexmap',
+		type : 'hexmap-vs-1',
+		desc : '2 players reversi using hexmap',
+		levels : [
+			{
+				format : 'hexFlatTopped',
+				table : [
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,B,G,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,G,B,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E]
+				]
+			},
+			{
+				format : 'hexFlatTopped',
+				table : [
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,G,B,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,B,G,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E]
+				]
+			},
+			{
+				format : 'hexFlatTopped',
+				table : [
+					[E,E,E,D,D,E,E,E,E,E,E,G,B,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,B,G,E,E,E,E,E,E,D,D,E,E,E],
+					[E,E,E,G,B,E,E,E,E,E,E,D,D,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,D,D,E,E,E,E,E,E,B,G,E,E,E]
+				]
+			},
+			{
+				format : 'hexFlatTopped',
+				table : [
+					[E,E,D,D,E,E,E,E,G,B,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,B,G,E,E,E,E,D,D,E,E],
+					[E,E,G,B,E,E,E,E,D,D,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,D,D,E,E,E,E,B,G,E,E]
+				]
+			},
+			{
+				format : 'hexFlatTopped',
+				table : [
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,Y,G,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,G,Y,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E]
+				]
+			},
+			{
+				format : 'hexFlatTopped',
+				table : [
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,G,Y,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,Y,G,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E]
+				]
+			},
+			{
+				format : 'hexFlatTopped',
+				table : [
+					[E,E,E,D,D,E,E,E,E,E,E,G,Y,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,Y,G,E,E,E,E,E,E,D,D,E,E,E],
+					[E,E,E,G,Y,E,E,E,E,E,E,D,D,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,D,D,E,E,E,E,E,E,Y,G,E,E,E]
+				]
+			},
+			{
+				format : 'hexFlatTopped',
+				table : [
+					[E,E,D,D,E,E,E,E,G,Y,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,Y,G,E,E,E,E,D,D,E,E],
+					[E,E,G,Y,E,E,E,E,D,D,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,D,D,E,E,E,E,Y,G,E,E]
+				]
+			},
+			{
+				format : 'hexFlatTopped',
+				table : [
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,R,G,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,G,R,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E]
+				]
+			},
+			{
+				format : 'hexFlatTopped',
+				table : [
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,G,R,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,R,G,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E]
+				]
+			},
+			{
+				format : 'hexFlatTopped',
+				table : [
+					[E,E,E,D,D,E,E,E,E,E,E,G,R,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,R,G,E,E,E,E,E,E,D,D,E,E,E],
+					[E,E,E,G,R,E,E,E,E,E,E,D,D,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,D,D,E,E,E,E,E,E,R,G,E,E,E]
+				]
+			},
+			{
+				format : 'hexFlatTopped',
+				table : [
+					[E,E,D,D,E,E,E,E,G,R,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,R,G,E,E,E,E,D,D,E,E],
+					[E,E,G,R,E,E,E,E,D,D,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,D,D,E,E,E,E,R,G,E,E]
+				]
+			},
+		]
+	},
+	{
+		type : 'hexmap-vs-N',
 		desc : 'multiplayers reversi using hexmap',
 		levels : [
 			{
 				format : 'hexFlatTopped',
 				table : [
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,B,G,E,E,E,E],
-					[E,E,E,E,G,B,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E]
+					[E,E,E,D,D,E,E,E,E,E,E,R,Y,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,B,G,E,E,E,E,E,E,D,D,E,E,E],
+					[E,E,E,G,B,E,E,E,E,E,E,D,D,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E],
+					[E,E,E,D,D,E,E,E,E,E,E,Y,R,E,E,E]
 				]
 			},
 			{
 				format : 'hexFlatTopped',
 				table : [
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,G,B,E,E,E,E],
-					[E,E,E,E,B,G,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E]
-				]
-			},
-			{
-				format : 'hexFlatTopped',
-				table : [
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,B,Y,E,E,E,E],
-					[E,E,E,E,Y,B,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E]
-				]
-			},
-			{
-				format : 'hexFlatTopped',
-				table : [
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,Y,B,E,E,E,E],
-					[E,E,E,E,B,Y,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E]
-				]
-			},
-			{
-				format : 'hexFlatTopped',
-				table : [
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,B,R,E,E,E,E],
-					[E,E,E,E,R,B,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E]
-				]
-			},
-			{
-				format : 'hexFlatTopped',
-				table : [
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,R,B,E,E,E,E],
-					[E,E,E,E,B,R,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E],
-					[E,E,E,E,E,E,E,E,E,E]
+					[B,E,E,E,E,E,E,E,E,E,E,O],
+					[E,B,G,E,E,E,E,E,E,E,E,E],
+					[E,E,E,G,R,E,E,E,E,E,E,E],
+					[E,E,E,E,E,R,Y,E,E,E,E,E],
+					[E,E,E,E,E,E,E,Y,S,E,E,E],
+					[E,E,E,E,E,E,E,E,E,S,O,E],
+					[B,E,E,E,E,E,E,E,E,E,E,O],
+					[E,B,G,E,E,E,E,E,E,E,E,E],
+					[E,E,E,G,R,E,E,E,E,E,E,E],
+					[E,E,E,E,E,R,Y,E,E,E,E,E],
+					[E,E,E,E,E,E,E,Y,S,E,E,E],
+					[E,E,E,E,E,E,E,E,E,S,O,E]
 				]
 			}
 		]
@@ -476,7 +704,8 @@ const gCyclicLevels = ((in_diameter) => {
 		const majorRadius = in_diameter / 2 * conf.rZoom;
 		const minorRadius = majorRadius * conf.minorRatio;
 		const unitSize = 2 * minorRadius * Math.tan(Math.PI / rows);
-		const unitThick = unitSize * conf.tWeight;
+		const minWidth = 2 * (majorRadius - minorRadius) * Math.tan(Math.PI / cols);
+		const unitThick = Math.min(unitSize, minWidth) * conf.tWeight;
 		const st = new cTorusStructure(
 			rows,
 			cols,
