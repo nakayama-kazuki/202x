@@ -984,7 +984,7 @@ class cGameController {
 		} else {
 			while (true) {
 				const {dead, frozen, score} = cond.players[this.#curIndex];
-				if (dead || (frozen && !in_reversi.rotatableFixedCol())) {
+				if (dead || (frozen && !in_reversi.rotatableFixedCol() && !in_reversi.rotatableFixedRow())) {
 					// curIndex can not do anything
 					this.#incrementIndex();
 				} else {

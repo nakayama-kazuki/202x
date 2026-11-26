@@ -758,6 +758,7 @@ export class cReversi {
 			players : []
 		}
 	};
+	#playerCount = 0;
 	#npcArgoPriority = [];
 	#history = [];
 	#conf = null;
@@ -1190,6 +1191,7 @@ export class cReversi {
 			while (--rest > 0) {
 				// rotate +1 (maxCnt - 1) times
 				rotateFunc.call(this, in_target, 1);
+				this.#updateOptionsAll();
 				if (this.flippable(in_player)) {
 					result.delta = maxCnt - rest;
 					return true;
@@ -1533,8 +1535,14 @@ export class cReversi {
 		return score;
 	}
 	#countNextEnemyOption(in_player) {
-		const player = (in_player + 1 + cReversi.#maxPlayers) % cReversi.#maxPlayers;
-		return this.#flippableIxArr(player).length;
+		for (let i = 1; i < this.#playerCount; i++) {
+			const player = (in_player + i) % this.#playerCount;
+			const count = this.#flippableIxArr(player).length;
+			if (count > 0) {
+				return count;
+			}
+		}
+		return 0;
 	}
 	#countNextOwnedSafeArea(in_player) {
 		let count = 0;
@@ -2010,6 +2018,7 @@ export class cReversi {
 		return null;
 	}
 	#setTable(in_table) {
+		const playerSet = new Set();
 		for (let row = 0; row < in_table.length; row++) {
 			for (let col = 0; col < in_table[row].length; col++) {
 				const item = in_table[row][col];
@@ -2017,9 +2026,13 @@ export class cReversi {
 					throw new Error('invalid input');
 				} else {
 					this.#setItemByPos(row, col, item);
+					if (item < cReversi.#maxPlayers) {
+						playerSet.add(item);
+					}
 				}
 			}
 		}
+		this.#playerCount = playerSet.size;
 	}
 	getTable() {
 		const table = [];

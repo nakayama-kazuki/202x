@@ -853,7 +853,7 @@ class cGameController {
 		} else {
 			while (true) {
 				const {dead, frozen, score} = cond.players[this.#curIndex];
-				if (dead || (frozen && !in_reversi.rotatableFixedCol())) {
+				if (dead || (frozen && !in_reversi.rotatableFixedCol() && !in_reversi.rotatableFixedRow())) {
 					// curIndex can not do anything
 					this.#incrementIndex();
 				} else {
@@ -1284,13 +1284,14 @@ function initialPoloidalRotation() {
 	const lastAngle = Math.PI / 4 * -1;
 	const ease = new cEase(0, lastAngle, 1000);
 	let prevAngle = 0;
+	const resume = gController.enableHandler;
 	const progress = () => {
 		const currAngle = ease.currentEasingOut();
 		poloidalRotateTorus(st, gColony, currAngle - prevAngle);
 		prevAngle = currAngle;
 		if (currAngle === lastAngle) {
 			gWorld.removeAnimationHook(progress);
-			gController.enableHandler = true;
+			gController.enableHandler = resume;
 		}
 	};
 	gController.enableHandler = false;
